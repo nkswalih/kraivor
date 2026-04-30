@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  identity:
+    volumes:
+      - ./services/identity:/app
+    command: python manage.py runserver 0.0.0.0:8001
+
+  core:
+    volumes:
+      - ./services/core:/app
+    command: python manage.py runserver 0.0.0.0:8002
+
+  analysis:
+    volumes:
+      - ./services/analysis:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
+
+  ai:
+    volumes:
+      - ./services/ai:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8004 --reload
+
+  notifications:
+    volumes:
+      - ./services/notifications:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8005 --reload
+
+  realtime:
+    volumes:
+      - ./services/realtime:/app
+    command: nodemon src/socket/index.js
+
+  frontend:
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev

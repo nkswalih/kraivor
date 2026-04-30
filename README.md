@@ -1,145 +1,114 @@
-# ⚡ Kraivor
+# Kraivor
 
-> Test if your code survives production — before production.
+One platform. Three products. Production-grade from day one.
 
-Kraivor is an AI-powered system that analyzes real-world codebases and simulates how they behave under production stress, failures, and scaling conditions.
+Kraivor is a unified developer intelligence platform built as a microservices system. It combines a Repository Analyzer, Agentic AI System, and Developer Productivity Platform into a single authenticated workspace.
 
-Instead of telling you *what your code does*, Kraivor tells you:
-
-* ❌ Where your system will break
-* ⚠️ What fails under load
-* 🧠 How a senior engineer would fix it
-
----
-
-## 🚀 Features (MVP)
-
-* 🔗 Analyze any GitHub repository instantly
-* 🧠 Senior-level engineering feedback (AI-assisted)
-* ⚡ Production readiness scoring
-* 💣 Failure detection (no caching, blocking calls, bad structure)
-* 📊 Simple architecture insights
-
----
-
-## 🧠 Example Output
+## Project Structure
 
 ```
-❌ Your app will likely fail under moderate load.
-
-Problems:
-- No caching layer
-- Blocking database queries
-- No background workers
-
-Impact:
-- High latency under 1k users
-- Possible crashes during traffic spikes
+kraivor/
+├── services/           # Microservices (6 services)
+│   ├── identity/       # Django DRF - Authentication & User Management
+│   ├── core/           # Django DRF - Workspaces, Repos, Notes, Projects
+│   ├── analysis/       # FastAPI - Repository Analyzer
+│   ├── ai/             # FastAPI - Multi-Agent AI System
+│   ├── notifications/  # FastAPI - Email, Push, Slack notifications
+│   └── realtime/       # Node.js - WebSocket & Real-time updates
+├── frontend/          # Next.js web application
+├── infra/             # Infrastructure as Code
+│   ├── docker/         # Nginx, Postgres configs
+│   ├── kubernetes/     # K8s manifests
+│   └── terraform/      # AWS infrastructure
+└── .github/           # CI/CD workflows
 ```
 
----
+## Prerequisites
 
-## 🧱 Tech Stack
+- Docker & Docker Compose
+- Python 3.11+
+- Node.js 18+
+- PostgreSQL 15+
+- Redis 7+
+- Kafka (or use Docker)
 
-**Backend**
+## Local Development Setup
 
-* FastAPI
-* Celery + Redis
-* PostgreSQL
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-org/kraivor.git
+   cd kraivor
+   ```
 
-**Frontend**
+2. Copy environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `.env` and fill in your API keys and secrets.
 
-* Next.js (React)
-* TailwindCSS
-* Framer Motion
+3. Start all services:
+   ```bash
+   make dev
+   ```
 
-**AI**
+4. Run tests:
+   ```bash
+   make test
+   ```
 
-* LLM-based feedback engine
-* Rule-based analysis system
+5. View logs:
+   ```bash
+   make logs
+   ```
 
----
+6. Stop all services:
+   ```bash
+   make stop
+   ```
 
-## ⚙️ How It Works
+## Services
 
-```
-Repo URL
-  ↓
-Clone (shallow)
-  ↓
-Code analysis
-  ↓
-Rule engine + AI
-  ↓
-Failure report + score
-```
+| Service | Port | Framework | Description |
+|---------|------|-----------|-------------|
+| Identity | 8001 | Django DRF | Auth, Users, API Keys, OAuth |
+| Core API | 8002 | Django DRF | Workspaces, Repos, Notes, Projects |
+| Analysis | 8003 | FastAPI | Repo Analyzer, Rule Engine, Scoring |
+| AI | 8004 | FastAPI | Multi-Agent AI, RAG Pipeline |
+| Notifications | 8005 | FastAPI | Email, Push, Slack notifications |
+| Realtime | 8006 | Node.js | WebSocket, Chat, Presence |
 
----
+## Key Features
 
-## 🛠️ Getting Started
+### Repository Analyzer
+Deep structural analysis of codebases with Production Readiness Scores and prioritized reports.
 
-### 1. Clone the repo
+### Agentic AI System
+Multi-agent AI workspace with specialized agents for code analysis, architecture review, security, and performance.
 
-```bash
-git clone https://github.com/yourusername/kraivor.git
-cd kraivor
-```
+### Developer Productivity Platform
+Unified workspace for notes, projects, and tasks with AI-enhanced context.
 
-### 2. Backend setup
+## Architecture Principles
 
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
+- **Single entry point** through API Gateway (Nginx + Kong)
+- **Async by default** - operations >500ms run as background jobs
+- **Service owns its data** - no cross-service database queries
+- **Fail gracefully** - services degrade independently
+- **Everything observable** - correlation IDs, structured logs, metrics
 
----
+## Deployment
 
-## 🤝 Contributing
+- **Staging**: Auto-deployed from `dev` branch
+- **Production**: Auto-deployed from `main` branch
+- **Infrastructure**: AWS EKS, RDS, ElastiCache, S3, Kafka (MSK)
 
-We welcome contributions from developers of all levels.
+## Contributing
 
-You can:
+1. Create a feature branch from `dev`
+2. Make your changes
+3. Run `make test` to ensure all tests pass
+4. Submit a pull request to `dev`
 
-* Add new analysis rules
-* Improve performance detection
-* Enhance UI/UX
-* Fix bugs
+## License
 
-Check `CONTRIBUTING.md` for details.
-
----
-
-## 📌 Roadmap
-
-* [ ] Real load simulation (k6 / locust)
-* [ ] OAuth (GitHub login)
-* [ ] Public repo analysis pages
-* [ ] Advanced architecture visualization
-* [ ] Team collaboration features
-
----
-
-## ⚠️ Disclaimer
-
-Kraivor provides intelligent insights, not absolute guarantees. Always validate results in real environments.
-
----
-
-## ⭐ Support
-
-If you find this useful:
-
-* Star the repo ⭐
-* Share it with developers
-* Contribute improvements
-
----
-
-## 🧠 Vision
-
-Kraivor aims to become the standard tool developers use to answer one question:
-
-> “Will my code survive production?”
-
----
+[Add your license here]

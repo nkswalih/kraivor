@@ -1,0 +1,64 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kraivor-ingress
+  namespace: kraivor-prod
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: api.kraivor.com
+    http:
+      paths:
+      - path: /api/auth
+        pathType: Prefix
+        backend:
+          service:
+            name: identity-service
+            port:
+              number: 8001
+      - path: /api/workspace
+        pathType: Prefix
+        backend:
+          service:
+            name: core-service
+            port:
+              number: 8002
+      - path: /api/analysis
+        pathType: Prefix
+        backend:
+          service:
+            name: analysis-service
+            port:
+              number: 8003
+      - path: /api/ai
+        pathType: Prefix
+        backend:
+          service:
+            name: ai-service
+            port:
+              number: 8004
+      - path: /api/notifications
+        pathType: Prefix
+        backend:
+          service:
+            name: notifications-service
+            port:
+              number: 8005
+      - path: /ws
+        pathType: Prefix
+        backend:
+          service:
+            name: realtime-service
+            port:
+              number: 8006
+  - host: kraivor.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 3000

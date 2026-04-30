@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: realtime-service
+  namespace: kraivor-prod
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: realtime-service
+  template:
+    metadata:
+      labels:
+        app: realtime-service
+    spec:
+      containers:
+      - name: realtime
+        image: ${ECR_REGISTRY}/kraivor-realtime:latest
+        ports:
+        - containerPort: 8006
+        env:
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: kraivor-secrets
+              key: redis-url
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka:9092"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: realtime-service
+  namespace: kraivor-prod
+spec:
+  selector:
+    app: realtime-service
+  ports:
+  - port: 8006
+    targetPort: 8006
+  type: ClusterIP

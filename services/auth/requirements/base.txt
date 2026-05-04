@@ -1,0 +1,10 @@
+django>=4.2
+djangorestframework>=3.14
+django-cors-headers>=4.0
+psycopg2-binary>=2.9
+redis>=5.0
+celery>=5.3
+djangorestframework-simplejwt>=5.3
+social-auth-app-django>=5.0
+argon2-cffi>=23.0
+django-environ>=0.11

@@ -11,4 +11,6 @@ dependencies = [
     "celery>=5.3",
     "djangorestframework-simplejwt>=5.3",
     "social-auth-app-django>=5.0",
+    "argon2-cffi>=25.1.0",
+    "django-environ>=0.13.0",
 ]

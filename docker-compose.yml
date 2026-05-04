@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
@@ -12,11 +10,21 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kraivor"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   kafka:
     image: bitnami/kafka:3.5
@@ -32,18 +40,22 @@ services:
 
   identity:
     build:
-      context: ./services/identity
+      context: ./services/auth
       dockerfile: Dockerfile.dev
     ports:
       - "8001:8001"
     environment:
-      DATABASE_URL: postgresql://kraivor:kraivor@postgres:5432/kraivor
+      DJANGO_SETTINGS_MODULE: auth.settings.development
+      DATABASE_URL: postgresql://kraivor:kraivor@postgres:5432/kraivor_dev
       REDIS_URL: redis://redis:6379/0
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
-      - ./services/identity:/app
+      - ./services/auth:/app
+    command: python manage.py runserver 0.0.0.0:8001
 
   core:
     build:

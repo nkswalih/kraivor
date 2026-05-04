@@ -2,10 +2,16 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y gcc netcat-openbsd && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    gcc \
+    postgresql-client \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY requirements/ /app/requirements/
-RUN pip install --no-cache-dir -r /app/requirements/development.txt
+COPY requirements/base.txt /app/requirements/
+RUN pip install --no-cache-dir -r /app/requirements/base.txt
+
+RUN pip install argon2-cffi psycopg2-binary
 
 COPY . /app/
 

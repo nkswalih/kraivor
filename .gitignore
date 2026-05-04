@@ -51,3 +51,11 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
+
+# DOCS
+KAIVOR_BLUEPRINT.md
+KRAIVOR_ARCHITECTURE.md
+KRAIVOR_BUILD_GUIDE.md
+system.md
+tickets.md
+tools.md

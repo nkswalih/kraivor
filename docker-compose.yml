@@ -46,6 +46,7 @@ services:
       - "8001:8001"
     environment:
       DJANGO_SETTINGS_MODULE: auth.settings.development
+      DB_HOST: postgres 
       DATABASE_URL: postgresql://kraivor:kraivor@postgres:5432/kraivor_dev
       REDIS_URL: redis://redis:6379/0
     depends_on:

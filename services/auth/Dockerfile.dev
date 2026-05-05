@@ -6,12 +6,14 @@ RUN apt-get update && apt-get install -y \
     gcc \
     postgresql-client \
     libpq-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements/base.txt /app/requirements/
-RUN pip install --no-cache-dir -r /app/requirements/base.txt
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
 
-RUN pip install argon2-cffi psycopg2-binary
+COPY pyproject.toml /app/
+RUN uv sync --frozen --no-dev
 
 COPY . /app/
 

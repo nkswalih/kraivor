@@ -2,10 +2,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y gcc netcat-openbsd && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y gcc curl && rm -rf /var/lib/apt/lists/*
 
-COPY requirements/base.txt /app/requirements/
-RUN pip install --no-cache-dir -r /app/requirements/base.txt
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+COPY pyproject.toml /app/
+RUN uv sync --frozen --no-dev
 
 COPY . /app/
 

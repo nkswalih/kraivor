@@ -1,37 +1,35 @@
+# Local development overrides
+# DO NOT COMMIT THIS FILE - Add to .gitignore
+# Copy this file and fill in your actual secrets
+
 services:
+  postgres:
+    environment:
+      POSTGRES_USER: kraivor
+      POSTGRES_PASSWORD: your-secure-password
+      POSTGRES_DB: kraivor
+
   identity:
-    volumes:
-      - ./services/auth:/app
-    command: python manage.py runserver 0.0.0.0:8001
+    environment:
+      DATABASE_URL: postgresql://kraivor:your-secure-password@postgres:5432/kraivor
+      REDIS_URL: redis://redis:6379/0
 
   core:
-    volumes:
-      - ./services/core:/app
-    command: python manage.py runserver 0.0.0.0:8002
+    environment:
+      DATABASE_URL: postgresql://kraivor:your-secure-password@postgres:5432/kraivor
+      REDIS_URL: redis://redis:6379/0
 
   analysis:
-    volumes:
-      - ./services/analysis:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
+    environment:
+      DATABASE_URL: postgresql://kraivor:your-secure-password@postgres:5432/kraivor
+      REDIS_URL: redis://redis:6379/0
 
   ai:
-    volumes:
-      - ./services/ai:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8004 --reload
+    environment:
+      DATABASE_URL: postgresql://kraivor:your-secure-password@postgres:5432/kraivor
+      REDIS_URL: redis://redis:6379/0
 
   notifications:
-    volumes:
-      - ./services/notifications:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8005 --reload
-
-  realtime:
-    volumes:
-      - ./services/realtime:/app
-    command: nodemon src/socket/index.js
-
-  frontend:
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
-    command: npm run dev
+    environment:
+      DATABASE_URL: postgresql://kraivor:your-secure-password@postgres:5432/kraivor
+      REDIS_URL: redis://redis:6379/0

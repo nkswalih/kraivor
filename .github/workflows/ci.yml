@@ -32,13 +32,13 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
       - name: Run migrations
-        run: python manage.py migrate
+        run: uv run python manage.py migrate
         env:
-          DATABASE_URL: postgresql://kraivor:kraivor@localhost:5432/kraivor_dev
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - name: Run tests
-        run: python manage.py test
+        run: uv run python manage.py test
         env:
-          DATABASE_URL: postgresql://kraivor:kraivor@localhost:5432/kraivor_dev
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
   # test-core:
   #   runs-on: ubuntu-latest

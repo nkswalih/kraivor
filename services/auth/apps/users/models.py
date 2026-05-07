@@ -1,7 +1,8 @@
 import uuid
-from django.db import models
+
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.core.validators import EmailValidator
+from django.db import models
 from django.utils import timezone
 
 
@@ -10,7 +11,7 @@ class UserManager(BaseUserManager):
         if not email:
             raise ValueError('The Email field is required')
         email = self.normalize_email(email)
-        name = extra_fields.pop('name', '')
+        extra_fields.pop('name', '')  # name is a direct model field, not in extra_fields
         user = self.model(email=email, **extra_fields)
         if password:
             user.set_password(password)
@@ -36,9 +37,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
-    # Email verification
-    email_verification_token = models.CharField(max_length=255, null=True, blank=True)
-    email_verification_expires_at = models.DateTimeField(null=True, blank=True)
+    # email_verified flag — set to True after JWT token verification (KRV-010)
+    # Token is stateless JWT; no DB storage needed.
 
     objects = UserManager()
 

@@ -1,5 +1,7 @@
 import os
+from datetime import timedelta
 from pathlib import Path
+
 import environ
 
 env = environ.Env(
@@ -92,11 +94,27 @@ REST_FRAMEWORK = {
 # CORS
 CORS_ALLOW_ALL_ORIGINS = env.bool('CORS_ALLOW_ALL_ORIGINS', default=True)
 
+# Redis
+REDIS_URL = env('REDIS_URL', default='redis://localhost:6379/0')
+
 # JWT (Simple JWT)
-from datetime import timedelta
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
 }
+
+# ---------------------------------------------------------------------------
+# Email (KRV-010)
+# Override in development.py → MailHog, production.py → AWS SES SMTP
+# ---------------------------------------------------------------------------
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')
+
+EMAIL_HOST = env('EMAIL_HOST', default='localhost')
+EMAIL_PORT = env.int('EMAIL_PORT', default=1025)
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=False)
+EMAIL_USE_STARTTLS = env.bool('EMAIL_USE_STARTTLS', default=False)
+EMAIL_FROM = env('EMAIL_FROM', default='noreply@kraivor.com')

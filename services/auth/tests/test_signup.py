@@ -1,73 +1,85 @@
+from unittest.mock import patch
+
 from django.test import TestCase
 from rest_framework.test import APIClient
+
 from users.models import User
-import json
+
 
 class SignUpTests(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.signup_url = '/auth/signup/'
-    
-    def test_valid_signup(self):
+        self.signup_url = "/api/auth/signup/"
+
+    @patch("users.views.email_service")
+    def test_valid_signup(self, mock_email):
         data = {
-            'email': 'test@example.com',
-            'password': 'securepassword123',
-            'password_confirm': 'securepassword123',
-            'name': 'Test User'
+            "email": "test@example.com",
+            "password": "securepassword123",
+            "password_confirm": "securepassword123",
+            "name": "Test User",
         }
         response = self.client.post(self.signup_url, data)
         self.assertEqual(response.status_code, 201)
-        self.assertTrue(User.objects.filter(email='test@example.com').exists())
-        user = User.objects.get(email='test@example.com')
+        self.assertTrue(User.objects.filter(email="test@example.com").exists())
+        user = User.objects.get(email="test@example.com")
         self.assertFalse(user.email_verified)
-        self.assertIsNotNone(user.email_verification_token)
-    
-    def test_duplicate_email(self):
-        User.objects.create(email='existing@example.com', name='Existing')
+        mock_email.send_verification_email.assert_called_once()
+
+    @patch("users.views.email_service")
+    def test_duplicate_email(self, mock_email):
+        User.objects.create(email="existing@example.com", name="Existing")
         data = {
-            'email': 'existing@example.com',
-            'password': 'securepassword123',
-            'password_confirm': 'securepassword123',
-            'name': 'Test User'
+            "email": "existing@example.com",
+            "password": "securepassword123",
+            "password_confirm": "securepassword123",
+            "name": "Test User",
         }
         response = self.client.post(self.signup_url, data)
         self.assertEqual(response.status_code, 400)
-        self.assertIn('email', response.json())
-    
-    def test_invalid_password_short(self):
+        self.assertIn("email", response.json())
+
+    @patch("users.views.email_service")
+    def test_invalid_password_short(self, mock_email):
         data = {
-            'email': 'test@example.com',
-            'password': 'short',
-            'password_confirm': 'short',
-            'name': 'Test User'
+            "email": "test@example.com",
+            "password": "short",
+            "password_confirm": "short",
+            "name": "Test User",
         }
         response = self.client.post(self.signup_url, data)
         self.assertEqual(response.status_code, 400)
-        self.assertIn('password', response.json())
-    
-    def test_invalid_email(self):
+        self.assertIn("password", response.json())
+
+    @patch("users.views.email_service")
+    def test_invalid_email(self, mock_email):
         data = {
-            'email': 'notanemail',
-            'password': 'securepassword123',
-            'password_confirm': 'securepassword123',
-            'name': 'Test User'
+            "email": "notanemail",
+            "password": "securepassword123",
+            "password_confirm": "securepassword123",
+            "name": "Test User",
         }
         response = self.client.post(self.signup_url, data)
         self.assertEqual(response.status_code, 400)
-        self.assertIn('email', response.json())
+        self.assertIn("email", response.json())
+
 
 class SignUpIntegrationTest(TestCase):
-    def test_full_signup_flow(self):
-        """Integration test for full signup flow"""
+    @patch("users.views.email_service")
+    def test_full_signup_flow(self, mock_email):
+        """Integration test for full signup flow — KRV-009.
+        Email verification continuation tested in test_email_verification.py (KRV-010).
+        """
         client = APIClient()
         data = {
-            'email': 'integration@test.com',
-            'password': 'integrationpass123',
-            'password_confirm': 'integrationpass123',
-            'name': 'Integration Test'
+            "email": "integration@test.com",
+            "password": "integrationpass123",
+            "password_confirm": "integrationpass123",
+            "name": "Integration Test",
         }
-        response = client.post('/auth/signup/', data)
+        response = client.post("/api/auth/signup/", data)
         self.assertEqual(response.status_code, 201)
-        user = User.objects.get(email='integration@test.com')
-        self.assertIsNotNone(user.email_verification_token)
-        # Would continue with email verification in KRV-010
+        user = User.objects.get(email="integration@test.com")
+        # No longer stores token in DB — JWT is stateless (KRV-010)
+        self.assertFalse(user.email_verified)
+        mock_email.send_verification_email.assert_called_once()

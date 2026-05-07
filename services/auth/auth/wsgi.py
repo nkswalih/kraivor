@@ -9,6 +9,6 @@ if str(apps_dir) not in sys.path:
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'auth.settings.development')
 
-from django.core.wsgi import get_wsgi_application
+from django.core.wsgi import get_wsgi_application  # noqa: E402
 
 application = get_wsgi_application()

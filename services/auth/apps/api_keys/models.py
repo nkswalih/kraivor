@@ -1,4 +1,5 @@
 import uuid
+
 from django.db import models
 
 
@@ -18,8 +19,6 @@ class APIKey(models.Model):
         db_table = 'auth_api_keys'
 
     def is_valid(self):
-        if self.revoked:
-            return False
-        if self.expires_at and self.expires_at < models.functions.Now():
-            return False
-        return True
+        return not self.revoked and not (
+            self.expires_at and self.expires_at < models.functions.Now()
+        )

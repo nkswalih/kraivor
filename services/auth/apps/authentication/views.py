@@ -61,35 +61,6 @@ class SignInIdentifyView(APIView):
     POST /api/auth/signin/identify
     
     Step 1: Email only - determines next authentication method.
-    
-    Request:
-        {"email": "user@example.com"}
-    
-    Response (user exists + verified):
-        {
-            "next_step": "password",
-            "user_exists": true,
-            "email_verified": true,
-            "methods": ["password", "otp"]
-        }
-    
-    Response (user exists + NOT verified):
-        {
-            "next_step": "verify_email",
-            "user_exists": true,
-            "email_verified": false,
-            "message": "Please verify your email first"
-        }
-    
-    Response (user doesn't exist):
-        {
-            "next_step": "signup",
-            "user_exists": false,
-            "email_verified": false
-        }
-    
-    Locked account:
-        429 Too Many Requests, retry_after header
     """
 
     permission_classes = [AllowAny]
@@ -102,7 +73,6 @@ class SignInIdentifyView(APIView):
         email = serializer.validated_data['email'].lower()
         ip = get_client_ip(request)
 
-        # Check lockout
         lockout_mgr = get_lockout_manager()
         is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
         
@@ -118,23 +88,17 @@ class SignInIdentifyView(APIView):
             response["Retry-After"] = str(retry_after)
             return response
 
-        # Check if user exists
         try:
             user = User.objects.get(email__iexact=email, is_active=True)
             user_exists = True
             email_verified = user.email_verified
         except User.DoesNotExist:
-            # Don't reveal whether user exists (prevents enumeration)
             user_exists = False
             email_verified = False
 
         if not user_exists:
             return Response(
-                {
-                    "next_step": "signup",
-                    "user_exists": False,
-                    "email_verified": False,
-                }
+                {"next_step": "signup", "user_exists": False, "email_verified": False}
             )
 
         if not email_verified:
@@ -147,7 +111,6 @@ class SignInIdentifyView(APIView):
                 }
             )
 
-        # User exists and verified - continue to password or OTP
         return Response(
             {
                 "next_step": "choose_method",
@@ -163,24 +126,6 @@ class SignInPasswordView(APIView):
     POST /api/auth/signin/password
     
     Step 2: Password verification.
-    
-    Request:
-        {"email": "user@example.com", "password": "secret123", "device_id": ""}
-    
-    Response (success):
-        {
-            "access_token": "eyJ...",
-            "refresh_token": "eyJ...",  # only for programmatic clients
-            "token_type": "Bearer",
-            "expires_in": 900,
-            "user": {"id": "uuid", "email": "...", "name": "..."}
-        }
-    
-    Response (failure):
-        401 Unauthorized, {"error": "Invalid credentials", "error_code": "invalid_credentials"}
-    
-    Locked account:
-        429 Too Many Requests, retry_after header
     """
 
     permission_classes = [AllowAny]
@@ -197,7 +142,6 @@ class SignInPasswordView(APIView):
         ip = get_client_ip(request)
         user_agent = request.META.get('HTTP_USER_AGENT', '')
 
-        # Check lockout first (fail fast)
         lockout_mgr = get_lockout_manager()
         is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
         
@@ -213,69 +157,38 @@ class SignInPasswordView(APIView):
             response["Retry-After"] = str(retry_after)
             return response
 
-        # Get user
         try:
             user = User.objects.get(email__iexact=email, is_active=True)
         except User.DoesNotExist:
-            # Same response as wrong password (prevents enumeration)
             return Response(
                 {"error": "Invalid credentials", "error_code": "invalid_credentials"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        # Verify password (Django already uses constant-time comparison)
         if not verify_password(password, user.password):
-            # Record failure
-            failed_attempts = lockout_mgr.record_failure(email, ip)
-            
-            log_login_event(
-                user=user,
-                ip=ip,
-                user_agent=user_agent,
-                device_id=device_id,
-                success=False,
-                method="password",
-            )
-            
+            lockout_mgr.record_failure(email, ip)
+            log_login_event(user, ip, user_agent, device_id, False, "password")
             return Response(
                 {"error": "Invalid credentials", "error_code": "invalid_credentials"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        # Success - clear lockout attempts
         lockout_mgr.clear_attempts(email, ip)
-
-        # Generate tokens
         tokens = generate_token_pair(user, device_id, ip, user_agent)
-        
-        # Create refresh cookie
         refresh_cookie = create_refresh_cookie(tokens['refresh_token'])
 
-        # Log successful login
-        log_login_event(
-            user=user,
-            ip=ip,
-            user_agent=user_agent,
-            device_id=device_id,
-            success=True,
-            method="password",
-        )
+        log_login_event(user, ip, user_agent, device_id, True, "password")
 
         response = Response(
             {
                 "access_token": tokens['access_token'],
                 "token_type": tokens['token_type'],
                 "expires_in": tokens['expires_in'],
-                "user": {
-                    "id": str(user.id),
-                    "email": user.email,
-                    "name": user.name,
-                },
+                "user": {"id": str(user.id), "email": user.email, "name": user.name},
             },
             status=status.HTTP_200_OK,
         )
 
-        # Set refresh token cookie
         response.set_cookie(
             'refresh_token',
             refresh_cookie['refresh_token'],
@@ -290,20 +203,7 @@ class SignInPasswordView(APIView):
 
 
 class OTPSendView(APIView):
-    """
-    POST /api/auth/signin/otp/send
-    
-    Send OTP to user's email for verification.
-    
-    Request:
-        {"email": "user@example.com"}
-    
-    Response:
-        {"message": "OTP sent to your email"}
-    
-    Rate limited:
-        429 Too Many Requests
-    """
+    """POST /api/auth/signin/otp/send - Send OTP to user's email."""
 
     permission_classes = [AllowAny]
 
@@ -315,7 +215,6 @@ class OTPSendView(APIView):
         email = serializer.validated_data['email'].lower()
         ip = get_client_ip(request)
 
-        # Check lockout
         lockout_mgr = get_lockout_manager()
         is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
         
@@ -331,7 +230,6 @@ class OTPSendView(APIView):
             response["Retry-After"] = str(retry_after)
             return response
 
-        # Check if user exists and verified
         try:
             user = User.objects.get(email__iexact=email, is_active=True)
         except User.DoesNotExist:
@@ -346,7 +244,6 @@ class OTPSendView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Generate and send OTP
         otp_service = get_otp_service()
         
         try:
@@ -363,7 +260,6 @@ class OTPSendView(APIView):
             response["Retry-After"] = str(e.retry_after)
             return response
 
-        # Send OTP via email
         otp_sender = get_otp_sender()
         try:
             otp_sender.send(email, otp)
@@ -372,27 +268,11 @@ class OTPSendView(APIView):
 
         logger.info(f"OTP sent to {email} for sign-in")
 
-        return Response(
-            {"message": "OTP sent to your email"},
-            status=status.HTTP_200_OK,
-        )
+        return Response({"message": "OTP sent to your email"}, status=status.HTTP_200_OK)
 
 
 class OTPVerifyView(APIView):
-    """
-    POST /api/auth/signin/otp/verify
-    
-    Verify OTP and return tokens.
-    
-    Request:
-        {"email": "user@example.com", "otp_code": "123456", "device_id": ""}
-    
-    Response (success):
-        Same as password sign-in
-    
-    Response (failure):
-        401 Unauthorized, error code depends on failure reason
-    """
+    """POST /api/auth/signin/otp/verify - Verify OTP and return tokens."""
 
     permission_classes = [AllowAny]
 
@@ -408,7 +288,6 @@ class OTPVerifyView(APIView):
         ip = get_client_ip(request)
         user_agent = request.META.get('HTTP_USER_AGENT', '')
 
-        # Check lockout
         lockout_mgr = get_lockout_manager()
         is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
         
@@ -424,7 +303,6 @@ class OTPVerifyView(APIView):
             response["Retry-After"] = str(retry_after)
             return response
 
-        # Get user
         try:
             user = User.objects.get(email__iexact=email, is_active=True)
         except User.DoesNotExist:
@@ -433,7 +311,6 @@ class OTPVerifyView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        # Verify OTP
         otp_service = get_otp_service()
         
         try:
@@ -451,40 +328,80 @@ class OTPVerifyView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        # Success - clear lockout
         lockout_mgr.clear_attempts(email, ip)
-
-        # Generate tokens
         tokens = generate_token_pair(user, device_id, ip, user_agent)
-        
-        # Create refresh cookie
         refresh_cookie = create_refresh_cookie(tokens['refresh_token'])
 
-        # Log successful login
-        log_login_event(
-            user=user,
-            ip=ip,
-            user_agent=user_agent,
-            device_id=device_id,
-            success=True,
-            method="otp",
-        )
+        log_login_event(user, ip, user_agent, device_id, True, "otp")
 
         response = Response(
             {
                 "access_token": tokens['access_token'],
                 "token_type": tokens['token_type'],
                 "expires_in": tokens['expires_in'],
-                "user": {
-                    "id": str(user.id),
-                    "email": user.email,
-                    "name": user.name,
-                },
+                "user": {"id": str(user.id), "email": user.email, "name": user.name},
             },
             status=status.HTTP_200_OK,
         )
 
-        # Set refresh token cookie
+        response.set_cookie(
+            'refresh_token',
+            refresh_cookie['refresh_token'],
+            httponly=refresh_cookie['httponly'],
+            secure=refresh_cookie['secure'],
+            samesite=refresh_cookie['samesite'],
+            path=refresh_cookie['path'],
+            max_age=refresh_cookie['max_age'],
+        )
+
+        return response
+
+
+class RefreshTokenView(APIView):
+    """
+    POST /api/auth/refresh
+    
+    Refresh access token using HttpOnly cookie.
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        refresh_token = request.COOKIES.get('refresh_token')
+        
+        if not refresh_token:
+            return Response(
+                {"error": "Refresh token not found", "error_code": "missing_token"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        try:
+            from rest_framework_simplejwt.tokens import RefreshToken
+            token = RefreshToken(refresh_token)
+            user_id = token.get('user_id')
+            user = User.objects.get(id=user_id, is_active=True)
+        except Exception:
+            return Response(
+                {"error": "Invalid or expired refresh token", "error_code": "invalid_token"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        device_id = token.get('device_id', '')
+        ip = get_client_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+
+        tokens = generate_token_pair(user, device_id, ip, user_agent)
+        refresh_cookie = create_refresh_cookie(tokens['refresh_token'])
+
+        response = Response(
+            {
+                "access_token": tokens['access_token'],
+                "token_type": tokens['token_type'],
+                "expires_in": tokens['expires_in'],
+            },
+            status=status.HTTP_200_OK,
+        )
+
         response.set_cookie(
             'refresh_token',
             refresh_cookie['refresh_token'],

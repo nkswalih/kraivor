@@ -16,6 +16,7 @@ jobs:
       postgres:
         image: postgres:15
         env:
+          DATABASE_URL: postgresql://kraivor:kraivor@localhost:5432/kraivor
           POSTGRES_USER: kraivor
           POSTGRES_PASSWORD: kraivor
           POSTGRES_DB: kraivor_dev

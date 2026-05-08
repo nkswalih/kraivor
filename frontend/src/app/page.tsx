@@ -1,8 +1,5 @@
-export default function Home() {
-  return (
-    <main>
-      <h1>Welcome to Kraivor</h1>
-      <p>Developer Intelligence Platform</p>
-    </main>
-  )
+import { redirect } from 'next/navigation';
+
+export default function RootPage() {
+  redirect('/login');
 }

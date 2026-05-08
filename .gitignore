@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+docker-compose.override.yml
 
 # Python
 __pycache__/
@@ -51,3 +52,11 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
+
+# DOCS
+KAIVOR_BLUEPRINT.md
+KRAIVOR_ARCHITECTURE.md
+KRAIVOR_BUILD_GUIDE.md
+system.md
+tickets.md
+tools.md

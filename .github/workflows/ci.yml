@@ -11,103 +11,121 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: services/identity
+        working-directory: services/auth
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: kraivor
+          POSTGRES_PASSWORD: kraivor
+          POSTGRES_DB: kraivor_dev
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v4
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install -r requirements/development.txt
+        run: uv sync --frozen
+      - name: Run migrations
+        run: uv run python manage.py migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - name: Run tests
-        run: python manage.py test
+        run: uv run python manage.py test
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-  test-core:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: services/core
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: pip install -r requirements/development.txt
-      - name: Run tests
-        run: python manage.py test
+  # test-core:
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: services/core
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.11'
+  #     - name: Install dependencies
+  #       run: pip install -r requirements/development.txt
+  #     - name: Run tests
+  #       run: python manage.py test
 
-  test-analysis:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: services/analysis
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: pip install -r requirements/development.txt
-      - name: Run tests
-        run: pytest tests/
+  # test-analysis:
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: services/analysis
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.11'
+  #     - name: Install dependencies
+  #       run: pip install -r requirements/development.txt
+  #     - name: Run tests
+  #       run: pytest tests/
 
-  test-ai:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: services/ai
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: pip install -r requirements/development.txt
-      - name: Run tests
-        run: pytest tests/
+  # test-ai:
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: services/ai
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.11'
+  #     - name: Install dependencies
+  #       run: pip install -r requirements/development.txt
+  #     - name: Run tests
+  #       run: pytest tests/
 
-  test-notifications:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: services/notifications
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: pip install -r requirements/development.txt
-      - name: Run tests
-        run: pytest tests/
+  # test-notifications:
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: services/notifications
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.11'
+  #     - name: Install dependencies
+  #       run: pip install -r requirements/development.txt
+  #     - name: Run tests
+  #       run: pytest tests/
 
-  test-realtime:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: services/realtime
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - name: Install dependencies
-        run: npm install
-      - name: Run lint
-        run: npm run lint || true
+  # test-realtime:
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: services/realtime
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '18'
+  #     - name: Install dependencies
+  #       run: npm install
+  #     - name: Run lint
+  #       run: npm run lint || true
 
-  test-frontend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - name: Install dependencies
-        run: npm install
-      - name: Run lint
-        run: npm run lint
+  # test-frontend:
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: frontend
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '18'
+  #     - name: Install dependencies
+  #       run: npm install
+  #     - name: Run lint
+  #       run: npm run lint

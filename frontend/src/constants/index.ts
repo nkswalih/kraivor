@@ -34,7 +34,10 @@ export const ROUTES = {
 
 export const API_ENDPOINTS = {
   AUTH: {
-    LOGIN: '/auth/login',
+    IDENTIFY: '/auth/signin/identify',
+    PASSWORD: '/auth/signin/password',
+    OTP_SEND: '/auth/signin/otp/send',
+    OTP_VERIFY: '/auth/signin/otp/verify',
     REGISTER: '/auth/register',
     LOGOUT: '/auth/logout',
     REFRESH: '/auth/refresh',

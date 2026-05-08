@@ -1,18 +1,10 @@
+export type UserRole = 'owner' | 'admin' | 'member' | 'viewer';
+
 export interface User {
   id: string;
   email: string;
   name: string;
-  avatar?: string;
-  role: UserRole;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export enum UserRole {
-  OWNER = 'owner',
-  ADMIN = 'admin',
-  MEMBER = 'member',
-  VIEWER = 'viewer',
+  avatar_url?: string;
 }
 
 export interface AuthState {
@@ -22,10 +14,31 @@ export interface AuthState {
   accessToken: string | null;
 }
 
-export interface LoginCredentials {
+export type SignInMethod = 'password' | 'otp';
+export type NextStep = 'choose_method' | 'verify_email' | 'signup' | 'password' | 'otp';
+
+export interface IdentifyResponse {
+  next_step: NextStep;
+  user_exists: boolean;
+  email_verified: boolean;
+  methods?: SignInMethod[];
+  message?: string;
+}
+
+export interface SignInCredentials {
   email: string;
   password: string;
-  rememberMe?: boolean;
+  device_id?: string;
+}
+
+export interface OTPSendRequest {
+  email: string;
+}
+
+export interface OTPVerifyRequest {
+  email: string;
+  otp_code: string;
+  device_id?: string;
 }
 
 export interface RegisterCredentials {
@@ -37,7 +50,9 @@ export interface RegisterCredentials {
 
 export interface AuthResponse {
   user: User;
-  accessToken: string;
+  access_token: string;
+  token_type: string;
+  expires_in: number;
 }
 
 export interface RefreshTokenResponse {

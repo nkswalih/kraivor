@@ -15,9 +15,9 @@ from unittest.mock import patch
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from apps.users.models import User
-from apps.authentication.security import get_lockout_manager
-from apps.authentication.otp import get_otp_service
+from users.models import User
+from authentication.security import get_lockout_manager
+from authentication.otp import get_otp_service
 
 
 class SignInIdentifyTests(TestCase):

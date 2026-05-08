@@ -18,9 +18,9 @@ import jwt
 from django.conf import settings
 from django.test import TestCase
 from rest_framework.test import APIClient
-from apps.users.models import User
-from apps.users.rate_limiter import RateLimitExceeded, RedisRateLimiter
-from apps.users.verification import (
+from users.models import User
+from users.rate_limiter import RateLimitExceeded, RedisRateLimiter
+from users.verification import (
     _ALGORITHM,
     _TOKEN_TYPE,
     decode_verification_token,

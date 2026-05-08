@@ -4,19 +4,25 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     gcc \
-    postgresql-client \
     libpq-dev \
+    postgresql-client \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
 ENV PATH="/root/.local/bin:$PATH"
 
-COPY pyproject.toml /app/
-RUN uv sync --frozen --no-dev
+# Copy dependency files first (better Docker cache)
+COPY pyproject.toml uv.lock* /app/
 
+# Install dependencies
+RUN uv sync --frozen
+
+# Copy project files
 COPY . /app/
 
 EXPOSE 8001
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8001"]
+CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8001"]

@@ -182,6 +182,31 @@ class EmailService:
         )
         logger.info("Verification email sent to %s", user.email)
 
+    def send_email(self, to_email: str, subject: str, message: str) -> None:
+        """
+        Send a plain text email.
+        
+        Used for OTP codes, password reset, etc.
+        """
+        text = f"{message}\n\n— The Kraivor Team"
+        html = f"""<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, sans-serif; background: #0f0f13; color: #e2e8f0; padding: 40px;">
+  <div style="max-width: 520px; margin: 0 auto; background: #1a1a2e; border-radius: 12px; padding: 40px;">
+    <h2 style="margin: 0 0 16px;">✦ Kraivor</h2>
+    <p style="line-height: 1.6;">{message}</p>
+  </div>
+</body>
+</html>"""
+        
+        logger.info("Sending email to %s", to_email)
+        self._backend.send(
+            to_email=to_email,
+            subject=subject,
+            html=html,
+            text=text,
+        )
+
 
 # Module-level singleton
 email_service = EmailService()

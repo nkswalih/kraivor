@@ -1,4 +1,18 @@
+from django.urls import path
+
+from .views import (
+    OTPVerifyView,
+    OTPSendView,
+    SignInIdentifyView,
+    SignInPasswordView,
+    RefreshTokenView,
+)
 
 urlpatterns = [
-    # Will add signin, refresh, etc. in KRV-011
+    # KRV-011: Multi-step Sign In
+    path("signin/identify/", SignInIdentifyView.as_view(), name="signin-identify"),
+    path("signin/password/", SignInPasswordView.as_view(), name="signin-password"),
+    path("signin/otp/send/", OTPSendView.as_view(), name="signin-otp-send"),
+    path("signin/otp/verify/", OTPVerifyView.as_view(), name="signin-otp-verify"),
+    path("refresh/", RefreshTokenView.as_view(), name="token-refresh"),
 ]

@@ -1,7 +1,7 @@
 import apiClient from './client';
 import { API_ENDPOINTS } from '@/constants';
 import type {
-  LoginCredentials,
+  SignInCredentials,
   RegisterCredentials,
   AuthResponse,
   RefreshTokenResponse,
@@ -9,18 +9,48 @@ import type {
   ResetPasswordPayload,
   VerifyEmailPayload,
   User,
+  IdentifyResponse,
+  OTPSendRequest,
+  OTPVerifyRequest,
 } from '@/types/auth';
 import { handleApiError } from './error-handler';
 
-export const authApi = {
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+class AuthApi {
+  async identify(email: string): Promise<IdentifyResponse> {
     try {
-      const response = await apiClient.post<AuthResponse>(API_ENDPOINTS.AUTH.LOGIN, credentials);
+      const response = await apiClient.post<IdentifyResponse>(API_ENDPOINTS.AUTH.IDENTIFY, { email });
       return response;
     } catch (error) {
       throw handleApiError(error);
     }
-  },
+  }
+
+  async signInWithPassword(credentials: SignInCredentials): Promise<AuthResponse> {
+    try {
+      const response = await apiClient.post<AuthResponse>(API_ENDPOINTS.AUTH.PASSWORD, credentials);
+      return response;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async sendOTP(payload: OTPSendRequest): Promise<{ message: string }> {
+    try {
+      const response = await apiClient.post<{ message: string }>(API_ENDPOINTS.AUTH.OTP_SEND, payload);
+      return response;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async verifyOTP(payload: OTPVerifyRequest): Promise<AuthResponse> {
+    try {
+      const response = await apiClient.post<AuthResponse>(API_ENDPOINTS.AUTH.OTP_VERIFY, payload);
+      return response;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
 
   async register(credentials: RegisterCredentials): Promise<AuthResponse> {
     try {
@@ -29,7 +59,7 @@ export const authApi = {
     } catch (error) {
       throw handleApiError(error);
     }
-  },
+  }
 
   async logout(): Promise<void> {
     try {
@@ -37,7 +67,7 @@ export const authApi = {
     } catch (error) {
       throw handleApiError(error);
     }
-  },
+  }
 
   async refreshToken(): Promise<RefreshTokenResponse> {
     try {
@@ -46,7 +76,7 @@ export const authApi = {
     } catch (error) {
       throw handleApiError(error);
     }
-  },
+  }
 
   async forgotPassword(payload: ForgotPasswordPayload): Promise<void> {
     try {
@@ -54,7 +84,7 @@ export const authApi = {
     } catch (error) {
       throw handleApiError(error);
     }
-  },
+  }
 
   async resetPassword(payload: ResetPasswordPayload): Promise<void> {
     try {
@@ -62,7 +92,7 @@ export const authApi = {
     } catch (error) {
       throw handleApiError(error);
     }
-  },
+  }
 
   async verifyEmail(payload: VerifyEmailPayload): Promise<void> {
     try {
@@ -70,7 +100,7 @@ export const authApi = {
     } catch (error) {
       throw handleApiError(error);
     }
-  },
+  }
 
   async getCurrentUser(): Promise<User> {
     try {
@@ -79,7 +109,8 @@ export const authApi = {
     } catch (error) {
       throw handleApiError(error);
     }
-  },
-};
+  }
+}
 
+export const authApi = new AuthApi();
 export default authApi;

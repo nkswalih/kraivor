@@ -184,7 +184,7 @@ class OTPSender:
         
         Uses the existing email_service infrastructure.
         """
-        from apps.users.email_service import email_service
+        from users.email_service import email_service
         
         subject = "Your Kraivor Sign-In Code"
         message = f"""

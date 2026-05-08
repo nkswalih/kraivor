@@ -43,7 +43,7 @@ from .serializers import (
 )
 from .jwt import generate_token_pair, create_refresh_cookie
 
-from apps.users.models import User
+from users.models import User
 
 logger = logging.getLogger(__name__)
 

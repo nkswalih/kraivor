@@ -49,7 +49,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         db_table = 'auth_users'
         verbose_name = 'User'
         verbose_name_plural = 'Users'
-        app_label = 'users'
+        app_label = 'apps.users'
 
     def __str__(self):
         return self.email

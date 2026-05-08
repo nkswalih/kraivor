@@ -21,7 +21,7 @@ import jwt
 from django.conf import settings
 
 if TYPE_CHECKING:
-    from users.models import User
+    from apps.users.models import User
 
 _ALGORITHM = "HS256"
 _TOKEN_TYPE = "email_verification"

@@ -34,11 +34,11 @@ jobs:
       - name: Run migrations
         run: uv run python manage.py migrate
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: postgresql://kraivor:kraivor@localhost:5432/kraivor_dev
       - name: Run tests
         run: uv run python manage.py test
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: postgresql://kraivor:kraivor@localhost:5432/kraivor_dev
 
   # test-core:
   #   runs-on: ubuntu-latest

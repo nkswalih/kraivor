@@ -26,6 +26,15 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
@@ -37,10 +46,12 @@ jobs:
         run: uv run python manage.py migrate
         env:
           DATABASE_URL: postgresql://kraivor:kraivor@localhost:5432/kraivor_dev
+          REDIS_URL: redis://localhost:6379/0
       - name: Run tests
         run: uv run python manage.py test
         env:
           DATABASE_URL: postgresql://kraivor:kraivor@localhost:5432/kraivor_dev
+          REDIS_URL: redis://localhost:6379/0
 
   # test-core:
   #   runs-on: ubuntu-latest

@@ -118,3 +118,26 @@ EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=False)
 EMAIL_USE_STARTTLS = env.bool('EMAIL_USE_STARTTLS', default=False)
 EMAIL_FROM = env('EMAIL_FROM', default='noreply@kraivor.com')
+
+# ---------------------------------------------------------------------------
+# JWT (RS256) - KRV-011
+# ---------------------------------------------------------------------------
+JWT_PRIVATE_KEY_PATH = os.path.join(BASE_DIR, env('JWT_PRIVATE_KEY_PATH', default='.keys/jwt-private.pem'))
+JWT_PUBLIC_KEY_PATH = os.path.join(BASE_DIR, env('JWT_PUBLIC_KEY_PATH', default='.keys/jwt-public.pem'))
+JWT_ALGORITHM = env('JWT_ALGORITHM', default='RS256')
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES = env.int('JWT_ACCESS_TOKEN_EXPIRE_MINUTES', default=15)
+JWT_REFRESH_TOKEN_EXPIRE_DAYS = env.int('JWT_REFRESH_TOKEN_EXPIRE_DAYS', default=30)
+
+# ---------------------------------------------------------------------------
+# Login Lockout (Redis) - KRV-011
+# ---------------------------------------------------------------------------
+LOGIN_MAX_FAILURES = env.int('LOGIN_MAX_FAILURES', default=5)
+LOGIN_LOCKOUT_MINUTES = env.int('LOGIN_LOCKOUT_MINUTES', default=15)
+
+# ---------------------------------------------------------------------------
+# OTP Configuration - KRV-011
+# ---------------------------------------------------------------------------
+OTP_CODE_LENGTH = 6
+OTP_EXPIRE_MINUTES = 5
+OTP_MAX_ATTEMPTS = 3
+OTP_RESEND_WAIT_SECONDS = 60

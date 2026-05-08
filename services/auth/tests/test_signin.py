@@ -81,10 +81,14 @@ class OTPFlowTests(TestCase):
     @patch("authentication.views.get_lockout_manager")
     @patch("authentication.views.get_otp_service")
     def test_otp_verify_invalid(self, mock_otp_svc, mock_lockout_mgr):
-        from authentication.otp import OTPService
+        from authentication.otp import OTPService, OTPInvalidError
         from authentication.security import LoginLockoutManager
         mock_svc = OTPService()
-        mock_svc.verify_otp = lambda e, c: (_ for _ in ()).throw(Exception("Invalid OTP"))
+        
+        def raise_invalid(e, c):
+            raise OTPInvalidError("Invalid OTP")
+        
+        mock_svc.verify_otp = raise_invalid
         mock_otp_svc.return_value = mock_svc
         mock_mgr = LoginLockoutManager()
         mock_mgr.check_lockout = lambda e, ip: (False, 0)

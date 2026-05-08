@@ -1,5 +1,5 @@
-from apps.authentication.security import get_lockout_manager
-from apps.authentication.otp import get_otp_service, get_otp_sender
+from authentication.security import get_lockout_manager
+from authentication.otp import get_otp_service, get_otp_sender
 
 __all__ = [
     "SignInIdentifyView",

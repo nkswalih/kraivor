@@ -1,0 +1,15 @@
+[project]
+name = "ai"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.100",
+    "uvicorn[standard]>=0.23",
+    "sqlalchemy[asyncio]>=2.0",
+    "psycopg2-binary>=2.9",
+    "redis>=5.0",
+    "celery>=5.3",
+    "openai>=1.0",
+    "anthropic>=0.8",
+    "langchain>=0.1",
+]

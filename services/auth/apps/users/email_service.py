@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING
 from django.conf import settings
 
 if TYPE_CHECKING:
-    from users.models import User
+    from apps.users.models import User
 
 logger = logging.getLogger(__name__)
 

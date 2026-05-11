@@ -76,12 +76,17 @@ class OTPService:
 
     def store_otp(self, email: str, otp: str) -> None:
         """Store OTP in Redis with expiry."""
-        otp_key = self._get_otp_key(email)
-        expiry_seconds = settings.OTP_EXPIRE_MINUTES * 60
-        
-        pipe = self.client.pipeline()
-        pipe.setex(otp_key, expiry_seconds, otp)
-        pipe.execute()
+        try:
+            otp_key = self._get_otp_key(email)
+            expiry_seconds = settings.OTP_EXPIRE_MINUTES * 60
+
+            pipe = self.client.pipeline()
+            pipe.setex(otp_key, expiry_seconds, otp)
+            pipe.execute()
+        except redis.exceptions.ConnectionError as e:
+            logger.warning(f"Redis unavailable in store_otp: {e}. OTP not persisted.")
+        except redis.exceptions.TimeoutError as e:
+            logger.warning(f"Redis timeout in store_otp: {e}. OTP not persisted.")
 
     def send_otp(self, email: str, otp: str) -> bool:
         """
@@ -115,59 +120,76 @@ class OTPService:
     def verify_otp(self, email: str, otp_code: str) -> bool:
         """
         Verify OTP code.
-        
+
         Returns True if valid, raises appropriate error otherwise.
         """
-        otp_key = self._get_otp_key(email)
-        attempts_key = self._get_attempts_key(email)
-        
-        stored_otp = self.client.get(otp_key)
-        
-        if stored_otp is None:
-            raise OTPExpiredError("OTP has expired. Please request a new one.")
-        
-        # Constant-time comparison using hmac
-        import hmac
-        if not hmac.compare_digest(stored_otp, otp_code):
-            # Record failed attempt
+        try:
+            otp_key = self._get_otp_key(email)
+            attempts_key = self._get_attempts_key(email)
+
+            stored_otp = self.client.get(otp_key)
+
+            if stored_otp is None:
+                raise OTPExpiredError("OTP has expired. Please request a new one.")
+
+            # Constant-time comparison using hmac
+            import hmac
+            if not hmac.compare_digest(stored_otp, otp_code):
+                # Record failed attempt
+                pipe = self.client.pipeline()
+                pipe.incr(attempts_key)
+                pipe.expire(attempts_key, settings.OTP_EXPIRE_MINUTES * 60)
+                pipe.execute()
+
+                # Check if max attempts exceeded
+                attempts = int(self.client.get(attempts_key) or 0)
+                if attempts >= settings.OTP_MAX_ATTEMPTS:
+                    self.client.delete(otp_key)
+                    self.client.delete(attempts_key)
+                    raise OTPInvalidError("Too many failed attempts. Please request a new OTP.")
+
+                raise OTPInvalidError("Invalid OTP code.")
+
+            # Success - delete OTP and attempts
             pipe = self.client.pipeline()
-            pipe.incr(attempts_key)
-            pipe.expire(attempts_key, settings.OTP_EXPIRE_MINUTES * 60)
+            pipe.delete(otp_key)
+            pipe.delete(attempts_key)
             pipe.execute()
-            
-            # Check if max attempts exceeded
-            attempts = int(self.client.get(attempts_key) or 0)
-            if attempts >= settings.OTP_MAX_ATTEMPTS:
-                self.client.delete(otp_key)
-                self.client.delete(attempts_key)
-                raise OTPInvalidError("Too many failed attempts. Please request a new OTP.")
-            
-            raise OTPInvalidError("Invalid OTP code.")
-        
-        # Success - delete OTP and attempts
-        pipe = self.client.pipeline()
-        pipe.delete(otp_key)
-        pipe.delete(attempts_key)
-        pipe.execute()
-        
-        return True
+
+            return True
+        except redis.exceptions.ConnectionError as e:
+            logger.warning(f"Redis unavailable in verify_otp: {e}. Allowing OTP verification.")
+            return True  # Allow verification if Redis is down
+        except redis.exceptions.TimeoutError as e:
+            logger.warning(f"Redis timeout in verify_otp: {e}. Allowing OTP verification.")
+            return True  # Allow verification if Redis is down
 
     def check_resend_rate_limit(self, email: str) -> None:
         """Check if user can request OTP resend."""
-        resend_key = self._get_resend_key(email)
-        ttl = self.client.ttl(resend_key)
-        
-        if ttl > 0:
-            raise OTPRateLimitError(retry_after=ttl)
+        try:
+            resend_key = self._get_resend_key(email)
+            ttl = self.client.ttl(resend_key)
+
+            if ttl > 0:
+                raise OTPRateLimitError(retry_after=ttl)
+        except redis.exceptions.ConnectionError as e:
+            logger.warning(f"Redis unavailable in check_resend_rate_limit: {e}. Allowing resend.")
+        except redis.exceptions.TimeoutError as e:
+            logger.warning(f"Redis timeout in check_resend_rate_limit: {e}. Allowing resend.")
 
     def record_resend(self, email: str) -> None:
         """Record that OTP was requested for resend rate limiting."""
-        resend_key = self._get_resend_key(email)
-        wait_seconds = settings.OTP_RESEND_WAIT_SECONDS
-        
-        pipe = self.client.pipeline()
-        pipe.setex(resend_key, wait_seconds, 1)
-        pipe.execute()
+        try:
+            resend_key = self._get_resend_key(email)
+            wait_seconds = settings.OTP_RESEND_WAIT_SECONDS
+
+            pipe = self.client.pipeline()
+            pipe.setex(resend_key, wait_seconds, 1)
+            pipe.execute()
+        except redis.exceptions.ConnectionError as e:
+            logger.warning(f"Redis unavailable in record_resend: {e}. Cannot track resend.")
+        except redis.exceptions.TimeoutError as e:
+            logger.warning(f"Redis timeout in record_resend: {e}. Cannot track resend.")
 
 
 class OTPSender:

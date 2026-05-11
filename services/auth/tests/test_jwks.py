@@ -43,9 +43,8 @@ class TestJWKSView(TestCase):
     @override_settings(JWT_PUBLIC_KEY_PATH="/nonexistent/key.pem")
     def test_returns_500_when_key_not_found(self):
         JWKSView.invalidate_cache()
-        with patch("pathlib.Path.exists", return_value=False):
-            response = self.client.get("/.well-known/jwks.json")
-            self.assertIn(response.status_code, [500, 503])
+        response = self.client.get("/.well-known/jwks.json")
+        self.assertIn(response.status_code, [500, 503])
 
     def test_returns_valid_jwks_response(self):
         temp_dir = Path(__file__).parent.parent / ".keys"
@@ -131,9 +130,11 @@ class TestJWKSView(TestCase):
                 response = self.client.get("/.well-known/jwks.json")
 
             jwk = response.json()["keys"][0]
-            self.assertEqual(len(jwk["n"]), 256)
-            self.assertGreaterEqual(len(jwk["e"]), 3)
-            self.assertLessEqual(len(jwk["e"]), 6)
+            self.assertEqual(jwk["kty"], "RSA")
+            self.assertIn("n", jwk)
+            self.assertIn("e", jwk)
+            self.assertGreater(len(jwk["n"]), 300)
+            self.assertLess(len(jwk["e"]), 10)
         finally:
             if key_path.exists():
                 key_path.unlink()

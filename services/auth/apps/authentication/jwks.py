@@ -7,6 +7,7 @@ from django.http import Http404, JsonResponse
 from django.views import View
 
 from django.conf import settings
+from django.http import HttpResponseServerError
 
 
 class JWKSView(View):
@@ -15,10 +16,13 @@ class JWKSView(View):
     _cached_jwks = None
 
     def get(self, request):
-        jwks = self._get_jwks()
-        response = JsonResponse(jwks)
-        response["Cache-Control"] = "public, max-age=3600"
-        return response
+        try:
+            jwks = self._get_jwks()
+            response = JsonResponse(jwks)
+            response["Cache-Control"] = "public, max-age=3600"
+            return response
+        except FileNotFoundError:
+            return HttpResponseServerError("Public key not found")
 
     @classmethod
     def _get_jwks(cls):

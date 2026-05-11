@@ -26,16 +26,13 @@ services:
       timeout: 3s
       retries: 5
 
-  # MailHog — development email capture (KRV-010)
-  # Web UI: http://localhost:8025  |  SMTP: localhost:1025
-  # NOT included in production — see docs/email-architecture.md
   mailhog:
     image: mailhog/mailhog:latest
     ports:
-      - "1025:1025"   # SMTP
-      - "8025:8025"   # Web UI
+      - "1025:1025"
+      - "8025:8025"
     logging:
-      driver: "none"  # suppress verbose SMTP logs
+      driver: "none"
 
   kafka:
     image: bitnami/kafka:3.5
@@ -67,7 +64,7 @@ services:
         condition: service_healthy
     volumes:
       - ./services/auth:/app
-    command: python manage.py runserver 0.0.0.0:8001
+      - identity_venv:/app/.venv
 
   core:
     build:
@@ -171,3 +168,4 @@ services:
 
 volumes:
   postgres_data:
+  identity_venv:

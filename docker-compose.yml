@@ -2,9 +2,9 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: kraivor
-      POSTGRES_PASSWORD: kraivor
-      POSTGRES_DB: kraivor
+      POSTGRES_USER: ${POSTGRES_USER:-kraivor}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-kraivor}
     ports:
       - "5433:5432"
     volumes:
@@ -55,7 +55,7 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: auth.settings.development
       DB_HOST: postgres
-      DATABASE_URL: postgresql://kraivor:kraivor@postgres:5432/kraivor
+      DATABASE_URL: postgresql://kraivor:${DB_PASSWORD}@postgres:5432/kraivor
       REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
@@ -73,7 +73,7 @@ services:
     ports:
       - "8002:8002"
     environment:
-      DATABASE_URL: postgresql://kraivor:kraivor@postgres:5432/kraivor
+      DATABASE_URL: postgresql://kraivor:${DB_PASSWORD}@postgres:5432/kraivor
       REDIS_URL: redis://redis:6379/0
     depends_on:
       - postgres
@@ -86,7 +86,7 @@ services:
     ports:
       - "8003:8003"
     environment:
-      DATABASE_URL: postgresql://kraivor:kraivor@postgres:5432/kraivor
+      DATABASE_URL: postgresql://kraivor:${DB_PASSWORD}@postgres:5432/kraivor
       REDIS_URL: redis://redis:6379/0
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
@@ -101,7 +101,7 @@ services:
     ports:
       - "8004:8004"
     environment:
-      DATABASE_URL: postgresql://kraivor:kraivor@postgres:5432/kraivor
+      DATABASE_URL: postgresql://kraivor:${DB_PASSWORD}@postgres:5432/kraivor
       REDIS_URL: redis://redis:6379/0
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
@@ -116,7 +116,7 @@ services:
     ports:
       - "8005:8005"
     environment:
-      DATABASE_URL: postgresql://kraivor:kraivor@postgres:5432/kraivor
+      DATABASE_URL: postgresql://kraivor:${DB_PASSWORD}@postgres:5432/kraivor
       REDIS_URL: redis://redis:6379/0
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:

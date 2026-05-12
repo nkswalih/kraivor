@@ -54,6 +54,7 @@ class RefreshToken(models.Model):
         indexes = [
             models.Index(fields=['user', 'device_id']),
             models.Index(fields=['token_hash']),
+            models.Index(fields=['user', 'revoked', 'expires_at']),
         ]
 
     def is_valid(self):

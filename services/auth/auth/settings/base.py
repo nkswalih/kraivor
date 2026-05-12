@@ -297,6 +297,11 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # LOGGING CONFIGURATION
 # =============================================================================
 
+# Create logs directory if it doesn't exist
+logs_dir = os.path.join(BASE_DIR, 'logs')
+if not os.path.exists(logs_dir):
+    os.makedirs(logs_dir, exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -316,7 +321,7 @@ LOGGING = {
         },
         'file': {
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
+            'filename': os.path.join(logs_dir, 'django.log'),
             'maxBytes': 1024 * 1024 * 10,  # 10MB
             'backupCount': 5,
             'formatter': 'verbose',

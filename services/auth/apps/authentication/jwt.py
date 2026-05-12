@@ -1,82 +1,90 @@
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+"""
+JWT Utilities - Legacy compatibility layer
+==========================================
 
-from django.conf import settings
-from rest_framework_simplejwt.tokens import RefreshToken
+This module provides backward compatibility for code that references
+the old jwt.py functions. New code should use tokens.py directly.
+
+DEPRECATED: Use tokens.py for new implementations.
+"""
+
+from .tokens import (
+    TokenPair,
+    TokenPayload,
+    get_token_service,
+    TokenError,
+    TokenExpiredError,
+    TokenInvalidError,
+    TokenRevokedError,
+    TokenReusedError,
+    CustomRefreshToken,
+)
+
+from .cookie_utils import create_refresh_cookie, clear_refresh_cookie
 
 
-class CustomRefreshToken(RefreshToken):
-    """Custom refresh token with device_id and extended claims."""
-
-    @classmethod
-    def for_user(cls, user, device_id: str = ""):
-        token = super().for_user(user)
-        token['name'] = user.name
-        if device_id:
-            token['device_id'] = device_id
-        return token
-
-
-def generate_token_pair(user, device_id: str = "", ip: str = "", user_agent: str = "") -> dict:
+def generate_token_pair(user, device_id: str = "", ip: str = "", user_agent: str = ""):
     """
     Generate access and refresh token pair.
     
-    Returns:
-        {
-            'access_token': str,
-            'refresh_token': str,
-            'token_type': 'Bearer',
-            'expires_in': int (seconds),
-        }
+    DEPRECATED: Use TokenService.generate_tokens() instead.
+    This function is maintained for backward compatibility.
     """
-    refresh = CustomRefreshToken.for_user(user, device_id)
-    
-    access_token = str(refresh.access_token)
-    refresh_token = str(refresh)
-    
-    # Calculate expiry in seconds
-    expire_minutes = settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
-    expires_in = expire_minutes * 60
+    token_service = get_token_service()
+    token_pair = token_service.generate_tokens(
+        user=user,
+        device_id=device_id,
+        ip_address=ip,
+        user_agent=user_agent,
+    )
     
     return {
-        'access_token': access_token,
-        'refresh_token': refresh_token,
-        'token_type': 'Bearer',
-        'expires_in': expires_in,
+        'access_token': token_pair.access_token,
+        'refresh_token': token_pair.refresh_token,
+        'token_type': token_pair.token_type,
+        'expires_in': token_pair.expires_in,
     }
 
 
-def create_refresh_cookie(refresh_token: str) -> dict:
+def create_refresh_cookie_deprecated(refresh_token: str) -> dict:
     """
     Create refresh token cookie settings.
     
-    Returns cookie attributes dict for Response.set_cookie()
+    DEPRECATED: Use create_refresh_cookie from cookie_utils instead.
     """
-    max_age = settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+    return create_refresh_cookie(refresh_token)
+
+
+def decode_refresh_token(token: str):
+    """
+    Decode refresh token payload.
+    
+    DEPRECATED: Use TokenService.validate_only() instead.
+    """
+    token_service = get_token_service()
+    payload = token_service.validate_only(token)
     
     return {
-        'refresh_token': refresh_token,
-        'max_age': max_age,
-        'httponly': True,
-        'secure': not settings.DEBUG,
-        'samesite': 'Lax',
-        'path': '/auth/',
+        'user_id': payload.user_id,
+        'email': payload.email,
+        'name': payload.name,
+        'device_id': payload.device_id,
     }
 
 
-def decode_refresh_token(token: str) -> Optional[dict]:
-    """
-    Decode and validate refresh token.
-    
-    Returns token payload or None if invalid.
-    """
-    try:
-        token_obj = RefreshToken(token)
-        return {
-            'user_id': str(token_obj.get('user_id')),
-            'email': token_obj.get('email'),
-            'name': token_obj.get('name'),
-            'device_id': token_obj.get('device_id', ''),
-        }
-    except Exception:
-        return None
+__all__ = [
+    'TokenPair',
+    'TokenPayload',
+    'get_token_service',
+    'TokenError',
+    'TokenExpiredError',
+    'TokenInvalidError',
+    'TokenRevokedError',
+    'TokenReusedError',
+    'CustomRefreshToken',
+    'create_refresh_cookie',
+    'clear_refresh_cookie',
+    'generate_token_pair',
+    'create_refresh_cookie_deprecated',
+    'decode_refresh_token',
+]

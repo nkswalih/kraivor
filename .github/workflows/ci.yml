@@ -2,112 +2,141 @@ name: CI
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [main, dev]
   pull_request:
-    branches: [ main, dev ]
+    branches: [main, dev]
+
+env:
+  PYTHON_VERSION: '3.11'
+  UV_VERSION: 'latest'
+  DATABASE_URL: 'sqlite://:memory:'
+  REDIS_URL: 'redis://localhost:6379/15'
+  SECRET_KEY: 'ci-test-secret-key-not-for-production'
+  JWT_PRIVATE_KEY_PATH: 'services/auth/.keys/jwt-private.pem'
+  JWT_PUBLIC_KEY_PATH: 'services/auth/.keys/jwt-public.pem'
+  JWT_ALGORITHM: 'RS256'
+  JWT_ACCESS_TOKEN_EXPIRE_MINUTES: '15'
+  JWT_REFRESH_TOKEN_EXPIRE_DAYS: '30'
 
 jobs:
-  test-identity:
+  test-auth:
+    name: Auth Service Tests
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: services/auth
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ env.UV_VERSION }}-${{ hashFiles('services/auth/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-${{ env.UV_VERSION }}-
+            ${{ runner.os }}-uv-
+
       - name: Install dependencies
         run: uv sync --frozen
+
+      - name: Create test keys
+        run: |
+          mkdir -p .keys
+          openssl genrsa -out .keys/jwt-private.pem 2048
+          openssl rsa -in .keys/jwt-private.pem -pubout -out .keys/jwt-public.pem
+
       - name: Run tests
-        run: uv run python manage.py test --settings=auth.settings.test
+        run: |
+          uv run pytest \
+            --color=yes \
+            --tb=short \
+            --cov=apps \
+            --cov-report=term-missing:skip-covered \
+            --cov-report=xml \
+            --cov-report=html \
+            --maxfail=3 \
+            -m "not slow" \
+            -q
 
-  # test-core:
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: services/core
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.11'
-  #     - name: Install dependencies
-  #       run: pip install -r requirements/development.txt
-  #     - name: Run tests
-  #       run: python manage.py test
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: services/auth/htmlcov
+          retention-days: 7
 
-  # test-analysis:
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: services/analysis
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.11'
-  #     - name: Install dependencies
-  #       run: pip install -r requirements/development.txt
-  #     - name: Run tests
-  #       run: pytest tests/
+      - name: Coverage summary
+        run: |
+          echo "## Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat coverage.xml | grep -oP '(?<=line-rate>)[^<]+' | head -1 | xargs -I{} echo "Line coverage: {}%" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
-  # test-ai:
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: services/ai
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.11'
-  #     - name: Install dependencies
-  #       run: pip install -r requirements/development.txt
-  #     - name: Run tests
-  #       run: pytest tests/
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/auth
 
-  # test-notifications:
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: services/notifications
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.11'
-  #     - name: Install dependencies
-  #       run: pip install -r requirements/development.txt
-  #     - name: Run tests
-  #       run: pytest tests/
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  # test-realtime:
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: services/realtime
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '18'
-  #     - name: Install dependencies
-  #       run: npm install
-  #     - name: Run lint
-  #       run: npm run lint || true
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-  # test-frontend:
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: frontend
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '18'
-  #     - name: Install dependencies
-  #       run: npm install
-  #     - name: Run lint
-  #       run: npm run lint
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run ruff
+        run: uv run ruff check apps/ tests/
+
+  security-checks:
+    name: Security
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/auth
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Create test keys
+        run: |
+          mkdir -p .keys
+          openssl genrsa -out .keys/jwt-private.pem 2048
+          openssl rsa -in .keys/jwt-private.pem -pubout -out .keys/jwt-public.pem
+
+      - name: Run security tests
+        run: |
+          uv run pytest -m security --color=yes --tb=short -v

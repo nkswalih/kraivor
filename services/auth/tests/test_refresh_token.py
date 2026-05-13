@@ -66,23 +66,23 @@ class RefreshTokenRotationTests(TestCase):
     def test_valid_refresh_rotation(self):
         """Test that valid refresh token rotates properly."""
         tokens1 = self._get_tokens_for_user()
-        
+
         initial_count = RefreshToken.objects.filter(user=self.user, revoked=False).count()
-        
+
         response = self.client.post(
             '/api/auth/refresh/',
             HTTP_COOKIE=f'refresh_token={tokens1.refresh_token}',
         )
-        
+
         self.assertEqual(response.status_code, 200)
-        
+
         data = response.json()
         self.assertIn('access_token', data)
         self.assertIn('refresh_token', response.cookies)
-        
+
         final_count = RefreshToken.objects.filter(user=self.user, revoked=False).count()
-        self.assertEqual(final_count, initial_count + 1)
-        
+        self.assertEqual(final_count, initial_count)
+
         revoked_count = RefreshToken.objects.filter(
             user=self.user,
             revoked=True,
@@ -150,23 +150,29 @@ class RefreshTokenRotationTests(TestCase):
         self.assertEqual(response.json()['error_code'], 'missing_token')
 
     def test_revoked_token(self):
-        """Test that revoked token is rejected."""
+        """Test that revoked token triggers security alert (replay attack detected)."""
         tokens = self._get_tokens_for_user()
-        
+
         token_record = RefreshToken.objects.get(
             token_hash=_hash_token(tokens.refresh_token),
             user=self.user,
         )
         token_record.revoked = True
         token_record.save()
-        
+
         response = self.client.post(
             '/api/auth/refresh/',
             HTTP_COOKIE=f'refresh_token={tokens.refresh_token}',
         )
-        
+
         self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.json()['error_code'], 'invalid_token')
+        self.assertEqual(response.json()['error_code'], 'security_alert')
+
+        active_sessions = RefreshToken.objects.filter(
+            user=self.user,
+            revoked=False,
+        ).count()
+        self.assertEqual(active_sessions, 0)
 
     def test_user_not_found(self):
         """Test that token for deleted user is rejected."""
@@ -200,20 +206,20 @@ class RefreshTokenRotationTests(TestCase):
         """Test that refreshing one token doesn't affect others."""
         tokens1 = self._get_tokens_for_user("device-1")
         tokens2 = self._get_tokens_for_user("device-2")
-        
+
         response1 = self.client.post(
             '/api/auth/refresh/',
             HTTP_COOKIE=f'refresh_token={tokens1.refresh_token}',
         )
-        
+
         self.assertEqual(response1.status_code, 200)
-        
+
         active_sessions = RefreshToken.objects.filter(
             user=self.user,
             revoked=False,
         ).count()
-        
-        self.assertEqual(active_sessions, 1)
+
+        self.assertEqual(active_sessions, 2)
 
     def test_concurrent_refresh_same_token(self):
         """Test concurrent refresh attempts with same token."""

@@ -215,7 +215,7 @@ class TestVerifyEmailView(TestCase):
     def test_valid_token_verifies_email(self):
         user = make_user(verified=False)
         token = generate_verification_token(user)
-        response = self.client.post(self.url, {"token": token})
+        response = self.client.post(self.url, {"token": token}, format="json")
         self.assertEqual(response.status_code, 200)
         user.refresh_from_db()
         self.assertTrue(user.email_verified)
@@ -224,33 +224,33 @@ class TestVerifyEmailView(TestCase):
     def test_already_verified_is_idempotent(self):
         user = make_user(verified=True)
         token = generate_verification_token(user)
-        response = self.client.post(self.url, {"token": token})
+        response = self.client.post(self.url, {"token": token}, format="json")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["email_verified"], True)
 
     def test_expired_token_returns_400_with_error_code(self):
         user = make_user()
         token = _expired_token(user)
-        response = self.client.post(self.url, {"token": token})
+        response = self.client.post(self.url, {"token": token}, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["error_code"], "token_expired")
         # hint for frontend to show resend option
         self.assertIn("hint", response.data)
 
     def test_invalid_token_returns_400(self):
-        response = self.client.post(self.url, {"token": "bad.token.here"})
+        response = self.client.post(self.url, {"token": "bad.token.here"}, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["error_code"], "invalid_token")
 
     def test_missing_token_returns_400(self):
-        response = self.client.post(self.url, {})
+        response = self.client.post(self.url, {}, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["error_code"], "missing_token")
 
     def test_wrong_token_type_returns_400(self):
         user = make_user()
         token = _wrong_type_token(user)
-        response = self.client.post(self.url, {"token": token})
+        response = self.client.post(self.url, {"token": token}, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["error_code"], "invalid_token")
 
@@ -267,7 +267,7 @@ class TestVerifyEmailView(TestCase):
             "exp": now + timedelta(hours=24),
         }
         token = jwt.encode(payload, settings.SECRET_KEY, algorithm=_ALGORITHM)
-        response = self.client.post(self.url, {"token": token})
+        response = self.client.post(self.url, {"token": token}, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["error_code"], "invalid_token")
 
@@ -287,7 +287,7 @@ class TestResendVerificationView(TestCase):
     def test_resend_success(self, mock_limiter, mock_email):
         mock_limiter.is_allowed.return_value = True
         user = make_user(email="unverified@example.com", verified=False)
-        response = self.client.post(self.url, {"email": user.email})
+        response = self.client.post(self.url, {"email": user.email}, format="json")
         self.assertEqual(response.status_code, 200)
         mock_email.send_verification_email.assert_called_once()
 
@@ -295,7 +295,7 @@ class TestResendVerificationView(TestCase):
     def test_already_verified_returns_400(self, mock_limiter):
         mock_limiter.is_allowed.return_value = True
         user = make_user(email="verified@example.com", verified=True)
-        response = self.client.post(self.url, {"email": user.email})
+        response = self.client.post(self.url, {"email": user.email}, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["error_code"], "already_verified")
 
@@ -303,7 +303,7 @@ class TestResendVerificationView(TestCase):
     def test_rate_limit_exceeded_returns_429(self, mock_limiter):
         mock_limiter.is_allowed.side_effect = RateLimitExceeded(retry_after=2700)
         make_user(email="ratelimited@example.com", verified=False)
-        response = self.client.post(self.url, {"email": "ratelimited@example.com"})
+        response = self.client.post(self.url, {"email": "ratelimited@example.com"}, format="json")
         self.assertEqual(response.status_code, 429)
         self.assertEqual(response.data["error_code"], "rate_limit_exceeded")
         self.assertIn("Retry-After", response)
@@ -312,11 +312,11 @@ class TestResendVerificationView(TestCase):
     def test_nonexistent_email_returns_200_anti_enumeration(self, mock_limiter):
         """Should return 200 even for unknown emails (prevents enumeration)."""
         mock_limiter.is_allowed.return_value = True
-        response = self.client.post(self.url, {"email": "nobody@example.com"})
+        response = self.client.post(self.url, {"email": "nobody@example.com"}, format="json")
         self.assertEqual(response.status_code, 200)
 
     def test_missing_email_returns_400(self):
-        response = self.client.post(self.url, {})
+        response = self.client.post(self.url, {}, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["error_code"], "missing_email")
 
@@ -326,7 +326,7 @@ class TestResendVerificationView(TestCase):
         mock_limiter.is_allowed.return_value = True
         mock_email.send_verification_email.side_effect = Exception("SMTP down")
         user = make_user(email="fail@example.com", verified=False)
-        response = self.client.post(self.url, {"email": user.email})
+        response = self.client.post(self.url, {"email": user.email}, format="json")
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.data["error_code"], "email_send_failed")
 
@@ -349,7 +349,7 @@ class TestSignUpSendsVerificationEmail(TestCase):
             "password_confirm": "SecurePass123!",
             "name": "New User",
         }
-        response = self.client.post(self.url, data)
+        response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, 201)
         mock_email.send_verification_email.assert_called_once()
         # user should NOT be verified immediately
@@ -366,7 +366,7 @@ class TestSignUpSendsVerificationEmail(TestCase):
             "password_confirm": "SecurePass123!",
             "name": "Email Fail",
         }
-        response = self.client.post(self.url, data)
+        response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, 201)
         self.assertFalse(response.data["email_sent"])
         self.assertTrue(User.objects.filter(email="emailfail@example.com").exists())
@@ -379,7 +379,7 @@ class TestSignUpSendsVerificationEmail(TestCase):
             "password_confirm": "SecurePass123!",
             "name": "Pending Verify",
         }
-        response = self.client.post(self.url, data)
+        response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, 201)
         self.assertFalse(response.data["email_verified"])
 
@@ -405,7 +405,7 @@ class TestEmailVerificationIntegration(TestCase):
             "password_confirm": "IntegrationPass1!",
             "name": "Integration User",
         }
-        signup_resp = self.client.post("/api/auth/signup/", signup_data)
+        signup_resp = self.client.post("/api/auth/signup/", signup_data, format="json")
         self.assertEqual(signup_resp.status_code, 201)
 
         # 2. Capture the token passed to email_service
@@ -414,7 +414,7 @@ class TestEmailVerificationIntegration(TestCase):
         self.assertIsNotNone(token_arg)
 
         # 3. Verify email with captured token
-        verify_resp = self.client.post("/api/auth/verify-email/", {"token": token_arg})
+        verify_resp = self.client.post("/api/auth/verify-email/", {"token": token_arg}, format="json")
         self.assertEqual(verify_resp.status_code, 200)
         self.assertTrue(verify_resp.data["email_verified"])
 
@@ -431,7 +431,7 @@ class TestEmailVerificationIntegration(TestCase):
         # Build an expired token
         expired_token = _expired_token(user)
 
-        response = self.client.post("/api/auth/verify-email/", {"token": expired_token})
+        response = self.client.post("/api/auth/verify-email/", {"token": expired_token}, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["error_code"], "token_expired")
         # hint must be present for frontend to show "Resend email" CTA

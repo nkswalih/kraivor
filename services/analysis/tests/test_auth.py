@@ -52,7 +52,6 @@ def public_key(keypair):
 @pytest.fixture
 def mock_jwks(public_key):
     from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric import rsa
 
     public_key_obj = serialization.load_pem_public_key(public_key)
     public_numbers = public_key_obj.public_numbers()
@@ -90,7 +89,7 @@ def mock_settings():
 
 class TestGetCurrentUser:
     def test_valid_token_returns_payload(self, private_key, mock_settings, mock_jwks):
-        from app.dependencies.auth import get_current_user, _jwks_cache, _jwks_cache_time
+        from app.dependencies.auth import get_current_user
 
         # Set up cache
         import app.dependencies.auth as auth_module
@@ -145,7 +144,7 @@ class TestGetCurrentUser:
         assert exc_info.value.status_code == 401
 
     def test_expired_token_raises_401(self, private_key, mock_settings, mock_jwks):
-        from app.dependencies.auth import get_current_user, _jwks_cache
+        from app.dependencies.auth import get_current_user
 
         import app.dependencies.auth as auth_module
         auth_module._jwks_cache = mock_jwks
@@ -190,7 +189,7 @@ class TestGetCurrentUser:
 
 class TestCacheInvalidation:
     def test_cache_can_be_invalidated(self, mock_settings):
-        from app.dependencies.auth import invalidate_jwks_cache, _jwks_cache, _jwks_cache_time
+        from app.dependencies.auth import invalidate_jwks_cache
 
         import app.dependencies.auth as auth_module
         auth_module._jwks_cache = {"test": "data"}

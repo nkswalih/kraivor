@@ -7,15 +7,14 @@ Usage:
     user = UserFactory.create()
     tokens = TokenFactory.create_for_user(user)
 """
-from dataclasses import dataclass
-from typing import Optional
 
-from django.conf import settings
+from dataclasses import dataclass
 
 
 @dataclass
 class TokenData:
     """Container for token data."""
+
     access_token: str
     refresh_token: str
     token_type: str
@@ -37,14 +36,14 @@ class UserFactory:
     @classmethod
     def create(
         cls,
-        email: Optional[str] = None,
+        email: str | None = None,
         name: str = "Test User",
         password: str = "testpass123",
         email_verified: bool = False,
         is_active: bool = True,
         is_staff: bool = False,
         is_superuser: bool = False,
-        **kwargs
+        **kwargs,
     ):
         """Create a new user with the given attributes."""
         from users.models import User
@@ -60,7 +59,7 @@ class UserFactory:
             is_active=is_active,
             is_staff=is_staff,
             is_superuser=is_superuser,
-            **kwargs
+            **kwargs,
         )
         return user
 
@@ -137,8 +136,8 @@ class JWKSFactory:
     @staticmethod
     def generate_keypair():
         """Generate a new RSA keypair."""
-        from cryptography.hazmat.primitives.asymmetric import rsa
         from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
 
         private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         public_key = private_key.public_key()
@@ -147,11 +146,11 @@ class JWKSFactory:
             "private_pem": private_key.private_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
+                encryption_algorithm=serialization.NoEncryption(),
             ),
             "public_pem": public_key.public_bytes(
                 encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
             ),
         }
 

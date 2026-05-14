@@ -1,17 +1,16 @@
 """
 Unit and integration tests for signup flow.
 """
-import pytest
+
 from unittest.mock import patch
 
+import pytest
 from rest_framework.test import APIClient
-
 from users.models import User
 
 
 @pytest.mark.auth
 class TestSignUp:
-
     @patch("users.views.email_service")
     def test_valid_signup(self, mock_email, db):
         client = APIClient()
@@ -71,7 +70,6 @@ class TestSignUp:
 
 @pytest.mark.auth
 class TestSignUpIntegration:
-
     @patch("users.views.email_service")
     def test_full_signup_flow(self, mock_email, db):
         """Integration test for full signup flow — KRV-009."""

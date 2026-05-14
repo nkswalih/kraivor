@@ -5,7 +5,7 @@ from django.db import models
 
 class APIKey(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='api_keys')
+    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="api_keys")
     name = models.CharField(max_length=255)
     key_hash = models.CharField(max_length=255)
     prefix = models.CharField(max_length=20)
@@ -16,7 +16,7 @@ class APIKey(models.Model):
     revoked = models.BooleanField(default=False)
 
     class Meta:
-        db_table = 'auth_api_keys'
+        db_table = "auth_api_keys"
 
     def is_valid(self):
         return not self.revoked and not (

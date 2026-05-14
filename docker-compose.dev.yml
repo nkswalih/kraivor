@@ -60,6 +60,7 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=auth.settings.development
       - DB_HOST=postgres
+      - UV_LINK_MODE=copy
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,10 +70,8 @@ services:
       - "8001:8001"
     volumes:
       - ./services/auth:/app
-      - identity_venv:/app/.venv
     stdin_open: true
     tty: true
 
 volumes:
   postgres_data:
-  identity_venv:

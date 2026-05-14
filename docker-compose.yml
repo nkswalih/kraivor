@@ -45,7 +45,7 @@ services:
 
   # Message queue
   kafka:
-    image: bitnami/kafka:3.5
+    image: bitnami/kafka:latest
     ports:
       - "9092:9092"
     environment:

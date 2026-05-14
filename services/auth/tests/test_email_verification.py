@@ -94,9 +94,7 @@ class TestGenerateVerificationToken(TestCase):
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[_ALGORITHM])
         exp = datetime.fromtimestamp(payload["exp"], tz=UTC)
         # exp must be roughly now + 24h (within 5 s of test execution)
-        self.assertAlmostEqual(
-            (exp - before).total_seconds(), 24 * 3600, delta=5
-        )
+        self.assertAlmostEqual((exp - before).total_seconds(), 24 * 3600, delta=5)
         _ = after  # suppress lint
 
     def test_different_users_get_different_tokens(self):
@@ -414,7 +412,9 @@ class TestEmailVerificationIntegration(TestCase):
         self.assertIsNotNone(token_arg)
 
         # 3. Verify email with captured token
-        verify_resp = self.client.post("/api/auth/verify-email/", {"token": token_arg}, format="json")
+        verify_resp = self.client.post(
+            "/api/auth/verify-email/", {"token": token_arg}, format="json"
+        )
         self.assertEqual(verify_resp.status_code, 200)
         self.assertTrue(verify_resp.data["email_verified"])
 
@@ -431,7 +431,9 @@ class TestEmailVerificationIntegration(TestCase):
         # Build an expired token
         expired_token = _expired_token(user)
 
-        response = self.client.post("/api/auth/verify-email/", {"token": expired_token}, format="json")
+        response = self.client.post(
+            "/api/auth/verify-email/", {"token": expired_token}, format="json"
+        )
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["error_code"], "token_expired")
         # hint must be present for frontend to show "Resend email" CTA

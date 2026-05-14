@@ -25,4 +25,4 @@ COPY . /app/
 
 EXPOSE 8001
 
-CMD ["/bin/bash", "-c", "source /app/.venv/bin/activate && python manage.py runserver 0.0.0.0:8001"]
+CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8001"]

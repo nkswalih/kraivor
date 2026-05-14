@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import environ
@@ -9,7 +8,7 @@ env = environ.Env(
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-SECRET_KEY = env('SECRET_KEY', default='dev-secret-key-not-for-production')
+SECRET_KEY = env('SECRET_KEY')
 
 DEBUG = env('DEBUG', default=False)
 
@@ -57,7 +56,7 @@ TEMPLATES = [
 STATIC_URL = '/static/'
 
 DATABASES = {
-    'default': env.db_url('DATABASE_URL', default='postgresql://kraivor:kraivor@postgres:5432/kraivor')
+    'default': env.db_url('DATABASE_URL')
 }
 
 AUTH_PASSWORD_HASHERS = [

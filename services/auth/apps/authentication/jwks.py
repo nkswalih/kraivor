@@ -1,13 +1,14 @@
 import base64
+import logging
 from pathlib import Path
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from django.http import Http404, JsonResponse
+from django.conf import settings
+from django.http import JsonResponse
 from django.views import View
 
-from django.conf import settings
-from django.http import HttpResponseServerError
+logger = logging.getLogger(__name__)
 
 
 class JWKSView(View):
@@ -22,7 +23,17 @@ class JWKSView(View):
             response["Cache-Control"] = "public, max-age=3600"
             return response
         except FileNotFoundError:
-            return HttpResponseServerError("Public key not found")
+            logger.error("JWKS: Public key not found at %s", settings.JWT_PUBLIC_KEY_PATH)
+            return JsonResponse(
+                {"error": "Public key not configured", "error_code": "jwks_not_available"},
+                status=503,
+            )
+        except Exception as e:
+            logger.exception("JWKS: Unexpected error loading public key: %s", e)
+            return JsonResponse(
+                {"error": "Failed to load public key", "error_code": "jwks_error"},
+                status=500,
+            )
 
     @classmethod
     def _get_jwks(cls):

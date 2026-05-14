@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import logging
 import secrets
-from typing import Optional
 
 import redis
 from django.conf import settings
@@ -22,22 +21,25 @@ logger = logging.getLogger(__name__)
 
 class OTPError(Exception):
     """Base exception for OTP operations."""
+
     pass
 
 
 class OTPExpiredError(OTPError):
     """Raised when OTP has expired."""
+
     pass
 
 
 class OTPInvalidError(OTPError):
     """Raised when OTP is invalid."""
+
     pass
 
 
 class OTPRateLimitError(OTPError):
     """Raised when too many OTP requests."""
-    
+
     def __init__(self, retry_after: int) -> None:
         self.retry_after = retry_after
         super().__init__(f"Too many requests. Try again in {retry_after} seconds.")
@@ -46,7 +48,7 @@ class OTPRateLimitError(OTPError):
 class OTPService:
     """
     Redis-backed OTP service for sign-in verification.
-    
+
     Generates 6-digit OTPs, stores in Redis with 5-minute expiry,
     and handles rate limiting for resend requests.
     """
@@ -71,7 +73,7 @@ class OTPService:
     def generate_otp(self, email: str) -> str:
         """Generate a 6-digit OTP."""
         # Generate cryptographically secure random number
-        otp = ''.join(secrets.choice('0123456789') for _ in range(settings.OTP_CODE_LENGTH))
+        otp = "".join(secrets.choice("0123456789") for _ in range(settings.OTP_CODE_LENGTH))
         return otp
 
     def store_otp(self, email: str, otp: str) -> None:
@@ -91,10 +93,10 @@ class OTPService:
     def send_otp(self, email: str, otp: str) -> bool:
         """
         Send OTP to user email.
-        
+
         This is a placeholder - actual email sending is handled
         by the email_service in the views layer.
-        
+
         Returns True if sending was initiated.
         """
         # OTP will be sent via email service in the view
@@ -105,16 +107,16 @@ class OTPService:
     def create_and_send(self, email: str) -> tuple[str, bool]:
         """
         Generate OTP, store it, and prepare for sending.
-        
+
         Returns:
             (otp_code, sending_initiated)
         """
         # Check rate limit first
         self.check_resend_rate_limit(email)
-        
+
         otp = self.generate_otp(email)
         self.store_otp(email, otp)
-        
+
         return otp, True
 
     def verify_otp(self, email: str, otp_code: str) -> bool:
@@ -134,6 +136,7 @@ class OTPService:
 
             # Constant-time comparison using hmac
             import hmac
+
             if not hmac.compare_digest(stored_otp, otp_code):
                 # Record failed attempt
                 pipe = self.client.pipeline()
@@ -195,19 +198,19 @@ class OTPService:
 class OTPSender:
     """
     Email sender for OTP codes.
-    
+
     This is a simple wrapper that defers to the email service.
     In a real implementation, this would format and send the email.
     """
-    
+
     def send(self, email: str, otp: str) -> None:
         """
         Send OTP code to user email.
-        
+
         Uses the existing email_service infrastructure.
         """
         from users.email_service import email_service
-        
+
         subject = "Your Kraivor Sign-In Code"
         message = f"""
 Your sign-in verification code is: {otp}
@@ -226,8 +229,8 @@ If you didn't request this code, please ignore this email.
             logger.exception(f"Failed to send OTP email to {email}")
 
 
-_otp_service: Optional[OTPService] = None
-_otp_sender: Optional[OTPSender] = None
+_otp_service: OTPService | None = None
+_otp_sender: OTPSender | None = None
 
 
 def get_otp_service() -> OTPService:

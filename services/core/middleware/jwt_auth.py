@@ -1,6 +1,5 @@
 import logging
 import time
-from typing import Optional
 
 import jwt
 import requests
@@ -18,7 +17,7 @@ class JWTAuthenticationMiddleware:
     after successful JWT verification.
     """
 
-    _jwks_cache: Optional[dict] = None
+    _jwks_cache: dict | None = None
     _jwks_cache_time: float = 0
 
     def __init__(self, get_response):

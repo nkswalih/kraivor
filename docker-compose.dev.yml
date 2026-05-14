@@ -1,0 +1,77 @@
+# =============================================================================
+# Kraivor Docker Compose - Auth Development Only
+# =============================================================================
+# Use this for local auth service development:
+#   docker-compose -f docker-compose.dev.yml up
+#
+# This starts only:
+# - postgres (database)
+# - redis (cache/sessions)
+# - mailhog (email testing)
+# - identity (auth service)
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: kraivor-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kraivor}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kraivor}
+      POSTGRES_DB: ${POSTGRES_DB:-kraivor}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kraivor}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: kraivor-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: kraivor-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    logging:
+      driver: "none"
+
+  identity:
+    build:
+      context: ./services/auth
+      dockerfile: Dockerfile.dev
+    container_name: kraivor-identity
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=auth.settings.development
+      - DB_HOST=postgres
+      - UV_LINK_MODE=copy
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./services/auth:/app
+    stdin_open: true
+    tty: true
+
+volumes:
+  postgres_data:

@@ -1,17 +1,25 @@
+# =============================================================================
+# Kraivor Docker Compose - Full Stack
+# =============================================================================
+# This is the production-compose with all services
+# For local development, use docker-compose.dev.yml
+# =============================================================================
+
 services:
+  # Infrastructure
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: kraivor
-      POSTGRES_PASSWORD: kraivor
-      POSTGRES_DB: kraivor
+      POSTGRES_USER: ${POSTGRES_USER:-kraivor}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kraivor}
+      POSTGRES_DB: ${POSTGRES_DB:-kraivor}
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kraivor"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kraivor}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -26,6 +34,7 @@ services:
       timeout: 3s
       retries: 5
 
+  # Development email catch
   mailhog:
     image: mailhog/mailhog:latest
     ports:
@@ -34,8 +43,9 @@ services:
     logging:
       driver: "none"
 
+  # Message queue
   kafka:
-    image: bitnami/kafka:3.5
+    image: bitnami/kafka:latest
     ports:
       - "9092:9092"
     environment:
@@ -46,110 +56,118 @@ services:
       KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
       KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: true
 
+  # Auth/Identity Service
   identity:
     build:
       context: ./services/auth
       dockerfile: Dockerfile.dev
-    ports:
-      - "8001:8001"
+    env_file:
+      - .env
     environment:
-      DJANGO_SETTINGS_MODULE: auth.settings.development
-      DB_HOST: postgres
-      DATABASE_URL: postgresql://kraivor:kraivor@postgres:5432/kraivor
-      REDIS_URL: redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=auth.settings.development
+      - DB_HOST=postgres
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    ports:
+      - "8001:8001"
     volumes:
       - ./services/auth:/app
       - identity_venv:/app/.venv
 
+  # Core Service
   core:
     build:
       context: ./services/core
       dockerfile: Dockerfile.dev
-    ports:
-      - "8002:8002"
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://kraivor:kraivor@postgres:5432/kraivor
-      REDIS_URL: redis://redis:6379/0
+      - DB_HOST=postgres
     depends_on:
       - postgres
       - redis
+    ports:
+      - "8002:8002"
     volumes:
       - ./services/core:/app
 
+  # Analysis Service
   analysis:
     build: ./services/analysis
-    ports:
-      - "8003:8003"
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://kraivor:kraivor@postgres:5432/kraivor
-      REDIS_URL: redis://redis:6379/0
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      - DB_HOST=postgres
     depends_on:
       - postgres
       - redis
       - kafka
+    ports:
+      - "8003:8003"
     volumes:
       - ./services/analysis:/app
 
+  # AI Service
   ai:
     build: ./services/ai
-    ports:
-      - "8004:8004"
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://kraivor:kraivor@postgres:5432/kraivor
-      REDIS_URL: redis://redis:6379/0
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      - DB_HOST=postgres
     depends_on:
       - postgres
       - redis
       - kafka
+    ports:
+      - "8004:8004"
     volumes:
       - ./services/ai:/app
 
+  # Notifications Service
   notifications:
     build: ./services/notifications
-    ports:
-      - "8005:8005"
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://kraivor:kraivor@postgres:5432/kraivor
-      REDIS_URL: redis://redis:6379/0
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      - DB_HOST=postgres
     depends_on:
       - postgres
       - redis
       - kafka
+    ports:
+      - "8005:8005"
     volumes:
       - ./services/notifications:/app
 
+  # Realtime Service (Node.js)
   realtime:
     build: ./services/realtime
-    ports:
-      - "8006:8006"
-    environment:
-      REDIS_URL: redis://redis:6379/0
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    env_file:
+      - .env
     depends_on:
       - redis
       - kafka
+    ports:
+      - "8006:8006"
     volumes:
       - ./services/realtime:/app
 
+  # Frontend
   frontend:
     build: ./frontend
+    env_file:
+      - .env
     ports:
       - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost
     volumes:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
 
+  # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
     ports:

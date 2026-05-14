@@ -17,11 +17,11 @@ Project Structure Expected:
 project/
 ├── .env                    # Local environment (NOT in git)
 ├── .env.example            # Template for contributors
-├── .keys/                  # JWT keys (NOT in git)
-│   ├── jwt-private.pem
-│   └── jwt-public.pem
 ├── services/
 │   └── auth/
+│       ├── .keys/          # Local JWT keys (NOT in git)
+│       │   ├── jwt-private.pem
+│       │   └── jwt-public.pem
 │       ├── auth/
 │       │   └── settings/
 │       │       ├── base.py       # This file
@@ -35,6 +35,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 # =============================================================================
 # ENVIRONMENT CONFIGURATION - 12-Factor App Principle
@@ -47,13 +48,48 @@ env = environ.Env(
     DEBUG=(bool, False)
 )
 
-# Build paths relative to project root (3 levels up from settings/)
-# settings/auth/settings/base.py -> auth -> services -> project root
-BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+# Build paths relative to the auth service root.
+# services/auth/auth/settings/base.py -> services/auth
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+PROJECT_ROOT = BASE_DIR.parent.parent
 
 # Read .env file - this is the central configuration for all environments
 # In production, env vars can override .env values (Docker/K8s secret injection)
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+ROOT_ENV_FILE = PROJECT_ROOT / ".env"
+
+if ROOT_ENV_FILE.exists():
+    environ.Env.read_env(ROOT_ENV_FILE)
+
+
+def required_env(name: str) -> str:
+    """Read a required environment variable with a clear deployment error."""
+    try:
+        return env(name)
+    except ImproperlyConfigured as exc:
+        raise ImproperlyConfigured(f"Set the {name} environment variable") from exc
+
+
+def required_env_path(name: str) -> str:
+    """
+    Resolve a required path from env.
+
+    Absolute paths are used as-is. Relative paths are resolved from the auth
+    service root, with compatibility for repo-root paths such as
+    services/auth/.keys/jwt-public.pem.
+    """
+    value = Path(required_env(name))
+    if value.is_absolute():
+        return str(value)
+
+    if value.parts[:2] == ("services", "auth"):
+        return str(PROJECT_ROOT / value)
+
+    service_path = BASE_DIR / value
+    project_path = PROJECT_ROOT / value
+    if project_path.exists() and not service_path.exists():
+        return str(project_path)
+
+    return str(service_path)
 
 # =============================================================================
 # CORE SECURITY SETTINGS
@@ -63,7 +99,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # WHY: Used for session signing, CSRF tokens, password reset tokens, etc.
 # PRODUCTION: MUST be unique, long, and NEVER committed to git
 # Generates via: python -c "import secrets; print(secrets.token_urlsafe(50))"
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = required_env('SECRET_KEY')
 
 # DEBUG: Controls detailed error pages and auto-reloading
 # WHY: True shows full tracebacks (security risk in production)
@@ -104,7 +140,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',  # Security headers
     'django.contrib.sessions.middleware.SessionMiddleware',  # Sessions
     'django.middleware.common.CommonMiddleware',  # Common utilities
-    'django.middleware.csrf.CsrfMiddleware',  # CSRF protection
+    'django.middleware.csrf.CsrfViewMiddleware',  # CSRF protection
     'django.contrib.auth.middleware.AuthenticationMiddleware',  # Auth
     'django.contrib.messages.middleware.MessageMiddleware',  # Messages
     'django.middleware.clickjacking.XFrameOptionsMiddleware',  # Clickjacking
@@ -144,7 +180,7 @@ TEMPLATES = [
 # - JSON support
 
 DATABASES = {
-    'default': env.db_url('DATABASE_URL')  # Format: postgresql://user:pass@host:port/dbname
+    'default': env.db_url('DATABASE_URL')
 }
 
 # PASSWORD_HASHERS: How passwords are hashed
@@ -187,6 +223,13 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
 
 # =============================================================================
+# REDIS URL - Direct access for authentication services
+# =============================================================================
+# Centralized Redis URL for OTP, rate limiting, and login lockout
+# Derived from CACHES location for consistency
+REDIS_URL = CACHES['default']['LOCATION']
+
+# =============================================================================
 # AUTHENTICATION & JWT CONFIGURATION
 # =============================================================================
 
@@ -222,8 +265,8 @@ SIMPLE_JWT = {
 # JWT (RS256) - Asymmetric Keys for API Security
 # WHY: RS256 provides better security than HS256 (shared secret)
 # Public key can be shared with other services (JWKS endpoint)
-JWT_PRIVATE_KEY_PATH = os.path.join(BASE_DIR, env('JWT_PRIVATE_KEY_PATH'))
-JWT_PUBLIC_KEY_PATH = os.path.join(BASE_DIR, env('JWT_PUBLIC_KEY_PATH'))
+JWT_PRIVATE_KEY_PATH = required_env_path('JWT_PRIVATE_KEY_PATH')
+JWT_PUBLIC_KEY_PATH = required_env_path('JWT_PUBLIC_KEY_PATH')
 JWT_ALGORITHM = env('JWT_ALGORITHM', default='RS256')
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES = env.int('JWT_ACCESS_TOKEN_EXPIRE_MINUTES', default=15)
 JWT_REFRESH_TOKEN_EXPIRE_DAYS = env.int('JWT_REFRESH_TOKEN_EXPIRE_DAYS', default=30)
@@ -234,7 +277,7 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS = env.int('JWT_REFRESH_TOKEN_EXPIRE_DAYS', default
 # WHY: Controls which domains can access your API
 # SECURITY: Be specific in production - never allow all origins
 
-CORS_ALLOW_ALL_ORIGINS = env.bool('CORS_ALLOW_ALL_ORIGINS', default=True)
+CORS_ALLOW_ALL_ORIGINS = env.bool('CORS_ALLOW_ALL_ORIGINS', default=False)
 CORS_ALLOW_CREDENTIALS = env.bool('CORS_ALLOW_CREDENTIALS', default=True)
 
 # Whitelist specific origins in production
@@ -267,18 +310,18 @@ COOKIE_SAMESITE_FORCE = env.bool('COOKIE_SAMESITE_FORCE', default=None)
 # =============================================================================
 # WHY: Transactional emails (password reset, verification, notifications)
 
-FRONTEND_URL = env('FRONTEND_URL')
+FRONTEND_URL = required_env('FRONTEND_URL')
 
 # SMTP Configuration
 EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = env('EMAIL_HOST')  # e.g., smtp.sendgrid.net, smtp.mailgun.org
+EMAIL_HOST = required_env('EMAIL_HOST')  # e.g., smtp.sendgrid.net, smtp.mailgun.org
 EMAIL_PORT = env.int('EMAIL_PORT')  # 587 (TLS) or 465 (SSL)
 EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS')
 EMAIL_USE_SSL = env.bool('EMAIL_USE_SSL', default=False)
 EMAIL_TIMEOUT = env.int('EMAIL_TIMEOUT', default=30)
-EMAIL_FROM = env('EMAIL_FROM')  # noreply@yourdomain.com
+EMAIL_FROM = required_env('EMAIL_FROM')  # noreply@yourdomain.com
 
 # =============================================================================
 # STATIC & MEDIA FILES

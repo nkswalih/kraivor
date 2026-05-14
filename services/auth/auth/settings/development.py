@@ -19,6 +19,29 @@ Environment Variables:
 - Override any setting with environment variables
 """
 
+import os
+from pathlib import Path
+
+import environ
+
+ROOT_ENV_FILE = Path(__file__).resolve().parents[4] / ".env"
+if ROOT_ENV_FILE.exists():
+    environ.Env.read_env(ROOT_ENV_FILE)
+
+os.environ.setdefault("APP_ENV", "development")
+os.environ.setdefault("SECRET_KEY", "dev-secret-key-not-for-production")
+os.environ.setdefault("DATABASE_URL", "postgresql://kraivor:kraivor@localhost:5433/kraivor")
+os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
+os.environ.setdefault("JWT_PRIVATE_KEY_PATH", ".keys/jwt-private.pem")
+os.environ.setdefault("JWT_PUBLIC_KEY_PATH", ".keys/jwt-public.pem")
+os.environ.setdefault("JWT_ALGORITHM", "RS256")
+os.environ.setdefault("FRONTEND_URL", "http://localhost:3000")
+os.environ.setdefault("EMAIL_HOST", "localhost")
+os.environ.setdefault("EMAIL_PORT", "1025")
+os.environ.setdefault("EMAIL_USE_TLS", "False")
+os.environ.setdefault("EMAIL_USE_SSL", "False")
+os.environ.setdefault("EMAIL_FROM", "noreply@kraivor.local")
+
 from .base import *  # noqa: F401, F403, F405
 
 # =============================================================================
@@ -103,7 +126,6 @@ COOKIE_SAMESITE = env('COOKIE_SAMESITE', default='Lax')
 # =============================================================================
 # More verbose logging in development
 
-import logging
 
 LOGGING['root']['level'] = 'DEBUG'
 LOGGING['loggers']['django']['level'] = 'DEBUG'

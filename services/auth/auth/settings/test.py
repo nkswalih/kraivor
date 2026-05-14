@@ -12,6 +12,22 @@ Usage:
 import os
 
 os.environ.setdefault("DJANGO_TEST_MODE", "1")
+os.environ.setdefault("APP_ENV", "test")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-testing-only-do-not-use-in-production")
+os.environ.setdefault("DATABASE_URL", "sqlite://:memory:")
+os.environ.setdefault("REDIS_URL", "redis://localhost:6379/15")
+os.environ.setdefault("JWT_PRIVATE_KEY_PATH", ".keys/jwt-private.pem")
+os.environ.setdefault("JWT_PUBLIC_KEY_PATH", ".keys/jwt-public.pem")
+os.environ.setdefault("JWT_ALGORITHM", "RS256")
+os.environ.setdefault("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "15")
+os.environ.setdefault("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "30")
+os.environ.setdefault("FRONTEND_URL", "http://localhost:3000")
+os.environ.setdefault("EMAIL_BACKEND", "django.core.mail.backends.locmem.EmailBackend")
+os.environ.setdefault("EMAIL_HOST", "localhost")
+os.environ.setdefault("EMAIL_PORT", "1025")
+os.environ.setdefault("EMAIL_USE_TLS", "False")
+os.environ.setdefault("EMAIL_USE_SSL", "False")
+os.environ.setdefault("EMAIL_FROM", "noreply@kraivor.test")
 
 from .base import *
 

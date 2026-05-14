@@ -5,7 +5,7 @@ Modern production-grade testing architecture with reusable fixtures.
 """
 import os
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -24,13 +24,12 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "auth.settings.test")
 os.environ.setdefault("DATABASE_URL", "sqlite://:memory:")
 
 import django
+
 django.setup()
 
-from django.test import override_settings
-from rest_framework.test import APIClient
-
-from users.models import User
 from authentication.security import reset_lockout_manager
+from rest_framework.test import APIClient
+from users.models import User
 
 
 @pytest.fixture(autouse=True)
@@ -202,7 +201,7 @@ def jwt_payload_builder():
         minutes_until_expiry=15,
         **extra_claims
     ):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         payload = {
             "sub": sub,
             "email": email,
@@ -228,7 +227,7 @@ def expired_verification_token(verified_user):
     import jwt
     from users.verification import _ALGORITHM, _TOKEN_TYPE
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": str(verified_user.id),
         "email": verified_user.email,
@@ -270,8 +269,8 @@ def otp_mock_service():
 @pytest.fixture
 def test_rsa_keys():
     """Generate test RSA keypair for JWKS tests."""
-    from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
 
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     public_key = private_key.public_key()
@@ -327,10 +326,17 @@ def pytest_configure(config):
 
 def pytest_collection_modifyitems(config, items):
     """Auto-mark tests based on their location and naming."""
+    security_nodes = (
+        "test_refresh_token.py",
+        "test_jwks.py",
+        "test_identify_locked_account",
+        "test_locked_account",
+        "test_wrong_password",
+        "rate_limit",
+    )
+
     for item in items:
-        if "test_signup" in item.nodeid:
-            item.add_marker(pytest.mark.auth)
-        elif "test_signin" in item.nodeid:
+        if "test_signup" in item.nodeid or "test_signin" in item.nodeid:
             item.add_marker(pytest.mark.auth)
         elif "test_refresh" in item.nodeid:
             item.add_marker(pytest.mark.token)
@@ -338,3 +344,6 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.auth)
         elif "test_jwks" in item.nodeid:
             item.add_marker(pytest.mark.integration)
+
+        if any(node in item.nodeid for node in security_nodes):
+            item.add_marker(pytest.mark.security)

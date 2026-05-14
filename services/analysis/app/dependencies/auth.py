@@ -4,7 +4,7 @@ from typing import Optional
 
 import httpx
 import jwt
-from fastapi import Depends, HTTPException, Request
+from fastapi import HTTPException, Request
 from pydantic import BaseModel
 
 from app.config import settings

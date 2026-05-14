@@ -1,10 +1,9 @@
 import logging
 import time
-from typing import Optional
 
 import httpx
 import jwt
-from fastapi import Depends, HTTPException, Request
+from fastapi import HTTPException, Request
 from pydantic import BaseModel
 
 from app.config import settings
@@ -19,7 +18,7 @@ class JWTPayload(BaseModel):
     roles: dict = {}
 
 
-_jwks_cache: Optional[dict] = None
+_jwks_cache: dict | None = None
 _jwks_cache_time: float = 0
 
 
@@ -102,7 +101,7 @@ def get_current_user(request: Request) -> JWTPayload:
         raise HTTPException(
             status_code=401,
             detail={"error": "invalid_token", "message": "Invalid or malformed token"}
-        )
+        ) from e
     except Exception as e:
         logger.error(f"JWT verification error: {e}")
         raise HTTPException(

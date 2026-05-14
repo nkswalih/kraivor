@@ -3,7 +3,7 @@ Tests for KRV-012 — AI Service JWT Dependency
 """
 
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import jwt
@@ -16,8 +16,8 @@ def generate_test_jwt(private_key_pem: bytes, payload: dict, algorithm: str = "R
 
 
 def generate_test_rsa_keypair():
-    from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
 
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     public_key = private_key.public_key()
@@ -52,7 +52,6 @@ def public_key(keypair):
 @pytest.fixture
 def mock_jwks(public_key):
     from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric import rsa
 
     public_key_obj = serialization.load_pem_public_key(public_key)
     public_numbers = public_key_obj.public_numbers()
@@ -90,9 +89,8 @@ def mock_settings():
 
 class TestGetCurrentUser:
     def test_valid_token_returns_payload(self, private_key, mock_settings, mock_jwks):
-        from app.dependencies.auth import get_current_user
-
         import app.dependencies.auth as auth_module
+        from app.dependencies.auth import get_current_user
         auth_module._jwks_cache = mock_jwks
         auth_module._jwks_cache_time = time.time()
 
@@ -102,8 +100,8 @@ class TestGetCurrentUser:
             "workspace_ids": ["ws-1", "ws-2"],
             "roles": {"ws-1": "owner"},
             "token_type": "access",
-            "iat": datetime.now(timezone.utc),
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+            "iat": datetime.now(UTC),
+            "exp": datetime.now(UTC) + timedelta(hours=1),
             "aud": "kraivor",
             "iss": "kraivor-identity",
         }
@@ -142,9 +140,8 @@ class TestGetCurrentUser:
         assert exc_info.value.status_code == 401
 
     def test_expired_token_raises_401(self, private_key, mock_settings, mock_jwks):
-        from app.dependencies.auth import get_current_user
-
         import app.dependencies.auth as auth_module
+        from app.dependencies.auth import get_current_user
         auth_module._jwks_cache = mock_jwks
         auth_module._jwks_cache_time = time.time()
 
@@ -152,8 +149,8 @@ class TestGetCurrentUser:
             "sub": "user-123",
             "email": "test@example.com",
             "token_type": "access",
-            "iat": datetime.now(timezone.utc) - timedelta(hours=2),
-            "exp": datetime.now(timezone.utc) - timedelta(hours=1),
+            "iat": datetime.now(UTC) - timedelta(hours=2),
+            "exp": datetime.now(UTC) - timedelta(hours=1),
             "aud": "kraivor",
             "iss": "kraivor-identity",
         }
@@ -187,9 +184,8 @@ class TestGetCurrentUser:
 
 class TestCacheInvalidation:
     def test_cache_can_be_invalidated(self, mock_settings):
-        from app.dependencies.auth import invalidate_jwks_cache
-
         import app.dependencies.auth as auth_module
+        from app.dependencies.auth import invalidate_jwks_cache
         auth_module._jwks_cache = {"test": "data"}
         auth_module._jwks_cache_time = time.time()
 

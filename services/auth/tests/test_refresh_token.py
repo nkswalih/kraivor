@@ -12,6 +12,8 @@ Tests cover:
 - Session invalidation
 """
 
+import uuid
+
 from authentication.cookie_utils import create_refresh_cookie
 from authentication.models import RefreshToken
 from authentication.tokens import (
@@ -23,7 +25,6 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from users.models import User
 
-import uuid
 
 @override_settings(
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES=15,

@@ -6,14 +6,13 @@ from .views import (
     OTPSendView,
     OTPVerifyView,
     RefreshTokenView,
-    SignInIdentifyView,
-    SignInPasswordView,
     SessionListView,
     SessionRevokeAllView,
     SessionRevokeView,
+    SignInIdentifyView,
+    SignInPasswordView,
     SignOutView,
 )
-
 
 urlpatterns = [
     # KRV-011: Multi-step Sign In

@@ -23,6 +23,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from users.models import User
 
+import uuid
 
 @override_settings(
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES=15,
@@ -34,7 +35,7 @@ class RefreshTokenRotationTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(
-            email="test@example.com",
+            email=f"{uuid.uuid4()}@example.com",
             password="testpass123",
             name="Test User",
             email_verified=True,

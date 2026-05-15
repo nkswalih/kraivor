@@ -1,3 +1,4 @@
+# ruff: noqa: F401, F403, F405
 """
 Django Production Settings
 ===========================
@@ -30,7 +31,7 @@ Security Checklist:
 - [x] CORS strict origin whitelist
 """
 
-from .base import *  # noqa: F401, F403, F405
+from .base import *
 
 # =============================================================================
 # DEBUG MODE - PRODUCTION

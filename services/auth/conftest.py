@@ -9,8 +9,12 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import django
 import pytest
+from authentication.security import reset_lockout_manager
 from django.conf import settings
+from rest_framework.test import APIClient
+from users.models import User
 
 BASE_DIR = Path(__file__).resolve().parent
 APPS_DIR = BASE_DIR / "apps"
@@ -23,14 +27,7 @@ for p in [str(PROJECT_ROOT), str(BASE_DIR), str(APPS_DIR)]:
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "auth.settings.test")
 os.environ.setdefault("DATABASE_URL", "sqlite://:memory:")
 
-import django
-
 django.setup()
-
-from authentication.security import reset_lockout_manager
-from rest_framework.test import APIClient
-from users.models import User
-
 
 @pytest.fixture(autouse=True)
 def clean_lockout_manager():

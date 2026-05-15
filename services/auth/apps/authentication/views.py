@@ -25,13 +25,11 @@ import hashlib
 import logging
 from dataclasses import dataclass
 
-from django.conf import settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 from users.models import User
 
 from .cookie_utils import create_refresh_cookie
@@ -45,6 +43,8 @@ from .otp import (
 )
 from .security import (
     check_password as verify_password,
+)
+from .security import (
     generate_device_id,
     get_client_ip,
     get_lockout_manager,

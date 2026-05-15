@@ -14,6 +14,8 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
+import uuid
+
 import jwt
 from django.conf import settings
 from django.test import TestCase
@@ -32,8 +34,13 @@ from users.verification import (
 # ---------------------------------------------------------------------------
 
 
-def make_user(email="test@example.com", verified=False, **kwargs) -> User:
-    user = User(email=email, name="Test User", email_verified=verified, **kwargs)
+def make_user(email=None, verified=False, **kwargs) -> User:
+    user = User(
+        email=email or f"{uuid.uuid4()}@example.com",
+        name="Test User",
+        email_verified=verified,
+        **kwargs,
+    )
     user.set_password("testpass123")
     user.save()
     return user

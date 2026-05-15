@@ -24,10 +24,37 @@ from pathlib import Path
 
 import environ
 
-ROOT_ENV_FILE = Path(__file__).resolve().parents[4] / ".env"
-if ROOT_ENV_FILE.exists():
-    environ.Env.read_env(ROOT_ENV_FILE)
+# =============================================================================
+# .env Discovery — works on local AND inside Docker
+# =============================================================================
+# Problem with parents[4]:
+#   Local:  C:/VS Code/kraivor/services/auth/auth/settings/development.py
+#           parents[4] = C:/VS Code/kraivor  ← .env lives here ✓
+#
+#   Docker: /app/auth/settings/development.py
+#           parents[2] = /app                ← only 3 levels exist, [4] crashes ✗
+#
+# Fix: walk up the tree and stop at the first .env found.
+# In Docker, compose already injected env vars via env_file — environ.Env.read_env
+# is a no-op when the vars are already set, so this is safe either way.
 
+def _find_env_file(start: Path) -> Path | None:
+    """Walk up from start until a .env file is found or we hit the filesystem root."""
+    for parent in start.parents:
+        candidate = parent / ".env"
+        if candidate.exists():
+            return candidate
+    return None
+
+_HERE = Path(__file__).resolve()
+_env_file = _find_env_file(_HERE)
+if _env_file:
+    environ.Env.read_env(_env_file)
+
+# =============================================================================
+# Defaults — only applied when env var is not already set
+# (Docker compose env_file injection takes priority over these)
+# =============================================================================
 os.environ.setdefault("APP_ENV", "development")
 os.environ.setdefault("SECRET_KEY", "dev-secret-key-not-for-production")
 os.environ.setdefault("DATABASE_URL", "postgresql://kraivor:kraivor@localhost:5433/kraivor")
@@ -47,122 +74,101 @@ from .base import *  # noqa: F401, F403, F405
 # =============================================================================
 # DEBUG MODE
 # =============================================================================
-# Enable debug mode for development
-# WHY: Shows detailed error pages with full tracebacks
-# NOTE: Never enable in production!
 DEBUG = True
 
 # =============================================================================
 # ALLOWED HOSTS - Development
 # =============================================================================
-# Allow localhost variations for local development
-# WHY: Django validates Host header to prevent cache poisoning
 ALLOWED_HOSTS = env.list(
-    'ALLOWED_HOSTS',
+    "ALLOWED_HOSTS",
     default=[
-        'localhost',
-        '127.0.0.1',
-        '127.0.0.1:3000',
-        'localhost:3000',
-        '127.0.0.1:8001',
-        'localhost:8001',
-    ]
+        "localhost",
+        "127.0.0.1",
+        "127.0.0.1:3000",
+        "localhost:3000",
+        "127.0.0.1:8001",
+        "localhost:8001",
+    ],
 )
 
 # =============================================================================
 # CORS - Development
 # =============================================================================
-# Allow all origins in development
-# WHY: Frontend runs on different port during development
-CORS_ALLOW_ALL_ORIGINS = env.bool('CORS_ALLOW_ALL_ORIGINS', default=True)
-CORS_ALLOW_CREDENTIALS = env.bool('CORS_ALLOW_CREDENTIALS', default=True)
-
-# =============================================================================
-# DATABASE - Development (Local PostgreSQL)
-# =============================================================================
-# Can be overridden via DATABASE_URL in .env
-# Default connects to Docker PostgreSQL on localhost:5433
-# (Uses 5433 instead of 5432 to avoid conflicts with local PostgreSQL)
+CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=True)
+CORS_ALLOW_CREDENTIALS = env.bool("CORS_ALLOW_CREDENTIALS", default=True)
 
 # =============================================================================
 # EMAIL - Development (Mailhog)
 # =============================================================================
-# Mailhog is a local email testing server
+# Mailhog catches all outgoing email.
 # Web UI: http://localhost:8025
-# SMTP: localhost:1025
-# WHY: Allows testing emails without sending to real addresses
-
-EMAIL_HOST = env('EMAIL_HOST', default='localhost')
-EMAIL_PORT = env.int('EMAIL_PORT', default=1025)
-EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
-EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=False)
-EMAIL_USE_STARTTLS = env.bool('EMAIL_USE_STARTTLS', default=False)
-EMAIL_FROM = env('EMAIL_FROM', default='noreply@kraivor.local')
+# In Docker: EMAIL_HOST=mailhog is injected by compose, overrides the default below.
+EMAIL_HOST = env("EMAIL_HOST", default="localhost")
+EMAIL_PORT = env.int("EMAIL_PORT", default=1025)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=False)
+EMAIL_USE_STARTTLS = env.bool("EMAIL_USE_STARTTLS", default=False)
+EMAIL_FROM = env("EMAIL_FROM", default="noreply@kraivor.local")
 
 # =============================================================================
-# FRONTEND URL - Development
+# FRONTEND URL
 # =============================================================================
-
-FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 
 # =============================================================================
 # COOKIES - Development
 # =============================================================================
-# Cookies work over HTTP in development
-# WHY: Browsers block secure cookies over HTTP
-COOKIE_SECURE = env.bool('COOKIE_SECURE', default=False)
-COOKIE_DOMAIN = env('COOKIE_DOMAIN', default='')
-COOKIE_SAMESITE = env('COOKIE_SAMESITE', default='Lax')
+# Secure=False so cookies work over plain HTTP in dev.
+COOKIE_SECURE = env.bool("COOKIE_SECURE", default=False)
+COOKIE_DOMAIN = env("COOKIE_DOMAIN", default="")
+COOKIE_SAMESITE = env("COOKIE_SAMESITE", default="Lax")
 
 # =============================================================================
-# STATIC & MEDIA - Development
+# CACHES - Development (local memory, no Redis needed)
 # =============================================================================
-# Serve media files in development (Django's runserver)
-# In production, use Nginx/WhiteNoise
-
-# =============================================================================
-# LOGGING - Development
-# =============================================================================
-# More verbose logging in development
-
-
-LOGGING['root']['level'] = 'DEBUG'
-LOGGING['loggers']['django']['level'] = 'DEBUG'
-
-# =============================================================================
-# PASSWORD VALIDATION - Development
-# =============================================================================
-# Relaxed validation for easier testing
-# Remove in production!
-
-# =============================================================================
-# CACHES - Development
-# =============================================================================
-# Use local memory cache for faster development
-# In production, use Redis
-
 CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",
     }
 }
 
 # =============================================================================
-# REST FRAMEWORK - Development
+# LOGGING - Development (verbose)
 # =============================================================================
+LOGGING["root"]["level"] = "INFO"
 
-REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'] = [
-    'rest_framework.renderers.JSONRenderer',
-    'rest_framework.renderers.BrowsableAPIRenderer',  # Nice HTML UI
+LOGGING["loggers"]["django"]["level"] = "INFO"
+
+LOGGING["loggers"]["django.utils.autoreload"] = {
+    "handlers": ["console"],
+    "level": "WARNING",
+    "propagate": False,
+}
+
+LOGGING["loggers"]["django.db.backends"] = {
+    "handlers": ["console"],
+    "level": "WARNING",
+    "propagate": False,
+}
+
+LOGGING["loggers"]["authentication"] = {
+    "handlers": ["console"],
+    "level": "DEBUG",
+    "propagate": False,
+}
+
+# =============================================================================
+# REST FRAMEWORK - Development (adds browsable API)
+# =============================================================================
+REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = [
+    "rest_framework.renderers.JSONRenderer",
+    "rest_framework.renderers.BrowsableAPIRenderer",
 ]
 
 # =============================================================================
-# Celery - Development
+# CELERY - Development (run tasks synchronously, no worker needed)
 # =============================================================================
-# Run celery tasks synchronously in development
-# Remove in production for async processing
-
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True

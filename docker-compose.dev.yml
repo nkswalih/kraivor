@@ -1,20 +1,26 @@
 # =============================================================================
-# Kraivor Docker Compose - Auth Development Only
+# docker-compose.dev.yml — Auth Service Development Stack
 # =============================================================================
-# Use this for local auth service development:
-#   docker-compose -f docker-compose.dev.yml up
+# Starts only what you need for auth development:
+#   postgres · redis · mailhog · identity (auth service)
 #
-# This starts only:
-# - postgres (database)
-# - redis (cache/sessions)
-# - mailhog (email testing)
-# - identity (auth service)
+# Usage:
+#   docker-compose -f docker-compose.dev.yml up --build
+#   docker-compose -f docker-compose.dev.yml up          (subsequent runs)
+#   docker-compose -f docker-compose.dev.yml down -v     (nuke everything)
+#
+# Hot reload: edit files in ./services/auth → Django restarts automatically.
+# Emails:     http://localhost:8025 (MailHog web UI)
+# Auth API:   http://localhost:8001/api/auth/
 # =============================================================================
 
 services:
+
+  # ── Infrastructure ──────────────────────────────────────────────────────────
+
   postgres:
     image: postgres:15-alpine
-    container_name: kraivor-postgres
+    container_name: kraivor-postgres-dev
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-kraivor}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kraivor}
@@ -22,45 +28,57 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./infra/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data_dev:/var/lib/postgresql/data
+      - ./infra/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kraivor}"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    container_name: kraivor-redis
+    container_name: kraivor-redis-dev
     ports:
       - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
 
   mailhog:
     image: mailhog/mailhog:latest
-    container_name: kraivor-mailhog
+    container_name: kraivor-mailhog-dev
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "1025:1025"   # SMTP — Django EMAIL_HOST_PORT
+      - "8025:8025"   # Web UI — http://localhost:8025
     logging:
       driver: "none"
+    restart: unless-stopped
+
+  # ── Auth / Identity Service ─────────────────────────────────────────────────
 
   identity:
     build:
       context: ./services/auth
       dockerfile: Dockerfile.dev
-    container_name: kraivor-identity
+    container_name: kraivor-identity-dev
     env_file:
       - .env
     environment:
-      - DJANGO_SETTINGS_MODULE=auth.settings.development
-      - DB_HOST=postgres
-      - UV_LINK_MODE=copy
+      DJANGO_SETTINGS_MODULE: auth.settings.development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      EMAIL_HOST: mailhog
+      EMAIL_PORT: 1025
+      UV_LINK_MODE: copy
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,9 +87,29 @@ services:
     ports:
       - "8001:8001"
     volumes:
+      # Source code mount — edits on host appear instantly inside container
       - ./services/auth:/app
+      # ── venv exclusion fix ──────────────────────────────────────────────────
+      # The image builds the venv at /opt/venv (set by UV_PROJECT_ENVIRONMENT).
+      # Because the venv is NOT under /app, the source volume mount above
+      # cannot shadow or delete it. No named volume trick needed.
+      #
+      # DO NOT add a volume for /app/.venv here — it would be empty and
+      # shadow the image's installed packages, breaking every import.
+      # ────────────────────────────────────────────────────────────────────────
     stdin_open: true
     tty: true
+    restart: unless-stopped
+
+    # Override CMD for dev: entrypoint.dev.sh waits for DB then migrates
+    # Remove this if you want to manage migrations manually
+    command: >
+      sh -c "
+        until pg_isready -h postgres -U ${POSTGRES_USER:-kraivor}; do sleep 1; done &&
+        python manage.py migrate --noinput &&
+        python manage.py runserver 0.0.0.0:8001
+      "
 
 volumes:
-  postgres_data:
+  postgres_data_dev:
+    name: kraivor_postgres_data_dev

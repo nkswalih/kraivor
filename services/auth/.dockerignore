@@ -1,0 +1,54 @@
+# =============================================================================
+# .dockerignore — services/auth/
+# =============================================================================
+# Prevents these from being sent to Docker build context.
+# Without this, Docker tries to copy .venv (which has Linux symlinks
+# that Windows cannot read) and the build fails immediately.
+# =============================================================================
+
+# Virtual environments — the #1 cause of the lib64 symlink error on Windows
+.venv
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# uv cache
+.uv/
+.ruff_cache/
+.mypy_cache/
+
+# Test & coverage artifacts
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Git
+.git/
+.gitignore
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local env files (never bake secrets into images)
+.env
+.env.local
+.env.*.local

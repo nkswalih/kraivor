@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 from authentication.security import reset_lockout_manager
 from rest_framework.test import APIClient
-from users.models import User
 
 from tests.factories import UserFactory
 

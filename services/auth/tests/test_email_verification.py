@@ -11,10 +11,9 @@ Covers:
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
-
-import uuid
 
 import jwt
 from django.conf import settings

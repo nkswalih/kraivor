@@ -2,6 +2,7 @@
 Unit and integration tests for signup flow.
 """
 
+import uuid
 from unittest.mock import patch
 
 import pytest
@@ -14,16 +15,19 @@ class TestSignUp:
     @patch("users.views.email_service")
     def test_valid_signup(self, mock_email, db):
         client = APIClient()
+        # Generate a unique email
+        unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+        
         data = {
-            "email": "test@example.com",
-            "password": "securepassword123",
-            "password_confirm": "securepassword123",
+            "email": unique_email,
+            "password": "SecurePass123!",
+            "password_confirm": "SecurePass123!",
             "name": "Test User",
         }
         response = client.post("/api/auth/signup/", data, format="json")
         assert response.status_code == 201
-        assert User.objects.filter(email="test@example.com").exists()
-        user = User.objects.get(email="test@example.com")
+        assert User.objects.filter(email=unique_email).exists()
+        user = User.objects.get(email=unique_email)
         assert not user.email_verified
         mock_email.send_verification_email.assert_called_once()
 

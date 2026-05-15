@@ -180,7 +180,7 @@ TEMPLATES = [
 # - JSON support
 
 DATABASES = {
-    'default': env.db_url('DATABASE_URL')
+    'default': env.db('DATABASE_URL')
 }
 
 # PASSWORD_HASHERS: How passwords are hashed

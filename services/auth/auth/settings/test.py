@@ -1,3 +1,4 @@
+# ruff: noqa: F401, F403, F405
 """
 Django Test Settings
 =====================
@@ -9,7 +10,10 @@ Usage:
     pytest --cov             # With coverage
     pytest tests/test_*.py   # Specific files
 """
+
 import os
+
+from .base import *
 
 os.environ.setdefault("DJANGO_TEST_MODE", "1")
 os.environ.setdefault("APP_ENV", "test")
@@ -28,8 +32,6 @@ os.environ.setdefault("EMAIL_PORT", "1025")
 os.environ.setdefault("EMAIL_USE_TLS", "False")
 os.environ.setdefault("EMAIL_USE_SSL", "False")
 os.environ.setdefault("EMAIL_FROM", "noreply@kraivor.test")
-
-from .base import *
 
 DEBUG = True
 
@@ -50,12 +52,17 @@ CACHES = {
         "LOCATION": "test-cache",
     }
 }
-
 REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/15")
 
-REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] = [
-    "rest_framework.authentication.SessionAuthentication",
-]
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication", 
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
 
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 

@@ -7,7 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from authentication.security import reset_lockout_manager
 from rest_framework.test import APIClient
-from users.models import User
+
+from tests.factories import UserFactory
 
 
 @pytest.mark.auth
@@ -44,31 +45,28 @@ class TestSignInPassword:
         reset_lockout_manager()
 
     def test_valid_credentials(self, db):
-        User.objects.create_user(
-            email="test@example.com", password="testpass123", name="Test User", email_verified=True
-        )
+        user = UserFactory.verified()
         client = APIClient()
         response = client.post(
             "/api/auth/signin/password/",
-            {"email": "test@example.com", "password": "testpass123"},
+            {"email": user.email, "password": "testpass123"},
             format="json",
         )
         assert response.status_code == 200
         assert "access_token" in response.json()
 
     def test_wrong_password(self, db):
-        User.objects.create_user(
-            email="test@example.com", password="testpass123", name="Test User", email_verified=True
-        )
+        user = UserFactory.verified()
         client = APIClient()
         response = client.post(
             "/api/auth/signin/password/",
-            {"email": "test@example.com", "password": "wrongpass"},
+            {"email": user.email, "password": "wrongpass"},
             format="json",
         )
         assert response.status_code == 401
 
     def test_locked_account(self, db):
+        user = UserFactory.verified()
         mock_mgr = MagicMock()
         mock_mgr.check_lockout.return_value = (True, 300)
 
@@ -76,16 +74,10 @@ class TestSignInPassword:
             patch("authentication.security._lockout_manager", mock_mgr),
             patch("authentication.views.get_lockout_manager", return_value=mock_mgr),
         ):
-            User.objects.create_user(
-                email="test@example.com",
-                password="testpass123",
-                name="Test User",
-                email_verified=True,
-            )
             client = APIClient()
             response = client.post(
                 "/api/auth/signin/password/",
-                {"email": "test@example.com", "password": "testpass123"},
+                {"email": user.email, "password": "testpass123"},
                 format="json",
             )
             assert response.status_code == 429
@@ -98,13 +90,11 @@ class TestOTPFlow:
 
     @patch("authentication.otp.get_otp_sender")
     def test_otp_send(self, mock_sender, db):
-        User.objects.create_user(
-            email="test@example.com", password="testpass123", name="Test User", email_verified=True
-        )
+        user = UserFactory.verified()
         mock_sender.return_value.send = lambda e, o: None
         client = APIClient()
         response = client.post(
-            "/api/auth/signin/otp/send/", {"email": "test@example.com"}, format="json"
+            "/api/auth/signin/otp/send/", {"email": user.email}, format="json"
         )
         assert response.status_code == 200
 
@@ -112,25 +102,26 @@ class TestOTPFlow:
         import authentication.otp as otp_module
         from authentication.otp import OTPInvalidError
 
+        user = UserFactory.verified()
+
         def raise_invalid(email, code):
             raise OTPInvalidError("Invalid OTP")
 
         mock_svc = MagicMock()
         mock_svc.verify_otp = MagicMock(side_effect=raise_invalid)
 
-        mock_get_lockout = MagicMock()
-        mock_get_lockout.check_lockout = MagicMock(return_value=(False, 0))
+        mock_mgr = MagicMock()
+        mock_mgr.check_lockout.return_value = (False, 0)
+        mock_mgr.record_failure = MagicMock()
 
-        User.objects.create_user(
-            email="test@example.com", password="testpass123", name="Test User", email_verified=True
-        )
-
-        with patch("apps.authentication.views.get_lockout_manager", return_value=mock_get_lockout):
+        # FIX: patch path must match how views.py imports — "authentication.views"
+        # not "apps.authentication.views" (apps/ is filesystem, not Python module path)
+        with patch("authentication.views.get_lockout_manager", return_value=mock_mgr):
             otp_module._otp_service = mock_svc
             client = APIClient()
             response = client.post(
                 "/api/auth/signin/otp/verify/",
-                {"email": "test@example.com", "otp_code": "000000"},
+                {"email": user.email, "otp_code": "000000"},
                 format="json",
             )
             assert response.status_code == 401
@@ -139,20 +130,22 @@ class TestOTPFlow:
 @pytest.mark.auth
 class TestSignInIntegration:
     def test_full_signin_flow(self, db):
-        User.objects.create_user(
-            email="integration@example.com",
-            password="testpass123",
-            name="Test",
-            email_verified=True,
-        )
+        # FIX: use user.email in the identify step — not a hardcoded email
+        # that doesn't match the created user, which returns next_step="signup"
+        user = UserFactory.verified()
         client = APIClient()
+
+        # Step 1: identify with the actual user's email
         response = client.post(
-            "/api/auth/signin/identify/", {"email": "integration@example.com"}, format="json"
+            "/api/auth/signin/identify/", {"email": user.email}, format="json"
         )
+        assert response.status_code == 200
         assert response.json()["next_step"] == "choose_method"
+
+        # Step 2: sign in with password
         response = client.post(
             "/api/auth/signin/password/",
-            {"email": "integration@example.com", "password": "testpass123"},
+            {"email": user.email, "password": "testpass123"},
             format="json",
         )
         assert response.status_code == 200

@@ -12,6 +12,8 @@ Tests cover:
 - Session invalidation
 """
 
+import uuid
+
 from authentication.cookie_utils import create_refresh_cookie
 from authentication.models import RefreshToken
 from authentication.tokens import (
@@ -34,7 +36,7 @@ class RefreshTokenRotationTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(
-            email="test@example.com",
+            email=f"{uuid.uuid4()}@example.com",
             password="testpass123",
             name="Test User",
             email_verified=True,

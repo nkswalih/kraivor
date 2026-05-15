@@ -22,13 +22,11 @@ import uuid
 from datetime import timedelta
 
 import pytest
+from authentication.models import RefreshToken
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
-
-from authentication.models import RefreshToken
 from users.models import User
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -272,7 +270,7 @@ class TestSessionList:
     def test_requires_authentication(self, anon_client):
         """Unauthenticated request is rejected by the configured test auth backend."""
         response = anon_client.get(reverse("session-list"))
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_does_not_return_other_users_sessions(self, auth_client, other_user):
         """User A cannot see User B's sessions."""
@@ -393,7 +391,7 @@ class TestSessionRevoke:
         response = anon_client.delete(
             reverse("session-revoke", kwargs={"session_id": session.id})
         )
-        assert response.status_code == 403
+        assert response.status_code == 401
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -452,4 +450,4 @@ class TestSessionRevokeAll:
     def test_requires_authentication(self, anon_client):
         """Unauthenticated request is rejected by the configured test auth backend."""
         response = anon_client.delete(reverse("session-revoke-all"))
-        assert response.status_code == 403
+        assert response.status_code == 401

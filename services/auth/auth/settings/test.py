@@ -1,3 +1,4 @@
+# ruff: noqa: F401, F403, F405
 """
 Django Test Settings
 =====================
@@ -9,7 +10,10 @@ Usage:
     pytest --cov             # With coverage
     pytest tests/test_*.py   # Specific files
 """
+
 import os
+
+from .base import *
 
 os.environ.setdefault("DJANGO_TEST_MODE", "1")
 os.environ.setdefault("APP_ENV", "test")
@@ -28,9 +32,6 @@ os.environ.setdefault("EMAIL_PORT", "1025")
 os.environ.setdefault("EMAIL_USE_TLS", "False")
 os.environ.setdefault("EMAIL_USE_SSL", "False")
 os.environ.setdefault("EMAIL_FROM", "noreply@kraivor.test")
-
-from .base import *
-
 DEBUG = True
 
 DATABASES = {

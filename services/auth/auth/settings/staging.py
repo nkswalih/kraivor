@@ -1,3 +1,4 @@
+# ruff: noqa: F401, F403, F405
 """
 Django Staging Settings
 ========================
@@ -26,7 +27,7 @@ Environment Variables:
 - Email: staging SMTP or mailhog
 """
 
-from .base import *  # noqa: F401, F403, F405
+from .base import *
 
 # =============================================================================
 # DEBUG MODE - STAGING

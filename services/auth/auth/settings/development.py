@@ -1,3 +1,4 @@
+# ruff: noqa: F401, F403, F405
 """
 Django Development Settings
 ============================
@@ -23,6 +24,8 @@ import os
 from pathlib import Path
 
 import environ
+
+from .base import *
 
 # =============================================================================
 # .env Discovery — works on local AND inside Docker
@@ -55,6 +58,7 @@ if _env_file:
 # Defaults — only applied when env var is not already set
 # (Docker compose env_file injection takes priority over these)
 # =============================================================================
+
 os.environ.setdefault("APP_ENV", "development")
 os.environ.setdefault("SECRET_KEY", "dev-secret-key-not-for-production")
 os.environ.setdefault("DATABASE_URL", "postgresql://kraivor:kraivor@localhost:5433/kraivor")
@@ -68,8 +72,6 @@ os.environ.setdefault("EMAIL_PORT", "1025")
 os.environ.setdefault("EMAIL_USE_TLS", "False")
 os.environ.setdefault("EMAIL_USE_SSL", "False")
 os.environ.setdefault("EMAIL_FROM", "noreply@kraivor.local")
-
-from .base import *  # noqa: F401, F403, F405
 
 # =============================================================================
 # DEBUG MODE

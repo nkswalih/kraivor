@@ -2,7 +2,10 @@
 Test settings for Core Service
 """
 
-from .base import *  # noqa: F401, F403, F405
+from .base import (
+    env,
+    LOGGING,
+)  # noqa: F401, F403, F405
 
 DEBUG = True
 

@@ -7,7 +7,6 @@ Handles GitHub OAuth 2.0 authentication flow.
 
 import logging
 from dataclasses import dataclass
-from typing import Optional
 
 import requests
 from django.conf import settings

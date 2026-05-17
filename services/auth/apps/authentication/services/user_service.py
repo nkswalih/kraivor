@@ -3,7 +3,6 @@ OAuth User Service
 """
 
 import logging
-from datetime import datetime, timezone
 from typing import Optional
 
 from django.contrib.auth import get_user_model
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-def find_or_create_oauth_user(provider: str, oauth_id: str, email: str, name: Optional[str], avatar_url: Optional[str]) -> tuple:
+def find_or_create_oauth_user(provider: str, oauth_id: str, email: str, name: str | None, avatar_url: str | None) -> tuple:
     identity = OAuthIdentity.objects.filter(provider=provider, provider_user_id=oauth_id).exclude(deleted_at__isnull=False).select_related("user").first()
 
     if identity:
@@ -37,6 +36,6 @@ def find_or_create_oauth_user(provider: str, oauth_id: str, email: str, name: Op
     return user, created
 
 
-def find_oauth_user(provider: str, oauth_id: str) -> Optional[object]:
+def find_oauth_user(provider: str, oauth_id: str) -> object | None:
     identity = OAuthIdentity.objects.filter(provider=provider, provider_user_id=oauth_id).exclude(deleted_at__isnull=False).select_related("user").first()
     return identity.user if identity else None

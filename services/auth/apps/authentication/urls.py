@@ -1,5 +1,6 @@
 from django.urls import path
 
+from .oauth.views import GitHubOAuthCallbackView, GitHubOAuthInitiateView
 from .views import (
     LogoutAllView,
     LogoutView,
@@ -13,7 +14,6 @@ from .views import (
     SignInPasswordView,
     SignOutView,
 )
-from .oauth.views import GitHubOAuthInitiateView, GitHubOAuthCallbackView
 
 urlpatterns = [
     # KRV-011: Multi-step Sign In

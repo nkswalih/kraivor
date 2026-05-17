@@ -5,7 +5,7 @@ Unit and integration tests for KRV-011 sign-in flow.
 from unittest.mock import MagicMock, patch
 
 import pytest
-from authentication.security import reset_lockout_manager
+from apps.authentication.security import reset_lockout_manager
 from rest_framework.test import APIClient
 
 from tests.factories import UserFactory
@@ -100,7 +100,7 @@ class TestOTPFlow:
 
     def test_otp_verify_invalid(self, db):
         import authentication.otp as otp_module
-        from authentication.otp import OTPInvalidError
+        from apps.authentication.otp import OTPInvalidError
 
         user = UserFactory.verified()
 

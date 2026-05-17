@@ -14,16 +14,16 @@ Tests cover:
 
 import uuid
 
-from authentication.cookie_utils import create_refresh_cookie
-from authentication.models import RefreshToken
-from authentication.tokens import (
+from apps.authentication.cookie_utils import create_refresh_cookie
+from apps.authentication.models import RefreshToken
+from apps.authentication.tokens import (
     _hash_token,
     get_token_service,
 )
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
-from users.models import User
+from apps.users.models import User
 
 
 @override_settings(

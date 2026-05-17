@@ -2,17 +2,16 @@
 GitHub OAuth Tests
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
-from apps.authentication.oauth.github import GitHubOAuthService, GitHubUser, GitHubOAuthError
-from apps.authentication.oauth.encryption import TokenEncryptionService, get_encryption_service
+from apps.authentication.models import OAuthIdentity
+from apps.authentication.oauth.github import GitHubOAuthError, GitHubOAuthService
+from apps.authentication.oauth.encryption import TokenEncryptionService
 from apps.authentication.oauth.state_manager import OAuthStateManager
 from apps.authentication.services.user_service import find_or_create_oauth_user
-from apps.users.models import User
-from apps.authentication.models import OAuthIdentity
 
 
 @override_settings(GITHUB_CLIENT_ID="test-client-id", GITHUB_CLIENT_SECRET="test-secret", GITHUB_REDIRECT_URI="http://test.com/callback", OAUTH_TOKEN_ENCRYPTION_KEY="/tmp/test-key.key")
@@ -65,17 +64,17 @@ class TestTokenEncryptionService(TestCase):
         service._fernet = MagicMock()
         mock_fernet = service._fernet
 
-        encrypted = service.encrypt("test-token")
+        service.encrypt("test-token")
         mock_fernet.encrypt.assert_called_once()
 
     def test_encrypt_empty_token(self):
         service = TokenEncryptionService()
-        with self.assertRaises(Exception):
+        with self.assertRaises(ValueError):
             service.encrypt("")
 
     def test_decrypt_empty_token(self):
         service = TokenEncryptionService()
-        with self.assertRaises(Exception):
+        with self.assertRaises(ValueError):
             service.decrypt("")
 
 

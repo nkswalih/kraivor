@@ -39,6 +39,12 @@ build/
 *.log
 logs/
 
+# Test coverage
+.coverage
+*/.coverage
+htmlcov/
+coverage.xml
+
 # Database
 *.db
 *.sqlite
@@ -60,3 +66,5 @@ KRAIVOR_BUILD_GUIDE.md
 system.md
 tickets.md
 tools.md
+
+.opencode

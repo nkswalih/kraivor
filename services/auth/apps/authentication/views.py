@@ -1,71 +1,81 @@
 """
-Sign-in views for KRV-011/KRV-013.
+Authentication views — KRV-011 / KRV-013 / KRV-014
 
-Multi-step authentication flow with secure token handling:
-1. POST /signin/identify - Email only, returns next step
-2. POST /signin/password - Password verification
-3. POST /signin/otp/send - Send OTP to email
-4. POST /signin/otp/verify - Verify OTP and return tokens
-5. POST /refresh - Refresh tokens with rotation (KRV-013)
+Multi-step sign-in, token refresh, sign-out, and session management.
 
-Returns:
-- access_token: In JSON response (store in memory)
-- refresh_token: HttpOnly cookie (30-day persist, rotated on use)
+Endpoints
+─────────
+KRV-011  POST /signin/identify/         Email lookup → next step
+KRV-011  POST /signin/password/         Password verification + token issuance
+KRV-011  POST /signin/otp/send/         Send OTP email
+KRV-011  POST /signin/otp/verify/       Verify OTP + token issuance
+KRV-013  POST /refresh/                 Rotate refresh token
+KRV-014  POST /signout/                 Revoke current session (cookie-based, no JWT needed)
+KRV-014  GET  /sessions/                List active sessions
+KRV-014  DELETE /sessions/<id>/         Revoke one session
+KRV-014  DELETE /sessions/all/          Revoke all sessions
 
-Security features:
-- Token rotation on every refresh
-- Replay attack detection (KRV-013)
-- Token hashing in database
-- Session management
+Token strategy
+──────────────
+- access_token   → JSON body (store in memory, 15-min lifetime)
+- refresh_token  → HttpOnly cookie (30-day lifetime, rotated on every use)
 """
 
+import hashlib
 import logging
 from dataclasses import dataclass
 
-from django.conf import settings
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from users.models import User
 
 from .cookie_utils import create_refresh_cookie
+from .models import RefreshToken
 from .otp import (
-    OTPRateLimitError,
-    OTPInvalidError,
     OTPExpiredError,
-    get_otp_service,
+    OTPInvalidError,
+    OTPRateLimitError,
     get_otp_sender,
+    get_otp_service,
 )
 from .security import (
-    get_client_ip,
-    get_lockout_manager,
-    generate_device_id,
     check_password as verify_password,
 )
+from .security import (
+    generate_device_id,
+    get_client_ip,
+    get_lockout_manager,
+)
 from .serializers import (
-    OTPVerifySerializer,
     OTPSendSerializer,
+    OTPVerifySerializer,
+    SessionSerializer,
     SignInIdentifySerializer,
     SignInPasswordSerializer,
 )
 from .tokens import (
-    get_token_service,
     TokenError,
     TokenExpiredError,
     TokenInvalidError,
-    TokenRevokedError,
     TokenReusedError,
+    TokenRevokedError,
+    get_token_service,
 )
-
-from users.models import User
 
 logger = logging.getLogger(__name__)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Shared helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
 @dataclass
 class ErrorResponse:
     """Structured error response for consistent API responses."""
+
     error: str
     error_code: str
     status_code: int = 400
@@ -101,18 +111,77 @@ def log_auth_event(
     }
     if extra:
         log_data.update(extra)
-    
+
     if success:
         logger.info("auth_event", extra=log_data)
     else:
         logger.warning("auth_event_failed", extra=log_data)
 
 
+def _hash_token(raw_token: str) -> str:
+    """SHA-256 hash a raw refresh token. Consistent with token_service storage."""
+    return hashlib.sha256(raw_token.encode()).hexdigest()
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    """Expire the refresh_token cookie on a response object in-place."""
+    cookie = create_refresh_cookie("")
+    response.set_cookie(
+        "refresh_token",
+        value="",
+        httponly=cookie["httponly"],
+        secure=cookie["secure"],
+        samesite=cookie["samesite"],
+        path=cookie["path"],
+        max_age=0,
+        domain=cookie.get("domain"),
+    )
+
+
+def _set_refresh_cookie(response: Response, raw_token: str) -> None:
+    """Write a new refresh_token cookie onto a response object in-place."""
+    cookie = create_refresh_cookie(raw_token)
+    response.set_cookie(
+        "refresh_token",
+        cookie["value"],
+        httponly=cookie["httponly"],
+        secure=cookie["secure"],
+        samesite=cookie["samesite"],
+        path=cookie["path"],
+        max_age=cookie["max_age"],
+        domain=cookie.get("domain"),
+    )
+
+
+def _active_sessions_qs(user_id):
+    """Base queryset: non-revoked, non-expired sessions for a user."""
+    return RefreshToken.objects.filter(
+        user_id=user_id,
+        revoked=False,
+        expires_at__gt=timezone.now(),
+    )
+
+
+def _current_device_id(request) -> str | None:
+    """
+    Extract device_id from the JWT payload sitting on request.auth.
+    DRF places the decoded payload dict on request.auth when using
+    a JWT authentication backend that returns the raw payload.
+    """
+    if isinstance(request.auth, dict):
+        return request.auth.get("device_id")
+    return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# KRV-011 — Multi-step Sign In
+# ─────────────────────────────────────────────────────────────────────────────
+
 class SignInIdentifyView(APIView):
     """
-    POST /api/auth/signin/identify
-    
-    Step 1: Email only - determines next authentication method.
+    POST /api/auth/signin/identify/
+
+    Step 1: Email only — determines next authentication method.
     """
 
     permission_classes = [AllowAny]
@@ -126,12 +195,12 @@ class SignInIdentifyView(APIView):
                 status_code=status.HTTP_400_BAD_REQUEST,
             ).to_response()
 
-        email = serializer.validated_data['email'].lower()
+        email = serializer.validated_data["email"].lower()
         ip = get_client_ip(request)
 
         lockout_mgr = get_lockout_manager()
         is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
-        
+
         if is_locked:
             return ErrorResponse(
                 error="Too many failed attempts. Account temporarily locked.",
@@ -175,9 +244,9 @@ class SignInIdentifyView(APIView):
 
 class SignInPasswordView(APIView):
     """
-    POST /api/auth/signin/password
-    
-    Step 2: Password verification.
+    POST /api/auth/signin/password/
+
+    Step 2a: Password verification → issues token pair.
     """
 
     permission_classes = [AllowAny]
@@ -191,16 +260,16 @@ class SignInPasswordView(APIView):
                 status_code=status.HTTP_400_BAD_REQUEST,
             ).to_response()
 
-        email = serializer.validated_data['email'].lower()
-        password = serializer.validated_data['password']
-        device_id = serializer.validated_data.get('device_id') or generate_device_id(request)
-        
+        email = serializer.validated_data["email"].lower()
+        password = serializer.validated_data["password"]
+        device_id = serializer.validated_data.get("device_id") or generate_device_id(request)
+
         ip = get_client_ip(request)
-        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
 
         lockout_mgr = get_lockout_manager()
         is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
-        
+
         if is_locked:
             return ErrorResponse(
                 error="Too many failed attempts. Account temporarily locked.",
@@ -239,7 +308,6 @@ class SignInPasswordView(APIView):
 
         token_service = get_token_service()
         tokens = token_service.generate_tokens(user, device_id, ip, user_agent)
-        cookie = create_refresh_cookie(tokens.refresh_token)
 
         log_auth_event(
             event_type="login_success",
@@ -256,31 +324,16 @@ class SignInPasswordView(APIView):
                 "access_token": tokens.access_token,
                 "token_type": tokens.token_type,
                 "expires_in": tokens.expires_in,
-                "user": {
-                    "id": str(user.id),
-                    "email": user.email,
-                    "name": user.name
-                },
+                "user": {"id": str(user.id), "email": user.email, "name": user.name},
             },
             status=status.HTTP_200_OK,
         )
-
-        response.set_cookie(
-            'refresh_token',
-            cookie['value'],
-            httponly=cookie['httponly'],
-            secure=cookie['secure'],
-            samesite=cookie['samesite'],
-            path=cookie['path'],
-            max_age=cookie['max_age'],
-            domain=cookie.get('domain'),
-        )
-
+        _set_refresh_cookie(response, tokens.refresh_token)
         return response
 
 
 class OTPSendView(APIView):
-    """POST /api/auth/signin/otp/send - Send OTP to user's email."""
+    """POST /api/auth/signin/otp/send/ — Send OTP to user's email."""
 
     permission_classes = [AllowAny]
 
@@ -293,12 +346,12 @@ class OTPSendView(APIView):
                 status_code=status.HTTP_400_BAD_REQUEST,
             ).to_response()
 
-        email = serializer.validated_data['email'].lower()
+        email = serializer.validated_data["email"].lower()
         ip = get_client_ip(request)
 
         lockout_mgr = get_lockout_manager()
         is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
-        
+
         if is_locked:
             return ErrorResponse(
                 error="Too many failed attempts. Account temporarily locked.",
@@ -324,7 +377,7 @@ class OTPSendView(APIView):
             ).to_response()
 
         otp_service = get_otp_service()
-        
+
         try:
             otp, _ = otp_service.create_and_send(email)
         except OTPRateLimitError as e:
@@ -349,14 +402,11 @@ class OTPSendView(APIView):
             method="otp",
         )
 
-        return Response(
-            {"message": "OTP sent to your email"},
-            status=status.HTTP_200_OK
-        )
+        return Response({"message": "OTP sent to your email"}, status=status.HTTP_200_OK)
 
 
 class OTPVerifyView(APIView):
-    """POST /api/auth/signin/otp/verify - Verify OTP and return tokens."""
+    """POST /api/auth/signin/otp/verify/ — Verify OTP and issue token pair."""
 
     permission_classes = [AllowAny]
 
@@ -369,16 +419,16 @@ class OTPVerifyView(APIView):
                 status_code=status.HTTP_400_BAD_REQUEST,
             ).to_response()
 
-        email = serializer.validated_data['email'].lower()
-        otp_code = serializer.validated_data['otp_code']
-        device_id = serializer.validated_data.get('device_id') or generate_device_id(request)
-        
+        email = serializer.validated_data["email"].lower()
+        otp_code = serializer.validated_data["otp_code"]
+        device_id = serializer.validated_data.get("device_id") or generate_device_id(request)
+
         ip = get_client_ip(request)
-        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
 
         lockout_mgr = get_lockout_manager()
         is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
-        
+
         if is_locked:
             return ErrorResponse(
                 error="Too many failed attempts. Account temporarily locked.",
@@ -397,7 +447,7 @@ class OTPVerifyView(APIView):
             ).to_response()
 
         otp_service = get_otp_service()
-        
+
         try:
             otp_service.verify_otp(email, otp_code)
         except OTPExpiredError:
@@ -416,10 +466,9 @@ class OTPVerifyView(APIView):
             ).to_response()
 
         lockout_mgr.clear_attempts(email, ip)
-        
+
         token_service = get_token_service()
         tokens = token_service.generate_tokens(user, device_id, ip, user_agent)
-        cookie = create_refresh_cookie(tokens.refresh_token)
 
         log_auth_event(
             event_type="login_success",
@@ -436,53 +485,35 @@ class OTPVerifyView(APIView):
                 "access_token": tokens.access_token,
                 "token_type": tokens.token_type,
                 "expires_in": tokens.expires_in,
-                "user": {
-                    "id": str(user.id),
-                    "email": user.email,
-                    "name": user.name
-                },
+                "user": {"id": str(user.id), "email": user.email, "name": user.name},
             },
             status=status.HTTP_200_OK,
         )
-
-        response.set_cookie(
-            'refresh_token',
-            cookie['value'],
-            httponly=cookie['httponly'],
-            secure=cookie['secure'],
-            samesite=cookie['samesite'],
-            path=cookie['path'],
-            max_age=cookie['max_age'],
-            domain=cookie.get('domain'),
-        )
-
+        _set_refresh_cookie(response, tokens.refresh_token)
         return response
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# KRV-013 — Token Refresh
+# ─────────────────────────────────────────────────────────────────────────────
+
 class RefreshTokenView(APIView):
     """
-    POST /api/auth/refresh
-    
-    Refresh access token using HttpOnly cookie.
-    
-    KRV-013: Implements secure refresh token rotation:
-    1. Reads refresh token from HttpOnly cookie
-    2. Validates token against database (not just JWT signature)
-    3. Issues new access token AND new refresh token
-    4. Immediately invalidates old refresh token (rotation)
-    5. Detects replay attacks: if reused token is presented,
-       ALL active sessions for that user are invalidated
-    
-    Returns:
-    - access_token: In JSON response body
-    - refresh_token: New token in HttpOnly cookie
+    POST /api/auth/refresh/
+
+    Rotate refresh token:
+    1. Read refresh token from HttpOnly cookie
+    2. Validate against database
+    3. Issue new access_token + new refresh_token
+    4. Immediately revoke old refresh token
+    5. Replay attack: reused token → revoke ALL user sessions
     """
 
     permission_classes = [AllowAny]
 
     def post(self, request):
-        refresh_token = request.COOKIES.get('refresh_token')
-        
+        refresh_token = request.COOKIES.get("refresh_token")
+
         if not refresh_token:
             return ErrorResponse(
                 error="Refresh token not found. Please sign in again.",
@@ -491,10 +522,9 @@ class RefreshTokenView(APIView):
             ).to_response()
 
         ip = get_client_ip(request)
-        user_agent = request.META.get('HTTP_USER_AGENT', '')
-
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
         token_service = get_token_service()
-        
+
         try:
             user, tokens = token_service.validate_and_rotate(
                 refresh_token=refresh_token,
@@ -508,10 +538,7 @@ class RefreshTokenView(APIView):
                 status_code=status.HTTP_401_UNAUTHORIZED,
             ).to_response()
         except TokenInvalidError as e:
-            logger.warning(
-                "refresh_token_invalid",
-                extra={"error": str(e), "ip": ip}
-            )
+            logger.warning("refresh_token_invalid", extra={"error": str(e), "ip": ip})
             return ErrorResponse(
                 error="Invalid refresh token. Please sign in again.",
                 error_code="invalid_token",
@@ -527,10 +554,10 @@ class RefreshTokenView(APIView):
             logger.error(
                 "replay_attack_detected",
                 extra={
-                    "user_id": str(user.id) if 'user' in locals() else "unknown",
+                    "user_id": str(user.id) if "user" in locals() else "unknown",
                     "ip": ip,
                     "error": str(e),
-                }
+                },
             )
             return ErrorResponse(
                 error="Security alert: suspicious activity detected. Please sign in again.",
@@ -544,8 +571,6 @@ class RefreshTokenView(APIView):
                 error_code="internal_error",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             ).to_response()
-
-        cookie = create_refresh_cookie(tokens.refresh_token)
 
         log_auth_event(
             event_type="token_refreshed",
@@ -563,72 +588,45 @@ class RefreshTokenView(APIView):
             },
             status=status.HTTP_200_OK,
         )
-
-        response.set_cookie(
-            'refresh_token',
-            cookie['value'],
-            httponly=cookie['httponly'],
-            secure=cookie['secure'],
-            samesite=cookie['samesite'],
-            path=cookie['path'],
-            max_age=cookie['max_age'],
-            domain=cookie.get('domain'),
-        )
-
+        _set_refresh_cookie(response, tokens.refresh_token)
         return response
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# KRV-013 legacy — kept for backwards compat with existing url patterns
+# ─────────────────────────────────────────────────────────────────────────────
+
 class LogoutView(APIView):
     """
-    POST /api/auth/logout
-    
-    Invalidate current refresh token (single device logout).
+    POST /api/auth/logout/
+
+    Legacy single-device logout via token_service.revoke_token().
+    Kept so existing url pattern and any clients using /logout/ still work.
+    New clients should use POST /signout/ (KRV-014).
     """
 
     permission_classes = [AllowAny]
 
     def post(self, request):
-        refresh_token = request.COOKIES.get('refresh_token')
+        refresh_token = request.COOKIES.get("refresh_token")
         ip = get_client_ip(request)
-        
+
         if refresh_token:
             token_service = get_token_service()
             token_service.revoke_token(refresh_token)
-            
-            log_auth_event(
-                event_type="logout",
-                ip=ip,
-                method="single",
-            )
+            log_auth_event(event_type="logout", ip=ip, method="single")
 
-        response = Response(
-            {"message": "Logged out successfully"},
-            status=status.HTTP_200_OK,
-        )
-
-        cookie = create_refresh_cookie('')
-        cookie['max_age'] = 0
-        
-        response.set_cookie(
-            'refresh_token',
-            value='',
-            httponly=cookie['httponly'],
-            secure=cookie['secure'],
-            samesite=cookie['samesite'],
-            path=cookie['path'],
-            max_age=0,
-            domain=cookie.get('domain'),
-        )
-
+        response = Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
+        _clear_refresh_cookie(response)
         return response
 
 
 class LogoutAllView(APIView):
     """
-    POST /api/auth/logout/all
-    
-    Invalidate ALL refresh tokens for the user (all devices).
-    Requires authentication.
+    POST /api/auth/logout/all/
+
+    Legacy all-devices logout via token_service.revoke_all_user_tokens().
+    Kept for backwards compat. New clients should use DELETE /sessions/all/ (KRV-014).
     """
 
     def post(self, request):
@@ -641,7 +639,7 @@ class LogoutAllView(APIView):
 
         token_service = get_token_service()
         count = token_service.revoke_all_user_tokens(request.user)
-        
+
         log_auth_event(
             event_type="logout_all",
             user_id=str(request.user.id),
@@ -650,22 +648,168 @@ class LogoutAllView(APIView):
         )
 
         response = Response(
-            {
-                "message": "Logged out from all devices",
-                "sessions_revoked": count,
-            },
+            {"message": "Logged out from all devices", "sessions_revoked": count},
             status=status.HTTP_200_OK,
         )
+        _clear_refresh_cookie(response)
+        return response
 
-        response.set_cookie(
-            'refresh_token',
-            value='',
-            httponly=True,
-            secure=settings.COOKIE_SECURE,
-            samesite=settings.COOKIE_SAMESITE,
-            path=settings.COOKIE_PATH,
-            max_age=0,
-            domain=settings.COOKIE_DOMAIN if settings.COOKIE_DOMAIN else None,
+
+# ─────────────────────────────────────────────────────────────────────────────
+# KRV-014 — Sign Out & Session Management
+# ─────────────────────────────────────────────────────────────────────────────
+
+class SignOutView(APIView):
+    """
+    POST /api/auth/signout/
+
+    Revoke the refresh token from the HttpOnly cookie and clear the cookie.
+
+    Does NOT require a valid JWT — covers the common case where the
+    access token has already expired and the user just wants to sign out.
+
+    Always returns 200 (idempotent — already-revoked or missing tokens are fine).
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        raw_token = request.COOKIES.get("refresh_token")
+        ip = get_client_ip(request)
+
+        if raw_token:
+            token_hash = _hash_token(raw_token)
+            revoked = RefreshToken.objects.filter(
+                token_hash=token_hash,
+                revoked=False,
+            ).update(revoked=True)
+
+            if revoked:
+                log_auth_event(event_type="signout", ip=ip, method="single")
+
+        response = Response({"message": "Signed out successfully."}, status=status.HTTP_200_OK)
+        _clear_refresh_cookie(response)
+        return response
+
+
+class SessionListView(APIView):
+    """
+    GET /api/auth/sessions/
+
+    Returns all active (non-revoked, non-expired) sessions for the
+    authenticated user, ordered by most-recently-used first.
+
+    is_current=True on the session whose device_id matches the
+    device_id claim in the caller's JWT payload.
+
+    Response shape:
+    {
+        "sessions": [
+            {
+                "session_id": "uuid",
+                "device_name": "Chrome on macOS",
+                "device_type": "desktop",
+                "ip_address": "203.0.113.1",
+                "last_used_at": "2025-05-14T10:00:00Z",
+                "created_at":   "2025-05-10T08:00:00Z",
+                "is_current":   true
+            },
+            ...
+        ]
+    }
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        sessions = _active_sessions_qs(request.user.id).order_by("-last_used_at")
+
+        serializer = SessionSerializer(
+            sessions,
+            many=True,
+            context={"current_device_id": _current_device_id(request)},
+        )
+        return Response({"sessions": serializer.data}, status=status.HTTP_200_OK)
+
+
+class SessionRevokeView(APIView):
+    """
+    DELETE /api/auth/sessions/<session_id>/
+
+    Revoke a single session by UUID.
+
+    Security rules:
+    - Users can only revoke their own sessions.
+    - Returns 404 (not 403) for sessions belonging to other users —
+      avoids confirming the session exists.
+    - Returns 404 for sessions that are already revoked or expired.
+    - If the revoked session is the current device, the cookie is also cleared.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, session_id):
+        try:
+            session = RefreshToken.objects.get(
+                id=session_id,
+                user=request.user,
+                revoked=False,
+                expires_at__gt=timezone.now(),
+            )
+        except RefreshToken.DoesNotExist:
+            return Response({"error": "Session not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        session.revoked = True
+        session.save(update_fields=["revoked"])
+
+        log_auth_event(
+            event_type="session_revoked",
+            user_id=str(request.user.id),
+            ip=get_client_ip(request),
+            extra={"session_id": str(session_id)},
         )
 
+        response = Response({"message": "Session revoked."}, status=status.HTTP_200_OK)
+
+        # Clear cookie only if the caller just revoked their own current device
+        current = _current_device_id(request)
+        if current and str(session.device_id) == str(current):
+            _clear_refresh_cookie(response)
+
+        return response
+
+
+class SessionRevokeAllView(APIView):
+    """
+    DELETE /api/auth/sessions/all/
+
+    Revoke every active session for the current user (sign out everywhere).
+    Requires a valid JWT.
+    Also clears the refresh cookie on the current device.
+
+    Response:
+    {
+        "message": "All sessions revoked.",
+        "revoked_count": 3
+    }
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        revoked_count = _active_sessions_qs(request.user.id).update(revoked=True)
+
+        log_auth_event(
+            event_type="logout_all",
+            user_id=str(request.user.id),
+            ip=get_client_ip(request),
+            method="all_devices",
+            extra={"sessions_revoked": revoked_count},
+        )
+
+        response = Response(
+            {"message": "All sessions revoked.", "revoked_count": revoked_count},
+            status=status.HTTP_200_OK,
+        )
+        _clear_refresh_cookie(response)
         return response

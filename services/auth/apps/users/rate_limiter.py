@@ -83,10 +83,10 @@ class RedisRateLimiter:
 # This allows tests to mock `users.views.rate_limiter` without needing Redis.
 # ---------------------------------------------------------------------------
 
-_rate_limiter: "RedisRateLimiter | None" = None
+_rate_limiter: RedisRateLimiter | None = None
 
 
-def _get_rate_limiter() -> "RedisRateLimiter":
+def _get_rate_limiter() -> RedisRateLimiter:
     global _rate_limiter  # noqa: PLW0603
     if _rate_limiter is None:
         _rate_limiter = RedisRateLimiter()

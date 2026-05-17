@@ -197,7 +197,10 @@ class ResendVerificationView(APIView):
         except Exception:
             logger.exception("Failed to resend verification email to %s", user.email)
             return Response(
-                {"error": "Failed to send email. Please try again later.", "error_code": "email_send_failed"},
+                {
+                    "error": "Failed to send email. Please try again later.",
+                    "error_code": "email_send_failed",
+                },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 

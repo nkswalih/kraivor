@@ -13,6 +13,7 @@ from .views import (
     SignInPasswordView,
     SignOutView,
 )
+from .oauth.views import GitHubOAuthInitiateView, GitHubOAuthCallbackView
 
 urlpatterns = [
     # KRV-011: Multi-step Sign In
@@ -22,21 +23,15 @@ urlpatterns = [
     path("signin/otp/verify/", OTPVerifyView.as_view(), name="signin-otp-verify"),
     # KRV-013: Refresh Token Rotation
     path("refresh/", RefreshTokenView.as_view(), name="token-refresh"),
-     # ── Legacy logout (keep for backwards compat) ─────────────────────────────
+    # KRV-015: GitHub OAuth
+    path("github/", GitHubOAuthInitiateView.as_view(), name="github-oauth-initiate"),
+    path("github/callback/", GitHubOAuthCallbackView.as_view(), name="github-oauth-callback"),
+    # Legacy logout (keep for backwards compat)
     path("logout/", LogoutView.as_view(), name="logout"),
     path("logout/all/", LogoutAllView.as_view(), name="logout-all"),
- 
-    # ── KRV-014: Sign Out & Session Management ────────────────────────────────
-    # POST   /api/auth/signout/              — revoke cookie token, no JWT needed
-    # GET    /api/auth/sessions/             — list active sessions
-    # DELETE /api/auth/sessions/all/         — revoke all sessions
-    # DELETE /api/auth/sessions/<id>/        — revoke one session
-    #
-    # IMPORTANT: sessions/all/ must come BEFORE sessions/<session_id>/
-    # Otherwise Django matches "all" as a UUID and returns a 404.
+    # KRV-014: Sign Out & Session Management
     path("signout/", SignOutView.as_view(), name="signout"),
     path("sessions/", SessionListView.as_view(), name="session-list"),
     path("sessions/all/", SessionRevokeAllView.as_view(), name="session-revoke-all"),
     path("sessions/<uuid:session_id>/", SessionRevokeView.as_view(), name="session-revoke"),
-    
 ]

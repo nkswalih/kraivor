@@ -11,8 +11,8 @@ def health_check(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/auth/', include('users.urls')),
-    path('api/auth/', include('authentication.urls')),
+    path('api/auth/', include('apps.users.urls')),
+    path('api/auth/', include('apps.authentication.urls')),
     path('api/auth/', include('api_keys.urls')),
     path('.well-known/jwks.json', JWKSView.as_view(), name='jwks'),
     path('api/health/', health_check, name='health'),

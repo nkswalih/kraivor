@@ -127,9 +127,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
-    'users',
-    'authentication',
-    'api_keys',
+    'apps.users',
+    'apps.authentication',
+    'apps.api_keys',
 ]
 
 # MIDDLEWARE: Request/response processing pipeline
@@ -195,7 +195,7 @@ PASSWORD_HASHERS = [
 
 # AUTH_USER_MODEL: Custom user model
 # WHY: Allows extending user model without breaking relations
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'apps.users.User'
 
 # =============================================================================
 # CACHING CONFIGURATION - Redis
@@ -396,7 +396,7 @@ LOGGING = {
 # WHY: Prevents brute force attacks on login endpoint
 LOGIN_MAX_FAILURES = env.int('LOGIN_MAX_FAILURES', default=5)
 LOGIN_LOCKOUT_MINUTES = env.int('LOGIN_LOCKOUT_MINUTES', default=15)
-LOGIN_FAILURE_SIGNAL = 'authentication.signals.lockout_signal'
+LOGIN_FAILURE_SIGNAL = 'apps.authentication.signals.lockout_signal'
 
 # =============================================================================
 # OTP (One-Time Password) CONFIGURATION

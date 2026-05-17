@@ -18,7 +18,7 @@ class OAuthStateError(Exception):
 
 class OAuthStateManager:
     def __init__(self):
-        self._redis_client: Optional[redis.Redis] = None
+        self._redis_client: redis.Redis | None = None
         self._state_ttl = getattr(settings, "OAUTH_STATE_EXPIRE_SECONDS", 600)
 
     @property

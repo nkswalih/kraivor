@@ -3,9 +3,7 @@ GitHub OAuth Views
 """
 
 import logging
-from urllib.parse import urlencode
 
-from django.conf import settings
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request

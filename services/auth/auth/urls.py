@@ -1,8 +1,7 @@
+from authentication.jwks import JWKSView
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
-
-from apps.authentication.jwks import JWKSView
 
 
 def health_check(request):

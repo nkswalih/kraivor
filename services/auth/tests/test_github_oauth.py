@@ -8,10 +8,12 @@ from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
 from authentication.models import OAuthIdentity
-from authentication.oauth.encryption import TokenEncryptionService
+from authentication.oauth.encryption import TokenEncryptionError, TokenEncryptionService
 from authentication.oauth.github import GitHubOAuthError, GitHubOAuthService
 from authentication.oauth.state_manager import OAuthStateManager
 from authentication.services.user_service import find_or_create_oauth_user
+from django.test import TestCase, override_settings
+from rest_framework.test import APIClient
 
 
 @override_settings(
@@ -80,12 +82,12 @@ class TestTokenEncryptionService(TestCase):
 
     def test_encrypt_empty_token(self):
         service = TokenEncryptionService()
-        with self.assertRaises(TokenEncryptionService.__module__.split(".")[-1] and Exception):
+        with self.assertRaises(TokenEncryptionError):
             service.encrypt("")
 
     def test_decrypt_empty_token(self):
         service = TokenEncryptionService()
-        with self.assertRaises(Exception):
+        with self.assertRaises(TokenEncryptionError):
             service.decrypt("")
 
 

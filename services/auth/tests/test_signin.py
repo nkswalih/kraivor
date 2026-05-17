@@ -5,8 +5,8 @@ Unit and integration tests for KRV-011 sign-in flow.
 from unittest.mock import MagicMock, patch
 
 import pytest
-from rest_framework.test import APIClient
 from authentication.security import reset_lockout_manager
+from rest_framework.test import APIClient
 from tests.factories import UserFactory
 
 
@@ -113,8 +113,10 @@ class TestOTPFlow:
         mock_mgr.check_lockout.return_value = (False, 0)
         mock_mgr.record_failure = MagicMock()
 
-        with patch("authentication.views.get_lockout_manager", return_value=mock_mgr):
-            with patch.object(otp_module, "_otp_service", mock_svc):
+        with (
+            patch("authentication.views.get_lockout_manager", return_value=mock_mgr),
+            patch.object(otp_module, "_otp_service", mock_svc),
+        ):
                 client = APIClient()
                 response = client.post(
                     "/api/auth/signin/otp/verify/",

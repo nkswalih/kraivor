@@ -22,10 +22,11 @@ import uuid
 from datetime import timedelta
 
 import pytest
-from apps.authentication.models import RefreshToken
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
+
+from apps.authentication.models import RefreshToken
 from apps.users.models import User
 
 # ─────────────────────────────────────────────────────────────────────────────

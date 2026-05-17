@@ -3,7 +3,6 @@ OAuth User Service
 """
 
 import logging
-from typing import Optional
 
 from django.contrib.auth import get_user_model
 

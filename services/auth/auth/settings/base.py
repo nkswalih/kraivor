@@ -407,3 +407,14 @@ if DEBUG is False and SECRET_KEY == 'dev-secret-key-not-for-production':
         "SECRET_KEY must be set in production! "
         "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(50))\""
     )
+
+# =============================================================================
+# OAUTH CONFIGURATION
+# =============================================================================
+
+GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID", "")
+GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET", "")
+GITHUB_REDIRECT_URI = os.environ.get("GITHUB_REDIRECT_URI", "http://localhost:8000/api/auth/github/callback")
+
+OAUTH_TOKEN_ENCRYPTION_KEY = os.environ.get("OAUTH_TOKEN_ENCRYPTION_KEY", os.path.join(BASE_DIR, ".keys", "oauth-encryption.key"))
+OAUTH_STATE_EXPIRE_SECONDS = int(os.environ.get("OAUTH_STATE_EXPIRE_SECONDS", "600"))

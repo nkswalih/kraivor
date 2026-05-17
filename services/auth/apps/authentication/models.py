@@ -28,6 +28,7 @@ class OAuthIdentity(models.Model):
 
     class Meta:
         db_table = "auth_oauth_identities"
+        app_label = "authentication"
         unique_together = [("provider", "provider_user_id")]
         indexes = [
             models.Index(fields=["provider", "provider_user_id"]),
@@ -54,6 +55,7 @@ class RefreshToken(models.Model):
 
     class Meta:
         db_table = "auth_refresh_tokens"
+        app_label = "authentication"
         indexes = [
             models.Index(fields=["user", "device_id"]),
             models.Index(fields=["token_hash"]),

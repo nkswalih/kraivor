@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 from .encryption import get_encryption_service
 from .github import GitHubOAuthError, get_github_oauth_service
 from .state_manager import OAuthStateError, get_state_manager
-from ..services import create_tokens_for_user
+from ..jwt import generate_token_pair
 from ..services.user_service import find_or_create_oauth_user
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ class GitHubOAuthCallbackView(APIView):
             encrypted_token = encryption_service.encrypt(access_token)
             user.oauth_identities.filter(provider=provider, deleted_at__isnull=False).update(deleted_at=None, access_token_encrypted=encrypted_token)
 
-            tokens = create_tokens_for_user(user)
+            tokens = generate_token_pair(user)
             return Response({"user": {"id": str(user.id), "email": user.email, "name": user.name}, "tokens": tokens}, status=status.HTTP_200_OK)
         except (OAuthStateError, GitHubOAuthError) as e:
             logger.error("oauth_callback_failed", extra={"error": str(e)})

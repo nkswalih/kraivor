@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from rest_framework.test import APIClient
-
 from authentication.security import reset_lockout_manager
 from tests.factories import UserFactory
 
@@ -99,6 +98,7 @@ class TestOTPFlow:
         assert response.status_code == 200
 
     def test_otp_verify_invalid(self, db):
+        from authentication import otp as otp_module
         from authentication.otp import OTPInvalidError
 
         user = UserFactory.verified()
@@ -113,17 +113,15 @@ class TestOTPFlow:
         mock_mgr.check_lockout.return_value = (False, 0)
         mock_mgr.record_failure = MagicMock()
 
-        # FIX: patch path must match how views.py imports — "authentication.views"
-        # not "apps.authentication.views" (apps/ is filesystem, not Python module path)
         with patch("authentication.views.get_lockout_manager", return_value=mock_mgr):
-            otp_module._otp_service = mock_svc
-            client = APIClient()
-            response = client.post(
-                "/api/auth/signin/otp/verify/",
-                {"email": user.email, "otp_code": "000000"},
-                format="json",
-            )
-            assert response.status_code == 401
+            with patch.object(otp_module, "_otp_service", mock_svc):
+                client = APIClient()
+                response = client.post(
+                    "/api/auth/signin/otp/verify/",
+                    {"email": user.email, "otp_code": "000000"},
+                    format="json",
+                )
+                assert response.status_code == 401
 
 
 @pytest.mark.auth

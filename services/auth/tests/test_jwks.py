@@ -7,8 +7,8 @@ Covers:
   - JWK format validation
 """
 
+from datetime import UTC
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
@@ -17,8 +17,8 @@ from apps.authentication.jwks import JWKSView
 
 
 def generate_test_rsa_keypair():
-    from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
 
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     public_key = private_key.public_key()
@@ -26,11 +26,10 @@ def generate_test_rsa_keypair():
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
     public_pem = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
+        encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
     return private_pem, public_pem
 
@@ -146,6 +145,7 @@ class TestJWKSViewUnit(TestCase):
 
     def test_public_key_to_jwk_conversion(self):
         from cryptography.hazmat.primitives import serialization
+
         public_key = serialization.load_pem_public_key(self.public_pem)
         jwk = JWKSView._public_key_to_jwk(public_key)
 
@@ -182,8 +182,9 @@ class TestIntegrationEndToEndJWT(TestCase):
         self.private_pem, self.public_pem = generate_test_rsa_keypair()
 
     def test_identity_issues_token_core_verifies(self):
+        from datetime import datetime, timedelta
+
         import jwt
-        from datetime import datetime, timedelta, timezone
 
         temp_dir = Path(__file__).parent.parent / ".keys"
         temp_dir.mkdir(exist_ok=True)
@@ -204,8 +205,8 @@ class TestIntegrationEndToEndJWT(TestCase):
                 "workspace_ids": ["ws-integration-1", "ws-integration-2"],
                 "roles": {"ws-integration-1": "owner", "ws-integration-2": "member"},
                 "token_type": "access",
-                "iat": datetime.now(timezone.utc),
-                "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+                "iat": datetime.now(UTC),
+                "exp": datetime.now(UTC) + timedelta(hours=1),
                 "aud": "kraivor",
                 "iss": "kraivor-identity",
             }
@@ -218,12 +219,12 @@ class TestIntegrationEndToEndJWT(TestCase):
             with override_settings(JWT_PUBLIC_KEY_PATH=str(public_key_path)):
                 JWKSView.invalidate_cache()
                 jwks = JWKSView._get_jwks()
-                jwk = jwks['keys'][0]
+                jwk = jwks["keys"][0]
 
             # Step 3: Core/Analysis/AI services verify the token using JWKS
-            from cryptography.hazmat.primitives import serialization
-            from cryptography.hazmat.primitives.asymmetric import rsa
             import base64
+
+            from cryptography.hazmat.primitives.asymmetric import rsa
 
             # Convert JWK back to public key for verification
             def b64url_decode(data: str) -> bytes:
@@ -240,7 +241,7 @@ class TestIntegrationEndToEndJWT(TestCase):
                 public_key,
                 algorithms=["RS256"],
                 audience="kraivor",
-                issuer="kraivor-identity"
+                issuer="kraivor-identity",
             )
 
             # Verify claims
@@ -256,8 +257,9 @@ class TestIntegrationEndToEndJWT(TestCase):
                 private_key_path.unlink()
 
     def test_expired_token_is_rejected(self):
+        from datetime import datetime, timedelta
+
         import jwt
-        from datetime import datetime, timedelta, timezone
 
         temp_dir = Path(__file__).parent.parent / ".keys"
         temp_dir.mkdir(exist_ok=True)
@@ -275,8 +277,8 @@ class TestIntegrationEndToEndJWT(TestCase):
                 "sub": "user-expired",
                 "email": "expired@kraivor.test",
                 "token_type": "access",
-                "iat": datetime.now(timezone.utc) - timedelta(hours=2),
-                "exp": datetime.now(timezone.utc) - timedelta(hours=1),
+                "iat": datetime.now(UTC) - timedelta(hours=2),
+                "exp": datetime.now(UTC) - timedelta(hours=1),
                 "aud": "kraivor",
                 "iss": "kraivor-identity",
             }
@@ -287,11 +289,12 @@ class TestIntegrationEndToEndJWT(TestCase):
                 jwks = JWKSView._get_jwks()
 
             # Try to decode - should fail with ExpiredSignatureError
-            from cryptography.hazmat.primitives import serialization
-            from cryptography.hazmat.primitives.asymmetric import rsa
             import base64
 
-            jwk = jwks['keys'][0]
+            from cryptography.hazmat.primitives.asymmetric import rsa
+
+            jwk = jwks["keys"][0]
+
             def b64url_decode(data: str) -> bytes:
                 return base64.urlsafe_b64decode(data + "=" * (4 - len(data) % 4))
 
@@ -306,7 +309,7 @@ class TestIntegrationEndToEndJWT(TestCase):
                     public_key,
                     algorithms=["RS256"],
                     audience="kraivor",
-                    issuer="kraivor-identity"
+                    issuer="kraivor-identity",
                 )
 
         finally:

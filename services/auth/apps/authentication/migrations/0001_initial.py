@@ -8,7 +8,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -17,45 +16,88 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='OAuthIdentity',
+            name="OAuthIdentity",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('provider', models.CharField(choices=[('github', 'GitHub'), ('google', 'Google'), ('apple', 'Apple')], max_length=50)),
-                ('provider_user_id', models.CharField(max_length=255)),
-                ('provider_email', models.EmailField(blank=True, max_length=254, null=True)),
-                ('access_token_encrypted', models.TextField(blank=True, null=True)),
-                ('refresh_token_encrypted', models.TextField(blank=True, null=True)),
-                ('expires_at', models.DateTimeField(blank=True, null=True)),
-                ('raw_data', models.JSONField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='oauth_identities', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                (
+                    "provider",
+                    models.CharField(
+                        choices=[("github", "GitHub"), ("google", "Google"), ("apple", "Apple")],
+                        max_length=50,
+                    ),
+                ),
+                ("provider_user_id", models.CharField(max_length=255)),
+                ("provider_email", models.EmailField(blank=True, max_length=254, null=True)),
+                ("access_token_encrypted", models.TextField(blank=True, null=True)),
+                ("refresh_token_encrypted", models.TextField(blank=True, null=True)),
+                ("expires_at", models.DateTimeField(blank=True, null=True)),
+                ("raw_data", models.JSONField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="oauth_identities",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'db_table': 'auth_oauth_identities',
-                'indexes': [models.Index(fields=['provider', 'provider_user_id'], name='auth_oauth__provide_07d374_idx'), models.Index(fields=['user', 'provider'], name='auth_oauth__user_id_fe3093_idx')],
-                'unique_together': {('provider', 'provider_user_id')},
+                "db_table": "auth_oauth_identities",
+                "indexes": [
+                    models.Index(
+                        fields=["provider", "provider_user_id"],
+                        name="auth_oauth__provide_07d374_idx",
+                    ),
+                    models.Index(
+                        fields=["user", "provider"], name="auth_oauth__user_id_fe3093_idx"
+                    ),
+                ],
+                "unique_together": {("provider", "provider_user_id")},
             },
         ),
         migrations.CreateModel(
-            name='RefreshToken',
+            name="RefreshToken",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('token_hash', models.CharField(max_length=255)),
-                ('device_id', models.CharField(blank=True, max_length=255, null=True)),
-                ('device_name', models.CharField(blank=True, max_length=255, null=True)),
-                ('device_type', models.CharField(blank=True, max_length=50, null=True)),
-                ('ip_address', models.GenericIPAddressField(blank=True, null=True)),
-                ('user_agent', models.TextField(blank=True, null=True)),
-                ('expires_at', models.DateTimeField()),
-                ('revoked', models.BooleanField(default=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('last_used_at', models.DateTimeField(blank=True, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='refresh_tokens', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("token_hash", models.CharField(max_length=255)),
+                ("device_id", models.CharField(blank=True, max_length=255, null=True)),
+                ("device_name", models.CharField(blank=True, max_length=255, null=True)),
+                ("device_type", models.CharField(blank=True, max_length=50, null=True)),
+                ("ip_address", models.GenericIPAddressField(blank=True, null=True)),
+                ("user_agent", models.TextField(blank=True, null=True)),
+                ("expires_at", models.DateTimeField()),
+                ("revoked", models.BooleanField(default=False)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("last_used_at", models.DateTimeField(blank=True, null=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="refresh_tokens",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'db_table': 'auth_refresh_tokens',
-                'indexes': [models.Index(fields=['user', 'device_id'], name='auth_refres_user_id_2fe88e_idx'), models.Index(fields=['token_hash'], name='auth_refres_token_h_cec3f5_idx')],
+                "db_table": "auth_refresh_tokens",
+                "indexes": [
+                    models.Index(
+                        fields=["user", "device_id"], name="auth_refres_user_id_2fe88e_idx"
+                    ),
+                    models.Index(fields=["token_hash"], name="auth_refres_token_h_cec3f5_idx"),
+                ],
             },
         ),
     ]

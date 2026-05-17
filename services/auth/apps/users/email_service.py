@@ -185,7 +185,7 @@ class EmailService:
     def send_email(self, to_email: str, subject: str, message: str) -> None:
         """
         Send a plain text email.
-        
+
         Used for OTP codes, password reset, etc.
         """
         text = f"{message}\n\n— The Kraivor Team"
@@ -198,7 +198,7 @@ class EmailService:
   </div>
 </body>
 </html>"""
-        
+
         logger.info("Sending email to %s", to_email)
         self._backend.send(
             to_email=to_email,

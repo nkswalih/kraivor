@@ -13,7 +13,7 @@ from pathlib import Path
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
-from apps.authentication.jwks import JWKSView
+from authentication.jwks import JWKSView
 
 
 def generate_test_rsa_keypair():

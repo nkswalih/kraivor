@@ -46,7 +46,7 @@ class UserFactory:
         **kwargs,
     ):
         """Create a new user with the given attributes."""
-        from apps.users.models import User
+        from users.models import User
 
         if email is None:
             email = cls._next_email()
@@ -90,7 +90,7 @@ class TokenFactory:
     @classmethod
     def create_for_user(cls, user, **overrides):
         """Create tokens for an existing user."""
-        from apps.authentication.tokens import get_token_service
+        from authentication.tokens import get_token_service
 
         token_service = get_token_service()
         tokens = token_service.generate_tokens(
@@ -104,7 +104,7 @@ class TokenFactory:
     @classmethod
     def create_access_token(cls, user, **overrides):
         """Create only an access token."""
-        from apps.authentication.tokens import get_token_service
+        from authentication.tokens import get_token_service
 
         token_service = get_token_service()
         tokens = token_service.generate_tokens(
@@ -118,7 +118,7 @@ class TokenFactory:
     @classmethod
     def create_refresh_token(cls, user, **overrides):
         """Create only a refresh token."""
-        from apps.authentication.tokens import get_token_service
+        from authentication.tokens import get_token_service
 
         token_service = get_token_service()
         tokens = token_service.generate_tokens(

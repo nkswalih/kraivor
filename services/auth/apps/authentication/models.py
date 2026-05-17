@@ -19,6 +19,7 @@ class OAuthIdentity(models.Model):
     access_token_encrypted = models.TextField(null=True, blank=True)
     refresh_token_encrypted = models.TextField(null=True, blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     raw_data = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

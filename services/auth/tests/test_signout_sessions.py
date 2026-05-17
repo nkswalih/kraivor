@@ -25,7 +25,6 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
-
 from authentication.models import RefreshToken
 from users.models import User
 

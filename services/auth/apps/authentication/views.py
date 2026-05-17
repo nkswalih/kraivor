@@ -30,7 +30,6 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from apps.users.models import User
 
 from .cookie_utils import create_refresh_cookie
 from .models import RefreshToken
@@ -64,6 +63,7 @@ from .tokens import (
     TokenRevokedError,
     get_token_service,
 )
+from apps.users.models import User
 
 logger = logging.getLogger(__name__)
 

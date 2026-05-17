@@ -195,7 +195,7 @@ PASSWORD_HASHERS = [
 
 # AUTH_USER_MODEL: Custom user model
 # WHY: Allows extending user model without breaking relations
-AUTH_USER_MODEL = 'apps.users.User'
+AUTH_USER_MODEL = 'users.User'
 
 # =============================================================================
 # CACHING CONFIGURATION - Redis

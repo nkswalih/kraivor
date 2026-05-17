@@ -10,11 +10,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from ..jwt import generate_token_pair
+from ..services.user_service import find_or_create_oauth_user
 from .encryption import get_encryption_service
 from .github import GitHubOAuthError, get_github_oauth_service
 from .state_manager import OAuthStateError, get_state_manager
-from ..jwt import generate_token_pair
-from ..services.user_service import find_or_create_oauth_user
 
 logger = logging.getLogger(__name__)
 

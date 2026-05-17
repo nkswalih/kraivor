@@ -8,8 +8,8 @@ from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
 from apps.authentication.models import OAuthIdentity
-from apps.authentication.oauth.github import GitHubOAuthError, GitHubOAuthService
 from apps.authentication.oauth.encryption import TokenEncryptionService
+from apps.authentication.oauth.github import GitHubOAuthError, GitHubOAuthService
 from apps.authentication.oauth.state_manager import OAuthStateManager
 from apps.authentication.services.user_service import find_or_create_oauth_user
 

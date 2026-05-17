@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.authentication.models import RefreshToken
+from authentication.models import RefreshToken
 
 # ── KRV-011 ───────────────────────────────────────────────────────────────────
 

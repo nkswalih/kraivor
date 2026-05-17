@@ -127,9 +127,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
-    'apps.users',
-    'apps.authentication',
-    'apps.api_keys',
+    'users',
+    'authentication',
+    'api_keys',
 ]
 
 # MIDDLEWARE: Request/response processing pipeline
@@ -396,7 +396,7 @@ LOGGING = {
 # WHY: Prevents brute force attacks on login endpoint
 LOGIN_MAX_FAILURES = env.int('LOGIN_MAX_FAILURES', default=5)
 LOGIN_LOCKOUT_MINUTES = env.int('LOGIN_LOCKOUT_MINUTES', default=15)
-LOGIN_FAILURE_SIGNAL = 'apps.authentication.signals.lockout_signal'
+LOGIN_FAILURE_SIGNAL = 'authentication.signals.lockout_signal'
 
 # =============================================================================
 # OTP (One-Time Password) CONFIGURATION

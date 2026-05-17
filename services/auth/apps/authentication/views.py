@@ -63,7 +63,7 @@ from .tokens import (
     TokenRevokedError,
     get_token_service,
 )
-from apps.users.models import User
+from users.models import User
 
 logger = logging.getLogger(__name__)
 

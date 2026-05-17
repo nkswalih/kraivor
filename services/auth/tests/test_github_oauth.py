@@ -7,11 +7,11 @@ from unittest.mock import MagicMock, Mock, patch
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
-from apps.authentication.models import OAuthIdentity
-from apps.authentication.oauth.encryption import TokenEncryptionService
-from apps.authentication.oauth.github import GitHubOAuthError, GitHubOAuthService
-from apps.authentication.oauth.state_manager import OAuthStateManager
-from apps.authentication.services.user_service import find_or_create_oauth_user
+from authentication.models import OAuthIdentity
+from authentication.oauth.encryption import TokenEncryptionService
+from authentication.oauth.github import GitHubOAuthError, GitHubOAuthService
+from authentication.oauth.state_manager import OAuthStateManager
+from authentication.services.user_service import find_or_create_oauth_user
 
 
 @override_settings(GITHUB_CLIENT_ID="test-client-id", GITHUB_CLIENT_SECRET="test-secret", GITHUB_REDIRECT_URI="http://test.com/callback", OAUTH_TOKEN_ENCRYPTION_KEY="/tmp/test-key.key")
@@ -25,7 +25,7 @@ class TestGitHubOAuthService(TestCase):
         self.assertIn("state=test-state", url)
         self.assertIn("github.com/login/oauth/authorize", url)
 
-    @patch("apps.authentication.oauth.github.requests.post")
+    @patch("authentication.oauth.github.requests.post")
     def test_exchange_code_for_token_success(self, mock_post):
         mock_response = Mock()
         mock_response.json.return_value = {"access_token": "test_token_123"}
@@ -35,7 +35,7 @@ class TestGitHubOAuthService(TestCase):
         token = self.service.exchange_code_for_token("test_code")
         self.assertEqual(token, "test_token_123")
 
-    @patch("apps.authentication.oauth.github.requests.post")
+    @patch("authentication.oauth.github.requests.post")
     def test_exchange_code_for_token_no_token(self, mock_post):
         mock_response = Mock()
         mock_response.json.return_value = {}
@@ -45,7 +45,7 @@ class TestGitHubOAuthService(TestCase):
         with self.assertRaises(GitHubOAuthError):
             self.service.exchange_code_for_token("test_code")
 
-    @patch("apps.authentication.oauth.github.requests.get")
+    @patch("authentication.oauth.github.requests.get")
     def test_get_user_success(self, mock_get):
         mock_response = Mock()
         mock_response.json.return_value = {"id": 123, "login": "testuser", "name": "Test User", "email": "test@example.com", "avatar_url": "http://avatar.com/123"}
@@ -78,7 +78,7 @@ class TestTokenEncryptionService(TestCase):
             service.decrypt("")
 
 
-@patch("apps.authentication.oauth.state_manager.redis.from_url")
+@patch("authentication.oauth.state_manager.redis.from_url")
 class TestOAuthStateManager(TestCase):
     def test_generate_state(self, mock_redis):
         mock_client = Mock()
@@ -128,8 +128,8 @@ class TestGitHubOAuthViews(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-    @patch("apps.authentication.oauth.views.get_github_oauth_service")
-    @patch("apps.authentication.oauth.views.get_state_manager")
+    @patch("authentication.oauth.views.get_github_oauth_service")
+    @patch("authentication.oauth.views.get_state_manager")
     def test_initiate_success(self, mock_state_manager, mock_oauth_service):
         mock_manager = Mock()
         mock_manager.generate_state.return_value = "test-state"
@@ -143,8 +143,8 @@ class TestGitHubOAuthViews(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("authorization_url", response.data)
 
-    @patch("apps.authentication.oauth.views.get_github_oauth_service")
-    @patch("apps.authentication.oauth.views.get_state_manager")
+    @patch("authentication.oauth.views.get_github_oauth_service")
+    @patch("authentication.oauth.views.get_state_manager")
     def test_callback_invalid_state(self, mock_state_manager, mock_oauth_service):
         mock_manager = Mock()
         mock_manager.validate_state.return_value = False

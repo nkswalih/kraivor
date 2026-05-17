@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from rest_framework.test import APIClient
 
-from apps.authentication.security import reset_lockout_manager
+from authentication.security import reset_lockout_manager
 from tests.factories import UserFactory
 
 
@@ -99,7 +99,7 @@ class TestOTPFlow:
         assert response.status_code == 200
 
     def test_otp_verify_invalid(self, db):
-        from apps.authentication.otp import OTPInvalidError
+        from authentication.otp import OTPInvalidError
 
         user = UserFactory.verified()
 

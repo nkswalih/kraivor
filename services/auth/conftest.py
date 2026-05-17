@@ -14,7 +14,7 @@ import pytest
 from authentication.security import reset_lockout_manager
 from django.conf import settings
 from rest_framework.test import APIClient
-from apps.users.models import User
+from users.models import User
 
 BASE_DIR = Path(__file__).resolve().parent
 APPS_DIR = BASE_DIR / "apps"
@@ -115,7 +115,7 @@ def user_factory(db):
 @pytest.fixture
 def token_service():
     """Get the token service for generating test tokens."""
-    from apps.authentication.tokens import get_token_service
+    from authentication.tokens import get_token_service
     return get_token_service()
 
 
@@ -214,7 +214,7 @@ def jwt_payload_builder():
 @pytest.fixture
 def verification_token(verified_user):
     """Generate a valid email verification token."""
-    from apps.users.verification import generate_verification_token
+    from users.verification import generate_verification_token
     return generate_verification_token(verified_user)
 
 
@@ -222,7 +222,7 @@ def verification_token(verified_user):
 def expired_verification_token(verified_user):
     """Generate an expired email verification token."""
     import jwt
-    from apps.users.verification import _ALGORITHM, _TOKEN_TYPE
+    from users.verification import _ALGORITHM, _TOKEN_TYPE
 
     now = datetime.now(UTC)
     payload = {

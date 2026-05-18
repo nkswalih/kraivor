@@ -5,7 +5,7 @@ from pathlib import Path
 
 # Add project root and apps directory to Python path
 auth_dir = Path(__file__).resolve().parent
-apps_dir = auth_dir / 'apps'
+apps_dir = auth_dir / "apps"
 project_root = auth_dir.parent
 
 # Set up paths in correct order
@@ -15,8 +15,8 @@ for p in paths_to_add:
         sys.path.insert(0, p)
 
 # Only set default settings module if not already specified
-if 'DJANGO_SETTINGS_MODULE' not in os.environ:
-    os.environ['DJANGO_SETTINGS_MODULE'] = 'auth.settings.development'
+if "DJANGO_SETTINGS_MODULE" not in os.environ:
+    os.environ["DJANGO_SETTINGS_MODULE"] = "auth.settings.development"
 
 
 def main():
@@ -32,5 +32,5 @@ def main():
     execute_from_command_line(sys.argv)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

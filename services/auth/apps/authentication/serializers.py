@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 # ── KRV-011 ───────────────────────────────────────────────────────────────────
 
+
 class SignInIdentifySerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
 
@@ -24,6 +25,7 @@ class OTPVerifySerializer(serializers.Serializer):
 
 
 # ── KRV-014 ───────────────────────────────────────────────────────────────────
+
 
 class SessionSerializer(serializers.ModelSerializer):
     """

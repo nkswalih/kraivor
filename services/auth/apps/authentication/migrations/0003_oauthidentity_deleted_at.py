@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('authentication', '0002_refreshtoken_auth_refres_user_id_c0d4c2_idx'),
+        ("authentication", "0002_refreshtoken_auth_refres_user_id_c0d4c2_idx"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='oauthidentity',
-            name='deleted_at',
+            model_name="oauthidentity",
+            name="deleted_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
     ]

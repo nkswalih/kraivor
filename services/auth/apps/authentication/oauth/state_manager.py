@@ -34,7 +34,9 @@ class OAuthStateManager:
             self.redis_client.setex(key, self._state_ttl, "valid")
             return state
         except redis.RedisError as e:
-            logger.error("oauth_state_storage_failed", extra={"provider": provider, "error": str(e)})
+            logger.error(
+                "oauth_state_storage_failed", extra={"provider": provider, "error": str(e)}
+            )
             raise OAuthStateError("Failed to create OAuth state") from e
 
     def validate_state(self, provider: str, state: str) -> bool:
@@ -45,7 +47,9 @@ class OAuthStateManager:
             result = self.redis_client.delete(key)
             return result > 0
         except redis.RedisError as e:
-            logger.error("oauth_state_validation_failed", extra={"provider": provider, "error": str(e)})
+            logger.error(
+                "oauth_state_validation_failed", extra={"provider": provider, "error": str(e)}
+            )
             raise OAuthStateError("Failed to validate OAuth state") from e
 
 

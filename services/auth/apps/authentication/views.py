@@ -72,6 +72,7 @@ logger = logging.getLogger(__name__)
 # Shared helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class ErrorResponse:
     """Structured error response for consistent API responses."""
@@ -177,6 +178,7 @@ def _current_device_id(request) -> str | None:
 # KRV-011 — Multi-step Sign In
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class SignInIdentifyView(APIView):
     """
     POST /api/auth/signin/identify/
@@ -218,9 +220,7 @@ class SignInIdentifyView(APIView):
             email_verified = False
 
         if not user_exists:
-            return Response(
-                {"next_step": "signup", "user_exists": False, "email_verified": False}
-            )
+            return Response({"next_step": "signup", "user_exists": False, "email_verified": False})
 
         if not email_verified:
             return Response(
@@ -497,6 +497,7 @@ class OTPVerifyView(APIView):
 # KRV-013 — Token Refresh
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class RefreshTokenView(APIView):
     """
     POST /api/auth/refresh/
@@ -596,6 +597,7 @@ class RefreshTokenView(APIView):
 # KRV-013 legacy — kept for backwards compat with existing url patterns
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class LogoutView(APIView):
     """
     POST /api/auth/logout/
@@ -658,6 +660,7 @@ class LogoutAllView(APIView):
 # ─────────────────────────────────────────────────────────────────────────────
 # KRV-014 — Sign Out & Session Management
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class SignOutView(APIView):
     """

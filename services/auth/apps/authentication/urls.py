@@ -1,3 +1,4 @@
+from authentication.oauth.google.views import GoogleOAuthCallbackView, GoogleOAuthInitiateView
 from django.urls import path
 
 from .oauth.views import GitHubOAuthCallbackView, GitHubOAuthInitiateView
@@ -23,9 +24,6 @@ urlpatterns = [
     path("signin/otp/verify/", OTPVerifyView.as_view(), name="signin-otp-verify"),
     # KRV-013: Refresh Token Rotation
     path("refresh/", RefreshTokenView.as_view(), name="token-refresh"),
-# KRV-015: GitHub OAuth
-    path("oauth/github/", GitHubOAuthInitiateView.as_view(), name="github-oauth-initiate"),
-    path("oauth/github/callback/", GitHubOAuthCallbackView.as_view(), name="github-oauth-callback"),
     # Legacy logout (keep for backwards compat)
     path("logout/", LogoutView.as_view(), name="logout"),
     path("logout/all/", LogoutAllView.as_view(), name="logout-all"),
@@ -34,4 +32,10 @@ urlpatterns = [
     path("sessions/", SessionListView.as_view(), name="session-list"),
     path("sessions/all/", SessionRevokeAllView.as_view(), name="session-revoke-all"),
     path("sessions/<uuid:session_id>/", SessionRevokeView.as_view(), name="session-revoke"),
+    # KRV-015: GitHub OAuth
+    path("oauth/github/", GitHubOAuthInitiateView.as_view(), name="github-oauth-initiate"),
+    path("oauth/github/callback/", GitHubOAuthCallbackView.as_view(), name="github-oauth-callback"),
+    # KRV-016 — Google OAuth
+    path("oauth/google/", GoogleOAuthInitiateView.as_view(), name="google-oauth-initiate"),
+    path("oauth/google/callback/", GoogleOAuthCallbackView.as_view(), name="google-oauth-callback"),
 ]

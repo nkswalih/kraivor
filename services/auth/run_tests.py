@@ -10,6 +10,7 @@ Usage:
     uv run pytest -m auth      # Run auth-marked tests only
     uv run pytest -m security  # Run security tests only
 """
+
 import sys
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ Pytest configuration and fixtures for Identity Service.
 
 Modern production-grade testing architecture with reusable fixtures.
 """
+
 import os
 import sys
 from datetime import UTC, datetime, timedelta
@@ -28,6 +29,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "auth.settings.test")
 os.environ.setdefault("DATABASE_URL", "sqlite://:memory:")
 
 django.setup()
+
 
 @pytest.fixture(autouse=True)
 def clean_lockout_manager():
@@ -88,6 +90,7 @@ def user_factory(db):
         user = user_factory(email="custom@test.com", email_verified=True)
         admin = user_factory(is_staff=True, is_superuser=True)
     """
+
     def _create_user(
         email="test@example.com",
         password="testpass123",
@@ -96,7 +99,7 @@ def user_factory(db):
         is_active=True,
         is_staff=False,
         is_superuser=False,
-        **kwargs
+        **kwargs,
     ):
         user = User.objects.create_user(
             email=email,
@@ -106,9 +109,10 @@ def user_factory(db):
             is_active=is_active,
             is_staff=is_staff,
             is_superuser=is_superuser,
-            **kwargs
+            **kwargs,
         )
         return user
+
     return _create_user
 
 
@@ -116,6 +120,7 @@ def user_factory(db):
 def token_service():
     """Get the token service for generating test tokens."""
     from authentication.tokens import get_token_service
+
     return get_token_service()
 
 
@@ -191,12 +196,13 @@ def jwt_payload_builder():
     Usage:
         payload = jwt_payload_builder(sub="123", email="test@test.com")
     """
+
     def _build_payload(
         sub="test-user-id",
         email="test@example.com",
         token_type="access",
         minutes_until_expiry=15,
-        **extra_claims
+        **extra_claims,
     ):
         now = datetime.now(UTC)
         payload = {
@@ -205,9 +211,10 @@ def jwt_payload_builder():
             "token_type": token_type,
             "iat": now,
             "exp": now + timedelta(minutes=minutes_until_expiry),
-            **extra_claims
+            **extra_claims,
         }
         return payload
+
     return _build_payload
 
 
@@ -215,6 +222,7 @@ def jwt_payload_builder():
 def verification_token(verified_user):
     """Generate a valid email verification token."""
     from users.verification import generate_verification_token
+
     return generate_verification_token(verified_user)
 
 
@@ -276,11 +284,11 @@ def test_rsa_keys():
         "private_pem": private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
+            encryption_algorithm=serialization.NoEncryption(),
         ),
         "public_pem": public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         ),
     }
 
@@ -308,6 +316,7 @@ def temp_jwks_keys(test_rsa_keys, tmp_path):
 def django_db_setup(django_db_blocker):
     """Create database tables before running tests."""
     from django.core.management import call_command
+
     with django_db_blocker.unblock():
         call_command("migrate", "--run-syncdb", verbosity=0)
 

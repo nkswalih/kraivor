@@ -63,7 +63,11 @@ class GitHubOAuthService:
         try:
             response = requests.post(
                 self.TOKEN_URL,
-                data={"client_id": self.client_id, "client_secret": self.client_secret, "code": code},
+                data={
+                    "client_id": self.client_id,
+                    "client_secret": self.client_secret,
+                    "code": code,
+                },
                 headers={"Accept": "application/json"},
                 timeout=10,
             )
@@ -80,12 +84,21 @@ class GitHubOAuthService:
         try:
             response = requests.get(
                 self.USER_API_URL,
-                headers={"Authorization": f"Bearer {access_token}", "Accept": "application/vnd.github.v3+json"},
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github.v3+json",
+                },
                 timeout=10,
             )
             response.raise_for_status()
             data = response.json()
-            return GitHubUser(id=data.get("id"), login=data.get("login"), name=data.get("name"), email=data.get("email"), avatar_url=data.get("avatar_url"))
+            return GitHubUser(
+                id=data.get("id"),
+                login=data.get("login"),
+                name=data.get("name"),
+                email=data.get("email"),
+                avatar_url=data.get("avatar_url"),
+            )
         except requests.RequestException as e:
             raise GitHubAPIError(f"Failed to fetch user profile: {e}") from e
 
@@ -93,12 +106,23 @@ class GitHubOAuthService:
         try:
             response = requests.get(
                 self.EMAILS_API_URL,
-                headers={"Authorization": f"Bearer {access_token}", "Accept": "application/vnd.github.v3+json"},
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github.v3+json",
+                },
                 timeout=10,
             )
             response.raise_for_status()
             emails_data = response.json()
-            emails = [{"email": e.get("email"), "primary": e.get("primary", False), "verified": e.get("verified", False)} for e in emails_data if e.get("email")]
+            emails = [
+                {
+                    "email": e.get("email"),
+                    "primary": e.get("primary", False),
+                    "verified": e.get("verified", False),
+                }
+                for e in emails_data
+                if e.get("email")
+            ]
             emails.sort(key=lambda e: (not e["primary"], not e["verified"]))
             return emails
         except requests.RequestException as e:

@@ -12,8 +12,15 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-def find_or_create_oauth_user(provider: str, oauth_id: str, email: str, name: str | None, avatar_url: str | None) -> tuple:
-    identity = OAuthIdentity.objects.filter(provider=provider, provider_user_id=oauth_id).exclude(deleted_at__isnull=False).select_related("user").first()
+def find_or_create_oauth_user(
+    provider: str, oauth_id: str, email: str, name: str | None, avatar_url: str | None
+) -> tuple:
+    identity = (
+        OAuthIdentity.objects.filter(provider=provider, provider_user_id=oauth_id)
+        .exclude(deleted_at__isnull=False)
+        .select_related("user")
+        .first()
+    )
 
     if identity:
         identity.user.email = email
@@ -30,11 +37,18 @@ def find_or_create_oauth_user(provider: str, oauth_id: str, email: str, name: st
         user = User.objects.create_user(email=email, name=name or "", avatar_url=avatar_url or "")
         created = True
 
-    OAuthIdentity.objects.create(user=user, provider=provider, provider_user_id=oauth_id, provider_email=email)
+    OAuthIdentity.objects.create(
+        user=user, provider=provider, provider_user_id=oauth_id, provider_email=email
+    )
 
     return user, created
 
 
 def find_oauth_user(provider: str, oauth_id: str) -> object | None:
-    identity = OAuthIdentity.objects.filter(provider=provider, provider_user_id=oauth_id).exclude(deleted_at__isnull=False).select_related("user").first()
+    identity = (
+        OAuthIdentity.objects.filter(provider=provider, provider_user_id=oauth_id)
+        .exclude(deleted_at__isnull=False)
+        .select_related("user")
+        .first()
+    )
     return identity.user if identity else None

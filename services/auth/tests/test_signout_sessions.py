@@ -32,15 +32,23 @@ from users.models import User
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def make_token_hash(raw: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
-def make_session(user, raw_token="test_raw_token", device_id=None, revoked=False, expired=False,
-                 device_name="Chrome on macOS", device_type="desktop"):
+def make_session(
+    user,
+    raw_token="test_raw_token",
+    device_id=None,
+    revoked=False,
+    expired=False,
+    device_name="Chrome on macOS",
+    device_type="desktop",
+):
     """Factory helper to create a RefreshToken row."""
     expires_at = (
-        timezone.now() - timedelta(days=1)   # already expired
+        timezone.now() - timedelta(days=1)  # already expired
         if expired
         else timezone.now() + timedelta(days=30)
     )
@@ -61,6 +69,7 @@ def make_session(user, raw_token="test_raw_token", device_id=None, revoked=False
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixtures
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def user(db):
@@ -106,8 +115,8 @@ def other_client(other_user):
 # POST /api/auth/signout/
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestSignOut:
 
+class TestSignOut:
     def test_signout_revokes_token_and_clears_cookie(self, anon_client, user):
         """Valid refresh cookie → token set to revoked=True, cookie cleared."""
         raw = "valid_raw_token_001"
@@ -200,8 +209,8 @@ class TestSignOut:
 # GET /api/auth/sessions/
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestSessionList:
 
+class TestSessionList:
     def test_returns_only_active_sessions(self, auth_client, user):
         """Revoked and expired sessions must not appear."""
         make_session(user, raw_token="active_1", device_name="Chrome on macOS")
@@ -244,6 +253,7 @@ class TestSessionList:
         response = auth_client.get(reverse("session-list"))
 
         import json
+
         body = json.dumps(response.data)
         assert "token_hash" not in body
         assert make_token_hash("secret_raw_token_789") not in body
@@ -290,15 +300,13 @@ class TestSessionList:
 # DELETE /api/auth/sessions/<session_id>/
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestSessionRevoke:
 
+class TestSessionRevoke:
     def test_revoke_own_session(self, auth_client, user):
         """Owner can revoke their own session by UUID."""
         session = make_session(user, raw_token="revoke_me_token")
 
-        response = auth_client.delete(
-            reverse("session-revoke", kwargs={"session_id": session.id})
-        )
+        response = auth_client.delete(reverse("session-revoke", kwargs={"session_id": session.id}))
 
         assert response.status_code == 200
         assert response.data["message"] == "Session revoked."
@@ -333,18 +341,14 @@ class TestSessionRevoke:
         """Already-revoked session → 404, not 200."""
         session = make_session(user, raw_token="double_revoke_token", revoked=True)
 
-        response = auth_client.delete(
-            reverse("session-revoke", kwargs={"session_id": session.id})
-        )
+        response = auth_client.delete(reverse("session-revoke", kwargs={"session_id": session.id}))
         assert response.status_code == 404
 
     def test_revoke_expired_session_returns_404(self, auth_client, user):
         """Expired session → 404."""
         session = make_session(user, raw_token="expired_token", expired=True)
 
-        response = auth_client.delete(
-            reverse("session-revoke", kwargs={"session_id": session.id})
-        )
+        response = auth_client.delete(reverse("session-revoke", kwargs={"session_id": session.id}))
         assert response.status_code == 404
 
     def test_revoking_current_session_clears_cookie(self, user):
@@ -358,9 +362,7 @@ class TestSessionRevoke:
         client = APIClient()
         client.force_authenticate(user=user, token={"device_id": device_id})
 
-        response = client.delete(
-            reverse("session-revoke", kwargs={"session_id": session.id})
-        )
+        response = client.delete(reverse("session-revoke", kwargs={"session_id": session.id}))
 
         assert response.status_code == 200
         cookie = response.cookies.get("refresh_token")
@@ -374,9 +376,7 @@ class TestSessionRevoke:
         other_device_id = str(uuid.uuid4())  # different from auth_client's "test-device-abc"
         session = make_session(user, raw_token="other_device_tok", device_id=other_device_id)
 
-        response = auth_client.delete(
-            reverse("session-revoke", kwargs={"session_id": session.id})
-        )
+        response = auth_client.delete(reverse("session-revoke", kwargs={"session_id": session.id}))
 
         assert response.status_code == 200
         # Cookie should not be set / cleared in this response
@@ -388,9 +388,7 @@ class TestSessionRevoke:
     def test_requires_authentication(self, anon_client, user):
         """Unauthenticated request is rejected by the configured test auth backend."""
         session = make_session(user, raw_token="unauth_test_token")
-        response = anon_client.delete(
-            reverse("session-revoke", kwargs={"session_id": session.id})
-        )
+        response = anon_client.delete(reverse("session-revoke", kwargs={"session_id": session.id}))
         assert response.status_code == 401
 
 
@@ -398,8 +396,8 @@ class TestSessionRevoke:
 # DELETE /api/auth/sessions/all/
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestSessionRevokeAll:
 
+class TestSessionRevokeAll:
     def test_revokes_all_active_sessions(self, auth_client, user):
         """All active sessions for current user are revoked."""
         for i in range(3):

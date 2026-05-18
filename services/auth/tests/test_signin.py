@@ -93,9 +93,7 @@ class TestOTPFlow:
         user = UserFactory.verified()
         mock_sender.return_value.send = lambda e, o: None
         client = APIClient()
-        response = client.post(
-            "/api/auth/signin/otp/send/", {"email": user.email}, format="json"
-        )
+        response = client.post("/api/auth/signin/otp/send/", {"email": user.email}, format="json")
         assert response.status_code == 200
 
     def test_otp_verify_invalid(self, db):
@@ -118,13 +116,13 @@ class TestOTPFlow:
             patch("authentication.views.get_lockout_manager", return_value=mock_mgr),
             patch.object(otp_module, "_otp_service", mock_svc),
         ):
-                client = APIClient()
-                response = client.post(
-                    "/api/auth/signin/otp/verify/",
-                    {"email": user.email, "otp_code": "000000"},
-                    format="json",
-                )
-                assert response.status_code == 401
+            client = APIClient()
+            response = client.post(
+                "/api/auth/signin/otp/verify/",
+                {"email": user.email, "otp_code": "000000"},
+                format="json",
+            )
+            assert response.status_code == 401
 
 
 @pytest.mark.auth
@@ -136,9 +134,7 @@ class TestSignInIntegration:
         client = APIClient()
 
         # Step 1: identify with the actual user's email
-        response = client.post(
-            "/api/auth/signin/identify/", {"email": user.email}, format="json"
-        )
+        response = client.post("/api/auth/signin/identify/", {"email": user.email}, format="json")
         assert response.status_code == 200
         assert response.json()["next_step"] == "choose_method"
 

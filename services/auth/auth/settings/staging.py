@@ -33,52 +33,51 @@ from .base import *
 # DEBUG MODE - STAGING
 # =============================================================================
 # False for production parity - catch issues early
-DEBUG = env('DEBUG', default=False)
+DEBUG = env("DEBUG", default=False)
 
 # =============================================================================
 # ALLOWED HOSTS - STAGING
 # =============================================================================
 ALLOWED_HOSTS = env.list(
-    'ALLOWED_HOSTS',
+    "ALLOWED_HOSTS",
     default=[
-        'staging.your-domain.com',
-        'staging-api.your-domain.com',
-    ]
+        "staging.your-domain.com",
+        "staging-api.your-domain.com",
+    ],
 )
 
 # =============================================================================
 # CORS - STAGING
 # =============================================================================
 # Allow staging frontend
-CORS_ALLOW_ALL_ORIGINS = env.bool('CORS_ALLOW_ALL_ORIGINS', default=False)
-CORS_ALLOW_CREDENTIALS = env.bool('CORS_ALLOW_CREDENTIALS', default=True)
+CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=False)
+CORS_ALLOW_CREDENTIALS = env.bool("CORS_ALLOW_CREDENTIALS", default=True)
 
 # =============================================================================
 # SECURITY HEADERS - STAGING
 # =============================================================================
 # Similar to production but may have differences for testing
 
-SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=True)
-SECURE_HSTS_SECONDS = env.int('SECURE_HSTS_SECONDS', default=60)  # Shorter for staging
-SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=True)
-SECURE_HSTS_PRELOAD = env.bool('SECURE_HSTS_PRELOAD', default=False)
+SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
+SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=60)  # Shorter for staging
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True)
+SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=False)
 
 # =============================================================================
 # COOKIES - STAGING
 # =============================================================================
-COOKIE_SECURE = env.bool('COOKIE_SECURE', default=True)
-COOKIE_SAMESITE = env('COOKIE_SAMESITE', default='Lax')  # More lenient for testing
-COOKIE_DOMAIN = env('COOKIE_DOMAIN', default='')
+COOKIE_SECURE = env.bool("COOKIE_SECURE", default=True)
+COOKIE_SAMESITE = env("COOKIE_SAMESITE", default="Lax")  # More lenient for testing
+COOKIE_DOMAIN = env("COOKIE_DOMAIN", default="")
 
-CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=True)
-SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=True)
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=True)
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=True)
 
 # =============================================================================
 # PROXY TRUST - STAGING
 # =============================================================================
 SECURE_PROXY_SSL_HEADER = env.list(
-    'SECURE_PROXY_SSL_HEADER',
-    default=[('HTTP_X_FORWARDED_PROTO', 'https')]
+    "SECURE_PROXY_SSL_HEADER", default=[("HTTP_X_FORWARDED_PROTO", "https")]
 )
 
 # =============================================================================
@@ -96,8 +95,8 @@ SECURE_PROXY_SSL_HEADER = env.list(
 # =============================================================================
 # Similar to production but may include more debug info
 
-LOGGING['root']['level'] = 'INFO'
-LOGGING['loggers']['django']['level'] = 'INFO'
+LOGGING["root"]["level"] = "INFO"
+LOGGING["loggers"]["django"]["level"] = "INFO"
 
 # =============================================================================
 # EMAIL - STAGING

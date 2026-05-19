@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 
+from api_keys.authentication.backend import APIKeyAuthentication
 from api_keys.selectors.api_key import get_user_api_keys
 from api_keys.serializers import (
     APIKeyCreateResponseSerializer,
@@ -25,19 +26,18 @@ from api_keys.services.key_service import (
     revoke_api_key,
 )
 from rest_framework import status
-from api_keys.authentication.backend import APIKeyAuthentication
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 logger = logging.getLogger(__name__)
  
  
 class APIKeyListCreateView(APIView):
     authentication_classes = [
-        JWTAuthentication,
         APIKeyAuthentication,
+        JWTAuthentication,
     ]
     permission_classes = [IsAuthenticated]
  
@@ -81,8 +81,8 @@ class APIKeyListCreateView(APIView):
  
 class APIKeyRevokeView(APIView):
     authentication_classes = [
-        JWTAuthentication,
         APIKeyAuthentication,
+        JWTAuthentication,
     ]
     permission_classes = [IsAuthenticated]
  

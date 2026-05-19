@@ -25,6 +25,8 @@ from api_keys.services.key_service import (
     revoke_api_key,
 )
 from rest_framework import status
+from api_keys.authentication.backend import APIKeyAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -33,6 +35,10 @@ logger = logging.getLogger(__name__)
  
  
 class APIKeyListCreateView(APIView):
+    authentication_classes = [
+        JWTAuthentication,
+        APIKeyAuthentication,
+    ]
     permission_classes = [IsAuthenticated]
  
     def get(self, request):
@@ -74,6 +80,10 @@ class APIKeyListCreateView(APIView):
  
  
 class APIKeyRevokeView(APIView):
+    authentication_classes = [
+        JWTAuthentication,
+        APIKeyAuthentication,
+    ]
     permission_classes = [IsAuthenticated]
  
     def delete(self, request, key_id: str):

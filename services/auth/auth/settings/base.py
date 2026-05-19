@@ -233,6 +233,7 @@ REDIS_URL = CACHES["default"]["LOCATION"]
 # REST Framework JWT Settings
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "api_keys.authentication.backend.APIKeyAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [

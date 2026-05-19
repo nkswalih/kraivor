@@ -14,6 +14,7 @@ class APIKey(models.Model):
     prefix = models.CharField(max_length=20)
     scopes = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     last_used_at = models.DateTimeField(null=True, blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)
     revoked = models.BooleanField(default=False)

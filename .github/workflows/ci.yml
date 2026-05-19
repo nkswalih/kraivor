@@ -68,6 +68,9 @@ jobs:
           openssl genrsa -out .keys/jwt-private.pem 2048
           openssl rsa -in .keys/jwt-private.pem -pubout -out .keys/jwt-public.pem
 
+      - name: Run migrations
+        run: uv run python manage.py migrate
+
       - name: Run tests
         run: |
           uv run pytest \

@@ -19,7 +19,7 @@ class APIKey(models.Model):
     revoked = models.BooleanField(default=False)
  
     class Meta:
-        db_table = "auth_api_keys"
+        db_table = "identity_api_keys"
  
     def __str__(self) -> str:
         return f"{self.name} ({self.user_id})"

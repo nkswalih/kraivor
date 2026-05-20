@@ -17,7 +17,7 @@ class TestSignUp:
         client = APIClient()
         # Generate a unique email
         unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
-        
+
         data = {
             "email": unique_email,
             "password": "SecurePass123!",

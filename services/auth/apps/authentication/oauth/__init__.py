@@ -3,3 +3,5 @@ OAUTH_PROVIDERS = [
     ("google", "Google"),
     ("apple", "Apple"),
 ]
+
+__all__ = ["OAUTH_PROVIDERS"]

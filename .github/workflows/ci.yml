@@ -26,6 +26,9 @@ env:
   JWT_ALGORITHM: 'RS256'
   JWT_ACCESS_TOKEN_EXPIRE_MINUTES: '15'
   JWT_REFRESH_TOKEN_EXPIRE_DAYS: '30'
+  GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+  GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+  GOOGLE_REDIRECT_URI: "http://localhost:8000/api/auth/oauth/google/callback/"
 
 jobs:
   test-auth:
@@ -64,6 +67,9 @@ jobs:
           mkdir -p .keys
           openssl genrsa -out .keys/jwt-private.pem 2048
           openssl rsa -in .keys/jwt-private.pem -pubout -out .keys/jwt-public.pem
+
+      - name: Run migrations
+        run: uv run python manage.py migrate
 
       - name: Run tests
         run: |

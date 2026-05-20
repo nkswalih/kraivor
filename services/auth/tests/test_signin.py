@@ -93,13 +93,11 @@ class TestOTPFlow:
         user = UserFactory.verified()
         mock_sender.return_value.send = lambda e, o: None
         client = APIClient()
-        response = client.post(
-            "/api/auth/signin/otp/send/", {"email": user.email}, format="json"
-        )
+        response = client.post("/api/auth/signin/otp/send/", {"email": user.email}, format="json")
         assert response.status_code == 200
 
     def test_otp_verify_invalid(self, db):
-        import authentication.otp as otp_module
+        from authentication import otp as otp_module
         from authentication.otp import OTPInvalidError
 
         user = UserFactory.verified()
@@ -114,10 +112,10 @@ class TestOTPFlow:
         mock_mgr.check_lockout.return_value = (False, 0)
         mock_mgr.record_failure = MagicMock()
 
-        # FIX: patch path must match how views.py imports — "authentication.views"
-        # not "apps.authentication.views" (apps/ is filesystem, not Python module path)
-        with patch("authentication.views.get_lockout_manager", return_value=mock_mgr):
-            otp_module._otp_service = mock_svc
+        with (
+            patch("authentication.views.get_lockout_manager", return_value=mock_mgr),
+            patch.object(otp_module, "_otp_service", mock_svc),
+        ):
             client = APIClient()
             response = client.post(
                 "/api/auth/signin/otp/verify/",
@@ -136,9 +134,7 @@ class TestSignInIntegration:
         client = APIClient()
 
         # Step 1: identify with the actual user's email
-        response = client.post(
-            "/api/auth/signin/identify/", {"email": user.email}, format="json"
-        )
+        response = client.post("/api/auth/signin/identify/", {"email": user.email}, format="json")
         assert response.status_code == 200
         assert response.json()["next_step"] == "choose_method"
 

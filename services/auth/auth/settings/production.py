@@ -46,18 +46,15 @@ DEBUG = False
 # Your exact production domain(s)
 # WHY: Prevents Host header attacks
 # EXAMPLE: ['api.kraivor.com', 'www.kraivor.com']
-ALLOWED_HOSTS = env.list(
-    'ALLOWED_HOSTS',
-    default=['your-production-domain.com']
-)
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["your-production-domain.com"])
 
 # =============================================================================
 # CORS - PRODUCTION
 # =============================================================================
 # Strict origin control
 # WHY: Prevent cross-site API access
-CORS_ALLOW_ALL_ORIGINS = env.bool('CORS_ALLOW_ALL_ORIGINS', default=False)
-CORS_ALLOW_CREDENTIALS = env.bool('CORS_ALLOW_CREDENTIALS', default=True)
+CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=False)
+CORS_ALLOW_CREDENTIALS = env.bool("CORS_ALLOW_CREDENTIALS", default=True)
 
 # Add your frontend domain in production
 # CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[])
@@ -67,49 +64,49 @@ CORS_ALLOW_CREDENTIALS = env.bool('CORS_ALLOW_CREDENTIALS', default=True)
 # =============================================================================
 # HTTP Strict Transport Security (HSTS)
 # WHY: Force HTTPS for all requests
-SECURE_HSTS_SECONDS = env.int('SECURE_HSTS_SECONDS', default=31536000)  # 1 year
-SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=True)
-SECURE_HSTS_PRELOAD = env.bool('SECURE_HSTS_PRELOAD', default=True)
+SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=31536000)  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True)
+SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=True)
 
 # SSL Redirect
 # WHY: Redirect all HTTP to HTTPS
-SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=True)
+SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
 
 # XSS Protection
 # WHY: Enable browser's XSS filtering
-SECURE_BROWSER_XSS_FILTER = env.bool('SECURE_BROWSER_XSS_FILTER', default=True)
+SECURE_BROWSER_XSS_FILTER = env.bool("SECURE_BROWSER_XSS_FILTER", default=True)
 
 # Content Type Sniffing
 # WHY: Prevent MIME type sniffing
-SECURE_CONTENT_TYPE_NOSNIFF = env.bool('SECURE_CONTENT_TYPE_NOSNIFF', default=True)
+SECURE_CONTENT_TYPE_NOSNIFF = env.bool("SECURE_CONTENT_TYPE_NOSNIFF", default=True)
 
 # Clickjacking Protection
 # WHY: Prevent embedding in iframes
-X_FRAME_OPTIONS = env('X_FRAME_OPTIONS', default='DENY')
+X_FRAME_OPTIONS = env("X_FRAME_OPTIONS", default="DENY")
 
 # Referrer Policy
 # WHY: Control referrer information sent to other sites
-SECURE_REFERRER_POLICY = env('SECURE_REFERRER_POLICY', default='strict-origin-when-cross-origin')
+SECURE_REFERRER_POLICY = env("SECURE_REFERRER_POLICY", default="strict-origin-when-cross-origin")
 
 # =============================================================================
 # COOKIES - PRODUCTION
 # =============================================================================
 # Secure cookies for HTTPS
 # WHY: Prevent cookie theft via network sniffing
-COOKIE_SECURE = env.bool('COOKIE_SECURE', default=True)
-COOKIE_SAMESITE = env('COOKIE_SAMESITE', default='Strict')  # CSRF protection
-COOKIE_HTTPONLY = env.bool('COOKIE_HTTPONLY', default=True)  # Prevent XSS access
-COOKIE_DOMAIN = env('COOKIE_DOMAIN', default='')
+COOKIE_SECURE = env.bool("COOKIE_SECURE", default=True)
+COOKIE_SAMESITE = env("COOKIE_SAMESITE", default="Strict")  # CSRF protection
+COOKIE_HTTPONLY = env.bool("COOKIE_HTTPONLY", default=True)  # Prevent XSS access
+COOKIE_DOMAIN = env("COOKIE_DOMAIN", default="")
 
 # CSRF Cookies
 # WHY: Secure CSRF token cookies
-CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=True)
-CSRF_COOKIE_SAMESITE = env('CSRF_COOKIE_SAMESITE', default='Strict')
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=True)
+CSRF_COOKIE_SAMESITE = env("CSRF_COOKIE_SAMESITE", default="Strict")
 
 # Session Cookies
 # WHY: Secure session cookies
-SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=True)
-SESSION_COOKIE_SAMESITE = env('SESSION_COOKIE_SAMESITE', default='Strict')
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=True)
+SESSION_COOKIE_SAMESITE = env("SESSION_COOKIE_SAMESITE", default="Strict")
 
 # =============================================================================
 # PROXY TRUST - PRODUCTION (Cloud/AWS/GCP/Azure)
@@ -117,8 +114,7 @@ SESSION_COOKIE_SAMESITE = env('SESSION_COOKIE_SAMESITE', default='Strict')
 # Trust proxy headers when behind load balancer/CDN
 # WHY: Get correct client IP and protocol
 SECURE_PROXY_SSL_HEADER = env.list(
-    'SECURE_PROXY_SSL_HEADER',
-    default=[('HTTP_X_FORWARDED_PROTO', 'https')]
+    "SECURE_PROXY_SSL_HEADER", default=[("HTTP_X_FORWARDED_PROTO", "https")]
 )
 
 # =============================================================================
@@ -134,7 +130,7 @@ SECURE_PROXY_SSL_HEADER = env.list(
 # Redis cache is already configured in base.py
 # Adjust timeout for production
 
-CACHES['default']['TIMEOUT'] = env.int('CACHE_TIMEOUT', default=300)
+CACHES["default"]["TIMEOUT"] = env.int("CACHE_TIMEOUT", default=300)
 
 # =============================================================================
 # STATIC & MEDIA FILES - PRODUCTION
@@ -146,9 +142,9 @@ CACHES['default']['TIMEOUT'] = env.int('CACHE_TIMEOUT', default=300)
 # =============================================================================
 # More careful logging in production - avoid sensitive data
 
-LOGGING['root']['level'] = 'INFO'
-LOGGING['loggers']['django']['level'] = 'WARNING'
-LOGGING['loggers']['django.security']['level'] = 'ERROR'
+LOGGING["root"]["level"] = "INFO"
+LOGGING["loggers"]["django"]["level"] = "WARNING"
+LOGGING["loggers"]["django.security"]["level"] = "ERROR"
 
 # Add JSON logging for production (easier to parse with log aggregators)
 # LOGGING['handlers']['json'] = {

@@ -41,6 +41,7 @@ from .base import *
 # In Docker, compose already injected env vars via env_file — environ.Env.read_env
 # is a no-op when the vars are already set, so this is safe either way.
 
+
 def _find_env_file(start: Path) -> Path | None:
     """Walk up from start until a .env file is found or we hit the filesystem root."""
     for parent in start.parents:
@@ -48,6 +49,7 @@ def _find_env_file(start: Path) -> Path | None:
         if candidate.exists():
             return candidate
     return None
+
 
 _HERE = Path(__file__).resolve()
 _env_file = _find_env_file(_HERE)

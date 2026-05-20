@@ -253,9 +253,7 @@ class TokenService:
                     },
                 )
                 self._revoke_all_user_tokens(user)
-                raise TokenReusedError(
-                    "Replay attack detected - all sessions invalidated"
-                ) from exc
+                raise TokenReusedError("Replay attack detected - all sessions invalidated") from exc
 
             raise TokenInvalidError("Token not found or already used") from exc
 

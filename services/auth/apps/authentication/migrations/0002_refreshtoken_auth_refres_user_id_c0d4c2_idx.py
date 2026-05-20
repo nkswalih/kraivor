@@ -5,15 +5,16 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('authentication', '0001_initial'),
+        ("authentication", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='refreshtoken',
-            index=models.Index(fields=['user', 'revoked', 'expires_at'], name='auth_refres_user_id_c0d4c2_idx'),
+            model_name="refreshtoken",
+            index=models.Index(
+                fields=["user", "revoked", "expires_at"], name="auth_refres_user_id_c0d4c2_idx"
+            ),
         ),
     ]

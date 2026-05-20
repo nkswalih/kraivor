@@ -3,7 +3,8 @@ import { ROUTES } from './constants';
 
 const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/verify-email', '/pricing', '/features', '/docs', '/api'];
 
-const PROTECTED_PATH_PREFIXES = ['/analysis', '/ai', '/notes', '/projects', '/settings'];
+// Protected paths are any workspaces or settings
+const PROTECTED_PATH_PREFIXES = ['/dashboard', '/settings', '/mfa/setup'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -17,16 +18,17 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const isProtectedPath = PROTECTED_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  // Next.js dynamic routes like /[workspace] might need broader checks, but let's check kraivor_auth cookie
+  // If the path is not public, and we want to enforce auth:
+  const isAuthenticated = request.cookies.get('kraivor_auth')?.value === 'true';
 
-  if (isProtectedPath) {
-    const accessToken = request.cookies.get('access_token')?.value;
+  // Alternatively, just checking for access_token or kraivor_auth
+  const hasToken = request.cookies.get('access_token')?.value || isAuthenticated;
 
-    if (!accessToken) {
-      const loginUrl = new URL(ROUTES.LOGIN, request.url);
-      loginUrl.searchParams.set('callbackUrl', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
+  if (!hasToken) {
+    const loginUrl = new URL(ROUTES.LOGIN, request.url);
+    loginUrl.searchParams.set('callbackUrl', pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();

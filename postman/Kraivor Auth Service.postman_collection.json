@@ -1164,6 +1164,243 @@
 				"description": "Test logout all without authentication."
 			},
 			"response": []
+		},
+		{
+			"name": "Sign Out (KRV-014)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200', function() {",
+							"    pm.response.to.have.status(200);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/auth/signout/",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "auth", "signout", ""]
+				},
+				"description": "Sign out and invalidate current session"
+			},
+			"response": []
+		},
+		{
+			"name": "List Sessions",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/auth/sessions/",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "auth", "sessions", ""]
+				},
+				"description": "List all active sessions for the current user"
+			},
+			"response": []
+		},
+		{
+			"name": "Revoke All Sessions",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/auth/sessions/all/",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "auth", "sessions", "all", ""]
+				},
+				"description": "Revoke all sessions for the current user"
+			},
+			"response": []
+		},
+		{
+			"name": "Revoke Specific Session",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/auth/sessions/{{sessionId}}/",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "auth", "sessions", "{{sessionId}}", ""]
+				},
+				"description": "Revoke a specific session by ID"
+			},
+			"response": []
+		},
+		{
+			"name": "API Keys",
+			"item": [
+				{
+					"name": "List API Keys",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/api-keys/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "api-keys", ""]
+						},
+						"description": "List all API keys for the current user"
+					},
+					"response": []
+				},
+				{
+					"name": "Create API Key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function() {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Stores API key for later use', function() {",
+									"    const jsonData = pm.response.json();",
+									"    if (jsonData.api_key) {",
+									"        pm.collectionVariables.set('keyId', jsonData.api_key.id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"My API Key\",\n    \"scopes\": [\"analysis:read\", \"analysis:trigger\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/api-keys/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "api-keys", ""]
+						},
+						"description": "Create a new API key. Returns the key only once - store it securely."
+					},
+					"response": []
+				},
+				{
+					"name": "Revoke API Key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 204 or 200', function() {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/api-keys/{{keyId}}/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "api-keys", "{{keyId}}", ""]
+						},
+						"description": "Revoke an API key by ID"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "OAuth",
+			"item": [
+				{
+					"name": "GitHub - Initiate",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/oauth/github/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "oauth", "github", ""]
+						},
+						"description": "Initiate GitHub OAuth flow. Redirects to GitHub for authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "GitHub - Callback",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/oauth/github/callback/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "oauth", "github", "callback", ""]
+						},
+						"description": "GitHub OAuth callback handler"
+					},
+					"response": []
+				},
+				{
+					"name": "Google - Initiate",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/oauth/google/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "oauth", "google", ""]
+						},
+						"description": "Initiate Google OAuth flow. Redirects to Google for authentication."
+					},
+					"response": []
+				},
+				{
+					"name": "Google - Callback",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/oauth/google/callback/",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "oauth", "google", "callback", ""]
+						},
+						"description": "Google OAuth callback handler"
+					},
+					"response": []
+				}
+			]
 		}
 	]
 }

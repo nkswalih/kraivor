@@ -1,15 +1,12 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/shadcn';
-import { useWorkspace } from '@/lib/hooks';
 
 export default function DashboardPage() {
-  const { currentWorkspace } = useWorkspace();
-
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Welcome to {currentWorkspace?.name || 'Kraivor'}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Welcome to Kraivor</h1>
         <p className="text-muted-foreground">Here's an overview of your workspace</p>
       </div>
 

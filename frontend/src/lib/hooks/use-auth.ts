@@ -1,16 +1,55 @@
 import { useAuthStore } from '@/lib/stores';
 
 export function useAuth() {
-  const { user, isAuthenticated, isLoading, accessToken, login, register, logout, checkAuth } = useAuthStore();
+  const {
+    user,
+    isAuthenticated,
+    isLoading,
+    accessToken,
+    mfaToken,
+    login,
+    register,
+    logout,
+    checkAuth,
+    setMfaToken,
+    forgotPassword,
+    resetPassword,
+    verifyEmail,
+    resendVerification,
+    sendOTP,
+    verifyOTP,
+    getSessions,
+    revokeSession,
+    revokeAllSessions,
+    logoutAll,
+    getApiKeys,
+    createApiKey,
+    revokeApiKey,
+  } = useAuthStore();
 
   return {
     user,
     isAuthenticated,
     isLoading,
     accessToken,
+    mfaToken,
     login,
     register,
     logout,
     checkAuth,
+    setMfaToken,
+    forgotPassword,
+    resetPassword,
+    verifyEmail,
+    resendVerification,
+    sendOTP,
+    verifyOTP,
+    getSessions,
+    revokeSession,
+    revokeAllSessions,
+    logoutAll,
+    getApiKeys,
+    createApiKey,
+    revokeApiKey,
   };
 }

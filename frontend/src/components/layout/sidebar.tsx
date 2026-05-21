@@ -17,15 +17,23 @@ import {
   Layers,
 } from 'lucide-react';
 
-const navItems = [
-  { href: '/[workspace]/(dashboard)', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/[workspace]/(routes)/analysis', icon: GitBranch, label: 'Analysis' },
-  { href: '/[workspace]/(routes)/ai', icon: MessageSquare, label: 'AI Chat' },
-  { href: '/[workspace]/(routes)/notes', icon: FileText, label: 'Notes' },
-  { href: '/[workspace]/(routes)/projects', icon: Kanban, label: 'Projects' },
+interface NavItem {
+  path: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+}
+
+const getNavItems = (slug: string): NavItem[] => [
+  { path: `/${slug}/dashboard`, icon: LayoutDashboard, label: 'Dashboard' },
+  { path: `/${slug}/analysis`, icon: GitBranch, label: 'Analysis' },
+  { path: `/${slug}/ai`, icon: MessageSquare, label: 'AI Chat' },
+  { path: `/${slug}/notes`, icon: FileText, label: 'Notes' },
+  { path: `/${slug}/projects`, icon: Kanban, label: 'Projects' },
 ];
 
-const bottomNavItems = [{ href: '/[workspace]/settings', icon: Settings, label: 'Settings' }];
+const getBottomNavItems = (slug: string): NavItem[] => [
+  { path: `/${slug}/settings`, icon: Settings, label: 'Settings' },
+];
 
 interface SidebarProps {
   workspaceSlug: string;
@@ -35,10 +43,12 @@ export function Sidebar({ workspaceSlug }: SidebarProps) {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebarCollapse } = useUI();
 
-  const isActive = (href: string) => {
-    const basePath = href.replace('/[workspace]/', `/${workspaceSlug}/`);
-    return pathname.startsWith(basePath);
+  const isActive = (path: string) => {
+    return pathname === path || pathname.startsWith(`${path}/`);
   };
+
+  const navItems = getNavItems(workspaceSlug);
+  const bottomNavItems = getBottomNavItems(workspaceSlug);
 
   return (
     <aside
@@ -56,11 +66,11 @@ export function Sidebar({ workspaceSlug }: SidebarProps) {
         <nav className="flex-1 space-y-1 p-2">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = isActive(item.href);
+            const active = isActive(item.path);
             return (
               <Link
-                key={item.href}
-                href={`/${workspaceSlug}${item.href.replace('/[workspace]/', '')}`}
+                key={item.path}
+                href={item.path}
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                   active ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
@@ -77,11 +87,11 @@ export function Sidebar({ workspaceSlug }: SidebarProps) {
         <div className="border-t p-2">
           {bottomNavItems.map((item) => {
             const Icon = item.icon;
-            const active = isActive(item.href);
+            const active = isActive(item.path);
             return (
               <Link
-                key={item.href}
-                href={`/${workspaceSlug}${item.href.replace('/[workspace]/', '')}`}
+                key={item.path}
+                href={item.path}
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                   active ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',

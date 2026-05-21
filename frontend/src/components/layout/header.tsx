@@ -26,7 +26,7 @@ export function Header({ workspaceName }: HeaderProps) {
         <Separator orientation="vertical" className="h-6" />
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={user?.avatar} alt={user?.name} />
+            <AvatarImage src={user?.avatar_url} alt={user?.name} />
             <AvatarFallback>{user ? getInitials(user.name) : 'U'}</AvatarFallback>
           </Avatar>
           <div className="hidden text-sm md:block">

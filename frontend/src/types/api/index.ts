@@ -35,7 +35,7 @@ export interface ApiRequestConfig {
 export interface QueueItem {
   resolve: (value: unknown) => void;
   reject: (reason?: unknown) => void;
-  config: ApiRequestConfig;
+  config: unknown;
 }
 
 export type ApiErrorCode =

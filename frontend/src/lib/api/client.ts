@@ -1,7 +1,7 @@
 import axios, { type AxiosInstance, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { config } from '@/config';
 import { API_ENDPOINTS } from '@/constants';
-import type { ApiError, RetryConfig, QueueItem } from '@/types/api';
+import type { ApiError, QueueItem } from '@/types/api';
 
 let isRefreshing = false;
 let failedQueue: QueueItem[] = [];
@@ -15,6 +15,42 @@ const processQueue = (error: AxiosError | null, token: string | null = null) => 
     }
   });
   failedQueue = [];
+};
+
+const PUBLIC_AUTH_EXACT_PATHS = [
+  '/auth/signin/password/',
+  '/auth/signin/identify/',
+  '/auth/signup/',
+  '/auth/refresh/',
+  '/auth/forgot-password/',
+  '/auth/reset-password/',
+  '/auth/verify-email/',
+  '/auth/resend-verification/',
+];
+
+const PUBLIC_AUTH_PREFIXES = [
+  '/auth/signin/otp/',
+  '/auth/otp/',
+  '/auth/oauth/',
+];
+
+const normalizeApiPath = (url: string | undefined): string => {
+  if (!url) return '';
+  try {
+    return new URL(url, config.api.baseUrl).pathname;
+  } catch {
+    return url.split('?')[0] ?? '';
+  }
+};
+
+const isPublicAuthEndpoint = (url: string | undefined): boolean => {
+  const pathname = normalizeApiPath(url);
+  const normalizedPathname = pathname.endsWith('/') ? pathname : `${pathname}/`;
+
+  return (
+    PUBLIC_AUTH_EXACT_PATHS.includes(normalizedPathname) ||
+    PUBLIC_AUTH_PREFIXES.some((prefix) => normalizedPathname.startsWith(prefix))
+  );
 };
 
 class ApiClient {
@@ -40,6 +76,11 @@ class ApiClient {
   private setupInterceptors() {
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
+        if (isPublicAuthEndpoint(config.url)) {
+          delete config.headers.Authorization;
+          return config;
+        }
+
         if (this.accessToken) {
           config.headers.Authorization = `Bearer ${this.accessToken}`;
         }
@@ -57,7 +98,7 @@ class ApiClient {
           return Promise.reject(error);
         }
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (error.response?.status === 401 && !originalRequest._retry && !isPublicAuthEndpoint(originalRequest.url)) {
           if (isRefreshing) {
             return new Promise((resolve, reject) => {
               failedQueue.push({ resolve, reject, config: originalRequest });
@@ -72,7 +113,7 @@ class ApiClient {
 
           try {
             const response = await this.client.post(API_ENDPOINTS.AUTH.REFRESH);
-            const { accessToken } = response.data;
+            const accessToken = response.data.access_token || response.data.accessToken;
             this.setAccessToken(accessToken);
             processQueue(null, accessToken);
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -80,7 +121,9 @@ class ApiClient {
           } catch (refreshError) {
             processQueue(refreshError as AxiosError, null);
             this.clearAccessToken();
-            window.location.href = '/login';
+            if (typeof window !== 'undefined') {
+              window.location.href = '/login';
+            }
             return Promise.reject(refreshError);
           } finally {
             isRefreshing = false;

@@ -1,0 +1,2130 @@
+{
+	"info": {
+		"_postman_id": "kraivor-complete-api",
+		"name": "Kraivor Complete API",
+		"description": "Complete Postman collection for Kraivor platform including all services: Auth, Core, Analysis, AI, and Notification services. Use the environment file to configure base URLs.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "{{baseUrl}}",
+			"type": "string"
+		},
+		{
+			"key": "authBaseUrl",
+			"value": "{{authBaseUrl}}",
+			"type": "string"
+		},
+		{
+			"key": "coreBaseUrl",
+			"value": "{{coreBaseUrl}}",
+			"type": "string"
+		},
+		{
+			"key": "analysisBaseUrl",
+			"value": "{{analysisBaseUrl}}",
+			"type": "string"
+		},
+		{
+			"key": "aiBaseUrl",
+			"value": "{{aiBaseUrl}}",
+			"type": "string"
+		},
+		{
+			"key": "notificationsBaseUrl",
+			"value": "{{notificationsBaseUrl}}",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "workspaceId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "email",
+			"value": "test@example.com",
+			"type": "string"
+		},
+		{
+			"key": "password",
+			"value": "TestPassword123!",
+			"type": "string"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Pre-request script to handle JWT authentication",
+					"// This script runs before each request to add the Authorization header",
+					"",
+					"const token = pm.collectionVariables.get('accessToken');",
+					"if (token) {",
+					"    pm.request.headers.add({",
+					"        key: 'Authorization',",
+					"        value: 'Bearer ' + token",
+					"    });",
+					"}",
+					"",
+					"// Add internal request header for service-to-service calls",
+					"pm.request.headers.add({",
+					"    key: 'X-Internal-Request',",
+					"    value: 'true'",
+					"});"
+				]
+			}
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Auth Service",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{authBaseUrl}}/api/health/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "health", ""]
+						},
+						"description": "Health check endpoint for Auth Service"
+					},
+					"response": []
+				},
+				{
+					"name": "JWKS - Get Public Keys",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has keys array', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('keys');",
+									"    pm.expect(jsonData.keys).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{authBaseUrl}}/.well-known/jwks.json",
+							"host": ["{{authBaseUrl}}"],
+							"path": [".well-known", "jwks.json"]
+						},
+						"description": "Get public keys (JWKS) for JWT verification by other services"
+					},
+					"response": []
+				},
+				{
+					"name": "Signup - Register New User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function() {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Response has required fields', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"    pm.expect(jsonData).to.have.property('user_id');",
+									"    pm.expect(jsonData).to.have.property('email');",
+									"    pm.expect(jsonData).to.have.property('name');",
+									"});",
+									"",
+									"pm.test('Stores user_id for later use', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('userId', jsonData.user_id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\",\n    \"password\": \"{{password}}\",\n    \"password_confirm\": \"{{password}}\",\n    \"name\": \"Test User\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authBaseUrl}}/api/auth/signup/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "auth", "signup", ""]
+						},
+						"description": "Register a new user account. Sends verification email."
+					},
+					"response": []
+				},
+				{
+					"name": "Signin - Step 1: Identify Email",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has next_step field', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('next_step');",
+									"    pm.expect(jsonData).to.have.property('user_exists');",
+									"});",
+									"",
+									"pm.test('Stores next_step for conditional requests', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('nextStep', jsonData.next_step);",
+									"    pm.collectionVariables.set('userExists', jsonData.user_exists);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authBaseUrl}}/api/auth/signin/identify/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "auth", "signin", "identify", ""]
+						},
+						"description": "Step 1 of multi-step sign-in. Identifies the user and determines authentication method."
+					},
+					"response": []
+				},
+				{
+					"name": "Signin - Step 2: Password Verification",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has access_token', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('access_token');",
+									"    pm.expect(jsonData).to.have.property('token_type', 'Bearer');",
+									"    pm.expect(jsonData).to.have.property('expires_in');",
+									"    pm.expect(jsonData).to.have.property('user');",
+									"});",
+									"",
+									"pm.test('Stores access token', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('accessToken', jsonData.access_token);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\",\n    \"password\": \"{{password}}\",\n    \"device_id\": \"postman-test-device\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authBaseUrl}}/api/auth/signin/password/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "auth", "signin", "password", ""]
+						},
+						"description": "Step 2 of sign-in - verify password and get tokens"
+					},
+					"response": []
+				},
+				{
+					"name": "Signin - OTP: Send Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response confirms OTP sent', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authBaseUrl}}/api/auth/signin/otp/send/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "auth", "signin", "otp", "send", ""]
+						},
+						"description": "Send OTP code to user's email for OTP-based authentication"
+					},
+					"response": []
+				},
+				{
+					"name": "Signin - OTP: Verify Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has access_token', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('access_token');",
+									"    pm.expect(jsonData).to.have.property('token_type', 'Bearer');",
+									"    pm.expect(jsonData).to.have.property('user');",
+									"});",
+									"",
+									"pm.test('Stores access token', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('accessToken', jsonData.access_token);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\",\n    \"otp_code\": \"123456\",\n    \"device_id\": \"postman-test-device\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authBaseUrl}}/api/auth/signin/otp/verify/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "auth", "signin", "otp", "verify", ""]
+						},
+						"description": "Verify OTP code and receive tokens. Note: Replace '123456' with actual OTP."
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Email",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response confirms email verified', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('email_verified', true);",
+									"    pm.expect(jsonData).to.have.property('user_id');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"email-verification-token\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authBaseUrl}}/api/auth/verify-email/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "auth", "verify-email", ""]
+						},
+						"description": "Verify email address using JWT token from verification email"
+					},
+					"response": []
+				},
+				{
+					"name": "Resend Verification Email",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{email}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{authBaseUrl}}/api/auth/resend-verification/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "auth", "resend-verification", ""]
+						},
+						"description": "Resend email verification. Rate limited to 3 requests per hour per email."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User (Me)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has user profile', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('email');",
+									"    pm.expect(jsonData).to.have.property('name');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{authBaseUrl}}/api/auth/me/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "auth", "me", ""]
+						},
+						"description": "Get current authenticated user's profile"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has new access_token', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('access_token');",
+									"    pm.expect(jsonData).to.have.property('token_type', 'Bearer');",
+									"});",
+									"",
+									"pm.test('Updates stored access token', function() {",
+									"    const jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('accessToken', jsonData.access_token);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{authBaseUrl}}/api/auth/refresh/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "auth", "refresh", ""]
+						},
+						"description": "Refresh access token using refresh token cookie. Refresh token is rotated on each use."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function() {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Clears access token', function() {",
+									"    pm.collectionVariables.set('accessToken', '');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{authBaseUrl}}/api/auth/logout/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "auth", "logout", ""]
+						},
+						"description": "Logout from current device. Clears refresh token cookie."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout from All Devices",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{authBaseUrl}}/api/auth/logout/all/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "auth", "logout", "all", ""]
+						},
+						"description": "Logout from all devices. Revokes all refresh tokens for the user."
+					},
+					"response": []
+				},
+				{
+					"name": "Sign Out (KRV-014)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{authBaseUrl}}/api/auth/signout/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "auth", "signout", ""]
+						},
+						"description": "Sign out and invalidate current session"
+					},
+					"response": []
+				},
+				{
+					"name": "List Sessions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{authBaseUrl}}/api/auth/sessions/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "auth", "sessions", ""]
+						},
+						"description": "List all active sessions for the current user"
+					},
+					"response": []
+				},
+				{
+					"name": "Revoke All Sessions",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{authBaseUrl}}/api/auth/sessions/all/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "auth", "sessions", "all", ""]
+						},
+						"description": "Revoke all sessions for the current user"
+					},
+					"response": []
+				},
+				{
+					"name": "Revoke Specific Session",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{authBaseUrl}}/api/auth/sessions/{{sessionId}}/",
+							"host": ["{{authBaseUrl}}"],
+							"path": ["api", "auth", "sessions", "{{sessionId}}", ""]
+						},
+						"description": "Revoke a specific session by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "API Keys",
+					"item": [
+						{
+							"name": "List API Keys",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{authBaseUrl}}/api/auth/api-keys/",
+									"host": ["{{authBaseUrl}}"],
+									"path": ["api", "auth", "api-keys", ""]
+								},
+								"description": "List all API keys for the current user"
+							},
+							"response": []
+						},
+						{
+							"name": "Create API Key",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"My API Key\",\n    \"scopes\": [\"analysis:read\", \"analysis:trigger\"]\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{authBaseUrl}}/api/auth/api-keys/",
+									"host": ["{{authBaseUrl}}"],
+									"path": ["api", "auth", "api-keys", ""]
+								},
+								"description": "Create a new API key. Returns the key only once - store it securely."
+							},
+							"response": []
+						},
+						{
+							"name": "Revoke API Key",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{authBaseUrl}}/api/auth/api-keys/{{keyId}}/",
+									"host": ["{{authBaseUrl}}"],
+									"path": ["api", "auth", "api-keys", "{{keyId}}", ""]
+								},
+								"description": "Revoke an API key by ID"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "OAuth",
+					"item": [
+						{
+							"name": "GitHub - Initiate",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{authBaseUrl}}/api/auth/oauth/github/",
+									"host": ["{{authBaseUrl}}"],
+									"path": ["api", "auth", "oauth", "github", ""]
+								},
+								"description": "Initiate GitHub OAuth flow. Redirects to GitHub for authentication."
+							},
+							"response": []
+						},
+						{
+							"name": "GitHub - Callback",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{authBaseUrl}}/api/auth/oauth/github/callback/",
+									"host": ["{{authBaseUrl}}"],
+									"path": ["api", "auth", "oauth", "github", "callback", ""]
+								},
+								"description": "GitHub OAuth callback handler"
+							},
+							"response": []
+						},
+						{
+							"name": "Google - Initiate",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{authBaseUrl}}/api/auth/oauth/google/",
+									"host": ["{{authBaseUrl}}"],
+									"path": ["api", "auth", "oauth", "google", ""]
+								},
+								"description": "Initiate Google OAuth flow. Redirects to Google for authentication."
+							},
+							"response": []
+						},
+						{
+							"name": "Google - Callback",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{authBaseUrl}}/api/auth/oauth/google/callback/",
+									"host": ["{{authBaseUrl}}"],
+									"path": ["api", "auth", "oauth", "google", "callback", ""]
+								},
+								"description": "Google OAuth callback handler"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Core Service",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{coreBaseUrl}}/api/health/",
+							"host": ["{{coreBaseUrl}}"],
+							"path": ["api", "health", ""]
+						},
+						"description": "Health check endpoint for Core Service"
+					},
+					"response": []
+				},
+				{
+					"name": "Workspaces",
+					"item": [
+						{
+							"name": "List Workspaces",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", ""]
+								},
+								"description": "List all workspaces the user has access to"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Workspace",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"My Workspace\",\n    \"description\": \"Workspace for my projects\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", ""]
+								},
+								"description": "Create a new workspace"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Workspace",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", ""]
+								},
+								"description": "Get workspace details by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Workspace",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Updated Workspace Name\",\n    \"description\": \"Updated description\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", ""]
+								},
+								"description": "Update workspace details"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Workspace",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", ""]
+								},
+								"description": "Delete a workspace (owner only)"
+							},
+							"response": []
+						},
+						{
+							"name": "List Workspace Members",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/members/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "members", ""]
+								},
+								"description": "List all members of a workspace"
+							},
+							"response": []
+						},
+						{
+							"name": "Invite Workspace Member",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email\": \"member@example.com\",\n    \"role\": \"member\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/members/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "members", ""]
+								},
+								"description": "Invite a member to the workspace"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Member Role",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"role\": \"admin\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/members/{{memberId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "members", "{{memberId}}", ""]
+								},
+								"description": "Update a workspace member's role"
+							},
+							"response": []
+						},
+						{
+							"name": "Remove Member",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/members/{{memberId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "members", "{{memberId}}", ""]
+								},
+								"description": "Remove a member from the workspace"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Repositories",
+					"item": [
+						{
+							"name": "List Repositories",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/repositories/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "repositories", ""]
+								},
+								"description": "List all repositories connected to a workspace"
+							},
+							"response": []
+						},
+						{
+							"name": "Connect Repository",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"provider\": \"github\",\n    \"repo_url\": \"https://github.com/owner/repo\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/repositories/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "repositories", ""]
+								},
+								"description": "Connect a GitHub/GitLab repository to the workspace"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Repository",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/repositories/{{repoId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "repositories", "{{repoId}}", ""]
+								},
+								"description": "Get repository details"
+							},
+							"response": []
+						},
+						{
+							"name": "Disconnect Repository",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/repositories/{{repoId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "repositories", "{{repoId}}", ""]
+								},
+								"description": "Disconnect and remove a repository from the workspace"
+							},
+							"response": []
+						},
+						{
+							"name": "Sync Repository",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/repositories/{{repoId}}/sync/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "repositories", "{{repoId}}", "sync", ""]
+								},
+								"description": "Manually trigger repository metadata sync from GitHub/GitLab"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Notes",
+					"item": [
+						{
+							"name": "List Notes",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/notes/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "notes", ""]
+								},
+								"description": "List all notes in a workspace"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Note",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"title\": \"My Note\",\n    \"content\": \"Note content here\",\n    \"tags\": [\"important\", \"feature\"]\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/notes/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "notes", ""]
+								},
+								"description": "Create a new note"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Note",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/notes/{{noteId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "notes", "{{noteId}}", ""]
+								},
+								"description": "Get note details"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Note",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"title\": \"Updated Title\",\n    \"content\": \"Updated content\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/notes/{{noteId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "notes", "{{noteId}}", ""]
+								},
+								"description": "Update a note"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Note",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/notes/{{noteId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "notes", "{{noteId}}", ""]
+								},
+								"description": "Delete a note"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Projects",
+					"item": [
+						{
+							"name": "List Projects",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/projects/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "projects", ""]
+								},
+								"description": "List all projects in a workspace"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Project",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"My Project\",\n    \"description\": \"Project description\",\n    \"repository_id\": \"{{repoId}}\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/projects/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "projects", ""]
+								},
+								"description": "Create a new project"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Project",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "projects", "{{projectId}}", ""]
+								},
+								"description": "Get project details"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Project",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"Updated Project Name\",\n    \"description\": \"Updated description\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "projects", "{{projectId}}", ""]
+								},
+								"description": "Update a project"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Project",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/projects/{{projectId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "projects", "{{projectId}}", ""]
+								},
+								"description": "Delete a project"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Tasks",
+					"item": [
+						{
+							"name": "List Tasks",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/tasks/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "tasks", ""]
+								},
+								"description": "List all tasks in a workspace"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Task",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"title\": \"New Task\",\n    \"description\": \"Task description\",\n    \"project_id\": \"{{projectId}}\",\n    \"status\": \"todo\",\n    \"priority\": \"medium\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/tasks/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "tasks", ""]
+								},
+								"description": "Create a new task"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Task",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/tasks/{{taskId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "tasks", "{{taskId}}", ""]
+								},
+								"description": "Get task details"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Task",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"status\": \"in_progress\",\n    \"priority\": \"high\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/tasks/{{taskId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "tasks", "{{taskId}}", ""]
+								},
+								"description": "Update a task"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Task",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/tasks/{{taskId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "tasks", "{{taskId}}", ""]
+								},
+								"description": "Delete a task"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Tags",
+					"item": [
+						{
+							"name": "List Tags",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/tags/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "tags", ""]
+								},
+								"description": "List all tags in a workspace"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Tag",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"name\": \"bug\",\n    \"color\": \"#FF0000\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/tags/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "tags", ""]
+								},
+								"description": "Create a new tag"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Tag",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{coreBaseUrl}}/api/workspaces/{{workspaceId}}/tags/{{tagId}}/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "tags", "{{tagId}}", ""]
+								},
+								"description": "Delete a tag"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Analysis Service",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{analysisBaseUrl}}/api/health/",
+							"host": ["{{analysisBaseUrl}}"],
+							"path": ["api", "health", ""]
+						},
+						"description": "Health check endpoint for Analysis Service"
+					},
+					"response": []
+				},
+				{
+					"name": "Analysis Jobs",
+					"item": [
+						{
+							"name": "Trigger Analysis",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"repo_id\": \"{{repoId}}\",\n    \"workspace_id\": \"{{workspaceId}}\",\n    \"branch\": \"main\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{analysisBaseUrl}}/api/analysis/",
+									"host": ["{{analysisBaseUrl}}"],
+									"path": ["api", "analysis", ""]
+								},
+								"description": "Trigger a new repository analysis"
+							},
+							"response": []
+						},
+						{
+							"name": "List Analysis Jobs",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{analysisBaseUrl}}/api/analysis/",
+									"host": ["{{analysisBaseUrl}}"],
+									"path": ["api", "analysis", ""]
+								},
+								"description": "List all analysis jobs for the workspace"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Analysis Job",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{analysisBaseUrl}}/api/analysis/{{jobId}}/",
+									"host": ["{{analysisBaseUrl}}"],
+									"path": ["api", "analysis", "{{jobId}}", ""]
+								},
+								"description": "Get analysis job details and status"
+							},
+							"response": []
+						},
+						{
+							"name": "Cancel Analysis",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{analysisBaseUrl}}/api/analysis/{{jobId}}/",
+									"host": ["{{analysisBaseUrl}}"],
+									"path": ["api", "analysis", "{{jobId}}", ""]
+								},
+								"description": "Cancel a running analysis job"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Reports",
+					"item": [
+						{
+							"name": "Get Latest Report",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{analysisBaseUrl}}/api/repositories/{{repoId}}/report/",
+									"host": ["{{analysisBaseUrl}}"],
+									"path": ["api", "repositories", "{{repoId}}", "report", ""]
+								},
+								"description": "Get the latest analysis report for a repository"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Report by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{analysisBaseUrl}}/api/reports/{{reportId}}/",
+									"host": ["{{analysisBaseUrl}}"],
+									"path": ["api", "reports", "{{reportId}}", ""]
+								},
+								"description": "Get a specific analysis report by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Download Report (S3 Presigned URL)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{analysisBaseUrl}}/api/reports/{{reportId}}/download/",
+									"host": ["{{analysisBaseUrl}}"],
+									"path": ["api", "reports", "{{reportId}}", "download", ""]
+								},
+								"description": "Get a presigned S3 URL to download the full report"
+							},
+							"response": []
+						},
+						{
+							"name": "List Report History",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{analysisBaseUrl}}/api/repositories/{{repoId}}/reports/",
+									"host": ["{{analysisBaseUrl}}"],
+									"path": ["api", "repositories", "{{repoId}}", "reports", ""]
+								},
+								"description": "List all reports for a repository"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Score History",
+					"item": [
+						{
+							"name": "Get Score History",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{analysisBaseUrl}}/api/repositories/{{repoId}}/scores/",
+									"host": ["{{analysisBaseUrl}}"],
+									"path": ["api", "repositories", "{{repoId}}", "scores", ""]
+								},
+								"description": "Get score history over time for a repository"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Score Aggregates",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{analysisBaseUrl}}/api/workspaces/{{workspaceId}}/scores/aggregates/",
+									"host": ["{{analysisBaseUrl}}"],
+									"path": ["api", "workspaces", "{{workspaceId}}", "scores", "aggregates", ""]
+								},
+								"description": "Get aggregated scores for all repositories in a workspace"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "AI Service",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{aiBaseUrl}}/api/health/",
+							"host": ["{{aiBaseUrl}}"],
+							"path": ["api", "health", ""]
+						},
+						"description": "Health check endpoint for AI Service"
+					},
+					"response": []
+				},
+				{
+					"name": "Conversations",
+					"item": [
+						{
+							"name": "List Conversations",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{aiBaseUrl}}/api/conversations/",
+									"host": ["{{aiBaseUrl}}"],
+									"path": ["api", "conversations", ""]
+								},
+								"description": "List all AI conversations"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Conversation",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"repo_id\": \"{{repoId}}\",\n    \"workspace_id\": \"{{workspaceId}}\",\n    \"title\": \"Code Review Session\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{aiBaseUrl}}/api/conversations/",
+									"host": ["{{aiBaseUrl}}"],
+									"path": ["api", "conversations", ""]
+								},
+								"description": "Create a new AI conversation"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Conversation",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{aiBaseUrl}}/api/conversations/{{conversationId}}/",
+									"host": ["{{aiBaseUrl}}"],
+									"path": ["api", "conversations", "{{conversationId}}", ""]
+								},
+								"description": "Get conversation details and messages"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Conversation",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{aiBaseUrl}}/api/conversations/{{conversationId}}/",
+									"host": ["{{aiBaseUrl}}"],
+									"path": ["api", "conversations", "{{conversationId}}", ""]
+								},
+								"description": "Delete a conversation"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Chat",
+					"item": [
+						{
+							"name": "Send Message (Non-Streaming)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"conversation_id\": \"{{conversationId}}\",\n    \"message\": \"What are the security issues in this codebase?\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{aiBaseUrl}}/api/chat/",
+									"host": ["{{aiBaseUrl}}"],
+									"path": ["api", "chat", ""]
+								},
+								"description": "Send a message to the AI chat (non-streaming response)"
+							},
+							"response": []
+						},
+						{
+							"name": "Send Message (Streaming)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"conversation_id\": \"{{conversationId}}\",\n    \"message\": \"Explain the architecture of this service\",\n    \"stream\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{aiBaseUrl}}/api/chat/stream/",
+									"host": ["{{aiBaseUrl}}"],
+									"path": ["api", "chat", "stream", ""]
+								},
+								"description": "Send a message and receive streaming response (SSE)"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Index Jobs",
+					"item": [
+						{
+							"name": "Trigger Indexing",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"repo_id\": \"{{repoId}}\",\n    \"workspace_id\": \"{{workspaceId}}\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{aiBaseUrl}}/api/index/",
+									"host": ["{{aiBaseUrl}}"],
+									"path": ["api", "index", ""]
+								},
+								"description": "Trigger code indexing for a repository"
+							},
+							"response": []
+						},
+						{
+							"name": "List Index Jobs",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{aiBaseUrl}}/api/index/",
+									"host": ["{{aiBaseUrl}}"],
+									"path": ["api", "index", ""]
+								},
+								"description": "List all index jobs"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Index Job Status",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{aiBaseUrl}}/api/index/{{jobId}}/",
+									"host": ["{{aiBaseUrl}}"],
+									"path": ["api", "index", "{{jobId}}", ""]
+								},
+								"description": "Get index job status"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Embeddings",
+					"item": [
+						{
+							"name": "Search Codebase",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"repo_id\": \"{{repoId}}\",\n    \"query\": \"authentication middleware\",\n    \"limit\": 5\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{aiBaseUrl}}/api/embeddings/search/",
+									"host": ["{{aiBaseUrl}}"],
+									"path": ["api", "embeddings", "search", ""]
+								},
+								"description": "Search the codebase using vector embeddings"
+							},
+							"response": []
+						},
+						{
+							"name": "Get File Content",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{aiBaseUrl}}/api/embeddings/file/",
+									"host": ["{{aiBaseUrl}}"],
+									"query": [
+										{
+											"key": "repo_id",
+											"value": "{{repoId}}"
+										},
+										{
+											"key": "file_path",
+											"value": "src/auth.py"
+										}
+									]
+								},
+								"description": "Get the content of a specific file from the indexed repository"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Agent Config",
+					"item": [
+						{
+							"name": "List Agent Configs",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{aiBaseUrl}}/api/agents/configs/",
+									"host": ["{{aiBaseUrl}}"],
+									"path": ["api", "agents", "configs", ""]
+								},
+								"description": "List available agent configurations"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Agent Config",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"enabled\": true,\n    \"temperature\": 0.7\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{aiBaseUrl}}/api/agents/configs/{{agentType}}/",
+									"host": ["{{aiBaseUrl}}"],
+									"path": ["api", "agents", "configs", "{{agentType}}", ""]
+								},
+								"description": "Update configuration for a specific agent type"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Notification Service",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{notificationsBaseUrl}}/api/health/",
+							"host": ["{{notificationsBaseUrl}}"],
+							"path": ["api", "health", ""]
+						},
+						"description": "Health check endpoint for Notification Service"
+					},
+					"response": []
+				},
+				{
+					"name": "Notifications",
+					"item": [
+						{
+							"name": "List Notifications",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{notificationsBaseUrl}}/api/notifications/",
+									"host": ["{{notificationsBaseUrl}}"],
+									"path": ["api", "notifications", ""]
+								},
+								"description": "List all notifications for the current user"
+							},
+							"response": []
+						},
+						{
+							"name": "Mark as Read",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"read\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{notificationsBaseUrl}}/api/notifications/{{notificationId}}/",
+									"host": ["{{notificationsBaseUrl}}"],
+									"path": ["api", "notifications", "{{notificationId}}", ""]
+								},
+								"description": "Mark a notification as read"
+							},
+							"response": []
+						},
+						{
+							"name": "Mark All as Read",
+							"request": {
+								"method": "POST",
+								"header": [],
+						"url": {
+									"raw": "{{notificationsBaseUrl}}/api/notifications/read-all/",
+									"host": ["{{notificationsBaseUrl}}"],
+									"path": ["api", "notifications", "read-all", ""]
+								},
+								"description": "Mark all notifications as read"
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Notification",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{notificationsBaseUrl}}/api/notifications/{{notificationId}}/",
+									"host": ["{{notificationsBaseUrl}}"],
+									"path": ["api", "notifications", "{{notificationId}}", ""]
+								},
+								"description": "Delete a notification"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Preferences",
+					"item": [
+						{
+							"name": "Get Preferences",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{notificationsBaseUrl}}/api/preferences/",
+									"host": ["{{notificationsBaseUrl}}"],
+									"path": ["api", "preferences", ""]
+								},
+								"description": "Get notification preferences"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Preferences",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email_enabled\": true,\n    \"push_enabled\": true,\n    \"analysis_completed\": true,\n    \"ai_responses\": true,\n    \"workspace_invites\": true\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{notificationsBaseUrl}}/api/preferences/",
+									"host": ["{{notificationsBaseUrl}}"],
+									"path": ["api", "preferences", ""]
+								},
+								"description": "Update notification preferences"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	]
+}

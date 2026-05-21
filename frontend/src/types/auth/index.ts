@@ -51,12 +51,16 @@ export interface RegisterCredentials {
 export interface AuthResponse {
   user: User;
   access_token: string;
+  accessToken?: string;
   token_type: string;
   expires_in: number;
 }
 
+export type LoginCredentials = SignInCredentials;
+
 export interface RefreshTokenResponse {
-  accessToken: string;
+  access_token?: string;
+  accessToken?: string;
 }
 
 export interface ForgotPasswordPayload {
@@ -70,4 +74,28 @@ export interface ResetPasswordPayload {
 
 export interface VerifyEmailPayload {
   token: string;
+}
+
+export interface VerifyEmailResponse {
+  message: string;
+  email_verified: boolean;
+  user_id: string;
+}
+
+export interface ResendVerificationPayload {
+  email: string;
+}
+
+export interface ResendVerificationResponse {
+  message?: string;
+  error?: string;
+  error_code?: string;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
+export interface ResetPasswordResponse {
+  message: string;
 }

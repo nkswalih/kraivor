@@ -1,34 +1,47 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { ROUTES } from './constants';
 
-const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/verify-email', '/pricing', '/features', '/docs', '/api'];
+const PUBLIC_PATHS = [
+  '/',
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/verify-email',
+  '/reset-password',
+  '/mfa',
+  '/pricing',
+  '/features',
+  '/docs',
+  '/api',
+  '/_next',
+  '/favicon.ico',
+];
 
-const PROTECTED_PATH_PREFIXES = ['/analysis', '/ai', '/notes', '/projects', '/settings'];
+const WORKSPACE_ROUTE_REGEX = /^\/[^/]+\/(?:dashboard|analysis|ai|notes|projects|settings)(?:\/.*)?$/;
+
+const isPublicPath = (pathname: string): boolean => {
+  return PUBLIC_PATHS.some((path) => {
+    if (path === '/') return pathname === '/';
+    return pathname === path || pathname.startsWith(`${path}/`);
+  });
+};
+
+const isWorkspaceRoute = (pathname: string): boolean => {
+  return WORKSPACE_ROUTE_REGEX.test(pathname);
+};
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const isPublicPath = PUBLIC_PATHS.some((path) => {
-    if (path === '/') return pathname === '/';
-    return pathname.startsWith(path);
-  });
-
-  if (isPublicPath) {
+  if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
-  const isProtectedPath = PROTECTED_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-
-  if (isProtectedPath) {
-    const accessToken = request.cookies.get('access_token')?.value;
-
-    if (!accessToken) {
-      const loginUrl = new URL(ROUTES.LOGIN, request.url);
-      loginUrl.searchParams.set('callbackUrl', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
+  if (!isWorkspaceRoute(pathname)) {
+    return NextResponse.next();
   }
 
+  // Workspace auth is enforced in AuthProvider because the access token is
+  // intentionally stored client-side and is not visible to Next middleware.
   return NextResponse.next();
 }
 

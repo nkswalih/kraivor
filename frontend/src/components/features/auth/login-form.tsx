@@ -7,7 +7,7 @@ import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks';
-import { ROUTES } from '@/constants';
+import { DEFAULT_DASHBOARD_ROUTE, ROUTES } from '@/constants';
 
 /* ─── Validation ─────────────────────────────────────────────── */
 
@@ -18,6 +18,16 @@ const loginSchema = z.object({
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
+
+const getSafeCallbackUrl = (callbackUrl: string | null): string => {
+  if (!callbackUrl) return DEFAULT_DASHBOARD_ROUTE;
+  if (!callbackUrl.startsWith('/') || callbackUrl.startsWith('//')) return DEFAULT_DASHBOARD_ROUTE;
+  if (callbackUrl === ROUTES.HOME) return DEFAULT_DASHBOARD_ROUTE;
+  if (callbackUrl.startsWith(ROUTES.LOGIN) || callbackUrl.startsWith(ROUTES.REGISTER)) {
+    return DEFAULT_DASHBOARD_ROUTE;
+  }
+  return callbackUrl;
+};
 
 /* ─── SVG icons ──────────────────────────────────────────────── */
 
@@ -55,7 +65,7 @@ const EyeOffIcon = () => (
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || ROUTES.DASHBOARD;
+  const callbackUrl = getSafeCallbackUrl(searchParams.get('callbackUrl'));
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -72,8 +82,13 @@ export function LoginForm() {
   const onSubmit = async (data: LoginFormData) => {
     setServerError(null);
     try {
-      await login(data);
-      router.push(callbackUrl);
+      const result = await login(data) as { mfaRequired?: boolean };
+      if (result?.mfaRequired) {
+        router.push('/mfa/verify');
+        return;
+      }
+
+      router.replace(callbackUrl);
     } catch {
       setServerError('Invalid email or password. Please try again.');
     }

@@ -68,13 +68,15 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
 export function getInitials(name: string): string {
   return name
     .split(' ')
-    .map((part) => part[0])
+    .map(part => part[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
 }
 
-export function parseJwt(token: string): { exp: number; iat: number; [key: string]: unknown } | null {
+export function parseJwt(
+  token: string
+): { exp: number; iat: number; [key: string]: unknown } | null {
   try {
     const base64Url = token.split('.')[1];
     if (!base64Url) return null;
@@ -82,7 +84,7 @@ export function parseJwt(token: string): { exp: number; iat: number; [key: strin
     const jsonPayload = decodeURIComponent(
       atob(base64)
         .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
         .join('')
     );
     return JSON.parse(jsonPayload);

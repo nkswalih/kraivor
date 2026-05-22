@@ -90,7 +90,10 @@ export function ForgotPasswordForm() {
         </div>
 
         <p className="mt-6 text-center">
-          <Link href={ROUTES.LOGIN} className="text-sm text-slate-400 transition-colors hover:text-violet-400">
+          <Link
+            href={ROUTES.LOGIN}
+            className="text-sm text-slate-400 transition-colors hover:text-violet-400"
+          >
             ← Back to login
           </Link>
         </p>
@@ -117,9 +120,7 @@ export function ForgotPasswordForm() {
         <h1 className="text-[28px] font-bold leading-tight tracking-tight text-white">
           Reset password
         </h1>
-        <p className="mt-1.5 text-sm text-slate-400">
-          Enter your email to receive a reset link
-        </p>
+        <p className="mt-1.5 text-sm text-slate-400">Enter your email to receive a reset link</p>
       </div>
 
       <div
@@ -135,7 +136,10 @@ export function ForgotPasswordForm() {
         {serverError && (
           <div
             className="mb-4 rounded-lg px-4 py-3 text-sm text-red-300"
-            style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239,68,68,0.2)' }}
+            style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239,68,68,0.2)',
+            }}
             role="alert"
           >
             {serverError}
@@ -155,9 +159,7 @@ export function ForgotPasswordForm() {
               className="auth-input w-full px-4 py-3 text-sm"
               {...register('email')}
             />
-            {errors.email && (
-              <p className="text-xs text-red-400">{errors.email.message}</p>
-            )}
+            {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
           </div>
 
           <button
@@ -168,9 +170,25 @@ export function ForgotPasswordForm() {
           >
             {isSubmitting ? (
               <>
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                <svg
+                  className="h-4 w-4 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
                 </svg>
                 Sending…
               </>
@@ -182,7 +200,10 @@ export function ForgotPasswordForm() {
       </div>
 
       <p className="mt-6 text-center">
-        <Link href={ROUTES.LOGIN} className="text-sm text-slate-400 transition-colors hover:text-violet-400">
+        <Link
+          href={ROUTES.LOGIN}
+          className="text-sm text-slate-400 transition-colors hover:text-violet-400"
+        >
           ← Back to login
         </Link>
       </p>

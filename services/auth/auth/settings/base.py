@@ -299,7 +299,7 @@ X_FRAME_OPTIONS = env("X_FRAME_OPTIONS", default="DENY")
 COOKIE_DOMAIN = env("COOKIE_DOMAIN", default="")
 COOKIE_SECURE = env.bool("COOKIE_SECURE", default=False)  # HTTPS only in production
 COOKIE_SAMESITE = env("COOKIE_SAMESITE", default="Lax")  # CSRF protection
-COOKIE_PATH = env("COOKIE_PATH", default="/auth/")
+COOKIE_PATH = env("COOKIE_PATH", default="/")
 COOKIE_HTTPONLY = env.bool("COOKIE_HTTPONLY", default=True)  # Prevent XSS access
 COOKIE_SAMESITE_FORCE = env.bool("COOKIE_SAMESITE_FORCE", default=None)
 

@@ -82,6 +82,19 @@ export interface VerifyEmailResponse {
   user_id: string;
 }
 
+export interface MfaVerifyRequest {
+  mfa_token: string;
+  code: string;
+}
+
+export interface MfaVerifyResponse {
+  user: User;
+  access_token: string;
+  accessToken?: string;
+  token_type: string;
+  expires_in: number;
+}
+
 export interface ResendVerificationPayload {
   email: string;
 }

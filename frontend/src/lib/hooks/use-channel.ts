@@ -11,7 +11,14 @@ interface UseRealtimeOptions<T> {
   reconnectInterval?: number;
 }
 
-export function useRealtime<T>({ url, onMessage, onConnect, onDisconnect, reconnectAttempts = 5, reconnectInterval = 3000 }: UseRealtimeOptions<T>) {
+export function useRealtime<T>({
+  url,
+  onMessage,
+  onConnect,
+  onDisconnect,
+  reconnectAttempts = 5,
+  reconnectInterval = 3000,
+}: UseRealtimeOptions<T>) {
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const reconnectCountRef = useRef(0);
@@ -27,7 +34,7 @@ export function useRealtime<T>({ url, onMessage, onConnect, onDisconnect, reconn
       onConnect?.();
     };
 
-    ws.onmessage = (event) => {
+    ws.onmessage = event => {
       try {
         const data = JSON.parse(event.data) as T;
         onMessage?.(data);

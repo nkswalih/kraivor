@@ -4,7 +4,6 @@ import type {
   SignInCredentials,
   RegisterCredentials,
   AuthResponse,
-  RefreshTokenResponse,
   ForgotPasswordPayload,
   ResetPasswordPayload,
   VerifyEmailPayload,
@@ -12,79 +11,55 @@ import type {
   IdentifyResponse,
   OTPSendRequest,
   OTPVerifyRequest,
+  MfaVerifyRequest,
 } from '@/types/auth';
 import { handleApiError } from './error-handler';
+import { useAuthStore } from '@/lib/stores/auth-store';
 
 class AuthApi {
   async identify(email: string): Promise<IdentifyResponse> {
     try {
-      const response = await apiClient.post<IdentifyResponse>(API_ENDPOINTS.AUTH.IDENTIFY, { email });
-      return response;
+      return await apiClient.post<IdentifyResponse>(API_ENDPOINTS.AUTH.IDENTIFY, { email });
     } catch (error) {
       throw handleApiError(error);
     }
   }
 
-  async login(credentials: SignInCredentials): Promise<AuthResponse> {
+  async login(credentials: SignInCredentials): Promise<{ mfaRequired: boolean }> {
+    useAuthStore.getState().setLoading(true);
     try {
-      const response = await apiClient.post<AuthResponse & { mfa_required?: boolean; mfa_token?: string }>(API_ENDPOINTS.AUTH.PASSWORD, credentials);
+      const response = await apiClient.post<
+        AuthResponse & { mfa_required?: boolean; mfa_token?: string }
+      >(API_ENDPOINTS.AUTH.PASSWORD, credentials);
+
       if (response.mfa_required && response.mfa_token) {
-        const mfaError: any = new Error('MFA required');
-        mfaError.mfaRequired = true;
-        mfaError.mfaToken = response.mfa_token;
-        throw mfaError;
+        useAuthStore.getState().setMfaToken(response.mfa_token);
+        useAuthStore.getState().setLoading(false);
+        return { mfaRequired: true };
       }
-      return {
-        ...response,
-        accessToken: response.access_token || response.accessToken || '',
-      };
+
+      const token = response.access_token || response.accessToken || '';
+      if (token && response.user) {
+        useAuthStore.getState().setAuth(response.user, token);
+      }
+      return { mfaRequired: false };
     } catch (error) {
+      useAuthStore.getState().setLoading(false);
       if ((error as any).mfaRequired) throw error;
       throw handleApiError(error);
     }
   }
 
-  async signInWithPassword(credentials: SignInCredentials): Promise<AuthResponse> {
-    try {
-      const response = await apiClient.post<AuthResponse>(API_ENDPOINTS.AUTH.PASSWORD, credentials);
-      return {
-        ...response,
-        accessToken: response.access_token || response.accessToken || '',
-      };
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  }
-
-  async sendOTP(payload: OTPSendRequest): Promise<{ message: string }> {
-    try {
-      const response = await apiClient.post<{ message: string }>(API_ENDPOINTS.AUTH.OTP_SEND, payload);
-      return response;
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  }
-
-  async verifyOTP(payload: OTPVerifyRequest): Promise<AuthResponse> {
-    try {
-      const response = await apiClient.post<AuthResponse>(API_ENDPOINTS.AUTH.OTP_VERIFY, payload);
-      return {
-        ...response,
-        accessToken: response.access_token || response.accessToken || '',
-      };
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  }
-
-  async register(credentials: RegisterCredentials): Promise<AuthResponse> {
+  async register(credentials: RegisterCredentials): Promise<void> {
+    useAuthStore.getState().setLoading(true);
     try {
       const response = await apiClient.post<AuthResponse>(API_ENDPOINTS.AUTH.REGISTER, credentials);
-      return {
-        ...response,
-        accessToken: response.access_token || response.accessToken || '',
-      };
+      const token = response.access_token || response.accessToken || '';
+      if (token && response.user) {
+        useAuthStore.getState().setAuth(response.user, token);
+      }
     } catch (error) {
+      useAuthStore.getState().setLoading(false);
       throw handleApiError(error);
     }
   }
@@ -92,19 +67,64 @@ class AuthApi {
   async logout(): Promise<void> {
     try {
       await apiClient.post(API_ENDPOINTS.AUTH.LOGOUT);
+    } catch {
+    } finally {
+      useAuthStore.getState().clearAuth();
+    }
+  }
+
+  async refreshSession(): Promise<void> {
+    try {
+      const response = await apiClient.post<{ access_token?: string; accessToken?: string; user?: User }>(API_ENDPOINTS.AUTH.REFRESH);
+      const token = response.access_token || response.accessToken || '';
+      if (!token) throw new Error('No access token returned from refresh');
+      if (response.user) {
+        useAuthStore.getState().setAuth(response.user, token);
+        return;
+      }
+      const user = await this.getCurrentUser();
+      useAuthStore.getState().setAuth(user, token);
+    } catch {
+      useAuthStore.getState().clearAuth();
+    }
+  }
+
+  async refreshToken(): Promise<string> {
+    const response = await apiClient.post<{ access_token?: string; accessToken?: string }>(API_ENDPOINTS.AUTH.REFRESH);
+    const token = response.access_token || response.accessToken || '';
+    return token;
+  }
+
+  async verifyMfa(payload: MfaVerifyRequest): Promise<void> {
+    try {
+      const response = await apiClient.post<AuthResponse>(API_ENDPOINTS.AUTH.MFA_VERIFY, payload);
+      const token = response.access_token || response.accessToken || '';
+      if (token && response.user) {
+        useAuthStore.getState().setAuth(response.user, token);
+      }
     } catch (error) {
       throw handleApiError(error);
     }
   }
 
-  async refreshToken(): Promise<RefreshTokenResponse> {
+  async sendOTP(payload: OTPSendRequest): Promise<{ message: string }> {
     try {
-      const response = await apiClient.post<RefreshTokenResponse>(API_ENDPOINTS.AUTH.REFRESH);
-      return {
-        ...response,
-        accessToken: response.access_token || response.accessToken || '',
-      };
+      return await apiClient.post<{ message: string }>(API_ENDPOINTS.AUTH.OTP_SEND, payload);
     } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async verifyOTP(payload: OTPVerifyRequest): Promise<void> {
+    useAuthStore.getState().setLoading(true);
+    try {
+      const response = await apiClient.post<AuthResponse>(API_ENDPOINTS.AUTH.OTP_VERIFY, payload);
+      const token = response.access_token || response.accessToken || '';
+      if (token && response.user) {
+        useAuthStore.getState().setAuth(response.user, token);
+      }
+    } catch (error) {
+      useAuthStore.getState().setLoading(false);
       throw handleApiError(error);
     }
   }
@@ -139,16 +159,46 @@ class AuthApi {
 
   async resendVerification(email: string): Promise<{ message: string }> {
     try {
-      const response = await apiClient.post<{ message: string }>(API_ENDPOINTS.AUTH.RESEND_VERIFICATION, { email });
-      return response;
+      return await apiClient.post<{ message: string }>(
+        API_ENDPOINTS.AUTH.RESEND_VERIFICATION,
+        { email }
+      );
     } catch (error) {
       throw handleApiError(error);
     }
   }
 
-  async getSessions(): Promise<Array<{ session_id: string; device_name: string; device_type: string; ip_address: string; last_used_at: string; created_at: string; is_current: boolean }>> {
+  async getCurrentUser(): Promise<User> {
     try {
-      const response = await apiClient.get<{ sessions: Array<{ session_id: string; device_name: string; device_type: string; ip_address: string; last_used_at: string; created_at: string; is_current: boolean }> }>(API_ENDPOINTS.AUTH.SESSIONS);
+      return await apiClient.get<User>(API_ENDPOINTS.AUTH.ME);
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async getSessions(): Promise<
+    Array<{
+      session_id: string;
+      device_name: string;
+      device_type: string;
+      ip_address: string;
+      last_used_at: string;
+      created_at: string;
+      is_current: boolean;
+    }>
+  > {
+    try {
+      const response = await apiClient.get<{
+        sessions: Array<{
+          session_id: string;
+          device_name: string;
+          device_type: string;
+          ip_address: string;
+          last_used_at: string;
+          created_at: string;
+          is_current: boolean;
+        }>;
+      }>(API_ENDPOINTS.AUTH.SESSIONS);
       return response.sessions;
     } catch (error) {
       throw handleApiError(error);
@@ -179,10 +229,11 @@ class AuthApi {
     }
   }
 
-  async getApiKeys(): Promise<Array<{ id: string; name: string; prefix: string; created_at: string; last_used_at?: string }>> {
+  async getApiKeys(): Promise<
+    Array<{ id: string; name: string; prefix: string; created_at: string; last_used_at?: string }>
+  > {
     try {
-      const response = await apiClient.get<Array<{ id: string; name: string; prefix: string; created_at: string; last_used_at?: string }>>(API_ENDPOINTS.AUTH.API_KEYS);
-      return response;
+      return await apiClient.get(API_ENDPOINTS.AUTH.API_KEYS);
     } catch (error) {
       throw handleApiError(error);
     }
@@ -190,8 +241,7 @@ class AuthApi {
 
   async createApiKey(name: string): Promise<{ id: string; name: string; key: string; created_at: string }> {
     try {
-      const response = await apiClient.post<{ id: string; name: string; key: string; created_at: string }>(API_ENDPOINTS.AUTH.API_KEYS, { name });
-      return response;
+      return await apiClient.post(API_ENDPOINTS.AUTH.API_KEYS, { name });
     } catch (error) {
       throw handleApiError(error);
     }
@@ -200,15 +250,6 @@ class AuthApi {
   async revokeApiKey(keyId: string): Promise<void> {
     try {
       await apiClient.delete(API_ENDPOINTS.AUTH.API_KEY_REVOKE(keyId));
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  }
-
-  async getCurrentUser(): Promise<User> {
-    try {
-      const response = await apiClient.get<User>(API_ENDPOINTS.AUTH.ME);
-      return response;
     } catch (error) {
       throw handleApiError(error);
     }

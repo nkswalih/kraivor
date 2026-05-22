@@ -2,6 +2,7 @@ import axios, { type AxiosInstance, type AxiosError, type InternalAxiosRequestCo
 import { config } from '@/config';
 import { API_ENDPOINTS } from '@/constants';
 import type { ApiError, QueueItem } from '@/types/api';
+import { useAuthStore } from '@/lib/stores/auth-store';
 
 let isRefreshing = false;
 let failedQueue: QueueItem[] = [];
@@ -42,7 +43,6 @@ const normalizeApiPath = (url: string | undefined): string => {
 const isPublicAuthEndpoint = (url: string | undefined): boolean => {
   const pathname = normalizeApiPath(url);
   const normalizedPathname = pathname.endsWith('/') ? pathname : `${pathname}/`;
-
   return (
     PUBLIC_AUTH_EXACT_PATHS.includes(normalizedPathname) ||
     PUBLIC_AUTH_PREFIXES.some(prefix => normalizedPathname.startsWith(prefix))
@@ -51,7 +51,6 @@ const isPublicAuthEndpoint = (url: string | undefined): boolean => {
 
 class ApiClient {
   private client: AxiosInstance;
-  private accessToken: string | null = null;
 
   constructor() {
     this.client = this.createClient();
@@ -62,9 +61,7 @@ class ApiClient {
     return axios.create({
       baseURL: config.api.baseUrl,
       timeout: config.api.timeout,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       withCredentials: true,
     });
   }
@@ -76,9 +73,9 @@ class ApiClient {
           delete config.headers.Authorization;
           return config;
         }
-
-        if (this.accessToken) {
-          config.headers.Authorization = `Bearer ${this.accessToken}`;
+        const token = useAuthStore.getState().accessToken;
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
       },
@@ -89,10 +86,7 @@ class ApiClient {
       response => response,
       async (error: AxiosError<ApiError>) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-
-        if (!originalRequest) {
-          return Promise.reject(error);
-        }
+        if (!originalRequest) return Promise.reject(error);
 
         if (
           error.response?.status === 401 &&
@@ -113,34 +107,22 @@ class ApiClient {
 
           try {
             const response = await this.client.post(API_ENDPOINTS.AUTH.REFRESH);
-            const accessToken = response.data.access_token || response.data.accessToken;
-            this.setAccessToken(accessToken);
-            processQueue(null, accessToken);
-            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            const newToken: string = response.data.access_token || response.data.accessToken || '';
+            useAuthStore.setState({ accessToken: newToken });
+            processQueue(null, newToken);
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
             return this.client(originalRequest);
           } catch (refreshError) {
             processQueue(refreshError as AxiosError, null);
-            this.clearAccessToken();
-            if (typeof window !== 'undefined') {
-              window.location.href = '/login';
-            }
+            useAuthStore.getState().clearAuth();
             return Promise.reject(refreshError);
           } finally {
             isRefreshing = false;
           }
         }
-
         return Promise.reject(error);
       }
     );
-  }
-
-  setAccessToken(token: string | null) {
-    this.accessToken = token;
-  }
-
-  clearAccessToken() {
-    this.accessToken = null;
   }
 
   async get<T>(url: string, config?: Record<string, unknown>) {

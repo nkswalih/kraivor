@@ -3,12 +3,13 @@
 import { useState, useEffect, useRef, KeyboardEvent, ClipboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores';
+import { authApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { DEFAULT_DASHBOARD_ROUTE } from '@/constants';
 
 export default function MfaVerifyPage() {
   const router = useRouter();
-  const { mfaToken, setMfaToken, setUser, setAccessToken } = useAuthStore();
+  const mfaToken = useAuthStore(s => s.mfaToken);
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -49,24 +50,12 @@ export default function MfaVerifyPage() {
   };
 
   const handleVerify = async () => {
-    if (otp.length !== 6) return;
+    if (otp.length !== 6 || !mfaToken) return;
     setServerError(null);
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/mfa/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mfa_token: mfaToken, code: otp }),
-      });
-
-      if (!response.ok) throw new Error('Invalid verification code');
-
-      const data = await response.json();
-      setUser(data.user);
-      setAccessToken(data.access_token);
-      setMfaToken(null);
-
+      await authApi.verifyMfa({ mfa_token: mfaToken, code: otp });
       router.replace(DEFAULT_DASHBOARD_ROUTE);
     } catch {
       setServerError('Invalid verification code. Please try again.');

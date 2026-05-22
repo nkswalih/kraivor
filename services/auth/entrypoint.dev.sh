@@ -22,5 +22,20 @@ echo "✅ Redis is ready"
 echo "🔄 Running migrations..."
 python manage.py migrate --noinput
 
+echo "👤 Creating default superuser (if not exists)..."
+python manage.py shell -c "
+from users.models import User
+if not User.objects.filter(email='admin@kraivor.local').exists():
+    User.objects.create_superuser(
+        email='admin@kraivor.local',
+        name='Admin',
+        password='admin123',
+        email_verified=True,
+    )
+    print('✅ Superuser created: admin@kraivor.local / admin123')
+else:
+    print('ℹ️  Superuser already exists')
+"
+
 echo "🚀 Starting development server..."
 exec python manage.py runserver 0.0.0.0:8001

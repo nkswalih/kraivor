@@ -58,13 +58,18 @@ export function Sidebar({ workspaceSlug }: SidebarProps) {
       )}
     >
       <div className="flex h-full flex-col">
-        <div className={cn('flex h-14 items-center border-b px-4', sidebarCollapsed ? 'justify-center' : 'justify-start gap-2')}>
+        <div
+          className={cn(
+            'flex h-14 items-center border-b px-4',
+            sidebarCollapsed ? 'justify-center' : 'justify-start gap-2'
+          )}
+        >
           <Layers className="h-6 w-6 text-primary" />
           {!sidebarCollapsed && <span className="font-semibold">Kraivor</span>}
         </div>
 
         <nav className="flex-1 space-y-1 p-2">
-          {navItems.map((item) => {
+          {navItems.map(item => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (
@@ -73,7 +78,9 @@ export function Sidebar({ workspaceSlug }: SidebarProps) {
                 href={item.path}
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  active ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                  active
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
                   sidebarCollapsed && 'justify-center px-2'
                 )}
               >
@@ -85,7 +92,7 @@ export function Sidebar({ workspaceSlug }: SidebarProps) {
         </nav>
 
         <div className="border-t p-2">
-          {bottomNavItems.map((item) => {
+          {bottomNavItems.map(item => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (
@@ -94,7 +101,9 @@ export function Sidebar({ workspaceSlug }: SidebarProps) {
                 href={item.path}
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  active ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                  active
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
                   sidebarCollapsed && 'justify-center px-2'
                 )}
               >
@@ -103,8 +112,17 @@ export function Sidebar({ workspaceSlug }: SidebarProps) {
               </Link>
             );
           })}
-          <Button variant="ghost" size="sm" className={cn('w-full mt-2', sidebarCollapsed && 'px-2')} onClick={toggleSidebarCollapse}>
-            {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn('w-full mt-2', sidebarCollapsed && 'px-2')}
+            onClick={toggleSidebarCollapse}
+          >
+            {sidebarCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
             {!sidebarCollapsed && <span className="ml-2">Collapse</span>}
           </Button>
         </div>

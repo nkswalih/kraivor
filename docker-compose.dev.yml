@@ -61,6 +61,21 @@ services:
       driver: "none"
     restart: unless-stopped
 
+# ────── Nginx ─────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: kraivor-nginx-dev
+    ports:
+    - "80:80"
+    volumes:
+    - ./infra/docker/nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    extra_hosts:
+    - "host.docker.internal:host-gateway"
+    depends_on:
+    - identity
+    restart: unless-stopped
+
+
   # ── Auth / Identity Service ─────────────────────────────────────────────────
 
   identity:
@@ -79,6 +94,10 @@ services:
       EMAIL_HOST: mailhog
       EMAIL_PORT: 1025
       UV_LINK_MODE: copy
+      # Explicitly set to prevent host environment variable leakage.
+      # Docker Compose inherits host env vars, which can override .env values.
+      # This ensures the correct frontend URL regardless of host environment state.
+      FRONTEND_URL: http://localhost:3000
     depends_on:
       postgres:
         condition: service_healthy

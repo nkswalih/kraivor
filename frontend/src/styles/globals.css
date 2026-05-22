@@ -58,7 +58,9 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
-    font-feature-settings: 'rlig' 1, 'calt' 1;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
     background-color: #0a0a0f;
   }
 }
@@ -66,20 +68,39 @@
 /* ─── Auth page animations ──────────────────────────────────────── */
 
 @keyframes float-slow {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%       { transform: translate(40px, -60px) scale(1.05); }
-  66%       { transform: translate(-30px, 30px) scale(0.97); }
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(40px, -60px) scale(1.05);
+  }
+  66% {
+    transform: translate(-30px, 30px) scale(0.97);
+  }
 }
 
 @keyframes float-medium {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50%       { transform: translate(-50px, 40px) scale(1.08); }
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-50px, 40px) scale(1.08);
+  }
 }
 
 @keyframes float-fast {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  40%       { transform: translate(30px, -40px) scale(0.95); }
-  80%       { transform: translate(-20px, 20px) scale(1.03); }
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  40% {
+    transform: translate(30px, -40px) scale(0.95);
+  }
+  80% {
+    transform: translate(-20px, 20px) scale(1.03);
+  }
 }
 
 @keyframes fade-up {
@@ -94,28 +115,56 @@
 }
 
 @keyframes shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
 }
 
 @keyframes pulse-ring {
-  0%   { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
-  70%  { box-shadow: 0 0 0 8px rgba(139, 92, 246, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(139, 92, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
+  }
 }
 
 @keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.animate-float-slow   { animation: float-slow   18s ease-in-out infinite; }
-.animate-float-medium { animation: float-medium 14s ease-in-out infinite; }
-.animate-float-fast   { animation: float-fast   10s ease-in-out infinite; }
-.animate-fade-up      { animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.animate-fade-up-delay-1 { animation: fade-up 0.6s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.animate-fade-up-delay-2 { animation: fade-up 0.6s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.animate-spin-slow    { animation: spin-slow 20s linear infinite; }
+.animate-float-slow {
+  animation: float-slow 18s ease-in-out infinite;
+}
+.animate-float-medium {
+  animation: float-medium 14s ease-in-out infinite;
+}
+.animate-float-fast {
+  animation: float-fast 10s ease-in-out infinite;
+}
+.animate-fade-up {
+  animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.animate-fade-up-delay-1 {
+  animation: fade-up 0.6s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.animate-fade-up-delay-2 {
+  animation: fade-up 0.6s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
 
 .btn-shimmer {
   background-size: 200% auto;
@@ -127,7 +176,10 @@
     #6366f1 70%,
     #7c3aed 100%
   );
-  transition: background-position 0.5s ease, box-shadow 0.3s ease, transform 0.2s ease;
+  transition:
+    background-position 0.5s ease,
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
 }
 .btn-shimmer:hover {
   background-position: right center;
@@ -141,7 +193,10 @@
 .btn-shimmer-secondary {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 .btn-shimmer-secondary:hover {
   background: rgba(255, 255, 255, 0.09);
@@ -157,7 +212,10 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #f1f5f9;
   border-radius: 10px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
 .auth-input::placeholder {
   color: rgba(148, 163, 184, 0.5);
@@ -174,7 +232,10 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   color: #e2e8f0;
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 .oauth-btn:hover {
   background: rgba(255, 255, 255, 0.09);

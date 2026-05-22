@@ -16,10 +16,11 @@ const PUBLIC_PATHS = [
   '/favicon.ico',
 ];
 
-const WORKSPACE_ROUTE_REGEX = /^\/[^/]+\/(?:dashboard|analysis|ai|notes|projects|settings)(?:\/.*)?$/;
+const WORKSPACE_ROUTE_REGEX =
+  /^\/[^/]+\/(?:dashboard|analysis|ai|notes|projects|settings)(?:\/.*)?$/;
 
 const isPublicPath = (pathname: string): boolean => {
-  return PUBLIC_PATHS.some((path) => {
+  return PUBLIC_PATHS.some(path => {
     if (path === '/') return pathname === '/';
     return pathname === path || pathname.startsWith(`${path}/`);
   });

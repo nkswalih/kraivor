@@ -13,7 +13,12 @@ export class ApiException extends Error {
   public readonly code: ApiErrorCode;
   public readonly details?: Record<string, unknown>;
 
-  constructor(message: string, statusCode: number, code: ApiErrorCode, details?: Record<string, unknown>) {
+  constructor(
+    message: string,
+    statusCode: number,
+    code: ApiErrorCode,
+    details?: Record<string, unknown>
+  ) {
     super(message);
     this.name = 'ApiException';
     this.statusCode = statusCode;

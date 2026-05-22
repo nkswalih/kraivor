@@ -96,10 +96,40 @@ ALLOWED_HOSTS = env.list(
 )
 
 # =============================================================================
+# FRONTEND URL
+# =============================================================================
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
+
+# =============================================================================
 # CORS - Development
 # =============================================================================
-CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=True)
-CORS_ALLOW_CREDENTIALS = env.bool("CORS_ALLOW_CREDENTIALS", default=True)
+CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=False)
+
+CORS_ALLOWED_ORIGINS = env.list(
+    "CORS_ALLOWED_ORIGINS",
+    default=[
+        "http://localhost:3000",
+    ],
+)
+
+CORS_ALLOW_CREDENTIALS = env.bool(
+    "CORS_ALLOW_CREDENTIALS",
+    default=True,
+)
+
+# =============================================================================
+# COOKIES - Development
+# =============================================================================
+# Secure=False so cookies work over plain HTTP in dev.
+COOKIE_SECURE = env.bool("COOKIE_SECURE", default=False)
+
+COOKIE_DOMAIN = env("COOKIE_DOMAIN", default="")
+
+COOKIE_SAMESITE = env("COOKIE_SAMESITE", default="Lax")
+
+COOKIE_PATH = env("COOKIE_PATH", default="/")
+
+COOKIE_HTTPONLY = env.bool("COOKIE_HTTPONLY", default=True)
 
 # =============================================================================
 # EMAIL - Development (Mailhog)
@@ -114,19 +144,6 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=False)
 EMAIL_USE_STARTTLS = env.bool("EMAIL_USE_STARTTLS", default=False)
 EMAIL_FROM = env("EMAIL_FROM", default="noreply@kraivor.local")
-
-# =============================================================================
-# FRONTEND URL
-# =============================================================================
-FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
-
-# =============================================================================
-# COOKIES - Development
-# =============================================================================
-# Secure=False so cookies work over plain HTTP in dev.
-COOKIE_SECURE = env.bool("COOKIE_SECURE", default=False)
-COOKIE_DOMAIN = env("COOKIE_DOMAIN", default="")
-COOKIE_SAMESITE = env("COOKIE_SAMESITE", default="Lax")
 
 # =============================================================================
 # CACHES - Development (local memory, no Redis needed)

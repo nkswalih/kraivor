@@ -7,7 +7,7 @@ let isRefreshing = false;
 let failedQueue: QueueItem[] = [];
 
 const processQueue = (error: AxiosError | null, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
+  failedQueue.forEach(prom => {
     if (error) {
       prom.reject(error);
     } else {
@@ -28,11 +28,7 @@ const PUBLIC_AUTH_EXACT_PATHS = [
   '/auth/resend-verification/',
 ];
 
-const PUBLIC_AUTH_PREFIXES = [
-  '/auth/signin/otp/',
-  '/auth/otp/',
-  '/auth/oauth/',
-];
+const PUBLIC_AUTH_PREFIXES = ['/auth/signin/otp/', '/auth/otp/', '/auth/oauth/'];
 
 const normalizeApiPath = (url: string | undefined): string => {
   if (!url) return '';
@@ -49,7 +45,7 @@ const isPublicAuthEndpoint = (url: string | undefined): boolean => {
 
   return (
     PUBLIC_AUTH_EXACT_PATHS.includes(normalizedPathname) ||
-    PUBLIC_AUTH_PREFIXES.some((prefix) => normalizedPathname.startsWith(prefix))
+    PUBLIC_AUTH_PREFIXES.some(prefix => normalizedPathname.startsWith(prefix))
   );
 };
 
@@ -86,11 +82,11 @@ class ApiClient {
         }
         return config;
       },
-      (error) => Promise.reject(error)
+      error => Promise.reject(error)
     );
 
     this.client.interceptors.response.use(
-      (response) => response,
+      response => response,
       async (error: AxiosError<ApiError>) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
@@ -98,11 +94,15 @@ class ApiClient {
           return Promise.reject(error);
         }
 
-        if (error.response?.status === 401 && !originalRequest._retry && !isPublicAuthEndpoint(originalRequest.url)) {
+        if (
+          error.response?.status === 401 &&
+          !originalRequest._retry &&
+          !isPublicAuthEndpoint(originalRequest.url)
+        ) {
           if (isRefreshing) {
             return new Promise((resolve, reject) => {
               failedQueue.push({ resolve, reject, config: originalRequest });
-            }).then((token) => {
+            }).then(token => {
               originalRequest.headers.Authorization = `Bearer ${token}`;
               return this.client(originalRequest);
             });
@@ -168,7 +168,12 @@ class ApiClient {
     return response.data;
   }
 
-  async request<T>(config: { url: string; method: string; data?: unknown; params?: Record<string, unknown> }) {
+  async request<T>(config: {
+    url: string;
+    method: string;
+    data?: unknown;
+    params?: Record<string, unknown>;
+  }) {
     const response = await this.client.request<T>(config);
     return response.data;
   }

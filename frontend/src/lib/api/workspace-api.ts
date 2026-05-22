@@ -33,7 +33,10 @@ export const workspaceApi = {
 
   async update(id: string, payload: UpdateWorkspacePayload) {
     try {
-      const response = await apiClient.patch<Workspace>(API_ENDPOINTS.WORKSPACES.UPDATE(id), payload);
+      const response = await apiClient.patch<Workspace>(
+        API_ENDPOINTS.WORKSPACES.UPDATE(id),
+        payload
+      );
       return response;
     } catch (error) {
       throw handleApiError(error);

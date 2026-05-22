@@ -46,6 +46,7 @@ export const API_ENDPOINTS = {
     LOGOUT_ALL: '/auth/logout/all/',
     API_KEYS: '/auth/api-keys/',
     API_KEY_REVOKE: (keyId: string) => `/auth/api-keys/${keyId}/`,
+    MFA_VERIFY: '/auth/mfa/verify/',
   },
   WORKSPACES: {
     LIST: '/workspaces/',

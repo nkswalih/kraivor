@@ -1,6 +1,11 @@
 import apiClient from './client';
 import { API_ENDPOINTS } from '@/constants';
-import type { Project, Task, ProjectCreatePayload, TaskCreatePayload } from '@/types/domain/projects';
+import type {
+  Project,
+  Task,
+  ProjectCreatePayload,
+  TaskCreatePayload,
+} from '@/types/domain/projects';
 import { handleApiError } from './error-handler';
 
 export const projectsApi = {
@@ -50,7 +55,9 @@ export const projectsApi = {
 
   async listTasks(projectId?: string) {
     try {
-      const response = await apiClient.get<Task[]>(API_ENDPOINTS.TASKS.LIST, { params: { projectId } });
+      const response = await apiClient.get<Task[]>(API_ENDPOINTS.TASKS.LIST, {
+        params: { projectId },
+      });
       return response;
     } catch (error) {
       throw handleApiError(error);

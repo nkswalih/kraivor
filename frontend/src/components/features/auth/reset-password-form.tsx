@@ -14,7 +14,7 @@ const resetPasswordSchema = z
     password: z.string().min(8, 'Password must be at least 8 characters'),
     confirmPassword: z.string(),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine(data => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
     path: ['confirmPassword'],
   });
@@ -22,14 +22,30 @@ const resetPasswordSchema = z
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 const EyeIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden="true"
+  >
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
     <circle cx="12" cy="12" r="3" />
   </svg>
 );
 
 const EyeOffIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden="true"
+  >
     <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
     <line x1="1" y1="1" x2="23" y2="23" />
   </svg>
@@ -86,9 +102,7 @@ export function ResetPasswordForm() {
         <h1 className="text-[28px] font-bold leading-tight tracking-tight text-white">
           Create new password
         </h1>
-        <p className="mt-1.5 text-sm text-slate-400">
-          Enter your new password below
-        </p>
+        <p className="mt-1.5 text-sm text-slate-400">Enter your new password below</p>
       </div>
 
       <div
@@ -104,7 +118,10 @@ export function ResetPasswordForm() {
         {serverError && (
           <div
             className="mb-4 rounded-lg px-4 py-3 text-sm text-red-300"
-            style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239,68,68,0.2)' }}
+            style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239,68,68,0.2)',
+            }}
             role="alert"
           >
             {serverError}
@@ -127,16 +144,14 @@ export function ResetPasswordForm() {
               />
               <button
                 type="button"
-                onClick={() => setShowPassword((v) => !v)}
+                onClick={() => setShowPassword(v => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-slate-300"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOffIcon /> : <EyeIcon />}
               </button>
             </div>
-            {errors.password && (
-              <p className="text-xs text-red-400">{errors.password.message}</p>
-            )}
+            {errors.password && <p className="text-xs text-red-400">{errors.password.message}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -154,7 +169,7 @@ export function ResetPasswordForm() {
               />
               <button
                 type="button"
-                onClick={() => setShowConfirm((v) => !v)}
+                onClick={() => setShowConfirm(v => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-slate-300"
                 aria-label={showConfirm ? 'Hide password' : 'Show password'}
               >
@@ -174,9 +189,25 @@ export function ResetPasswordForm() {
           >
             {isSubmitting ? (
               <>
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                <svg
+                  className="h-4 w-4 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
                 </svg>
                 Resetting…
               </>
@@ -188,7 +219,10 @@ export function ResetPasswordForm() {
       </div>
 
       <p className="mt-6 text-center">
-        <Link href={ROUTES.LOGIN} className="text-sm text-slate-400 transition-colors hover:text-violet-400">
+        <Link
+          href={ROUTES.LOGIN}
+          className="text-sm text-slate-400 transition-colors hover:text-violet-400"
+        >
           ← Back to login
         </Link>
       </p>

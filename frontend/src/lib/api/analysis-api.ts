@@ -24,7 +24,10 @@ export const analysisApi = {
 
   async connectRepository(provider: RepositoryProvider, repoUrl: string) {
     try {
-      const response = await apiClient.post<Repository>(API_ENDPOINTS.REPOSITORIES.CONNECT, { provider, repoUrl });
+      const response = await apiClient.post<Repository>(API_ENDPOINTS.REPOSITORIES.CONNECT, {
+        provider,
+        repoUrl,
+      });
       return response;
     } catch (error) {
       throw handleApiError(error);

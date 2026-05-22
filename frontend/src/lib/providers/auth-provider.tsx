@@ -24,7 +24,8 @@ const PUBLIC_ROUTES = [
 ];
 
 const AUTH_REDIRECT_ROUTES = [ROUTES.LOGIN, ROUTES.REGISTER];
-const WORKSPACE_ROUTE_REGEX = /^\/[^/]+\/(?:dashboard|analysis|ai|notes|projects|settings)(?:\/.*)?$/;
+const WORKSPACE_ROUTE_REGEX =
+  /^\/[^/]+\/(?:dashboard|analysis|ai|notes|projects|settings)(?:\/.*)?$/;
 
 const isRouteMatch = (pathname: string, route: string): boolean => {
   if (route === ROUTES.HOME) return pathname === ROUTES.HOME;
@@ -32,11 +33,11 @@ const isRouteMatch = (pathname: string, route: string): boolean => {
 };
 
 const isPublicRoute = (pathname: string): boolean => {
-  return PUBLIC_ROUTES.some((route) => isRouteMatch(pathname, route));
+  return PUBLIC_ROUTES.some(route => isRouteMatch(pathname, route));
 };
 
 const isAuthRedirectRoute = (pathname: string): boolean => {
-  return AUTH_REDIRECT_ROUTES.some((route) => isRouteMatch(pathname, route));
+  return AUTH_REDIRECT_ROUTES.some(route => isRouteMatch(pathname, route));
 };
 
 const isWorkspaceRoute = (pathname: string): boolean => {
@@ -98,7 +99,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       router.replace(loginUrl);
       return;
     }
-  }, [isAuthenticated, isLoading, pathname, routeIsAuthRedirect, routeIsPublic, routeIsWorkspace, router]);
+  }, [
+    isAuthenticated,
+    isLoading,
+    pathname,
+    routeIsAuthRedirect,
+    routeIsPublic,
+    routeIsWorkspace,
+    router,
+  ]);
 
   useEffect(() => {
     if (!routeIsWorkspace) return;

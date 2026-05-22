@@ -18,7 +18,9 @@ import { handleApiError } from './error-handler';
 class AuthApi {
   async identify(email: string): Promise<IdentifyResponse> {
     try {
-      const response = await apiClient.post<IdentifyResponse>(API_ENDPOINTS.AUTH.IDENTIFY, { email });
+      const response = await apiClient.post<IdentifyResponse>(API_ENDPOINTS.AUTH.IDENTIFY, {
+        email,
+      });
       return response;
     } catch (error) {
       throw handleApiError(error);
@@ -27,7 +29,9 @@ class AuthApi {
 
   async login(credentials: SignInCredentials): Promise<AuthResponse> {
     try {
-      const response = await apiClient.post<AuthResponse & { mfa_required?: boolean; mfa_token?: string }>(API_ENDPOINTS.AUTH.PASSWORD, credentials);
+      const response = await apiClient.post<
+        AuthResponse & { mfa_required?: boolean; mfa_token?: string }
+      >(API_ENDPOINTS.AUTH.PASSWORD, credentials);
       if (response.mfa_required && response.mfa_token) {
         const mfaError: any = new Error('MFA required');
         mfaError.mfaRequired = true;
@@ -58,7 +62,10 @@ class AuthApi {
 
   async sendOTP(payload: OTPSendRequest): Promise<{ message: string }> {
     try {
-      const response = await apiClient.post<{ message: string }>(API_ENDPOINTS.AUTH.OTP_SEND, payload);
+      const response = await apiClient.post<{ message: string }>(
+        API_ENDPOINTS.AUTH.OTP_SEND,
+        payload
+      );
       return response;
     } catch (error) {
       throw handleApiError(error);
@@ -139,16 +146,39 @@ class AuthApi {
 
   async resendVerification(email: string): Promise<{ message: string }> {
     try {
-      const response = await apiClient.post<{ message: string }>(API_ENDPOINTS.AUTH.RESEND_VERIFICATION, { email });
+      const response = await apiClient.post<{ message: string }>(
+        API_ENDPOINTS.AUTH.RESEND_VERIFICATION,
+        { email }
+      );
       return response;
     } catch (error) {
       throw handleApiError(error);
     }
   }
 
-  async getSessions(): Promise<Array<{ session_id: string; device_name: string; device_type: string; ip_address: string; last_used_at: string; created_at: string; is_current: boolean }>> {
+  async getSessions(): Promise<
+    Array<{
+      session_id: string;
+      device_name: string;
+      device_type: string;
+      ip_address: string;
+      last_used_at: string;
+      created_at: string;
+      is_current: boolean;
+    }>
+  > {
     try {
-      const response = await apiClient.get<{ sessions: Array<{ session_id: string; device_name: string; device_type: string; ip_address: string; last_used_at: string; created_at: string; is_current: boolean }> }>(API_ENDPOINTS.AUTH.SESSIONS);
+      const response = await apiClient.get<{
+        sessions: Array<{
+          session_id: string;
+          device_name: string;
+          device_type: string;
+          ip_address: string;
+          last_used_at: string;
+          created_at: string;
+          is_current: boolean;
+        }>;
+      }>(API_ENDPOINTS.AUTH.SESSIONS);
       return response.sessions;
     } catch (error) {
       throw handleApiError(error);
@@ -179,18 +209,35 @@ class AuthApi {
     }
   }
 
-  async getApiKeys(): Promise<Array<{ id: string; name: string; prefix: string; created_at: string; last_used_at?: string }>> {
+  async getApiKeys(): Promise<
+    Array<{ id: string; name: string; prefix: string; created_at: string; last_used_at?: string }>
+  > {
     try {
-      const response = await apiClient.get<Array<{ id: string; name: string; prefix: string; created_at: string; last_used_at?: string }>>(API_ENDPOINTS.AUTH.API_KEYS);
+      const response = await apiClient.get<
+        Array<{
+          id: string;
+          name: string;
+          prefix: string;
+          created_at: string;
+          last_used_at?: string;
+        }>
+      >(API_ENDPOINTS.AUTH.API_KEYS);
       return response;
     } catch (error) {
       throw handleApiError(error);
     }
   }
 
-  async createApiKey(name: string): Promise<{ id: string; name: string; key: string; created_at: string }> {
+  async createApiKey(
+    name: string
+  ): Promise<{ id: string; name: string; key: string; created_at: string }> {
     try {
-      const response = await apiClient.post<{ id: string; name: string; key: string; created_at: string }>(API_ENDPOINTS.AUTH.API_KEYS, { name });
+      const response = await apiClient.post<{
+        id: string;
+        name: string;
+        key: string;
+        created_at: string;
+      }>(API_ENDPOINTS.AUTH.API_KEYS, { name });
       return response;
     } catch (error) {
       throw handleApiError(error);

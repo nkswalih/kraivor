@@ -87,7 +87,9 @@ export function VerifyEmailForm() {
           {status === 'success' ? 'Email Verified' : 'Verify your email'}
         </h1>
         <p className="mt-1.5 text-sm text-slate-400">
-          {email ? `We sent a verification link to ${email}` : 'Check your email for the verification link'}
+          {email
+            ? `We sent a verification link to ${email}`
+            : 'Check your email for the verification link'}
         </p>
       </div>
 
@@ -104,9 +106,24 @@ export function VerifyEmailForm() {
         <div className="flex flex-col items-center space-y-6">
           {status === 'loading' && (
             <>
-              <svg className="h-12 w-12 animate-spin text-violet-400" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              <svg
+                className="h-12 w-12 animate-spin text-violet-400"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
               </svg>
               <p className="text-sm text-slate-400">Verifying your email...</p>
             </>
@@ -115,7 +132,15 @@ export function VerifyEmailForm() {
           {status === 'success' && (
             <>
               <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-400">
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-green-400"
+                >
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   <polyline points="9 12 11 14 15 10" />
                 </svg>
@@ -127,7 +152,15 @@ export function VerifyEmailForm() {
           {status === 'expired' && (
             <>
               <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-400">
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-amber-400"
+                >
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
@@ -151,14 +184,25 @@ export function VerifyEmailForm() {
           {status === 'error' && (
             <>
               <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-400">
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-red-400"
+                >
                   <circle cx="12" cy="12" r="10" />
                   <line x1="15" y1="9" x2="9" y2="15" />
                   <line x1="9" y1="9" x2="15" y2="15" />
                 </svg>
               </div>
               <p className="text-sm text-red-300 text-center">{message}</p>
-              <Link href={ROUTES.LOGIN} className="text-sm text-violet-400 hover:text-violet-300 hover:underline">
+              <Link
+                href={ROUTES.LOGIN}
+                className="text-sm text-violet-400 hover:text-violet-300 hover:underline"
+              >
                 Back to login
               </Link>
             </>

@@ -22,7 +22,7 @@ export function useLogin() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: authApi.login,
-    onSuccess: (data) => {
+    onSuccess: data => {
       queryClient.setQueryData(['currentUser'], data.user);
     },
   });
@@ -32,7 +32,7 @@ export function useRegister() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: authApi.register,
-    onSuccess: (data) => {
+    onSuccess: data => {
       queryClient.setQueryData(['currentUser'], data.user);
     },
   });

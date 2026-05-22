@@ -55,9 +55,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       />
 
       {/* ── Page content ─────────────────────────────────── */}
-      <div className="relative z-10 w-full px-4 py-8">
-        {children}
-      </div>
+      <div className="relative z-10 w-full px-4 py-8">{children}</div>
     </div>
   );
 }

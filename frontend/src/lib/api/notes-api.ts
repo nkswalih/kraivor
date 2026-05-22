@@ -1,6 +1,11 @@
 import apiClient from './client';
 import { API_ENDPOINTS } from '@/constants';
-import type { Note, NoteCreatePayload, NoteUpdatePayload, NoteSearchParams } from '@/types/domain/notes';
+import type {
+  Note,
+  NoteCreatePayload,
+  NoteUpdatePayload,
+  NoteSearchParams,
+} from '@/types/domain/notes';
 import { handleApiError } from './error-handler';
 
 export const notesApi = {

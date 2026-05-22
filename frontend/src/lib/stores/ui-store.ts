@@ -26,21 +26,21 @@ interface UIActions {
 
 type UIStore = UIState & UIActions;
 
-export const useUIStore = create<UIStore>((set) => ({
+export const useUIStore = create<UIStore>(set => ({
   sidebarOpen: true,
   sidebarCollapsed: false,
   theme: 'system',
   toasts: [],
 
-  toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-  setSidebarOpen: (open) => set({ sidebarOpen: open }),
-  toggleSidebarCollapse: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-  setTheme: (theme) => set({ theme }),
-  addToast: (toast) =>
-    set((state) => ({
+  toggleSidebar: () => set(state => ({ sidebarOpen: !state.sidebarOpen })),
+  setSidebarOpen: open => set({ sidebarOpen: open }),
+  toggleSidebarCollapse: () => set(state => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+  setTheme: theme => set({ theme }),
+  addToast: toast =>
+    set(state => ({
       toasts: [...state.toasts, { ...toast, id: Math.random().toString(36).substr(2, 9) }],
     })),
-  removeToast: (id) => set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
+  removeToast: id => set(state => ({ toasts: state.toasts.filter(t => t.id !== id) })),
 }));
 
 export default useUIStore;

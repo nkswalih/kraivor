@@ -43,11 +43,11 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     set({ currentWorkspace: workspace });
   },
 
-  createWorkspace: async (payload) => {
+  createWorkspace: async payload => {
     set({ isLoading: true, error: null });
     try {
       const workspace = await workspaceApi.create(payload);
-      set((state) => ({
+      set(state => ({
         workspaces: [...state.workspaces, workspace],
         currentWorkspace: workspace,
         isLoading: false,
@@ -63,8 +63,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const workspace = await workspaceApi.update(id, payload);
-      set((state) => ({
-        workspaces: state.workspaces.map((w) => (w.id === id ? workspace : w)),
+      set(state => ({
+        workspaces: state.workspaces.map(w => (w.id === id ? workspace : w)),
         currentWorkspace: state.currentWorkspace?.id === id ? workspace : state.currentWorkspace,
         isLoading: false,
       }));
@@ -74,12 +74,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     }
   },
 
-  deleteWorkspace: async (id) => {
+  deleteWorkspace: async id => {
     set({ isLoading: true, error: null });
     try {
       await workspaceApi.delete(id);
-      set((state) => {
-        const workspaces = state.workspaces.filter((w) => w.id !== id);
+      set(state => {
+        const workspaces = state.workspaces.filter(w => w.id !== id);
         return {
           workspaces,
           currentWorkspace: state.currentWorkspace?.id === id ? null : state.currentWorkspace,

@@ -10,10 +10,10 @@ export const ROUTES = {
   DOCS: '/docs',
 } as const;
 
-export const DEFAULT_WORKSPACE_SLUG = 'main';
+export const DEFAULT_WORKSPACE_SLUG = 'dashboard';
 
 export const workspaceRoutes = (slug: string) => ({
-  dashboard: `/${slug}/dashboard`,
+  dashboard: `/${slug}`,
   analysis: `/${slug}/analysis`,
   ai: `/${slug}/ai`,
   notes: `/${slug}/notes`,

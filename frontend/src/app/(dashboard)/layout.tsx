@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import { useAuthStore } from '@/lib/stores/auth-store';
+import { authApi } from '@/lib/api/auth-api';
 
 export default function DashboardLayout({
   children,
@@ -29,7 +30,7 @@ export default function DashboardLayout({
   const workspaceSlug = params.workspace as string;
 
   const { sidebarCollapsed } = useUI();
-  const { user, logout } = useAuthStore();
+  const { user, clearAuth } = useAuthStore();
 
   const navigation = [
     {
@@ -50,8 +51,12 @@ export default function DashboardLayout({
   ];
 
   const handleLogout = async () => {
-    await logout();
-    router.push('/login');
+    try {
+      await authApi.logout();
+    } finally {
+      clearAuth();
+      router.push('/login');
+    }
   };
 
   const isSettingsPage = pathname.includes('/settings');

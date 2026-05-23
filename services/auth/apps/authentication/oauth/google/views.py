@@ -221,20 +221,13 @@ class GoogleOAuthCallbackView(APIView):
         )
 
         # ── 9. Return auth response ───────────────────────────────────────────
-        response = Response(
-            {
-                "access_token": tokens.access_token,
-                "token_type": tokens.token_type,
-                "expires_in": tokens.expires_in,
-                "user": {
-                    "id": str(user.id),
-                    "email": user.email,
-                    "name": user.name,
-                    "avatar_url": user_info.avatar_url,
-                },
-                "created": created,
-            },
-            status=status.HTTP_200_OK,
+        frontend_url = (
+            f"http://localhost/oauth/success"
+            f"?access_token={tokens.access_token}"
         )
+
+        response = HttpResponseRedirect(frontend_url)
+
         _set_refresh_cookie(response, tokens.refresh_token)
+
         return response

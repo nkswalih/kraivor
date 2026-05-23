@@ -80,6 +80,11 @@ class GoogleIdentityService:
         created = False
         try:
             user = User.objects.get(email__iexact=user_info.email, is_active=True)
+
+            if user_info.avatar_url:
+                user.avatar_url = user_info.avatar_url
+                user.save(update_fields=["avatar_url"])
+                
             logger.info(
                 "google_oauth_link_existing_account: user_id=%s email=%s",
                 user.id,
@@ -90,6 +95,7 @@ class GoogleIdentityService:
             user = User.objects.create(
                 email=user_info.email,
                 name=user_info.name or user_info.email.split("@")[0],
+                avatar_url=user_info.avatar_url,
                 email_verified=True,  # Verified by Google
                 is_active=True,
                 # No password — OAuth-only users cannot sign in with password
@@ -108,13 +114,16 @@ class GoogleIdentityService:
         if expires_in:
             expires_at = timezone.now() + timedelta(seconds=int(expires_in))
 
+        access_token = raw_token_response.get("access_token")
+        refresh_token = raw_token_response.get("refresh_token")
+
         OAuthIdentity.objects.create(
             user=user,
             provider="google",
             provider_user_id=user_info.provider_user_id,
             provider_email=user_info.email,
-            access_token_encrypted=encrypt_token(raw_token_response.get("access_token", "")),
-            refresh_token_encrypted=encrypt_token(raw_token_response.get("refresh_token", "")),
+            access_token_encrypted=encrypt_token(access_token) if access_token else "",
+            refresh_token_encrypted=encrypt_token(refresh_token) if refresh_token else "",
             expires_at=expires_at,
             raw_data={
                 "sub": user_info.provider_user_id,
@@ -136,7 +145,10 @@ class GoogleIdentityService:
         """Refresh stored tokens on every login (tokens rotate)."""
         update_fields = ["access_token_encrypted", "updated_at"]
 
-        identity.access_token_encrypted = encrypt_token(raw_token_response.get("access_token", ""))
+        access_token = raw_token_response.get("access_token")
+
+        if access_token:
+            identity.access_token_encrypted = encrypt_token(access_token)
 
         # Google only returns refresh_token on first grant; preserve existing if absent
         new_refresh = raw_token_response.get("refresh_token")

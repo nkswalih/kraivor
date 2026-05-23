@@ -153,8 +153,14 @@ export function RegisterForm() {
     }
   };
 
-  const handleOAuth = (provider: 'github' | 'google') => {
-    window.location.href = `/api/auth/oauth/${provider}`;
+  const handleOAuth = async (
+    provider: 'github' | 'google'
+  ) => {
+    try {
+      window.location.href = `/api/auth/oauth/${provider}/`;
+    } catch (error) {
+      console.error('OAuth failed:', error);
+    }
   };
 
   return (

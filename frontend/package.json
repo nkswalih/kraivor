@@ -43,6 +43,7 @@
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.0",
     "react-use": "^17.6.0",
+    "sileo": "^0.1.5",
     "socket.io-client": "^4.8.0",
     "sonner": "^1.7.1",
     "tailwind-merge": "^2.6.0",

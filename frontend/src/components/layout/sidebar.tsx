@@ -24,7 +24,7 @@ interface NavItem {
 }
 
 const getNavItems = (slug: string): NavItem[] => [
-  { path: `/${slug}/dashboard`, icon: LayoutDashboard, label: 'Dashboard' },
+  { path: `/${slug}`, icon: LayoutDashboard, label: 'Dashboard' },
   { path: `/${slug}/analysis`, icon: GitBranch, label: 'Analysis' },
   { path: `/${slug}/ai`, icon: MessageSquare, label: 'AI Chat' },
   { path: `/${slug}/notes`, icon: FileText, label: 'Notes' },
@@ -32,7 +32,7 @@ const getNavItems = (slug: string): NavItem[] => [
 ];
 
 const getBottomNavItems = (slug: string): NavItem[] => [
-  { path: `/${slug}/settings`, icon: Settings, label: 'Settings' },
+  { path: `/${slug}/settings/security`, icon: Settings, label: 'Settings' },
 ];
 
 interface SidebarProps {
@@ -44,7 +44,17 @@ export function Sidebar({ workspaceSlug }: SidebarProps) {
   const { sidebarCollapsed, toggleSidebarCollapse } = useUI();
 
   const isActive = (path: string) => {
-    return pathname === path || pathname.startsWith(`${path}/`);
+    // Main dashboard route
+    if (path === `/${workspaceSlug}`) {
+      return pathname === path;
+    }
+
+    // Settings section
+    if (path.includes('/settings')) {
+      return pathname.includes('/settings');
+    }
+
+    return pathname.startsWith(path);
   };
 
   const navItems = getNavItems(workspaceSlug);
@@ -77,12 +87,14 @@ export function Sidebar({ workspaceSlug }: SidebarProps) {
                 key={item.path}
                 href={item.path}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 border',
+                  
                   active
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                    ? 'bg-primary text-primary-foreground border-primary/20 shadow-sm'
+                    : 'border-transparent text-muted-foreground hover:bg-primary/10 hover:text-foreground',
+
                   sidebarCollapsed && 'justify-center px-2'
-                )}
+              )}
               >
                 <Icon className="h-5 w-5 shrink-0" />
                 {!sidebarCollapsed && <span>{item.label}</span>}
@@ -100,12 +112,14 @@ export function Sidebar({ workspaceSlug }: SidebarProps) {
                 key={item.path}
                 href={item.path}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 border',
+                  
                   active
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                    ? 'bg-primary text-primary-foreground border-primary/20 shadow-sm'
+                    : 'border-transparent text-muted-foreground hover:bg-primary/10 hover:text-foreground',
+
                   sidebarCollapsed && 'justify-center px-2'
-                )}
+                )}    
               >
                 <Icon className="h-5 w-5 shrink-0" />
                 {!sidebarCollapsed && <span>{item.label}</span>}

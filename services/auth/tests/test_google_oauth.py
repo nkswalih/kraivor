@@ -249,13 +249,13 @@ class TestGoogleOAuthCallbackView:
             },
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 302
 
-        data = response.json()
+        assert response.url.startswith(
+            "http://localhost/oauth/success"
+        )
 
-        assert data["access_token"] == "kraivor.access.token"
-        assert data["user"]["email"] == "test@gmail.com"
-        assert data["created"] is True
+        assert "access_token=" in response.url
 
         assert "refresh_token" in response.cookies
 

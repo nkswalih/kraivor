@@ -68,3 +68,7 @@ tickets.md
 tools.md
 
 .opencode
+.keys
+.keys/jwt-private.pem
+.keys/jwt-public.pem
+.keys/oauth-encryption.key

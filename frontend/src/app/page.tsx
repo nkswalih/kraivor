@@ -1,8 +1,13 @@
+'use client';
+
 import Link from 'next/link';
+import { useAuthStore } from '@/lib/stores/auth-store';
 import { Button } from '@/components/ui/shadcn';
 import { ROUTES } from '@/constants';
 
 export default function RootPage() {
+  const { isAuthenticated } = useAuthStore();
+
   return (
     <div className="min-h-screen">
       <header className="border-b">
@@ -20,14 +25,27 @@ export default function RootPage() {
             <Link href={ROUTES.DOCS} className="text-sm font-medium hover:underline">
               Docs
             </Link>
-            <Link href={ROUTES.LOGIN}>
-              <Button variant="outline" size="sm">
-                Sign in
+            {isAuthenticated ? (
+            <Link href="/main">
+              <Button size="sm">
+                Dashboard
               </Button>
             </Link>
-            <Link href={ROUTES.REGISTER}>
-              <Button size="sm">Get Started</Button>
-            </Link>
+          ) : (
+            <>
+              <Link href={ROUTES.LOGIN}>
+                <Button variant="outline" size="sm">
+                  Sign in
+                </Button>
+              </Link>
+
+              <Link href={ROUTES.REGISTER}>
+                <Button size="sm">
+                  Get Started
+                </Button>
+              </Link>
+            </>
+)}
           </nav>
         </div>
       </header>

@@ -4,6 +4,7 @@ GitHub OAuth Views
 
 import logging
 
+from django.shortcuts import redirect
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -88,13 +89,23 @@ class GitHubOAuthCallbackView(APIView):
             )
 
             tokens = generate_token_pair(user)
-            return Response(
-                {
-                    "user": {"id": str(user.id), "email": user.email, "name": user.name},
-                    "tokens": tokens,
-                },
-                status=status.HTTP_200_OK,
+            frontend_url = (
+                f"http://localhost/oauth/success"
+                f"?access_token={tokens['access_token']}"
             )
+
+            response = redirect(frontend_url)
+
+            response.set_cookie(
+                key="refresh_token",
+                value=tokens["refresh_token"],
+                httponly=True,
+                secure=False,  # True in production HTTPS
+                samesite="Lax",
+                max_age=60 * 60 * 24 * 7,
+            )
+
+            return response
         except (OAuthStateError, GitHubOAuthError) as e:
             logger.error("oauth_callback_failed", extra={"error": str(e)})
             return Response(

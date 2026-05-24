@@ -1,3 +1,4 @@
+// src/lib/api/auth-api.ts
 import apiClient from './client';
 import { API_ENDPOINTS } from '@/constants';
 import type {
@@ -16,6 +17,17 @@ import type {
 import { handleApiError } from './error-handler';
 import { useAuthStore } from '@/lib/stores/auth-store';
 
+// Helper to reliably get/generate a device_id
+const getDeviceId = (): string => {
+  if (typeof window === 'undefined') return 'server-device';
+  let deviceId = localStorage.getItem('kraivor_device_id');
+  if (!deviceId) {
+    deviceId = `device-${Math.random().toString(36).substring(2, 15)}`;
+    localStorage.setItem('kraivor_device_id', deviceId);
+  }
+  return deviceId;
+};
+
 class AuthApi {
   async identify(email: string): Promise<IdentifyResponse> {
     try {
@@ -25,12 +37,26 @@ class AuthApi {
     }
   }
 
+  // Add this inside the AuthApi class
+  async initiateOAuth(provider: 'github' | 'google'): Promise<{ authorization_url: string }> {
+    try {
+      // Adjust this endpoint path if your apiClient base URL is different
+      const response = await apiClient.get<{ authorization_url: string }>(`/auth/oauth/${provider}/`);
+      return response;
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
   async login(credentials: SignInCredentials): Promise<{ mfaRequired: boolean }> {
     useAuthStore.getState().setLoading(true);
     try {
+      // Inject device_id seamlessly into the payload
+      const payload = { ...credentials, device_id: getDeviceId() };
+
       const response = await apiClient.post<
         AuthResponse & { mfa_required?: boolean; mfa_token?: string }
-      >(API_ENDPOINTS.AUTH.PASSWORD, credentials);
+      >(API_ENDPOINTS.AUTH.PASSWORD, payload);
 
       if (response.mfa_required && response.mfa_token) {
         useAuthStore.getState().setMfaToken(response.mfa_token);
@@ -46,6 +72,31 @@ class AuthApi {
     } catch (error) {
       useAuthStore.getState().setLoading(false);
       if ((error as any).mfaRequired) throw error;
+      throw handleApiError(error);
+    }
+  }
+
+  async sendOTP(payload: OTPSendRequest): Promise<{ message: string }> {
+    try {
+      return await apiClient.post<{ message: string }>(API_ENDPOINTS.AUTH.OTP_SEND, payload);
+    } catch (error) {
+      throw handleApiError(error);
+    }
+  }
+
+  async verifyOTP(payload: OTPVerifyRequest): Promise<void> {
+    useAuthStore.getState().setLoading(true);
+    try {
+      // Inject device_id seamlessly
+      const finalPayload = { ...payload, device_id: getDeviceId() };
+      const response = await apiClient.post<AuthResponse>(API_ENDPOINTS.AUTH.OTP_VERIFY, finalPayload);
+      
+      const token = response.access_token || response.accessToken || '';
+      if (token && response.user) {
+        useAuthStore.getState().setAuth(response.user, token);
+      }
+    } catch (error) {
+      useAuthStore.getState().setLoading(false);
       throw handleApiError(error);
     }
   }
@@ -103,28 +154,6 @@ class AuthApi {
         useAuthStore.getState().setAuth(response.user, token);
       }
     } catch (error) {
-      throw handleApiError(error);
-    }
-  }
-
-  async sendOTP(payload: OTPSendRequest): Promise<{ message: string }> {
-    try {
-      return await apiClient.post<{ message: string }>(API_ENDPOINTS.AUTH.OTP_SEND, payload);
-    } catch (error) {
-      throw handleApiError(error);
-    }
-  }
-
-  async verifyOTP(payload: OTPVerifyRequest): Promise<void> {
-    useAuthStore.getState().setLoading(true);
-    try {
-      const response = await apiClient.post<AuthResponse>(API_ENDPOINTS.AUTH.OTP_VERIFY, payload);
-      const token = response.access_token || response.accessToken || '';
-      if (token && response.user) {
-        useAuthStore.getState().setAuth(response.user, token);
-      }
-    } catch (error) {
-      useAuthStore.getState().setLoading(false);
       throw handleApiError(error);
     }
   }

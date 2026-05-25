@@ -4,9 +4,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       {/* ── Animated gradient orbs ───────────────────────── */}
       <div
         aria-hidden="true"
-        className="animate-float-slow pointer-events-none absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full opacity-25"
+        className="animate-float-slow pointer-events-none absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full opacity-15"
         style={{
-          background: 'radial-gradient(circle, #7c3aed 0%, #4f46e5 50%, transparent 70%)',
+          background: 'radial-gradient(circle, hsl(var(--primary)) 0%, hsl(var(--primary-dark)) 70%, transparent 80%)',
           filter: 'blur(80px)',
         }}
       />
@@ -14,7 +14,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         aria-hidden="true"
         className="animate-float-medium pointer-events-none absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full opacity-20"
         style={{
-          background: 'radial-gradient(circle, #6366f1 0%, #8b5cf6 50%, transparent 70%)',
+          background: 'radial-gradient(circle, hsl(var(--primary-light)) 0%, hsl(var(--primary)) 50%, transparent 70%)',
           filter: 'blur(90px)',
         }}
       />
@@ -22,7 +22,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         aria-hidden="true"
         className="animate-float-fast pointer-events-none absolute top-1/2 left-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-10"
         style={{
-          background: 'radial-gradient(circle, #a78bfa 0%, transparent 70%)',
+          background: 'radial-gradient(circle, hsl(var(--primary-light)) 0%, transparent 70%)',
           filter: 'blur(60px)',
         }}
       />
@@ -43,14 +43,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         className="animate-spin-slow pointer-events-none absolute top-8 right-8 h-32 w-32 rounded-full opacity-10"
         style={{
           border: '1px solid',
-          borderColor: 'transparent #7c3aed transparent #4f46e5',
+          borderColor: 'transparent hsl(var(--primary)) transparent hsl(var(--primary-dark))',
         }}
       />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute bottom-12 left-12 h-20 w-20 rounded-full opacity-10"
         style={{
-          border: '1px solid rgba(139, 92, 246, 0.5)',
+          border: '1px solid hsla(var(--primary), 0.5)',
         }}
       />
 

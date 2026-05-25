@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks';
 import { ROUTES } from '@/constants';
+import { authApi } from '@/lib/api/auth-api';
 
 /* ─── Validation ─────────────────────────────────────────────── */
 
@@ -97,6 +98,7 @@ function PasswordStrength({ password }: { password: string }) {
     /[^A-Za-z0-9]/.test(password),
   ];
   const score = checks.filter(Boolean).length;
+  // Standard universal security colors (Red, Yellow, Green), no need to theme these
   const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
   const colors = ['', '#ef4444', '#f59e0b', '#22c55e', '#10b981'];
 
@@ -130,6 +132,7 @@ export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
 
   const {
     register,
@@ -153,13 +156,30 @@ export function RegisterForm() {
     }
   };
 
-  const handleOAuth = async (
-    provider: 'github' | 'google'
-  ) => {
+  const handleOAuth = async (provider: 'github' | 'google') => {
     try {
-      window.location.href = `/api/auth/oauth/${provider}/`;
-    } catch (error) {
-      console.error('OAuth failed:', error);
+      setIsOAuthLoading(true);
+      setServerError(null);
+
+      if (provider === 'google') {
+        // Google uses a standard 302 redirect directly
+        window.location.href = `/api/auth/oauth/${provider}/`;
+        return;
+      }
+
+      if (provider === 'github') {
+        // GitHub sends back JSON containing the authorization URL
+        const res = await authApi.initiateOAuth(provider);
+        if (res.authorization_url) {
+          window.location.href = res.authorization_url;
+        } else {
+          setServerError(`Failed to initiate ${provider} registration.`);
+          setIsOAuthLoading(false);
+        }
+      }
+    } catch (error: any) {
+      setServerError(error.message || `Could not connect to ${provider}.`);
+      setIsOAuthLoading(false);
     }
   };
 
@@ -168,15 +188,7 @@ export function RegisterForm() {
       {/* ── Brand ─────────────────────────────────────────── */}
       <div className="mb-8 text-center">
         <div className="mb-3 inline-flex items-center gap-2">
-          <span
-            className="text-2xl font-bold"
-            style={{
-              background: 'linear-gradient(135deg, #a78bfa, #818cf8)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
+          <span className="text-2xl font-bold bg-gradient-to-br from-[hsl(var(--primary-light))] to-[hsl(var(--primary))] bg-clip-text text-transparent">
             ✦ Kraivor
           </span>
         </div>
@@ -202,8 +214,9 @@ export function RegisterForm() {
           <button
             id="btn-github-register"
             type="button"
+            disabled={isOAuthLoading}
             onClick={() => handleOAuth('github')}
-            className="oauth-btn flex w-full items-center justify-center gap-3 px-4 py-3 text-sm font-medium"
+            className="oauth-btn flex w-full items-center justify-center gap-3 px-4 py-3 text-sm font-medium disabled:opacity-60"
           >
             <GithubIcon />
             Sign up with GitHub
@@ -212,8 +225,9 @@ export function RegisterForm() {
           <button
             id="btn-google-register"
             type="button"
+            disabled={isOAuthLoading}
             onClick={() => handleOAuth('google')}
-            className="oauth-btn flex w-full items-center justify-center gap-3 px-4 py-3 text-sm font-medium"
+            className="oauth-btn flex w-full items-center justify-center gap-3 px-4 py-3 text-sm font-medium disabled:opacity-60"
           >
             <GoogleIcon />
             Sign up with Google
@@ -257,10 +271,10 @@ export function RegisterForm() {
               type="text"
               autoComplete="name"
               placeholder="Jane Smith"
-              className="auth-input w-full px-4 py-3 text-sm"
+              className={`auth-input w-full px-4 py-3 text-sm ${errors.name ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' : ''}`}
               {...register('name')}
             />
-            {errors.name && <p className="text-xs text-red-400">{errors.name.message}</p>}
+            {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name.message}</p>}
           </div>
 
           {/* Email */}
@@ -273,10 +287,10 @@ export function RegisterForm() {
               type="email"
               autoComplete="email"
               placeholder="you@company.com"
-              className="auth-input w-full px-4 py-3 text-sm"
+              className={`auth-input w-full px-4 py-3 text-sm ${errors.email ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' : ''}`}
               {...register('email')}
             />
-            {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
+            {errors.email && <p className="text-xs text-red-400 mt-1">{errors.email.message}</p>}
           </div>
 
           {/* Password */}
@@ -290,7 +304,7 @@ export function RegisterForm() {
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="new-password"
                 placeholder="Create a strong password"
-                className="auth-input w-full px-4 py-3 pr-11 text-sm"
+                className={`auth-input w-full px-4 py-3 pr-11 text-sm ${errors.password ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                 {...register('password')}
               />
               <button
@@ -303,7 +317,7 @@ export function RegisterForm() {
               </button>
             </div>
             <PasswordStrength password={passwordValue} />
-            {errors.password && <p className="text-xs text-red-400">{errors.password.message}</p>}
+            {errors.password && <p className="text-xs text-red-400 mt-1">{errors.password.message}</p>}
           </div>
 
           {/* Confirm password */}
@@ -317,7 +331,7 @@ export function RegisterForm() {
                 type={showConfirm ? 'text' : 'password'}
                 autoComplete="new-password"
                 placeholder="Repeat your password"
-                className="auth-input w-full px-4 py-3 pr-11 text-sm"
+                className={`auth-input w-full px-4 py-3 pr-11 text-sm ${errors.confirmPassword ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                 {...register('confirmPassword')}
               />
               <button
@@ -330,26 +344,26 @@ export function RegisterForm() {
               </button>
             </div>
             {errors.confirmPassword && (
-              <p className="text-xs text-red-400">{errors.confirmPassword.message}</p>
+              <p className="text-xs text-red-400 mt-1">{errors.confirmPassword.message}</p>
             )}
           </div>
 
           {/* Terms */}
           <p className="text-xs text-slate-500">
             By creating an account you agree to our{' '}
-            <a
+            <Link
               href="/terms"
-              className="text-violet-400 hover:text-violet-300 underline underline-offset-2"
+              className="text-[hsl(var(--primary-light))] hover:text-white transition-colors underline underline-offset-2"
             >
               Terms of Service
-            </a>{' '}
+            </Link>{' '}
             and{' '}
-            <a
+            <Link
               href="/privacy"
-              className="text-violet-400 hover:text-violet-300 underline underline-offset-2"
+              className="text-[hsl(var(--primary-light))] hover:text-white transition-colors underline underline-offset-2"
             >
               Privacy Policy
-            </a>
+            </Link>
             .
           </p>
 
@@ -396,7 +410,7 @@ export function RegisterForm() {
         Already have an account?{' '}
         <Link
           href={ROUTES.LOGIN}
-          className="font-medium text-violet-400 transition-colors hover:text-violet-300"
+          className="font-medium text-[hsl(var(--primary-light))] transition-colors hover:text-[hsl(var(--primary))]"
         >
           Sign in
         </Link>

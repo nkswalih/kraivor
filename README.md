@@ -111,4 +111,4 @@ Unified workspace for notes, projects, and tasks with AI-enhanced context.
 
 ## License
 
-[Add your license here]
+This project is licensed under the MIT License.

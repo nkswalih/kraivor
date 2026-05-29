@@ -124,6 +124,48 @@ jobs:
       - name: Run ruff
         run: uv run ruff check apps/ tests/
 
+  test-core:
+    name: Core Service Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/core
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-core-${{ hashFiles('services/core/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-core-
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run ruff
+        run: uv run ruff check apps/workspaces/ core/settings/
+
+      - name: Run tests
+        run: |
+          uv run pytest apps/workspaces/tests/ \
+            --color=yes \
+            --tb=short \
+            --maxfail=3 \
+            -q
+
   security-checks:
     name: Security
     runs-on: ubuntu-latest

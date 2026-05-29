@@ -167,7 +167,7 @@ class EmailService:
 
         In development this is captured by MailHog (localhost:8025).
         """
-        frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+        frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost")
         verify_url = f"{frontend_url}/verify-email?token={token}"
 
         html = _build_verification_html(verify_url, user.name or user.email)

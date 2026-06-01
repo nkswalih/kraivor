@@ -149,39 +149,51 @@ class TestWorkspaceMemberViewSetList:
 
 class TestWorkspaceMemberViewSetCreate:
     def test_admin_can_add_member(self, workspace, admin_member, db):
-        new_user_id = uuid.uuid4()
-        data = {"user_id": str(new_user_id), "role": "member"}
+        # Bind view to the 'invite' custom action instead of 'create'
+        view = WorkspaceMemberViewSet.as_view(actions={"post": "invite"})
+        
+        # Payload requires an email address under KRV-020 contract
+        data = {"email": "new_invitee@example.com", "role": "member"}
         request = _build_request(
-            "post", f"/workspace/workspaces/{workspace.id}/members/",
+            "post", f"/workspace/workspaces/{workspace.id}/members/invite/",
             user_id=admin_member.user_id,
             data=data,
         )
-        view = WorkspaceMemberViewSet.as_view(actions={"post": "create"})
+        
         response = view(request, workspace_pk=str(workspace.id))
         assert response.status_code == status.HTTP_201_CREATED
-        assert response.data["user_id"] == str(new_user_id)
+        assert response.data["email"] == "new_invitee@example.com"
+        assert response.data["role"] == "member"
+        assert "token" in response.data
 
     def test_returns_400_without_user_id(self, workspace, admin_member, db):
-        data = {"role": "member"}
+        # Renamed to reflect missing email payload criteria
+        view = WorkspaceMemberViewSet.as_view(actions={"post": "invite"})
+        
+        data = {"role": "member"}  # Missing "email"
         request = _build_request(
-            "post", f"/workspace/workspaces/{workspace.id}/members/",
+            "post", f"/workspace/workspaces/{workspace.id}/members/invite/",
             user_id=admin_member.user_id,
             data=data,
         )
-        view = WorkspaceMemberViewSet.as_view(actions={"post": "create"})
+        
         response = view(request, workspace_pk=str(workspace.id))
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "email" in response.data
 
     def test_returns_400_for_invalid_role(self, workspace, admin_member, db):
-        data = {"user_id": str(uuid.uuid4()), "role": "superadmin"}
+        view = WorkspaceMemberViewSet.as_view(actions={"post": "invite"})
+        
+        data = {"email": "test@example.com", "role": "superadmin"}
         request = _build_request(
-            "post", f"/workspace/workspaces/{workspace.id}/members/",
+            "post", f"/workspace/workspaces/{workspace.id}/members/invite/",
             user_id=admin_member.user_id,
             data=data,
         )
-        view = WorkspaceMemberViewSet.as_view(actions={"post": "create"})
+        
         response = view(request, workspace_pk=str(workspace.id))
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "role" in response.data
 
 
 class TestWorkspaceMemberViewSetUpdate:

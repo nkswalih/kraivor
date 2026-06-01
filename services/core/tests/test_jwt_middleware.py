@@ -7,7 +7,6 @@ Covers:
   - Internal requests bypass JWT verification
 """
 
-import time
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
@@ -80,17 +79,23 @@ def mock_jwks(public_key):
 
 
 @pytest.fixture
-def middleware(mock_jwks):
+def middleware(public_key):
+    from cryptography.hazmat.primitives import serialization
+
     from core.middleware.jwt_auth import JWTAuthenticationMiddleware
 
     def get_response(request):
         return MagicMock()
 
-    with patch.object(JWTAuthenticationMiddleware, '_get_jwks', return_value=mock_jwks):
-        mw = JWTAuthenticationMiddleware(get_response)
-        mw._jwks_cache = mock_jwks
-        mw._jwks_cache_time = time.time()
-        return mw
+    public_key_obj = serialization.load_pem_public_key(public_key)
+    signing_key = MagicMock()
+    signing_key.key = public_key_obj
+
+    jwks_client = MagicMock()
+    jwks_client.get_signing_key_from_jwt.return_value = signing_key
+
+    with patch("core.middleware.jwt_auth._get_jwks_client", return_value=jwks_client):
+        yield JWTAuthenticationMiddleware(get_response)
 
 
 class TestJWTAuthenticationMiddleware:
@@ -112,7 +117,7 @@ class TestJWTAuthenticationMiddleware:
         token = generate_test_jwt(private_key, payload)
         request = factory.get('/api/test/', HTTP_AUTHORIZATION=f'Bearer {token}')
 
-        response = middleware(request)
+        middleware(request)
 
         assert request.user_id == "user-123"
         assert request.email == "test@example.com"
@@ -175,11 +180,11 @@ class TestJWTAuthenticationMiddleware:
 
 class TestJWTCacheInvalidation:
     def test_cache_can_be_invalidated(self):
+        import core.middleware.jwt_auth as jwt_auth
         from core.middleware.jwt_auth import JWTAuthenticationMiddleware
 
-        JWTAuthenticationMiddleware._jwks_cache = {"test": "data"}
-        JWTAuthenticationMiddleware._jwks_cache_time = time.time()
+        jwt_auth._jwks_client = MagicMock()
 
         JWTAuthenticationMiddleware.invalidate_cache()
 
-        assert JWTAuthenticationMiddleware._jwks_cache is None
+        assert jwt_auth._jwks_client is None

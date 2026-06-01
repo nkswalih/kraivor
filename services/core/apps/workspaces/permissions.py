@@ -50,10 +50,11 @@ class IsWorkspaceMember(BasePermission):
             return False
 
         # obj could be Workspace or WorkspaceMember
-        if isinstance(obj, WorkspaceMember):
-            workspace = obj.workspace
-        else:
-            workspace = obj
+        workspace = (
+            obj.workspace
+            if isinstance(obj, WorkspaceMember)
+            else obj
+        )
 
         return workspace.is_member(user_id)
 
@@ -75,10 +76,11 @@ class IsWorkspaceAdmin(BasePermission):
         if not user_id:
             return False
 
-        if isinstance(obj, WorkspaceMember):
-            workspace = obj.workspace
-        else:
-            workspace = obj
+        workspace = (
+            obj.workspace
+            if isinstance(obj, WorkspaceMember)
+            else obj
+        )
 
         member = workspace.get_member(user_id)
         return bool(member and member.can_admin)
@@ -100,9 +102,5 @@ class IsWorkspaceOwner(BasePermission):
         if not user_id:
             return False
 
-        if hasattr(obj, "workspace"):
-            workspace = obj.workspace
-        else:
-            workspace = obj
-
+        workspace = obj.workspace if hasattr(obj, "workspace") else obj
         return workspace.is_owner(user_id)

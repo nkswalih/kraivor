@@ -72,3 +72,4 @@ tools.md
 .keys/jwt-private.pem
 .keys/jwt-public.pem
 .keys/oauth-encryption.key
+oauth-encryption.key

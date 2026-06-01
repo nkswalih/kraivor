@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import logging
 from pathlib import Path
 
@@ -40,30 +41,64 @@ class JWKSView(View):
         if cls._cached_jwks is not None:
             return cls._cached_jwks
 
-        public_key = cls._load_public_key()
-        jwks = cls._public_key_to_jwk(public_key)
-        cls._cached_jwks = {"keys": [jwks]}
+        keys = []
+
+        # Current signing key (always served)
+        current_key = cls._load_public_key()
+        current_kid = getattr(settings, "JWT_KEY_ID", None)
+        keys.append(cls._public_key_to_jwk(current_key, kid=current_kid))
+
+        # Previous key during rotation overlap (if it exists)
+        prev_path = getattr(settings, "JWT_PREV_PUBLIC_KEY_PATH", None)
+        if prev_path:
+            prev_path_obj = Path(prev_path)
+            if prev_path_obj.exists():
+                try:
+                    prev_key = cls._load_public_key_from_path(prev_path_obj)
+                    prev_kid = "kraivor-rs256-" + hashlib.sha256(
+                        prev_path_obj.read_bytes()
+                    ).hexdigest()[:8]
+                    keys.append(cls._public_key_to_jwk(prev_key, kid=prev_kid))
+                except Exception as exc:
+                    logger.warning("Failed to load previous key %s: %s", prev_path, exc)
+
+        cls._cached_jwks = {"keys": keys}
         return cls._cached_jwks
 
     @classmethod
     def _load_public_key(cls):
-        key_path = Path(settings.JWT_PUBLIC_KEY_PATH)
+        return cls._load_public_key_from_path(Path(settings.JWT_PUBLIC_KEY_PATH))
+
+    @classmethod
+    def _load_public_key_from_path(cls, key_path: Path):
         if not key_path.exists():
             raise FileNotFoundError(f"Public key not found at {key_path}")
         with open(key_path, "rb") as f:
             return serialization.load_pem_public_key(f.read())
 
     @classmethod
-    def _public_key_to_jwk(cls, public_key: rsa.RSAPublicKey) -> dict:
+    def _public_key_to_jwk(cls, public_key: rsa.RSAPublicKey, kid: str = None) -> dict:
         public_numbers = public_key.public_numbers()
-        n_bytes = public_numbers.n.to_bytes(256, "big")
-        e_bytes = public_numbers.e.to_bytes(4, "big")
+
+        n_bytes = public_numbers.n.to_bytes(
+            (public_numbers.n.bit_length() + 7) // 8, "big"
+        )
+        e_bytes = public_numbers.e.to_bytes(
+            (public_numbers.e.bit_length() + 7) // 8, "big"
+        )
+
+        if kid is None:
+            key_pem = public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+            kid = "kraivor-rs256-" + hashlib.sha256(key_pem).hexdigest()[:8]
 
         return {
             "kty": "RSA",
             "use": "sig",
             "alg": "RS256",
-            "kid": "kraivor-key-1",
+            "kid": kid,
             "n": cls._base64url_encode(n_bytes),
             "e": cls._base64url_encode(e_bytes),
         }

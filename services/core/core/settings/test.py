@@ -21,15 +21,8 @@ MIDDLEWARE = [
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("POSTGRES_DB", default="kraivor"),
-        "USER": env("POSTGRES_USER", default="kraivor"),
-        "PASSWORD": env("POSTGRES_PASSWORD", default="kraivor"),
-        "HOST": env("DB_HOST", default="localhost"),
-        "PORT": env.int("DB_PORT", default=5433),
-        "TEST": {
-            "NAME": "test_kraivor_core",
-        },
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
     }
 }
 

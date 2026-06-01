@@ -127,6 +127,11 @@ jobs:
   test-core:
     name: Core Service Tests
     runs-on: ubuntu-latest
+
+    env:
+      APP_ENV: test
+      DJANGO_SETTINGS_MODULE: core.settings.test
+      
     defaults:
       run:
         working-directory: services/core
@@ -161,6 +166,7 @@ jobs:
       - name: Run tests
         run: |
           uv run pytest apps/workspaces/tests/ \
+            --ds=core.settings.test \
             --color=yes \
             --tb=short \
             --maxfail=3 \

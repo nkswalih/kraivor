@@ -16,7 +16,7 @@ This conftest.py handles the two environment-specific concerns:
 """
 
 import pytest
-from django.urls import reverse, NoReverseMatch
+from django.urls import NoReverseMatch, reverse
 
 
 @pytest.fixture(scope="session")

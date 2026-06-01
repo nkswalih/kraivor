@@ -2,7 +2,8 @@
 Test settings for Core Service
 """
 
-from .base import *  # noqa: F401,F403,F405
+from . import base as base_settings
+from .base import *  # noqa: F401,F403
 
 DEBUG = False
 
@@ -11,7 +12,7 @@ SECRET_KEY = "test-secret-key"
 ALLOWED_HOSTS = ["*"]
 
 MIDDLEWARE = [
-    m for m in MIDDLEWARE
+    m for m in base_settings.MIDDLEWARE
     if m != "core.middleware.jwt_auth.JWTAuthenticationMiddleware"
 ]
 

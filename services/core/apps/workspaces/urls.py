@@ -30,14 +30,14 @@ URL design decisions:
     to distinguish from {pk} in nested routes (DRF nested router convention)
 """
 
-from django.urls import path, include
+from django.urls import path
 
 from .views import (
-    WorkspaceViewSet,
-    WorkspaceMemberViewSet,
-    WorkspaceInvitationListView,
-    InvitationRevokeView,
     InvitationAcceptView,
+    InvitationRevokeView,
+    WorkspaceInvitationListView,
+    WorkspaceMemberViewSet,
+    WorkspaceViewSet,
 )
 
 # ─── Workspace CRUD ────────────────────────────────────────────────────────────

@@ -19,19 +19,20 @@ Publishing contract:
 import json
 import logging
 import uuid
-from datetime import datetime, timezone as tz
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .models import Workspace, WorkspaceMember, WorkspaceInvitation
+    from .models import Workspace, WorkspaceInvitation, WorkspaceMember
 
 logger = logging.getLogger(__name__)
 
 TOPIC_WORKSPACE = "workspace.events"
+KAFKA_FLUSH_TIMEOUT_SECONDS = 2.0
 
 
 def _now_iso() -> str:
-    return datetime.now(tz=tz.utc).isoformat()
+    return datetime.now(tz=UTC).isoformat()
 
 
 def _envelope(
@@ -100,7 +101,7 @@ class WorkspaceEventPublisher:
             # Short flush timeout — don't block request on Kafka latency.
             # Unflushed messages sit in the local producer buffer; Kafka
             # guarantees they'll be delivered on the next flush or process exit.
-            self._producer.flush(timeout=1.0)
+            self._producer.flush(timeout=KAFKA_FLUSH_TIMEOUT_SECONDS)
 
             logger.debug(
                 "event.published",

@@ -17,14 +17,14 @@ KRV-020 additions:
 
 import logging
 import uuid
-from typing import Optional
 
 from django.db import transaction
+from django.db.models import QuerySet
 from django.utils import timezone
 
-from .constants import WorkspaceRole, WorkspacePlan, PLAN_LIMITS
+from .constants import PLAN_LIMITS, WorkspacePlan, WorkspaceRole
 from .events import WorkspaceEventPublisher
-from .models import Workspace, WorkspaceMember, WorkspaceInvitation
+from .models import Workspace, WorkspaceInvitation, WorkspaceMember
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class WorkspaceService:
     Instantiate per-request. No shared mutable state.
     """
 
-    def __init__(self, event_publisher: Optional[WorkspaceEventPublisher] = None):
+    def __init__(self, event_publisher: WorkspaceEventPublisher | None = None):
         self._events = event_publisher or WorkspaceEventPublisher()
 
     @transaction.atomic
@@ -74,9 +74,9 @@ class WorkspaceService:
         owner_id: uuid.UUID,
         name: str,
         slug: str,
-        avatar_url: Optional[str] = None,
-        description: Optional[str] = None,
-        settings: Optional[dict] = None,
+        avatar_url: str | None = None,
+        description: str | None = None,
+        settings: dict | None = None,
     ) -> Workspace:
         """
         Create workspace + owner membership in one atomic transaction.
@@ -326,7 +326,7 @@ class InvitationService:
     Instantiate per-request. No shared state.
     """
 
-    def __init__(self, event_publisher: Optional[WorkspaceEventPublisher] = None):
+    def __init__(self, event_publisher: WorkspaceEventPublisher | None = None):
         self._events = event_publisher or WorkspaceEventPublisher()
 
     @transaction.atomic
@@ -477,8 +477,8 @@ class InvitationService:
                 .select_for_update(nowait=False)  # block until lock acquired
                 .get(token=token, deleted_at__isnull=True)
             )
-        except WorkspaceInvitation.DoesNotExist:
-            raise InvitationError("This invitation link is invalid or has been revoked.")
+        except WorkspaceInvitation.DoesNotExist as exc:
+            raise InvitationError("This invitation link is invalid or has been revoked.") from exc
 
         workspace = invitation.workspace
 

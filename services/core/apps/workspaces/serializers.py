@@ -65,6 +65,10 @@ class MemberRoleUpdateSerializer(serializers.Serializer):
         ]
     )
 
+    def validate_role(self, value: str) -> str:
+        if value == WorkspaceRole.OWNER:
+            raise serializers.ValidationError("Ownership transfer is a separate flow.")
+        return value
 
 # ─── Workspace Serializers (KRV-019) ──────────────────────────────────────────
 

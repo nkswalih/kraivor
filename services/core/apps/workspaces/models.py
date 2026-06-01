@@ -18,8 +18,7 @@ from datetime import timedelta
 from django.db import models
 from django.utils import timezone
 
-from .constants import WorkspaceRole, WorkspacePlan
-
+from .constants import WorkspacePlan, WorkspaceRole
 
 # ─── Soft Delete Infrastructure ───────────────────────────────────────────────
 

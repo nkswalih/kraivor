@@ -18,7 +18,14 @@ class TestWorkspaceMemberSerializer:
     def test_serializes_correct_fields(self, owner_member, db):
         serializer = WorkspaceMemberSerializer(owner_member)
         assert set(serializer.data.keys()) == {
-            "id", "user_id", "role", "joined_at", "created_at",
+            "id",
+            "user_id",
+            "role",
+            "status",
+            "joined_at",
+            "invited_by_id",
+            "created_at",
+            "updated_at",
         }
 
     def test_read_only_fields(self, owner_member, db):

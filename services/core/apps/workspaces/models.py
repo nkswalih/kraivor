@@ -143,6 +143,10 @@ class Workspace(TimestampedModel):
 
     def is_member(self, user_id: uuid.UUID) -> bool:
         return self.members.filter(user_id=user_id).exists()
+    
+    @property
+    def member_count(self):
+        return self.members.count()
 
 
 # ─── Workspace Member ──────────────────────────────────────────────────────────

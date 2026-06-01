@@ -1,6 +1,7 @@
 import logging
 
 from django.apps import AppConfig
+from django.conf import settings as django_settings
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,9 @@ class AuthenticationConfig(AppConfig):
         Runs after all apps are loaded but before any request.
         """
         try:
-            from django.conf import settings as django_settings
+            from authentication.backends import JWKSTokenBackend
+            from rest_framework_simplejwt import state as simplejwt_state
+            from rest_framework_simplejwt.settings import api_settings
 
             kid = getattr(django_settings, "JWT_KEY_ID", None)
             if not kid:
@@ -25,10 +28,6 @@ class AuthenticationConfig(AppConfig):
                     "JWT_KEY_ID not configured — tokens will lack 'kid' header"
                 )
                 return
-
-            from authentication.backends import JWKSTokenBackend
-            from rest_framework_simplejwt.settings import api_settings
-            from rest_framework_simplejwt import state as simplejwt_state
 
             new_backend = JWKSTokenBackend(
                 api_settings.ALGORITHM,

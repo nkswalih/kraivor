@@ -127,9 +127,24 @@ jobs:
   test-core:
     name: Core Service Tests
     runs-on: ubuntu-latest
+
+    env:
+      APP_ENV: test
+      DJANGO_SETTINGS_MODULE: core.settings.test
+      
     defaults:
       run:
         working-directory: services/core
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: kraivor
+          POSTGRES_USER: kraivor
+          POSTGRES_PASSWORD: kraivor
+        ports:
+          - 5432:5432
 
     steps:
       - name: Checkout
@@ -161,6 +176,7 @@ jobs:
       - name: Run tests
         run: |
           uv run pytest apps/workspaces/tests/ \
+            --ds=core.settings.test \
             --color=yes \
             --tb=short \
             --maxfail=3 \

@@ -17,6 +17,7 @@ dependencies = [
     "cryptography>=42.0.0",
     "dj-database-url>=3.1.2",
     "google-auth>=2.28.0",
+    "gunicorn>=21.2.0",
 ]
 dev-dependencies = [
     "pytest>=8.0",

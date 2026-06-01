@@ -31,6 +31,7 @@ project/
 """
 
 import os
+import hashlib
 from datetime import timedelta
 from pathlib import Path
 
@@ -109,7 +110,16 @@ DEBUG = env("DEBUG", default=False)
 # WHY: Prevents HTTP Host header attacks (cache poisoning, SSRF)
 # PRODUCTION: List your exact domain(s) - no wildcards unless behind CDN
 # Microservices: Each service needs its own allowed hosts
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[
+    "localhost",
+    "127.0.0.1",
+    "identity",
+    "nginx",
+    "core",
+    "analysis",
+    "ai",
+    "notifications",
+])
 
 # =============================================================================
 # APPLICATION CONFIGURATION
@@ -250,24 +260,43 @@ REST_FRAMEWORK = {
 
 # Simple JWT (DJANGO REST FRAMEWORK SIMPLEJWT)
 # WHY: Lightweight JWT implementation for stateless auth
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
-    "ROTATE_REFRESH_TOKENS": True,  # Issue new refresh token on use
-    "BLACKLIST_AFTER_ROTATION": True,  # Invalidate old refresh tokens
-    "AUTH_HEADER_TYPES": ("Bearer",),
-    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
-    "TOKEN_TYPE_CLAIM": "token_type",
-}
 
 # JWT (RS256) - Asymmetric Keys for API Security
 # WHY: RS256 provides better security than HS256 (shared secret)
 # Public key can be shared with other services (JWKS endpoint)
+
 JWT_PRIVATE_KEY_PATH = required_env_path("JWT_PRIVATE_KEY_PATH")
 JWT_PUBLIC_KEY_PATH = required_env_path("JWT_PUBLIC_KEY_PATH")
+
+PRIVATE_KEY = Path(JWT_PRIVATE_KEY_PATH).read_text()
+PUBLIC_KEY = Path(JWT_PUBLIC_KEY_PATH).read_text()
+
 JWT_ALGORITHM = env("JWT_ALGORITHM", default="RS256")
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES = env.int("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", default=15)
 JWT_REFRESH_TOKEN_EXPIRE_DAYS = env.int("JWT_REFRESH_TOKEN_EXPIRE_DAYS", default=30)
+
+_pub_key_bytes = Path(JWT_PUBLIC_KEY_PATH).read_bytes()
+JWT_KEY_ID = "kraivor-rs256-" + hashlib.sha256(_pub_key_bytes).hexdigest()[:8]
+
+JWT_PREV_PUBLIC_KEY_PATH = env(
+    "JWT_PREV_PUBLIC_KEY_PATH",
+    default=str(Path(JWT_PUBLIC_KEY_PATH).parent / "jwt-prev-public.pem"),
+)
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=JWT_REFRESH_TOKEN_EXPIRE_DAYS),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    "TOKEN_TYPE_CLAIM": "token_type",
+    "ALGORITHM": "RS256",
+    "SIGNING_KEY": PRIVATE_KEY,
+    "VERIFYING_KEY": PUBLIC_KEY,
+    "AUDIENCE": env("JWT_DEFAULT_AUDIENCE", default="kraivor"),
+    "ISSUER": env("JWT_DEFAULT_ISSUER", default="kraivor-identity"),
+}
 
 # =============================================================================
 # CORS (Cross-Origin Resource Sharing) CONFIGURATION

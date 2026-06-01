@@ -28,7 +28,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
 
-from .models import Workspace, WorkspaceMember, WorkspaceInvitation
+from .models import Workspace, WorkspaceInvitation, WorkspaceMember
 from .permissions import IsAuthenticated
 from .serializers import (
     InvitationAcceptResponseSerializer,
@@ -48,7 +48,6 @@ from .services import (
     WorkspaceNotFoundError,
     WorkspacePermissionError,
     WorkspaceService,
-    WorkspaceServiceError,
 )
 
 logger = logging.getLogger(__name__)
@@ -72,7 +71,7 @@ class WorkspaceContextMixin:
 
     def _get_user_id(self) -> uuid.UUID:
         """Extract user_id injected by GatewayAuthMiddleware from X-User-ID header."""
-        return getattr(self.request, "user_id")
+        return self.request.user_id
 
     def _get_actor_name(self) -> str:
         """
@@ -91,8 +90,8 @@ class WorkspaceContextMixin:
         """
         try:
             workspace_id = pk if isinstance(pk, uuid.UUID) else uuid.UUID(str(pk))
-        except (ValueError, AttributeError):
-            raise NotFound("Workspace not found.")
+        except (ValueError, AttributeError) as exc:
+            raise NotFound("Workspace not found.") from exc
 
         user_id = self._get_user_id()
 
@@ -166,7 +165,7 @@ class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
                 settings=validated.get("settings", {}),
             )
         except WorkspaceLimitError as exc:
-            raise ValidationError({"detail": str(exc)})
+            raise ValidationError({"detail": str(exc)}) from exc
 
         from django.db.models import Q
         workspace = (
@@ -199,7 +198,7 @@ class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
                 updates=serializer.validated_data,
             )
         except WorkspacePermissionError as exc:
-            raise PermissionDenied(str(exc))
+            raise PermissionDenied(str(exc)) from exc
 
         return Response(WorkspaceDetailSerializer(updated, context={"request": request}).data)
 
@@ -211,7 +210,7 @@ class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
                 actor_id=self._get_user_id(),
             )
         except WorkspacePermissionError as exc:
-            raise PermissionDenied(str(exc))
+            raise PermissionDenied(str(exc)) from exc
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -270,9 +269,9 @@ class WorkspaceMemberViewSet(WorkspaceContextMixin, ViewSet):
                 role=validated["role"],
             )
         except WorkspacePermissionError as exc:
-            raise PermissionDenied(str(exc))
+            raise PermissionDenied(str(exc)) from exc
         except (WorkspaceLimitError, InvitationError) as exc:
-            raise ValidationError({"detail": str(exc)})
+            raise ValidationError({"detail": str(exc)}) from exc
 
         return Response(
             WorkspaceInvitationSerializer(invitation, context={"request": request}).data,
@@ -289,8 +288,8 @@ class WorkspaceMemberViewSet(WorkspaceContextMixin, ViewSet):
 
         try:
             target_user_id = uuid.UUID(str(pk))
-        except ValueError:
-            raise NotFound("Member not found.")
+        except ValueError as exc:
+            raise NotFound("Member not found.") from exc
 
         serializer = MemberRoleUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -303,9 +302,9 @@ class WorkspaceMemberViewSet(WorkspaceContextMixin, ViewSet):
                 new_role=serializer.validated_data["role"],
             )
         except WorkspacePermissionError as exc:
-            raise PermissionDenied(str(exc))
-        except WorkspaceNotFoundError:
-            raise NotFound("Member not found.")
+            raise PermissionDenied(str(exc)) from exc
+        except WorkspaceNotFoundError as exc:
+            raise NotFound("Member not found.") from exc
 
         return Response(WorkspaceMemberSerializer(member).data)
 
@@ -320,8 +319,8 @@ class WorkspaceMemberViewSet(WorkspaceContextMixin, ViewSet):
 
         try:
             target_user_id = uuid.UUID(str(pk))
-        except ValueError:
-            raise NotFound("Member not found.")
+        except ValueError as exc:
+            raise NotFound("Member not found.") from exc
 
         try:
             WorkspaceService().remove_member(
@@ -330,9 +329,9 @@ class WorkspaceMemberViewSet(WorkspaceContextMixin, ViewSet):
                 target_user_id=target_user_id,
             )
         except WorkspacePermissionError as exc:
-            raise PermissionDenied(str(exc))
-        except WorkspaceNotFoundError:
-            raise NotFound("Member not found.")
+            raise PermissionDenied(str(exc)) from exc
+        except WorkspaceNotFoundError as exc:
+            raise NotFound("Member not found.") from exc
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -375,16 +374,16 @@ class InvitationRevokeView(WorkspaceContextMixin, APIView):
 
         try:
             inv_id = uuid.UUID(str(invitation_id))
-        except ValueError:
-            raise NotFound("Invitation not found.")
+        except ValueError as exc:
+            raise NotFound("Invitation not found.") from exc
 
         try:
             invitation = WorkspaceInvitation.objects.select_related("workspace").get(
                 id=inv_id,
                 workspace=workspace,
             )
-        except WorkspaceInvitation.DoesNotExist:
-            raise NotFound("Invitation not found.")
+        except WorkspaceInvitation.DoesNotExist as exc:
+            raise NotFound("Invitation not found.") from exc
 
         try:
             InvitationService().revoke_invitation(
@@ -392,9 +391,9 @@ class InvitationRevokeView(WorkspaceContextMixin, APIView):
                 actor_id=self._get_user_id(),
             )
         except WorkspacePermissionError as exc:
-            raise PermissionDenied(str(exc))
+            raise PermissionDenied(str(exc)) from exc
         except InvitationError as exc:
-            raise ValidationError({"detail": str(exc)})
+            raise ValidationError({"detail": str(exc)}) from exc
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -436,7 +435,7 @@ class InvitationAcceptView(APIView):
                 user_email=request.user_email,
             )
         except InvitationError as exc:
-            raise ValidationError({"detail": str(exc)})
+            raise ValidationError({"detail": str(exc)}) from exc
         except Exception as exc:
             logger.error(
                 "invitation.accept.unexpected_error",

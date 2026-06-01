@@ -1,10 +1,7 @@
 import logging
-import time
 from threading import Lock
-from typing import Optional
 
 import jwt
-import requests
 from django.conf import settings
 from django.http import JsonResponse
 from jwt import PyJWKClient
@@ -14,7 +11,7 @@ logger = logging.getLogger(__name__)
 # ── Module-level JWKS client cache ───────────────────────────────────────────
 # PyJWKClient must be a singleton — not created per-request.
 # Creating per-request hammers the identity service with JWKS fetches.
-_jwks_client: Optional[PyJWKClient] = None
+_jwks_client: PyJWKClient | None = None
 _jwks_client_lock = Lock()
 
 
@@ -106,6 +103,7 @@ class JWTAuthenticationMiddleware:
         request.user_id = payload.get("sub") or payload.get("user_id")
         request.user_name = payload.get("name") or payload.get("email", "")
         request.email = payload.get("email")
+        request.user_email = payload.get("email")
         request.workspace_ids = payload.get("workspace_ids", [])
         request.roles = payload.get("roles", {})
 
@@ -132,7 +130,7 @@ class JWTAuthenticationMiddleware:
         try:
             signing_key = client.get_signing_key_from_jwt(token)
 
-        except Exception as exc:
+        except Exception:
             # ── Fallback: no kid in token (dev / misconfigured identity svc) ──
             # Only attempt if explicitly allowed AND there's exactly one key.
             # This is UNSAFE for production — disable once identity svc fixed.
@@ -187,3 +185,10 @@ class JWTAuthenticationMiddleware:
             "Fix identity service to include kid when signing tokens."
         )
         return keys[0]
+
+    @staticmethod
+    def invalidate_cache() -> None:
+        """Clear the module-level JWKS client cache."""
+        global _jwks_client
+        with _jwks_client_lock:
+            _jwks_client = None

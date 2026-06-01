@@ -135,6 +135,16 @@ jobs:
     defaults:
       run:
         working-directory: services/core
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: kraivor
+          POSTGRES_USER: kraivor
+          POSTGRES_PASSWORD: kraivor
+        ports:
+          - 5432:5432
 
     steps:
       - name: Checkout

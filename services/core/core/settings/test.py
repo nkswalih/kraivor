@@ -26,8 +26,8 @@ DATABASES = {
         "NAME": base_settings.env("POSTGRES_DB", default="kraivor"),
         "USER": base_settings.env("POSTGRES_USER", default="kraivor"),
         "PASSWORD": base_settings.env("POSTGRES_PASSWORD", default="kraivor"),
-        "HOST": base_settings.env("DB_HOST", default="localhost"),
-        "PORT": base_settings.env.int("DB_PORT", default=5433),
+        "HOST": base_settings.env("DB_HOST", default="postgres"),
+        "PORT": base_settings.env.int("DB_PORT", default=5432),
         "TEST": {
             "NAME": "test_kraivor_core",
         },

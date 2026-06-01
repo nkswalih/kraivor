@@ -22,15 +22,15 @@ Test structure:
 
 import uuid
 from datetime import timedelta
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.workspaces.constants import WorkspaceRole, WorkspacePlan
-from apps.workspaces.models import Workspace, WorkspaceMember, WorkspaceInvitation
+from apps.workspaces.constants import WorkspacePlan, WorkspaceRole
+from apps.workspaces.models import Workspace, WorkspaceInvitation, WorkspaceMember
 from apps.workspaces.services import (
     InvitationError,
     InvitationService,
@@ -38,7 +38,6 @@ from apps.workspaces.services import (
     WorkspacePermissionError,
     WorkspaceService,
 )
-
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -207,8 +206,6 @@ def patch_request_user_id(monkeypatch):
     from apps.workspaces import permissions as perms
     from apps.workspaces import views as v
 
-    original_has_perm = perms.IsAuthenticated.has_permission
-
     def patched_has_permission(self, request, view):
         # If real middleware already set it, use that
         if getattr(request, "user_id", None):
@@ -225,8 +222,6 @@ def patch_request_user_id(monkeypatch):
     monkeypatch.setattr(perms.IsAuthenticated, "has_permission", patched_has_permission)
 
     # Also patch WorkspaceContextMixin._get_user_id for the same reason
-    original_get_user_id = v.WorkspaceContextMixin._get_user_id
-
     def patched_get_user_id(self):
         uid = getattr(self.request, "user_id", None)
         if uid:
@@ -463,7 +458,7 @@ class TestInvitationService:
 
     def test_create_invitation_success(self, workspace, owner_id, mock_events):
         service = InvitationService(event_publisher=mock_events)
-        with patch("apps.workspaces.services._dispatch_invitation_email") as mock_task:
+        with patch("apps.workspaces.services._dispatch_invitation_email"):
             invitation = service.create_invitation(
                 workspace=workspace,
                 actor_id=owner_id,
@@ -741,7 +736,7 @@ class TestInvitationService:
         )
         accepted.accept()
 
-        expired = WorkspaceInvitation.objects.create(
+        WorkspaceInvitation.objects.create(
             workspace=workspace, email="expired@x.com",
             role=WorkspaceRole.MEMBER, invited_by_id=owner_id, invited_by_name="O",
             expires_at=timezone.now() - timedelta(hours=1),
@@ -922,10 +917,19 @@ class TestInvitationViews:
         assert "token" in resp.data
         assert "accept_url" in resp.data
 
-    def test_invite_dispatches_email_task(self, team_workspace_with_members, owner_id, ws_url):
+    def test_invite_dispatches_email_task(
+        self,
+        team_workspace_with_members,
+        owner_id,
+        ws_url,
+        django_capture_on_commit_callbacks,
+    ):
         client = _authed_client(owner_id, "Owner")
 
-        with patch("apps.workspaces.services._dispatch_invitation_email") as mock_task:
+        with (
+            patch("apps.workspaces.services._dispatch_invitation_email") as mock_task,
+            django_capture_on_commit_callbacks(execute=True),
+        ):
             resp = client.post(
                 ws_url(f"workspaces/{team_workspace_with_members.id}/members/invite/"),
                 {"email": "task@example.com", "role": "viewer"},
@@ -940,7 +944,11 @@ class TestInvitationViews:
         url = ws_url(f"workspaces/{workspace_with_members.id}/members/invite/")
 
         with patch("apps.workspaces.services._dispatch_invitation_email"):
-            client.post(url, {"email": "dup@example.com", "role": "member"}, format="json")
+            client.post(
+                url,
+                {"email": "dup@example.com", "role": "member"},
+                format="json",
+            )
             resp = client.post(url, {"email": "dup@example.com", "role": "member"}, format="json")
 
         assert resp.status_code == 400
@@ -1059,11 +1067,19 @@ class TestInvitationViews:
 @pytest.mark.django_db
 class TestKafkaEvents:
 
-    def test_invitation_created_publishes_event(self, workspace, owner_id):
+    def test_invitation_created_publishes_event(
+        self,
+        workspace,
+        owner_id,
+        django_capture_on_commit_callbacks,
+    ):
         mock_publisher = MagicMock()
         service = InvitationService(event_publisher=mock_publisher)
 
-        with patch("apps.workspaces.services._dispatch_invitation_email"):
+        with (
+            patch("apps.workspaces.services._dispatch_invitation_email"),
+            django_capture_on_commit_callbacks(execute=True),
+        ):
             service.create_invitation(
                 workspace=workspace,
                 actor_id=owner_id,
@@ -1072,14 +1088,17 @@ class TestKafkaEvents:
                 role=WorkspaceRole.MEMBER,
             )
 
-        # Note: event is published via transaction.on_commit — in tests, on_commit
-        # fires immediately when not inside a real transaction.
         mock_publisher.member_invited.assert_called_once()
         call_kwargs = mock_publisher.member_invited.call_args.kwargs
         assert call_kwargs["workspace"] == workspace
         assert call_kwargs["actor_id"] == owner_id
 
-    def test_member_joined_publishes_event(self, workspace, owner_id):
+    def test_member_joined_publishes_event(
+        self,
+        workspace,
+        owner_id,
+        django_capture_on_commit_callbacks,
+    ):
         invitation = WorkspaceInvitation.objects.create(
             workspace=workspace,
             email="joiner@x.com",
@@ -1092,8 +1111,15 @@ class TestKafkaEvents:
         mock_publisher = MagicMock()
         service = InvitationService(event_publisher=mock_publisher)
 
-        with patch("apps.workspaces.services._dispatch_member_joined_notification"):
-            service.accept_invitation(token=invitation.token, user_id=new_user_id, user_email=invitation.email)
+        with (
+            patch("apps.workspaces.services._dispatch_member_joined_notification"),
+            django_capture_on_commit_callbacks(execute=True),
+        ):
+            service.accept_invitation(
+                token=invitation.token,
+                user_id=new_user_id,
+                user_email=invitation.email,
+            )
 
         mock_publisher.member_joined.assert_called_once()
 
@@ -1117,13 +1143,15 @@ class TestKafkaEvents:
         mock_publisher = MagicMock()
         service = WorkspaceService(event_publisher=mock_publisher)
 
-        with patch("apps.workspaces.services._dispatch_invitation_email"):
-            with patch("apps.workspaces.tasks.notify_member_removed.delay"):
-                service.remove_member(
-                    workspace=workspace_with_members,
-                    actor_id=owner_id,
-                    target_user_id=viewer_id,
-                )
+        with (
+            patch("apps.workspaces.services._dispatch_invitation_email"),
+            patch("apps.workspaces.tasks.notify_member_removed.delay"),
+        ):
+            service.remove_member(
+                workspace=workspace_with_members,
+                actor_id=owner_id,
+                target_user_id=viewer_id,
+            )
 
         mock_publisher.member_removed.assert_called_once()
 
@@ -1133,16 +1161,22 @@ class TestKafkaEvents:
 @pytest.mark.django_db
 class TestCeleryTasks:
 
-    def test_invitation_email_task_dispatched_on_invite(self, workspace, owner_id):
+    def test_invitation_email_task_dispatched_on_invite(
+        self,
+        workspace,
+        owner_id,
+        django_capture_on_commit_callbacks,
+    ):
         with patch("apps.workspaces.services._dispatch_invitation_email") as mock_dispatch:
             service = InvitationService(event_publisher=MagicMock())
-            service.create_invitation(
-                workspace=workspace,
-                actor_id=owner_id,
-                actor_name="Owner",
-                email="task@example.com",
-                role=WorkspaceRole.MEMBER,
-            )
+            with django_capture_on_commit_callbacks(execute=True):
+                service.create_invitation(
+                    workspace=workspace,
+                    actor_id=owner_id,
+                    actor_name="Owner",
+                    email="task@example.com",
+                    role=WorkspaceRole.MEMBER,
+                )
 
         mock_dispatch.assert_called_once()
         invitation_id = mock_dispatch.call_args[0][0]
@@ -1159,9 +1193,11 @@ class TestCeleryTasks:
             invited_by_name="Owner",
         )
 
-        with patch("apps.workspaces.tasks.send_mail") as mock_send:
-            with patch("apps.workspaces.tasks.render_to_string", return_value="rendered"):
-                result = send_workspace_invitation_email(str(invitation.id))
+        with (
+            patch("apps.workspaces.tasks.send_mail") as mock_send,
+            patch("apps.workspaces.tasks.render_to_string", return_value="rendered"),
+        ):
+            result = send_workspace_invitation_email(str(invitation.id))
 
         assert result["status"] == "sent"
         mock_send.assert_called_once()
@@ -1210,7 +1246,7 @@ class TestCeleryTasks:
     def test_send_invitation_email_retries_on_smtp_failure(self, workspace, owner_id):
         from apps.workspaces.tasks import send_workspace_invitation_email
 
-        invitation = WorkspaceInvitation.objects.create(
+        WorkspaceInvitation.objects.create(
             workspace=workspace,
             email="retry@example.com",
             role=WorkspaceRole.MEMBER,
@@ -1218,9 +1254,11 @@ class TestCeleryTasks:
             invited_by_name="Owner",
         )
 
-        with patch("apps.workspaces.tasks.send_mail", side_effect=Exception("SMTP down")):
-            with patch("apps.workspaces.tasks.render_to_string", return_value="body"):
-                task = send_workspace_invitation_email
-                # Verify the task has retry configuration
-                assert task.max_retries == 3
-                assert task.acks_late is True
+        with (
+            patch("apps.workspaces.tasks.send_mail", side_effect=Exception("SMTP down")),
+            patch("apps.workspaces.tasks.render_to_string", return_value="body"),
+        ):
+            task = send_workspace_invitation_email
+            # Verify the task has retry configuration
+            assert task.max_retries == 3
+            assert task.acks_late is True

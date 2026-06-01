@@ -42,7 +42,7 @@ class TestWorkspaceListSerializer:
         request = RequestFactory().get("/")
         request.user_id = workspace.owner_id
         
-        # FIX: Explicitly patch the annotated field onto the raw fixture
+        # ADD THIS LINE: (Patches the raw fixture so the serializer detects the field)
         workspace.active_member_count = 1 
         
         serializer = WorkspaceListSerializer(workspace, context={"request": request})

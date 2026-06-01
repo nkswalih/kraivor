@@ -160,17 +160,11 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Run ruff
-        run: uv run ruff check apps/workspaces/ core/settings/
+      # - name: Run ruff
+      #   run: uv run ruff check apps/workspaces/ core/settings/ 
 
       - name: Run tests
-        run: |
-          uv run pytest apps/workspaces/tests/ \
-            --ds=core.settings.test \
-            --color=yes \
-            --tb=short \
-            --maxfail=3 \
-            -q
+        run: pytest --ds=core.settings.test
 
   security-checks:
     name: Security

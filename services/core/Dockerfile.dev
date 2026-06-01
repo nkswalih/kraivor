@@ -1,0 +1,85 @@
+# =============================================================================
+# Dockerfile.dev — Core Service (Development)
+# =============================================================================
+# Goals:
+#   - Fast container startup
+#   - Hot reload support
+#   - Stable uv-based environment
+#   - PostgreSQL-ready
+#   - Source mounted via volume
+#   - venv isolated outside /app
+# =============================================================================
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# =============================================================================
+# SYSTEM DEPENDENCIES
+# =============================================================================
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    postgresql-client \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# =============================================================================
+# INSTALL UV
+# =============================================================================
+
+COPY --from=ghcr.io/astral-sh/uv:0.4.30 /uv /usr/local/bin/uv
+
+# =============================================================================
+# ENVIRONMENT
+# =============================================================================
+
+ENV UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    PATH="/opt/venv/bin:$PATH"
+
+# =============================================================================
+# DEPENDENCY LAYER
+# =============================================================================
+
+# Cached unless pyproject changes
+COPY pyproject.toml uv.lock /app/
+
+# Install dependencies
+RUN uv sync --frozen
+
+# =============================================================================
+# APPLICATION SOURCE
+# =============================================================================
+
+COPY . /app/
+
+# =============================================================================
+# EXPOSE
+# =============================================================================
+
+EXPOSE 8002
+
+# =============================================================================
+# HEALTHCHECK
+# =============================================================================
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8002/api/health/ || exit 1
+
+# =============================================================================
+# STARTUP
+# =============================================================================
+
+CMD ["sh", "-c", \
+     "if [ -f /app/entrypoint.dev.sh ]; then \
+        chmod +x /app/entrypoint.dev.sh && /app/entrypoint.dev.sh; \
+      else \
+        python manage.py migrate --noinput && \
+        python manage.py runserver 0.0.0.0:8002; \
+      fi"]

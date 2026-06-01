@@ -130,6 +130,58 @@ services:
         python manage.py runserver 0.0.0.0:8001
       "
 
+  core:
+    build:
+      context: ./services/core
+      dockerfile: Dockerfile.dev
+
+    container_name: kraivor-core-dev
+
+    env_file:
+      - .env
+
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings.development
+
+      DB_HOST: postgres
+      DB_PORT: 5432
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      EMAIL_HOST: mailhog
+      EMAIL_PORT: 1025
+
+      UV_LINK_MODE: copy
+
+      FRONTEND_URL: http://localhost:3000
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+    ports:
+      - "8002:8002"
+
+    volumes:
+      - ./services/core:/app
+      - ./.keys:/app/.keys
+
+    stdin_open: true
+    tty: true
+
+    restart: unless-stopped
+
+    command: >
+      sh -c "
+        until pg_isready -h postgres -U ${POSTGRES_USER:-kraivor}; do sleep 1; done &&
+        python manage.py migrate --noinput &&
+        python manage.py runserver 0.0.0.0:8002
+      "
+
 volumes:
   postgres_data_dev:
     name: kraivor_postgres_data_dev

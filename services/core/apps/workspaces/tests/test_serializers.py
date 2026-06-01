@@ -44,7 +44,8 @@ class TestWorkspaceListSerializer:
         serializer = WorkspaceListSerializer(workspace, context={"request": request})
         assert set(serializer.data.keys()) == {
             "id", "name", "slug", "plan", "avatar_url", "description",
-            "member_count", "current_user_role", "created_at", "updated_at",
+            "active_member_count",  # <-- Update this key
+            "current_user_role", "created_at", "updated_at",
         }
 
     def test_current_user_role_returns_role(self, workspace, owner_member, db):
@@ -66,10 +67,10 @@ class TestWorkspaceListSerializer:
     def test_member_count_is_read_only(self, workspace, owner_member, db):
         request = RequestFactory().get("/")
         request.user_id = workspace.owner_id
-        data = {"member_count": 99}
+        data = {"active_member_count": 99}  # <-- Update this key
         serializer = WorkspaceListSerializer(workspace, data=data, partial=True, context={"request": request})
         serializer.is_valid()
-        assert "member_count" not in serializer.validated_data
+        assert "active_member_count" not in serializer.validated_data  # <-- Update this key
 
 
 class TestWorkspaceDetailSerializer:

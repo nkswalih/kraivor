@@ -21,13 +21,11 @@ Queue assignment (system design §10):
 
 import logging
 import uuid
-from typing import Optional
 
 from celery import shared_task
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +153,7 @@ def send_workspace_invitation_email(
             },
         )
         # Exponential backoff: 30s, 60s, 120s
-        raise self.retry(exc=exc, countdown=30 * (2 ** self.request.retries))
+        raise self.retry(exc=exc, countdown=30 * (2 ** self.request.retries)) from exc
 
     # Mark email sent
     invitation.mark_email_sent()
@@ -203,7 +201,7 @@ def notify_member_joined(
         user_id:      UUID string of the new member
         role:         Role the new member received
     """
-    from .models import Workspace, WorkspaceMember
+    from .models import Workspace
 
     logger.info(
         "task.notify_member_joined.started",

@@ -2,8 +2,7 @@
 Test settings for Core Service
 """
 
-from . import base as base_settings
-from .base import *  # noqa: F401,F403
+from .base import *  # noqa: F401,F403,F405
 
 DEBUG = False
 
@@ -12,7 +11,7 @@ SECRET_KEY = "test-secret-key"
 ALLOWED_HOSTS = ["*"]
 
 MIDDLEWARE = [
-    m for m in base_settings.MIDDLEWARE
+    m for m in MIDDLEWARE
     if m != "core.middleware.jwt_auth.JWTAuthenticationMiddleware"
 ]
 
@@ -23,11 +22,11 @@ MIDDLEWARE = [
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": base_settings.env("POSTGRES_DB", default="kraivor"),
-        "USER": base_settings.env("POSTGRES_USER", default="kraivor"),
-        "PASSWORD": base_settings.env("POSTGRES_PASSWORD", default="kraivor"),
-        "HOST": base_settings.env("DB_HOST", default="postgres"),
-        "PORT": base_settings.env.int("DB_PORT", default=5432),
+        "NAME": env("POSTGRES_DB", default="kraivor"),
+        "USER": env("POSTGRES_USER", default="kraivor"),
+        "PASSWORD": env("POSTGRES_PASSWORD", default="kraivor"),
+        "HOST": env("DB_HOST", default="localhost"),
+        "PORT": env.int("DB_PORT", default=5433),
         "TEST": {
             "NAME": "test_kraivor_core",
         },

@@ -113,8 +113,8 @@ SESSION_COOKIE_SAMESITE = env("SESSION_COOKIE_SAMESITE", default="Strict")
 # =============================================================================
 # Trust proxy headers when behind load balancer/CDN
 # WHY: Get correct client IP and protocol
-SECURE_PROXY_SSL_HEADER = env.list(
-    "SECURE_PROXY_SSL_HEADER", default=[("HTTP_X_FORWARDED_PROTO", "https")]
+SECURE_PROXY_SSL_HEADER = env.tuple(
+    "SECURE_PROXY_SSL_HEADER", default=("HTTP_X_FORWARDED_PROTO", "https")
 )
 
 # =============================================================================

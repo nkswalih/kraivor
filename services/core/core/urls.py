@@ -10,4 +10,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/health/', health_check, name='health'),
     path('api/', include('apps.workspaces.urls')),
+    path('api/', include('apps.repositories.urls')),
 ]

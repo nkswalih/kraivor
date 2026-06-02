@@ -173,11 +173,15 @@ export default function RootPage() {
             <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] shadow-2xl backdrop-blur-xl flex items-center justify-center">
               {/* This represents a stylized dashboard frame */}
               <div className="absolute top-0 w-full h-12 border-b border-white/5 flex items-center px-4 gap-2">
-                <div className="h-3 w-3 rounded-full bg-slate-700"></div>
-                <div className="h-3 w-3 rounded-full bg-slate-700"></div>
-                <div className="h-3 w-3 rounded-full bg-slate-700"></div>
+                <div className="h-3 w-3 rounded-full bg-red-600 hover:bg-red-700 hover:cursor-pointer z-10"></div>
+                <div className="h-3 w-3 rounded-full bg-yellow-300 hover:bg-yellow-500 hover:cursor-pointer z-10"></div>
+                <div className="h-3 w-3 rounded-full bg-green-500 hover:bg-green-700 hover:cursor-pointer z-10"></div>
               </div>
-              <p className="text-slate-500 font-mono text-sm tracking-widest uppercase">Platform Preview UI</p>
+              <img 
+                src="Screenshot 2026-05-25 212539.png" 
+                alt="Platform Preview" 
+                className="w-full h-full object-cover pt-12"
+              />
               {/* Inner glowing effect */}
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-transparent"></div>
             </div>

@@ -1,4 +1,5 @@
 from authentication.jwks import JWKSView
+from authentication.oauth.token import GitHubOAuthTokenView
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
@@ -13,6 +14,8 @@ urlpatterns = [
     path("api/auth/", include("users.urls")),
     path("api/auth/", include("authentication.urls")),
     path("api/auth/", include("api_keys.urls")),
+    # Internal service-to-service: retrieve a user's stored GitHub OAuth token
+    path("api/oauth/github/token/", GitHubOAuthTokenView.as_view(), name="github-oauth-token"),
     path(".well-known/jwks.json", JWKSView.as_view(), name="jwks"),
     path("api/health/", health_check, name="health"),
 ]

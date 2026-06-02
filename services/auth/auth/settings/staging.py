@@ -76,8 +76,8 @@ SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=True)
 # =============================================================================
 # PROXY TRUST - STAGING
 # =============================================================================
-SECURE_PROXY_SSL_HEADER = env.list(
-    "SECURE_PROXY_SSL_HEADER", default=[("HTTP_X_FORWARDED_PROTO", "https")]
+SECURE_PROXY_SSL_HEADER = env.tuple(
+    "SECURE_PROXY_SSL_HEADER", default=("HTTP_X_FORWARDED_PROTO", "https")
 )
 
 # =============================================================================

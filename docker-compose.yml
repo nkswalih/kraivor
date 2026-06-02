@@ -114,6 +114,7 @@ services:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: auth.settings.production
+      SECURE_SSL_REDIRECT: "false"
       DB_HOST: postgres
       DB_PORT: 5432
       REDIS_HOST: redis
@@ -126,6 +127,9 @@ services:
     ports:
       - "8001:8001"
     restart: unless-stopped
+    volumes:
+      # JWT signing keys + OAuth encryption key — not baked into the image
+      - ./.keys:/app/.keys
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8001/api/health/ || exit 1"]
       interval: 15s

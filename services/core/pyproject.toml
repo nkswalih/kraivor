@@ -39,7 +39,13 @@ DJANGO_SETTINGS_MODULE = "core.settings.test"
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-testpaths = ["tests"]
+# Discover tests in both the legacy top-level tests/ directory and all app-level
+# tests/ directories. New apps (e.g. repositories) keep their tests co-located
+# with the app code following the workspaces convention.
+testpaths = [
+    "tests",
+    "apps",
+]
 
 [tool.coverage.run]
 source = ["apps"]

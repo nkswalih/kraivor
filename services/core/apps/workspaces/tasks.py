@@ -202,6 +202,7 @@ def notify_member_joined(
         role:         Role the new member received
     """
     from .models import Workspace
+    from apps.notifications.tasks import dispatch_notification
 
     logger.info(
         "task.notify_member_joined.started",
@@ -221,21 +222,18 @@ def notify_member_joined(
     admin_members = workspace.members.filter(
         role__in=["owner", "admin"],
         deleted_at__isnull=True,
-    ).exclude(user_id=uuid.UUID(user_id))  # don't notify the joiner about themselves
+    ).exclude(user_id=uuid.UUID(user_id))
 
     notified = 0
     for member in admin_members:
         try:
-            # In production: call notification service or dispatch per-user task
-            # For now: structured log that notification service consumes
-            logger.info(
-                "task.notify_member_joined.notify_admin",
-                extra={
-                    "workspace_id": workspace_id,
-                    "new_member_id": user_id,
-                    "admin_user_id": str(member.user_id),
-                    "role": role,
-                },
+            dispatch_notification.delay(
+                user_id=str(member.user_id),
+                notification_type="workspace.member.joined",
+                title=f"New member joined {workspace.name}",
+                body=f"A new member has joined {workspace.name} as {role}.",
+                workspace_id=workspace_id,
+                actor_id=user_id,
             )
             notified += 1
         except Exception as exc:
@@ -272,14 +270,32 @@ def notify_member_removed(
         reason:           'removed_by_admin' | 'left'
     """
     from .models import Workspace
+    from apps.notifications.tasks import dispatch_notification
 
     try:
         workspace = Workspace.objects.get(id=workspace_id)
     except Workspace.DoesNotExist:
         return {"status": "skipped", "reason": "workspace_not_found"}
 
-    # In production: call notification service with the removed user's email
-    # Email address comes from identity service (separate API call)
+    title = f"Removed from {workspace.name}"
+    body = f"You have been removed from {workspace.name}." if reason == "removed_by_admin" else f"You left {workspace.name}."
+
+    try:
+        dispatch_notification.delay(
+            user_id=removed_user_id,
+            notification_type="workspace.member.removed",
+            title=title,
+            body=body,
+            workspace_id=workspace_id,
+            actor_id=actor_id,
+        )
+    except Exception as exc:
+        logger.error(
+            "task.notify_member_removed.failed",
+            extra={"workspace_id": workspace_id, "removed_user_id": removed_user_id, "error": str(exc)},
+        )
+        return {"status": "failed", "error": str(exc)}
+
     logger.info(
         "task.notify_member_removed.dispatched",
         extra={

@@ -40,8 +40,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'daphne',
+    'channels',
     'apps.workspaces',
     'apps.repositories',
+    'apps.knowledge',
+    'apps.chat',
+    'apps.notifications',
 ]
 
 MIDDLEWARE = [
@@ -57,6 +62,8 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'core.urls'
 
 WSGI_APPLICATION = 'core.wsgi.application'
+
+ASGI_APPLICATION = 'core.asgi.application'
 
 TEMPLATES = [
     {
@@ -118,6 +125,80 @@ JWT_KEY_ID = env('JWT_KEY_ID', default='kraivor-rs256-dev-key')
 
 # Cache settings for JWKS
 JWT_JWKS_CACHE_TTL = env.int('JWT_JWKS_CACHE_TTL', default=3600)
+
+# =============================================================================
+# Channels / Daphne — WebSocket & Real-Time
+# =============================================================================
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [env("REDIS_URL", default="redis://localhost:6379/0")],
+            "capacity": 1500,
+            "expiry": 60,
+        },
+    },
+}
+
+# =============================================================================
+# Celery — Async Task Queue
+# =============================================================================
+
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/1")
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="redis://localhost:6379/1")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "UTC"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_ROUTES = {
+    "workspaces.tasks.*": {"queue": "notifications"},
+    "notifications.tasks.*": {"queue": "notifications"},
+    "chat.tasks.*": {"queue": "default"},
+}
+CELERY_BEAT_SCHEDULE = {
+    "cleanup_expired_notifications": {
+        "task": "notifications.tasks.cleanup_expired_notifications",
+        "schedule": 3600.0,
+        "options": {"queue": "default"},
+    },
+    "sweep_stale_presence": {
+        "task": "notifications.tasks.sweep_stale_presence",
+        "schedule": 300.0,
+        "options": {"queue": "default"},
+    },
+}
+
+# =============================================================================
+# Kafka — Event Bus
+# =============================================================================
+
+KAFKA_BOOTSTRAP_SERVERS = env("KAFKA_BOOTSTRAP_SERVERS", default="localhost:9092")
+KAFKA_FLUSH_TIMEOUT = env.float("KAFKA_FLUSH_TIMEOUT", default=2.0)
+KAFKA_CONSUMER_GROUP = env("KAFKA_CONSUMER_GROUP", default="core-consumer")
+KAFKA_AUTO_CREATE_TOPICS = env.bool("KAFKA_AUTO_CREATE_TOPICS", default=True)
+
+# =============================================================================
+# DynamoDB — Chat Message Storage
+# =============================================================================
+
+DYNAMODB_LOCAL = env.bool("DYNAMODB_LOCAL", default=False)
+DYNAMODB_ENDPOINT = env("DYNAMODB_ENDPOINT", default="http://localhost:8000")
+DYNAMODB_CHAT_TABLE = env("DYNAMODB_CHAT_TABLE", default="kraivor-chat-messages")
+AWS_REGION = env("AWS_REGION", default="us-east-1")
+
+# =============================================================================
+# Redis — General purpose
+# =============================================================================
+
+REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/0")
+
+# =============================================================================
+# Firebase — Push Notifications (optional)
+# =============================================================================
+
+FIREBASE_CREDENTIALS_PATH = env("FIREBASE_CREDENTIALS_PATH", default=None)
 
 # Internal request header check
 INTERNAL_REQUEST_HEADER = 'X-Internal-Request'

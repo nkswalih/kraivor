@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     'channels',
     'apps.workspaces',
     'apps.repositories',
-    # 'apps.knowledge',
+    'apps.knowledge',
     'apps.chat',
     'apps.notifications',
 ]

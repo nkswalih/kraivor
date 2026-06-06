@@ -13,7 +13,6 @@ import uuid
 
 import pytest
 from django.db import IntegrityError
-from django.utils import timezone
 
 from apps.repositories.models import Repository
 from apps.workspaces.models import Workspace

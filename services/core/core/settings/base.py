@@ -33,6 +33,7 @@ ALLOWED_HOSTS = env.list(
     ])
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -40,11 +41,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'daphne',
     'channels',
     'apps.workspaces',
     'apps.repositories',
-    'apps.knowledge',
+    # 'apps.knowledge',
     'apps.chat',
     'apps.notifications',
 ]

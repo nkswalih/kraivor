@@ -35,7 +35,6 @@ from apps.repositories.views import RepositoryDetailView, RepositoryView
 
 from .conftest import make_request
 
-
 # ─── GET /workspaces/{workspace_pk}/repos/ ────────────────────────────────────
 
 @pytest.mark.django_db

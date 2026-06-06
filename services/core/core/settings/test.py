@@ -87,3 +87,25 @@ MIGRATION_MODULES = {}
 # Force Celery to run tasks synchronously during tests
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_STORE_EAGER_RESULT = True
+
+# =============================================================================
+# CHANNELS — In-memory channel layer for tests
+# =============================================================================
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
+
+# =============================================================================
+# REDIS — Disabled in tests (not needed with eager Celery + in-memory channels)
+# =============================================================================
+
+REDIS_URL = None
+
+# =============================================================================
+# DYNAMODB — Disabled in tests (use mocks)
+# =============================================================================
+
+DYNAMODB_LOCAL = False

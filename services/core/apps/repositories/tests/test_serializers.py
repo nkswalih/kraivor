@@ -12,7 +12,6 @@ import pytest
 
 from apps.repositories.serializers import RepositoryConnectSerializer, RepositorySerializer
 
-
 # ─── RepositoryConnectSerializer ─────────────────────────────────────────────
 
 class TestRepositoryConnectSerializer:

@@ -25,10 +25,9 @@ from unittest.mock import patch
 import pytest
 from rest_framework.test import APIRequestFactory
 
+from apps.repositories.models import Repository
 from apps.workspaces.constants import WorkspacePlan, WorkspaceRole
 from apps.workspaces.models import Workspace, WorkspaceMember
-
-from apps.repositories.models import Repository
 
 # ─── API request factory ──────────────────────────────────────────────────────
 

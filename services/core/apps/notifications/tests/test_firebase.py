@@ -18,25 +18,26 @@ class TestFirebaseInitialization:
 
     @override_settings(FIREBASE_CREDENTIALS_PATH="/fake/path.json")
     def test_init_success(self):
-        with patch("apps.notifications.firebase.firebase_admin.initialize_app") as mock_init:
-            with patch("apps.notifications.firebase.credentials.Certificate") as mock_cert:
-                from apps.notifications.firebase import _initialize
-                mock_cert.return_value = "fake-cred"
-                result = _initialize()
-                assert result is True
-                mock_init.assert_called_once()
+        with (
+            patch("firebase_admin.initialize_app") as mock_init,
+            patch("firebase_admin.credentials.Certificate") as mock_cert,
+        ):
+            from apps.notifications.firebase import _initialize
+            mock_cert.return_value = "fake-cred"
+            result = _initialize()
+            assert result is True
+            mock_init.assert_called_once()
 
     def test_init_called_only_once(self):
-        from apps.notifications.firebase import _sdk_initialized
-        _sdk_initialized = False
-        with patch("apps.notifications.firebase.firebase_admin.initialize_app") as mock_init:
-            with patch("apps.notifications.firebase.credentials.Certificate") as mock_cert:
-                with patch.object(type(__import__("apps.notifications.firebase")), "_sdk_initialized", False):
-                    from apps.notifications.firebase import _initialize
-                    mock_cert.return_value = "cred"
-                    _initialize()
-                    _initialize()
-                    assert mock_init.call_count == 1
+        with (
+            patch("firebase_admin.initialize_app") as mock_init,
+            patch("firebase_admin.credentials.Certificate") as mock_cert,
+        ):
+            mock_cert.return_value = "cred"
+            from apps.notifications.firebase import _initialize
+            _initialize()
+            _initialize()
+            assert mock_init.call_count == 1
 
 
 class TestSendPushNotification:
@@ -52,44 +53,49 @@ class TestSendPushNotification:
 
     @override_settings(FIREBASE_CREDENTIALS_PATH="/fake/path.json")
     def test_send_success(self):
-        mock_message = type("MockMessage", (), {"send": lambda self: "projects/.../messages/msg1"})()
-        with patch("apps.notifications.firebase._initialize", return_value=True):
-            with patch("apps.notifications.firebase.messaging.Message", return_value=mock_message) as mock_msg:
-                with patch("apps.notifications.firebase.messaging.send", return_value="msg-id-1") as mock_send:
-                    from apps.notifications.firebase import send_push_notification
-                    result = send_push_notification(
-                        token="device-token",
-                        title="Test Title",
-                        body="Test Body",
-                        data={"key": "value"},
-                    )
-                    assert result["status"] == "sent"
-                    mock_msg.assert_called_once()
-                    mock_send.assert_called_once()
+        with (
+            patch("apps.notifications.firebase._initialize", return_value=True),
+            patch("firebase_admin.messaging.Message") as mock_msg,
+            patch("firebase_admin.messaging.send", return_value="msg-id-1") as mock_send,
+        ):
+            from apps.notifications.firebase import send_push_notification
+            result = send_push_notification(
+                token="device-token",
+                title="Test Title",
+                body="Test Body",
+                data={"key": "value"},
+            )
+            assert result["status"] == "sent"
+            mock_msg.assert_called_once()
+            mock_send.assert_called_once()
 
     @override_settings(FIREBASE_CREDENTIALS_PATH="/fake/path.json")
     def test_send_failure_returns_error(self):
-        with patch("apps.notifications.firebase._initialize", return_value=True):
-            with patch("apps.notifications.firebase.messaging.send", side_effect=Exception("FCM error")):
-                from apps.notifications.firebase import send_push_notification
-                result = send_push_notification(
-                    token="bad-token",
-                    title="Fail",
-                    body="Fail",
-                )
-                assert result["status"] == "failed"
-                assert "error" in result
+        with (
+            patch("apps.notifications.firebase._initialize", return_value=True),
+            patch("firebase_admin.messaging.send", side_effect=Exception("FCM error")),
+        ):
+            from apps.notifications.firebase import send_push_notification
+            result = send_push_notification(
+                token="bad-token",
+                title="Fail",
+                body="Fail",
+            )
+            assert result["status"] == "failed"
+            assert "error" in result
 
     def test_send_with_data_converts_to_strings(self):
-        with patch("apps.notifications.firebase._initialize", return_value=True):
-            with patch("apps.notifications.firebase.messaging.Message") as mock_msg:
-                with patch("apps.notifications.firebase.messaging.send", return_value="msg-id"):
-                    with patch.object(mock_msg, "return_value", create=True):
-                        from apps.notifications.firebase import send_push_notification
-                        result = send_push_notification(
-                            token="t",
-                            title="T",
-                            body="B",
-                            data={"count": 42, "flag": True},
-                        )
-                        assert result["status"] == "sent"
+        with (
+            patch("apps.notifications.firebase._initialize", return_value=True),
+            patch("firebase_admin.messaging.Message") as mock_msg,
+            patch("firebase_admin.messaging.send", return_value="msg-id"),
+            patch.object(mock_msg, "return_value", create=True),
+        ):
+            from apps.notifications.firebase import send_push_notification
+            result = send_push_notification(
+                token="t",
+                title="T",
+                body="B",
+                data={"count": 42, "flag": True},
+            )
+            assert result["status"] == "sent"

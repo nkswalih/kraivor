@@ -5,10 +5,10 @@ from django.test import override_settings
 
 from apps.notifications.management.commands.consume_events import (
     DISPATCH_TABLE,
+    TOPICS,
     _build_body,
     _build_title,
     _dispatch_task,
-    TOPICS,
 )
 
 
@@ -106,24 +106,28 @@ class TestCommand:
     @override_settings(KAFKA_BOOTSTRAP_SERVERS="localhost:9092")
     def test_create_consumer_with_kafka_settings(self):
         mock_consumer = MagicMock()
+        mock_consumer.poll.side_effect = [None, KeyboardInterrupt]
         with patch("confluent_kafka.Consumer", return_value=mock_consumer):
             from django.core.management import call_command
             call_command("consume_events", "--poll-timeout", "0.1")
             mock_consumer.subscribe.assert_called_once()
+            mock_consumer.close.assert_called_once()
 
     def test_handle_missing_kafka_library(self):
-        with patch("apps.notifications.management.commands.consume_events.KafkaConsumer", None):
-            with patch("builtins.__import__", side_effect=ImportError):
-                from django.core.management import call_command
-                import sys
-                from io import StringIO
-                out = StringIO()
-                sys.stdout = out
-                try:
-                    call_command("consume_events", "--poll-timeout", "0.1")
-                except SystemExit:
-                    pass
-                sys.stdout = sys.__stdout__
+        import contextlib
+        import sys
+        from io import StringIO
+
+        from django.core.management import call_command
+        with (
+            patch("confluent_kafka.Consumer", None),
+            patch("builtins.__import__", side_effect=ImportError),
+        ):
+            out = StringIO()
+            sys.stdout = out
+            with contextlib.suppress(SystemExit):
+                call_command("consume_events", "--poll-timeout", "0.1")
+            sys.stdout = sys.__stdout__
 
     @override_settings(KAFKA_BOOTSTRAP_SERVERS="localhost:9092")
     def test_process_message_dispatches_event(self):

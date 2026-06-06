@@ -77,7 +77,7 @@ class TestNotificationModel:
 
     def test_filter_unread(self, user_id, db):
         Notification.objects.create(user_id=user_id, notification_type="system", title="Unread 1")
-        n2 = Notification.objects.create(user_id=user_id, notification_type="system", title="Unread 2")
+        Notification.objects.create(user_id=user_id, notification_type="system", title="Unread 2")
         n3 = Notification.objects.create(user_id=user_id, notification_type="system", title="Read")
         n3.read_at = timezone.now()
         n3.save(update_fields=["read_at"])
@@ -102,7 +102,7 @@ class TestNotificationModel:
             notification_type="system",
             title="Test",
         )
-        workspace.delete()
+        workspace.hard_delete()
         assert Notification.objects.count() == 0
 
     def test_indexes_exist(self):
@@ -128,8 +128,8 @@ class TestFCMTokenModel:
             token="duplicate-token",
             platform="web",
         )
-        from django.db import IntegrityError
         import pytest
+        from django.db import IntegrityError
         with pytest.raises(IntegrityError):
             FCMToken.objects.create(
                 user_id=user_id,

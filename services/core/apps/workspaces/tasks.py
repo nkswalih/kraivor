@@ -201,8 +201,9 @@ def notify_member_joined(
         user_id:      UUID string of the new member
         role:         Role the new member received
     """
-    from .models import Workspace
     from apps.notifications.tasks import dispatch_notification
+
+    from .models import Workspace
 
     logger.info(
         "task.notify_member_joined.started",
@@ -269,8 +270,9 @@ def notify_member_removed(
         actor_id:         UUID string of who removed them
         reason:           'removed_by_admin' | 'left'
     """
-    from .models import Workspace
     from apps.notifications.tasks import dispatch_notification
+
+    from .models import Workspace
 
     try:
         workspace = Workspace.objects.get(id=workspace_id)

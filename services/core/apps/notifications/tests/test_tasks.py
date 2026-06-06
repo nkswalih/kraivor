@@ -56,7 +56,7 @@ class TestDispatchNotificationTask:
 
     def test_dispatch_sends_fcm_push(self, user_id, db):
         FCMToken.objects.create(user_id=user_id, token="fcm-device-token", platform="web")
-        with patch("apps.notifications.tasks.send_push_notification") as mock_send:
+        with patch("apps.notifications.firebase.send_push_notification") as mock_send:
             dispatch_notification(
                 user_id=str(user_id),
                 notification_type="system",
@@ -78,7 +78,7 @@ class TestDispatchNotificationTask:
         assert result["status"] == "dispatched"
 
     def test_dispatch_calls_channel_layer(self, user_id, db):
-        with patch("apps.notifications.tasks.get_channel_layer") as mock_get:
+        with patch("channels.layers.get_channel_layer") as mock_get:
             mock_layer = mock_get.return_value
             dispatch_notification(
                 user_id=str(user_id),
@@ -145,6 +145,6 @@ class TestSweepStalePresenceTask:
             "ttl": lambda self, key: -1,
             "delete": lambda self, key: None,
         })()
-        with patch("apps.notifications.tasks.get_redis", return_value=mock_redis):
+        with patch("core.infrastructure.redis.get_redis", return_value=mock_redis):
             result = sweep_stale_presence()
             assert result["status"] == "completed"

@@ -2,11 +2,9 @@ import os
 import sys
 import uuid
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import django
 import pytest
-from django.utils import timezone
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(BASE_DIR))
@@ -54,3 +52,15 @@ def fcm_token(user_id, db):
 def api_request_factory():
     from rest_framework.test import APIRequestFactory
     return APIRequestFactory()
+
+
+@pytest.fixture
+def workspace(db):
+    import uuid
+
+    from apps.workspaces.models import Workspace
+    return Workspace.objects.create(
+        owner_id=uuid.uuid4(),
+        name="Test Workspace",
+        slug="test-workspace",
+    )

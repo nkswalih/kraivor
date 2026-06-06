@@ -171,15 +171,15 @@ jobs:
         run: uv sync
 
       - name: Run ruff
-        run: uv run ruff check apps/workspaces/ apps/repositories/ core/settings/ \
-              apps/knowledge/
+        run: uv run ruff check apps/workspaces/ apps/repositories/ apps/notifications/ \
+              apps/chat/ core/settings/ core/middleware/
 
       - name: Run tests
         run: |
           uv run pytest \\
             apps/workspaces/tests/ \\
             apps/repositories/tests/ \\
-            apps/knowledge/tests/ \\
+            apps/notifications/tests/ \\
             --ds=core.settings.test \\
             --color=yes \\
             --tb=short \\

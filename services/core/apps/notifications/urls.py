@@ -1,3 +1,11 @@
+"""
+URL configuration for the notifications API endpoints.
+
+Registers DRF routers:
+- notifications/ — NotificationViewSet (list, retrieve, mark_read, dismiss)
+- fcm-tokens/  — FCMTokenViewSet (register, unregister device tokens)
+"""
+
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 

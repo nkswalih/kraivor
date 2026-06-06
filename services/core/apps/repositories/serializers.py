@@ -17,7 +17,6 @@ from rest_framework import serializers
 
 from .models import Repository
 
-
 # ─── Output Serializer ────────────────────────────────────────────────────────
 
 class RepositorySerializer(serializers.ModelSerializer):

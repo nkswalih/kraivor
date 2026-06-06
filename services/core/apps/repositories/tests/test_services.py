@@ -33,7 +33,6 @@ from apps.repositories.services import (
     RepositoryService,
 )
 
-
 # ─── connect_repository ───────────────────────────────────────────────────────
 
 @pytest.mark.django_db(transaction=True)
@@ -217,13 +216,12 @@ class TestConnectRepository:
         with patch(
             "apps.repositories.services.GitHubAPIClient.get_repository",
             return_value=existing_payload,
-        ):
-            with pytest.raises(RepositoryAlreadyConnectedError):
-                self._service().connect_repository(
-                    workspace=workspace,
-                    actor_id=owner_id,
-                    github_repo="acme/api",
-                )
+        ), pytest.raises(RepositoryAlreadyConnectedError):
+            self._service().connect_repository(
+                workspace=workspace,
+                actor_id=owner_id,
+                github_repo="acme/api",
+            )
 
     # ── GitHub integration errors ─────────────────────────────────────────────
 
@@ -233,13 +231,12 @@ class TestConnectRepository:
         with patch(
             "apps.repositories.services.GitHubTokenClient.get_token",
             side_effect=GitHubAuthError("No GitHub account connected."),
-        ):
-            with pytest.raises(GitHubAuthError):
-                self._service().connect_repository(
-                    workspace=workspace,
-                    actor_id=owner_id,
-                    github_repo="acme/new-service",
-                )
+        ), pytest.raises(GitHubAuthError):
+            self._service().connect_repository(
+                workspace=workspace,
+                actor_id=owner_id,
+                github_repo="acme/new-service",
+            )
 
     def test_raises_github_api_error_when_repo_not_found(
         self, workspace, owner_member, owner_id, mock_github_token,
@@ -247,13 +244,12 @@ class TestConnectRepository:
         with patch(
             "apps.repositories.services.GitHubAPIClient.get_repository",
             side_effect=GitHubAPIError("Repository not found."),
-        ):
-            with pytest.raises(GitHubAPIError):
-                self._service().connect_repository(
-                    workspace=workspace,
-                    actor_id=owner_id,
-                    github_repo="acme/nonexistent",
-                )
+        ), pytest.raises(GitHubAPIError):
+            self._service().connect_repository(
+                workspace=workspace,
+                actor_id=owner_id,
+                github_repo="acme/nonexistent",
+            )
 
     def test_no_db_row_created_when_github_api_fails(
         self, workspace, owner_member, owner_id, mock_github_token,
@@ -263,13 +259,12 @@ class TestConnectRepository:
         with patch(
             "apps.repositories.services.GitHubAPIClient.get_repository",
             side_effect=GitHubAPIError("GitHub error"),
-        ):
-            with pytest.raises(GitHubAPIError):
-                self._service().connect_repository(
-                    workspace=workspace,
-                    actor_id=owner_id,
-                    github_repo="acme/fail",
-                )
+        ), pytest.raises(GitHubAPIError):
+            self._service().connect_repository(
+                workspace=workspace,
+                actor_id=owner_id,
+                github_repo="acme/fail",
+            )
         assert Repository.objects.filter(workspace=workspace).count() == count_before
 
 
@@ -450,8 +445,8 @@ class TestDisconnectRepository:
     def test_raises_not_found_for_repo_in_different_workspace(
         self, workspace, owner_member, owner_id, repository,
     ):
-        from apps.workspaces.models import Workspace, WorkspaceMember
         from apps.workspaces.constants import WorkspaceRole
+        from apps.workspaces.models import Workspace, WorkspaceMember
         other_workspace = Workspace.objects.create(
             owner_id=owner_id,
             name="Other",

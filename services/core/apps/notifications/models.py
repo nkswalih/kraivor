@@ -1,3 +1,11 @@
+"""
+Notification and FCM token data models.
+
+Notification stores per-user notifications with type classification,
+read tracking, and expiry support. FCMToken maps user device tokens
+for Firebase Cloud Messaging push delivery.
+"""
+
 import uuid
 
 from django.db import models

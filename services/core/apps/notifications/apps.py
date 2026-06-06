@@ -1,3 +1,9 @@
+"""
+Django AppConfig for the notifications application.
+
+Registered as 'apps.notifications' with label 'notifications'.
+"""
+
 from django.apps import AppConfig
 
 

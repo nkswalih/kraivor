@@ -19,7 +19,7 @@ GitHub token retrieval:
   bypass JWT verification on the auth service side.
 
   Auth service endpoint: GET {GITHUB_TOKEN_SERVICE_URL}/api/oauth/github/token/
-  Default base URL:      http://auth:8001  (service name in docker-compose)
+  Default base URL:      http://identity:8001  (service name in docker-compose)
 
 HTTP client:
   Uses `requests` (already in the project's dependency list) so no extra

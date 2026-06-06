@@ -124,6 +124,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     ports:
       - "8001:8001"
     restart: unless-stopped
@@ -151,11 +153,18 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       REDIS_HOST: redis
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9094
+      DYNAMODB_LOCAL: "true"
+      DYNAMODB_ENDPOINT: http://dynamodb-local:8000
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
+      dynamodb-local:
+        condition: service_started
     ports:
       - "8002:8002"
     restart: unless-stopped
@@ -222,15 +231,20 @@ services:
       retries: 5
       start_period: 20s
 
-  notifications:
+  # ── Core Worker (Celery) ──────────────────────────────────────────────────
+
+  core-worker:
     build:
-      context: ./services/notifications
+      context: ./services/core
       dockerfile: Dockerfile
-    container_name: kraivor-notifications
+    container_name: kraivor-core-worker
+    command: celery -A core.celery_app worker -Q notifications,default --loglevel=info
     env_file:
       - .env
     environment:
+      DJANGO_SETTINGS_MODULE: core.settings.production
       DB_HOST: postgres
+      DB_PORT: 5432
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
     depends_on:
@@ -240,27 +254,64 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-    ports:
-      - "8005:8005"
     restart: unless-stopped
 
-  realtime:
+  core-beat:
     build:
-      context: ./services/realtime
+      context: ./services/core
       dockerfile: Dockerfile
-    container_name: kraivor-realtime
+    container_name: kraivor-core-beat
+    command: celery -A core.celery_app beat --loglevel=info
     env_file:
       - .env
     environment:
+      DJANGO_SETTINGS_MODULE: core.settings.production
+      DB_HOST: postgres
+      DB_PORT: 5432
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
       kafka:
         condition: service_healthy
+    restart: unless-stopped
+
+  core-consumer:
+    build:
+      context: ./services/core
+      dockerfile: Dockerfile
+    container_name: kraivor-core-consumer
+    command: python manage.py consume_events
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings.production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9094
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── DynamoDB Local (Chat History) ────────────────────────────────────────
+
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: kraivor-dynamodb
     ports:
-      - "8006:8006"
+      - "8007:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /data"
+    volumes:
+      - dynamodb_data:/data
     restart: unless-stopped
 
   frontend:
@@ -310,3 +361,5 @@ volumes:
     name: kraivor_redis_data
   kafka_data:
     name: kraivor_kafka_data
+  dynamodb_data:
+    name: kraivor_dynamodb_data

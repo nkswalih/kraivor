@@ -73,14 +73,10 @@ USER appuser
 EXPOSE 8002
 
 CMD ["sh", "-c", \
-     "gunicorn core.wsgi:application \
-      --bind 0.0.0.0:8002 \
+     "uvicorn core.asgi:application \
+      --host 0.0.0.0 \
+      --port 8002 \
       --workers ${WEB_CONCURRENCY:-2} \
-      --threads ${WEB_THREADS:-2} \
-      --worker-class gthread \
-      --worker-tmp-dir /dev/shm \
-      --timeout 30 \
-      --keep-alive 5 \
+      --timeout-keep-alive 5 \
       --log-level ${LOG_LEVEL:-info} \
-      --access-logfile - \
-      --error-logfile -"]
+      --access-log -"]

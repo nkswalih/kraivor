@@ -171,15 +171,19 @@ jobs:
         run: uv sync
 
       - name: Run ruff
-        run: uv run ruff check apps/workspaces/ core/settings/
+        run: uv run ruff check apps/workspaces/ apps/repositories/ core/settings/ \
+              apps/knowledge/
 
       - name: Run tests
         run: |
-          uv run pytest apps/workspaces/tests/ \
-            --ds=core.settings.test \
-            --color=yes \
-            --tb=short \
-            --maxfail=3 \
+          uv run pytest \\
+            apps/workspaces/tests/ \\
+            apps/repositories/tests/ \\
+            apps/knowledge/tests/ \\
+            --ds=core.settings.test \\
+            --color=yes \\
+            --tb=short \\
+            --maxfail=3 \\
             -q
 
   security-checks:

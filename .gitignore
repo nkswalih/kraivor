@@ -63,6 +63,10 @@ temp/
 KAIVOR_BLUEPRINT.md
 KRAIVOR_ARCHITECTURE.md
 KRAIVOR_BUILD_GUIDE.md
+CORE_IMPLEMENTATION.md
+frontend-core-service.md
+KRAIVOR_FRONTEND_PROMPT.md
+NEW_CORE_DESIGN.md
 system.md
 tickets.md
 tools.md

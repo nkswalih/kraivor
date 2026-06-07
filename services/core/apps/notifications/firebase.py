@@ -14,6 +14,11 @@ logger = logging.getLogger(__name__)
 _sdk_initialized = False
 
 
+def _reset():
+    global _sdk_initialized
+    _sdk_initialized = False
+
+
 def _initialize():
     global _sdk_initialized
     if _sdk_initialized:

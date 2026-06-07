@@ -105,7 +105,7 @@ class TestNotificationModel:
         workspace.hard_delete()
         assert Notification.objects.count() == 0
 
-    def test_indexes_exist(self):
+    def test_indexes_exist(self, db):
         from django.db import connection
         indexes = connection.introspection.get_constraints(connection.cursor(), Notification._meta.db_table)
         assert any("user_id" in str(idx) for idx in indexes)

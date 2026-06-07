@@ -117,6 +117,7 @@ class TestCreateKnowledgeSpace:
         )
         assert ks.pk is not None
 
+    @pytest.mark.django_db(transaction=True)
     def test_event_published_after_commit(self, workspace, owner_member, owner_id):
         publisher = MagicMock()
         ks = _service(publisher).create_knowledge_space(
@@ -301,6 +302,7 @@ class TestUpdateKnowledgeSpace:
         )
         assert updated.name == "Member Update"
 
+    @pytest.mark.django_db(transaction=True)
     def test_event_published_after_commit(
         self, workspace, owner_member, owner_id, knowledge_space,
     ):
@@ -390,6 +392,7 @@ class TestDeleteKnowledgeSpace:
         )
         assert knowledge_space.is_deleted
 
+    @pytest.mark.django_db(transaction=True)
     def test_event_published_after_commit(
         self, workspace, owner_member, owner_id, knowledge_space,
     ):

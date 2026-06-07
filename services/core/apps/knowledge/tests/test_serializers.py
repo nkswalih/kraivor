@@ -19,7 +19,6 @@ from apps.knowledge.serializers import (
     KnowledgeSpaceUpdateSerializer,
 )
 
-
 # ─── KnowledgeSpaceCreateSerializer ──────────────────────────────────────────
 
 class TestKnowledgeSpaceCreateSerializer:

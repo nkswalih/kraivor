@@ -36,7 +36,7 @@ import logging
 import uuid
 
 from rest_framework import status
-from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -52,7 +52,6 @@ from .serializers import (
 )
 from .services import (
     KnowledgePermissionError,
-    KnowledgeSpaceNotFoundError,
     KnowledgeSpaceService,
 )
 

@@ -7,7 +7,7 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotFound, APIException
+from rest_framework.exceptions import APIException, NotFound
 from rest_framework.pagination import CursorPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
@@ -147,7 +147,7 @@ class MessageViewSet(ViewSet):
             )
         except Exception as exc:
             logger.error("chat.messages.list_failed", extra={"room_id": room_id, "error": str(exc)})
-            raise ServiceUnavailable("Message store is temporarily unavailable.")
+            raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
 
         serializer = MessageSerializer(messages, many=True)
         response_data = {
@@ -169,7 +169,7 @@ class MessageViewSet(ViewSet):
             )
         except Exception as exc:
             logger.error("chat.message.get_failed", extra={"message_id": str(pk), "error": str(exc)})
-            raise ServiceUnavailable("Message store is temporarily unavailable.")
+            raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
 
         if not message:
             raise NotFound("Message not found.")
@@ -195,7 +195,7 @@ class MessageViewSet(ViewSet):
             )
         except Exception as exc:
             logger.error("chat.message.edit_failed", extra={"message_id": str(pk), "error": str(exc)})
-            raise ServiceUnavailable("Message store is temporarily unavailable.")
+            raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
 
         if updated is None:
             raise NotFound("Message not found or you can only edit your own messages.")
@@ -213,7 +213,7 @@ class MessageViewSet(ViewSet):
             )
         except Exception as exc:
             logger.error("chat.message.delete_failed", extra={"message_id": str(pk), "error": str(exc)})
-            raise ServiceUnavailable("Message store is temporarily unavailable.")
+            raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
 
         if not success:
             raise NotFound("Message not found or already deleted.")
@@ -299,7 +299,7 @@ class MessageViewSet(ViewSet):
             )
         except Exception as exc:
             logger.error("chat.messages.search_failed", extra={"room_id": str(room_pk), "error": str(exc)})
-            raise ServiceUnavailable("Message store is temporarily unavailable.")
+            raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
 
         serializer = MessageSerializer(results, many=True)
         return Response({"results": serializer.data, "count": len(results)})

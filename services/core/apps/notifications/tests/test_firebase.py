@@ -28,6 +28,7 @@ class TestFirebaseInitialization:
             assert result is True
             mock_init.assert_called_once()
 
+    @override_settings(FIREBASE_CREDENTIALS_PATH="/fake/path.json")
     def test_init_called_only_once(self):
         with (
             patch("firebase_admin.initialize_app") as mock_init,

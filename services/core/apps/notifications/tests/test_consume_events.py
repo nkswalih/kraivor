@@ -119,15 +119,14 @@ class TestCommand:
         from io import StringIO
 
         from django.core.management import call_command
-        with (
-            patch("confluent_kafka.Consumer", None),
-            patch("builtins.__import__", side_effect=ImportError),
-        ):
-            out = StringIO()
-            sys.stdout = out
+        with patch.dict("sys.modules", {"confluent_kafka": None}):
+            err = StringIO()
+            sys.stderr = err
             with contextlib.suppress(SystemExit):
                 call_command("consume_events", "--poll-timeout", "0.1")
-            sys.stdout = sys.__stdout__
+            sys.stderr = sys.__stderr__
+            output = err.getvalue()
+            assert "confluent-kafka is not installed" in output
 
     @override_settings(KAFKA_BOOTSTRAP_SERVERS="localhost:9092")
     def test_process_message_dispatches_event(self):

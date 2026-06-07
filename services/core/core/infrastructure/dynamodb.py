@@ -38,6 +38,8 @@ def get_dynamodb():
             if dynamodb_local:
                 endpoint = getattr(settings, "DYNAMODB_ENDPOINT", "http://localhost:8000")
                 kwargs["endpoint_url"] = endpoint
+                kwargs["aws_access_key_id"] = "dummy"
+                kwargs["aws_secret_access_key"] = "dummy"
                 logger.info("dynamodb.using_local", extra={"endpoint": endpoint})
             _resource = boto3.resource("dynamodb", **kwargs)
             logger.info("dynamodb.initialized", extra={"local": dynamodb_local})

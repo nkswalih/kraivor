@@ -24,17 +24,15 @@ Scenarios per view:
 """
 
 import uuid
-from unittest.mock import patch
 
 import pytest
 from rest_framework import status
+from rest_framework.test import APIRequestFactory
 
 from apps.knowledge.models import KnowledgeSpace
 from apps.knowledge.views import KnowledgeSpaceDetailView, KnowledgeSpaceListCreateView
-from rest_framework.test import APIRequestFactory
 
 from .conftest import make_request
-
 
 # ─── GET /workspaces/{workspace_pk}/knowledge/ ────────────────────────────────
 
@@ -131,7 +129,7 @@ class TestKnowledgeSpaceCreateView:
     def _call(self, workspace, user_id, data=None):
         request = make_request(
             "post", "/api/workspaces/x/knowledge/",
-            user_id, data=data or self._PAYLOAD,
+            user_id, data=data if data is not None else self._PAYLOAD,
         )
         return KnowledgeSpaceListCreateView.as_view()(request, workspace_pk=workspace.id)
 
@@ -344,13 +342,13 @@ class TestKnowledgeSpaceDeleteView:
         self, workspace, owner_member, owner_id, knowledge_space,
     ):
         """
-        TimestampedModel.delete() sets deleted_at on the in-memory Python instance.
-        Check is_deleted directly — do NOT call refresh_from_db() because
-        SoftDeleteManager.get_queryset() filters deleted_at__isnull=True,
-        so refresh_from_db() would raise DoesNotExist.
+        The view loads a new Python object via _get_knowledge_space_or_404(),
+        so the fixture variable is not mutated. Refetch from all_objects to
+        verify the soft delete was persisted to the DB transaction.
         """
         self._call(owner_id, knowledge_space.id)
-        assert knowledge_space.is_deleted
+        ks = KnowledgeSpace.all_objects.get(id=knowledge_space.id)
+        assert ks.is_deleted
 
     def test_returns_403_for_member(
         self, workspace, regular_member, member_id, knowledge_space,

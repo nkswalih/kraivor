@@ -14,7 +14,6 @@ Usage:
 """
 
 import logging
-from typing import NoReturn
 
 from confluent_kafka import Producer
 from django.conf import settings

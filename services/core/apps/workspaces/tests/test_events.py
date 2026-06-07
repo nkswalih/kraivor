@@ -37,8 +37,9 @@ class TestEnvelope:
 
 class TestWorkspaceEventPublisher:
     def test_get_producer_returns_none_when_kafka_unavailable(self):
-        publisher = WorkspaceEventPublisher()
-        assert publisher._producer is None
+        with patch("core.infrastructure.kafka.get_producer", return_value=None):
+            publisher = WorkspaceEventPublisher()
+            assert publisher._producer is None
 
     def test_workspace_created_publishes_event(self):
         mock_producer = MagicMock()

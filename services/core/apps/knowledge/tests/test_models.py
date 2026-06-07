@@ -11,10 +11,8 @@ Covers:
 import uuid
 
 import pytest
-from django.utils import timezone
 
 from apps.knowledge.models import KnowledgeSpace
-from apps.workspaces.models import Workspace
 
 
 @pytest.mark.django_db

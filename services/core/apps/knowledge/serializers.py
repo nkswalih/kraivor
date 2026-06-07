@@ -17,7 +17,6 @@ from rest_framework import serializers
 
 from .models import KnowledgeSpace
 
-
 # ─── Output Serializers ───────────────────────────────────────────────────────
 
 class KnowledgeSpaceListSerializer(serializers.ModelSerializer):
@@ -31,6 +30,8 @@ class KnowledgeSpaceListSerializer(serializers.ModelSerializer):
     Mirrors the WorkspaceListSerializer pattern (no members list) vs
     WorkspaceDetailSerializer (full members list).
     """
+
+    workspace_id = serializers.UUIDField()
 
     class Meta:
         model = KnowledgeSpace
@@ -56,6 +57,8 @@ class KnowledgeSpaceSerializer(serializers.ModelSerializer):
       - GET  /knowledge/{id}/               (retrieve)
       - PUT  /knowledge/{id}/               (update response)
     """
+
+    workspace_id = serializers.UUIDField()
 
     class Meta:
         model = KnowledgeSpace

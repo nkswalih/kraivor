@@ -28,13 +28,15 @@ class TestFirebaseInitialization:
             assert result is True
             mock_init.assert_called_once()
 
+    @override_settings(FIREBASE_CREDENTIALS_PATH="/fake/path.json")
     def test_init_called_only_once(self):
+        from apps.notifications.firebase import _initialize, _reset
+        _reset()
         with (
             patch("firebase_admin.initialize_app") as mock_init,
             patch("firebase_admin.credentials.Certificate") as mock_cert,
         ):
             mock_cert.return_value = "cred"
-            from apps.notifications.firebase import _initialize
             _initialize()
             _initialize()
             assert mock_init.call_count == 1

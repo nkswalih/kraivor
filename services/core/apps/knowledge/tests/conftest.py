@@ -15,7 +15,6 @@ make_request():
 """
 
 import uuid
-from unittest.mock import patch
 
 import pytest
 from rest_framework.test import APIRequestFactory

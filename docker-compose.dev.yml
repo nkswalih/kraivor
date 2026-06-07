@@ -1,17 +1,19 @@
 # =============================================================================
-# docker-compose.dev.yml — Auth Service Development Stack
+# docker-compose.dev.yml — Kraivor Development Stack
 # =============================================================================
-# Starts only what you need for auth development:
-#   postgres · redis · mailhog · identity (auth service)
+# Services for local development with full infrastructure:
+#   postgres · redis · mailhog · dynamodb-local · kafka
+#   identity · core · core-worker · core-beat · core-consumer
 #
 # Usage:
 #   docker-compose -f docker-compose.dev.yml up --build
 #   docker-compose -f docker-compose.dev.yml up          (subsequent runs)
 #   docker-compose -f docker-compose.dev.yml down -v     (nuke everything)
 #
-# Hot reload: edit files in ./services/auth → Django restarts automatically.
+# Hot reload: edit files in ./services/auth or ./services/core → Django restarts.
 # Emails:     http://localhost:8025 (MailHog web UI)
 # Auth API:   http://localhost:8001/api/auth/
+# Core API:   http://localhost:8002/api/
 # =============================================================================
 
 services:
@@ -61,6 +63,40 @@ services:
       driver: "none"
     restart: unless-stopped
 
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: kraivor-dynamodb-dev
+    ports:
+      - "8007:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+    restart: unless-stopped
+
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: kraivor-kafka-dev
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,INTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    volumes:
+      - kafka_data_dev:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --list --bootstrap-server localhost:9092 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
 # ────── Nginx ─────────────────────────────────────────────────
   nginx:
     image: nginx:alpine
@@ -73,6 +109,7 @@ services:
     - "host.docker.internal:host-gateway"
     depends_on:
     - identity
+    - core
     restart: unless-stopped
 
 
@@ -134,54 +171,150 @@ services:
     build:
       context: ./services/core
       dockerfile: Dockerfile.dev
-
     container_name: kraivor-core-dev
-
     env_file:
       - .env
-
     environment:
       DJANGO_SETTINGS_MODULE: core.settings.development
-
       DB_HOST: postgres
       DB_PORT: 5432
-
       REDIS_HOST: redis
       REDIS_PORT: 6379
-
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
       EMAIL_HOST: mailhog
       EMAIL_PORT: 1025
-
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9094
+      DYNAMODB_LOCAL: "true"
+      DYNAMODB_ENDPOINT: http://dynamodb-local:8000
       UV_LINK_MODE: copy
-
       FRONTEND_URL: http://localhost:3000
-
     depends_on:
       postgres:
         condition: service_healthy
-
       redis:
         condition: service_healthy
-
+      dynamodb-local:
+        condition: service_started
+      kafka:
+        condition: service_healthy
     ports:
       - "8002:8002"
-
     volumes:
       - ./services/core:/app
       - ./.keys:/app/.keys
-
     stdin_open: true
     tty: true
-
     restart: unless-stopped
-
     command: >
       sh -c "
         until pg_isready -h postgres -U ${POSTGRES_USER:-kraivor}; do sleep 1; done &&
         python manage.py migrate --noinput &&
+        python manage.py create_chat_table &&
         python manage.py runserver 0.0.0.0:8002
       "
+
+  # ── Core Workers ──────────────────────────────────────────────────────────
+
+  core-worker:
+    build:
+      context: ./services/core
+      dockerfile: Dockerfile.dev
+    container_name: kraivor-core-worker-dev
+    command: celery -A core.celery_app worker -Q notifications,default --loglevel=info
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings.development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9094
+      DYNAMODB_LOCAL: "true"
+      DYNAMODB_ENDPOINT: http://dynamodb-local:8000
+      UV_LINK_MODE: copy
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      dynamodb-local:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./services/core:/app
+    restart: unless-stopped
+
+  core-beat:
+    build:
+      context: ./services/core
+      dockerfile: Dockerfile.dev
+    container_name: kraivor-core-beat-dev
+    command: celery -A core.celery_app beat --loglevel=info
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings.development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9094
+      DYNAMODB_LOCAL: "true"
+      DYNAMODB_ENDPOINT: http://dynamodb-local:8000
+      UV_LINK_MODE: copy
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      dynamodb-local:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./services/core:/app
+    restart: unless-stopped
+
+  core-consumer:
+    build:
+      context: ./services/core
+      dockerfile: Dockerfile.dev
+    container_name: kraivor-core-consumer-dev
+    command: python manage.py consume_events
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings.development
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9094
+      DYNAMODB_LOCAL: "true"
+      DYNAMODB_ENDPOINT: http://dynamodb-local:8000
+      UV_LINK_MODE: copy
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      dynamodb-local:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./services/core:/app
+    restart: unless-stopped
 
 volumes:
   postgres_data_dev:
     name: kraivor_postgres_data_dev
+  kafka_data_dev:
+    name: kraivor_kafka_data_dev

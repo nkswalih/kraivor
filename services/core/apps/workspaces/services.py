@@ -444,6 +444,24 @@ class InvitationService:
             lambda: _dispatch_invitation_email(str(invitation.id))
         )
 
+        # ── Dispatch in-app notification (after commit) ──────────────────────
+        # Looks up the user by email via the Identity service. If the user
+        # exists, creates a Notification record + WebSocket push so the
+        # invitation appears in their inbox in real time.
+        _ws_name = workspace.name
+        _inv_email = invitation.email
+        _inv_role = invitation.role
+        _inviter_name = invitation.invited_by_name
+        transaction.on_commit(
+            lambda: _dispatch_invitation_notification(
+                workspace_name=_ws_name,
+                email=_inv_email,
+                role=_inv_role,
+                invited_by_name=_inviter_name,
+                invitation_token=str(invitation.token),
+            )
+        )
+
         return invitation
 
     @transaction.atomic
@@ -662,4 +680,81 @@ def _dispatch_member_removed_notification(
         logger.error(
             "task.dispatch.member_removed.failed",
             extra={"workspace_id": workspace_id, "removed_user_id": removed_user_id, "error": str(exc)},
+        )
+
+
+def _dispatch_invitation_notification(
+    workspace_name: str,
+    email: str,
+    role: str,
+    invited_by_name: str,
+    invitation_token: str,
+) -> None:
+    """
+    Resolve the invited email to a user via the Identity service and
+    dispatch an in-app notification so the invitation appears in real time.
+    This is best-effort: if the user has no account yet, the notification
+    is simply skipped (they'll receive the email instead).
+    """
+    import requests
+    from django.conf import settings
+
+    identity_url = getattr(
+        settings,
+        "IDENTITY_SERVICE_URL",
+        "http://identity:8001",
+    )
+    endpoint = f"{identity_url}/api/auth/internal/resolve-users/"
+
+    try:
+        response = requests.post(
+            endpoint,
+            json={"emails": [email]},
+            headers={settings.INTERNAL_REQUEST_HEADER: "1"},
+            timeout=5,
+        )
+    except requests.exceptions.RequestException as exc:
+        logger.warning(
+            "invitation.notification.resolve_failed",
+            extra={"email": email, "error": str(exc)},
+        )
+        return
+
+    if response.status_code != 200:
+        logger.warning(
+            "invitation.notification.resolve_error",
+            extra={"email": email, "status_code": response.status_code},
+        )
+        return
+
+    data = response.json()
+    users = data.get("users", {})
+    user_info = users.get(email)
+    if not user_info:
+        # User doesn't have an account yet — skip in-app notification
+        logger.debug(
+            "invitation.notification.user_not_found",
+            extra={"email": email},
+        )
+        return
+
+    user_id = user_info["id"]
+    try:
+        from apps.notifications.tasks import dispatch_notification
+
+        dispatch_notification.delay(
+            user_id=user_id,
+            notification_type="workspace.invitation",
+            title=f"You've been invited to {workspace_name}",
+            body=f"{invited_by_name or 'A team member'} invited you to {workspace_name} as {role}.",
+            link=f"/invitations/{invitation_token}",
+        )
+        logger.info(
+            "invitation.notification.dispatched",
+            extra={"user_id": user_id, "email": email, "workspace_name": workspace_name},
+        )
+    except Exception as exc:
+        logger.error(
+            "invitation.notification.dispatch_failed",
+            extra={"user_id": user_id, "email": email, "error": str(exc)},
         )     

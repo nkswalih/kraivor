@@ -1,7 +1,7 @@
 """
 Kafka consumer management command.
 
-Listens to external service events (analysis, ai) and dispatches
+Listens to external service events (analysis, ai, workspace) and dispatches
 Celery tasks for notification delivery.
 
 Usage:
@@ -10,9 +10,12 @@ Usage:
 Subscribes to topics:
     - analysis.events  (analysis.completed, analysis.failed)
     - ai.events        (ai.index.completed, ai.analysis.completed)
+    - workspace.events (workspace.member.invited)
 
-Events that Core publishes internally are NOT consumed here — they
-are dispatched directly via transaction.on_commit() in service code.
+Events that Core publishes internally via transaction.on_commit() are the
+primary delivery path. This Kafka consumer acts as a durable fallback —
+it catches events that may have been missed if the on_commit handler
+failed (e.g. Identity service was temporarily unreachable).
 """
 
 import json
@@ -20,6 +23,7 @@ import logging
 import signal
 import sys
 
+import requests
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
@@ -36,7 +40,13 @@ DISPATCH_TABLE: dict[str, str] = {
     "ai.analysis.completed": "notifications.tasks.dispatch_notification",
 }
 
-TOPICS = ["analysis.events", "ai.events"]
+# Workspace events are dispatched via a separate handler that
+# resolves email → user_id via the Identity service.
+WORKSPACE_EVENT_DISPATCH: dict[str, str] = {
+    "workspace.member.invited": "notifications.tasks.dispatch_notification",
+}
+
+TOPICS = ["analysis.events", "ai.events", "workspace.events"]
 POLL_TIMEOUT = 1.0
 _shutdown = False
 
@@ -79,6 +89,87 @@ def _dispatch_task(event_type: str, data: dict) -> None:
         actor_id=data.get("actor_id"),
     )
     logger.info("consumer.event.dispatched", extra={"event_type": event_type, "user_id": str(user_id)})
+
+
+def _dispatch_workspace_event(event_type: str, data: dict) -> None:
+    """
+    Dispatch a workspace event that needs email → user_id resolution.
+    Workspace events carry an email (not a user_id) because the invited
+    user may not have an account yet. This function resolves the email
+    via the Identity service's internal API before dispatching.
+    """
+    task_name = WORKSPACE_EVENT_DISPATCH.get(event_type)
+    if not task_name:
+        logger.debug("consumer.workspace_event.unknown_type", extra={"event_type": event_type})
+        return
+
+    email = data.get("email")
+    if not email:
+        logger.warning("consumer.workspace_event.no_email", extra={"event_type": event_type})
+        return
+
+    # Resolve email → user_id via Identity service
+    identity_url = getattr(settings, "IDENTITY_SERVICE_URL", "http://identity:8001")
+    endpoint = f"{identity_url}/api/auth/internal/resolve-users/"
+
+    try:
+        response = requests.post(
+            endpoint,
+            json={"emails": [email]},
+            headers={settings.INTERNAL_REQUEST_HEADER: "1"},
+            timeout=5,
+        )
+    except requests.exceptions.RequestException as exc:
+        logger.warning(
+            "consumer.workspace_event.resolve_failed",
+            extra={"event_type": event_type, "email": email, "error": str(exc)},
+        )
+        return
+
+    if response.status_code != 200:
+        logger.warning(
+            "consumer.workspace_event.resolve_error",
+            extra={"event_type": event_type, "email": email, "status_code": response.status_code},
+        )
+        return
+
+    result = response.json()
+    users = result.get("users", {})
+    user_info = users.get(email)
+    if not user_info:
+        logger.debug(
+            "consumer.workspace_event.user_not_found",
+            extra={"event_type": event_type, "email": email},
+        )
+        return
+
+    user_id = user_info["id"]
+    from celery import current_app
+    task = current_app.tasks.get(task_name)
+    if task is None:
+        logger.error("consumer.task.not_found", extra={"task_name": task_name})
+        return
+
+    workspace_name = data.get("workspace_name", "a workspace")
+    invited_by_name = data.get("invited_by_name", "A team member")
+    role = data.get("role", "member")
+    accept_url = data.get("accept_url", "")
+    # Extract token from accept_url: "https://kraivor.com/invitations/{token}"
+    token = accept_url.rstrip("/").split("/")[-1] if accept_url else ""
+
+    task.delay(
+        user_id=str(user_id),
+        notification_type=event_type,
+        title=f"You've been invited to {workspace_name}",
+        body=f"{invited_by_name} invited you to {workspace_name} as {role}.",
+        link=f"/invitations/{token}",
+        workspace_id=data.get("workspace_id"),
+        actor_id=data.get("actor_id"),
+    )
+    logger.info(
+        "consumer.workspace_event.dispatched",
+        extra={"event_type": event_type, "user_id": user_id, "email": email},
+    )
 
 
 def _build_title(event_type: str, data: dict) -> str:
@@ -189,7 +280,12 @@ class Command(BaseCommand):
                 "consumer.event.received",
                 extra={"topic": msg.topic(), "event_type": event_type},
             )
-            _dispatch_task(event_type, data)
+
+            # Route workspace events through the email-resolution handler
+            if event_type.startswith("workspace."):
+                _dispatch_workspace_event(event_type, data)
+            else:
+                _dispatch_task(event_type, data)
         except json.JSONDecodeError as exc:
             logger.error("consumer.event.decode_failed", extra={"error": str(exc)})
         except Exception as exc:

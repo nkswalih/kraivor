@@ -75,7 +75,7 @@ def dispatch_notification(
             "task.notification.create_failed",
             extra={"user_id": user_id, "error": str(exc)},
         )
-        raise self.retry(exc=exc, countdown=30 * (2 ** self.request.retries)) from exc
+        raise self.retry(exc=exc, countdown=30 * (2**self.request.retries)) from exc
 
     # ── 2. Broadcast via Channels ──────────────────────────────────────────
     try:

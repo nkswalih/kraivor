@@ -65,31 +65,46 @@ class TestBuildBody:
 class TestDispatchTask:
     def test_dispatches_known_event_with_user_id(self):
         mock_task = MagicMock()
-        with patch("celery.current_app.tasks", {"notifications.tasks.dispatch_notification": mock_task}):
-            _dispatch_task("analysis.completed", {
-                "user_id": "user-123",
-                "github_repo": "repo",
-            })
+        with patch(
+            "celery.current_app.tasks", {"notifications.tasks.dispatch_notification": mock_task}
+        ):
+            _dispatch_task(
+                "analysis.completed",
+                {
+                    "user_id": "user-123",
+                    "github_repo": "repo",
+                },
+            )
             mock_task.delay.assert_called_once()
 
     def test_dispatches_known_event_with_workspace_id_fallback(self):
         mock_task = MagicMock()
-        with patch("celery.current_app.tasks", {"notifications.tasks.dispatch_notification": mock_task}):
-            _dispatch_task("ai.index.completed", {
-                "workspace_id": "ws-456",
-                "github_repo": "repo",
-            })
+        with patch(
+            "celery.current_app.tasks", {"notifications.tasks.dispatch_notification": mock_task}
+        ):
+            _dispatch_task(
+                "ai.index.completed",
+                {
+                    "workspace_id": "ws-456",
+                    "github_repo": "repo",
+                },
+            )
             mock_task.delay.assert_called_once()
 
     def test_skips_unknown_event_type(self):
         mock_task = MagicMock()
-        with patch("celery.current_app.tasks", return_value={"notifications.tasks.dispatch_notification": mock_task}):
+        with patch(
+            "celery.current_app.tasks",
+            return_value={"notifications.tasks.dispatch_notification": mock_task},
+        ):
             _dispatch_task("unknown.event", {"user_id": "u-1"})
             mock_task.delay.assert_not_called()
 
     def test_skips_event_without_recipient(self):
         mock_task = MagicMock()
-        with patch("celery.current_app.tasks", {"notifications.tasks.dispatch_notification": mock_task}):
+        with patch(
+            "celery.current_app.tasks", {"notifications.tasks.dispatch_notification": mock_task}
+        ):
             _dispatch_task("analysis.completed", {})
             mock_task.delay.assert_not_called()
 
@@ -101,7 +116,11 @@ class TestDispatchTask:
 
 class TestCommand:
     def test_topics_constant(self):
-        assert TOPICS == ["analysis.events", "ai.events"]
+        assert TOPICS == [
+            "analysis.events",
+            "ai.events",
+            "workspace.events",
+        ]
 
     @override_settings(KAFKA_BOOTSTRAP_SERVERS="localhost:9092")
     def test_create_consumer_with_kafka_settings(self):
@@ -109,6 +128,7 @@ class TestCommand:
         mock_consumer.poll.side_effect = [None, KeyboardInterrupt]
         with patch("confluent_kafka.Consumer", return_value=mock_consumer):
             from django.core.management import call_command
+
             call_command("consume_events", "--poll-timeout", "0.1")
             mock_consumer.subscribe.assert_called_once()
             mock_consumer.close.assert_called_once()
@@ -119,6 +139,7 @@ class TestCommand:
         from io import StringIO
 
         from django.core.management import call_command
+
         with patch.dict("sys.modules", {"confluent_kafka": None}):
             err = StringIO()
             sys.stderr = err
@@ -131,28 +152,37 @@ class TestCommand:
     @override_settings(KAFKA_BOOTSTRAP_SERVERS="localhost:9092")
     def test_process_message_dispatches_event(self):
         from apps.notifications.management.commands.consume_events import Command
+
         cmd = Command()
         mock_msg = MagicMock()
-        mock_msg.value.return_value = json.dumps({
-            "event_type": "analysis.completed",
-            "data": {"user_id": "u-1", "github_repo": "repo"},
-        }).encode()
+        mock_msg.value.return_value = json.dumps(
+            {
+                "event_type": "analysis.completed",
+                "data": {"user_id": "u-1", "github_repo": "repo"},
+            }
+        ).encode()
         mock_msg.topic.return_value = "analysis.events"
-        with patch("apps.notifications.management.commands.consume_events._dispatch_task") as mock_dispatch:
+        with patch(
+            "apps.notifications.management.commands.consume_events._dispatch_task"
+        ) as mock_dispatch:
             cmd._process_message(mock_msg)
             mock_dispatch.assert_called_once()
 
     def test_process_message_with_null_value(self):
         from apps.notifications.management.commands.consume_events import Command
+
         cmd = Command()
         mock_msg = MagicMock()
         mock_msg.value.return_value = None
-        with patch("apps.notifications.management.commands.consume_events._dispatch_task") as mock_dispatch:
+        with patch(
+            "apps.notifications.management.commands.consume_events._dispatch_task"
+        ) as mock_dispatch:
             cmd._process_message(mock_msg)
             mock_dispatch.assert_not_called()
 
     def test_process_message_with_invalid_json(self):
         from apps.notifications.management.commands.consume_events import Command
+
         cmd = Command()
         mock_msg = MagicMock()
         mock_msg.value.return_value = b"not-json"
@@ -162,6 +192,7 @@ class TestCommand:
 
     def test_process_message_without_event_type(self):
         from apps.notifications.management.commands.consume_events import Command
+
         cmd = Command()
         mock_msg = MagicMock()
         mock_msg.value.return_value = json.dumps({"data": {}}).encode()
@@ -171,6 +202,7 @@ class TestCommand:
 
     def test_close_consumer(self):
         from apps.notifications.management.commands.consume_events import Command
+
         cmd = Command()
         mock_consumer = MagicMock()
         cmd._close(mock_consumer)
@@ -178,5 +210,6 @@ class TestCommand:
 
     def test_close_none_consumer(self):
         from apps.notifications.management.commands.consume_events import Command
+
         cmd = Command()
         cmd._close(None)

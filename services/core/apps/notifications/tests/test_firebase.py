@@ -7,12 +7,14 @@ class TestFirebaseInitialization:
     @override_settings(FIREBASE_CREDENTIALS_PATH=None)
     def test_init_without_credentials_returns_false(self):
         from apps.notifications.firebase import _initialize
+
         result = _initialize()
         assert result is False
 
     @override_settings(FIREBASE_CREDENTIALS_PATH="/fake/path.json")
     def test_init_with_invalid_credentials_returns_false(self):
         from apps.notifications.firebase import _initialize
+
         result = _initialize()
         assert result is False
 
@@ -23,6 +25,7 @@ class TestFirebaseInitialization:
             patch("firebase_admin.credentials.Certificate") as mock_cert,
         ):
             from apps.notifications.firebase import _initialize
+
             mock_cert.return_value = "fake-cred"
             result = _initialize()
             assert result is True
@@ -31,6 +34,7 @@ class TestFirebaseInitialization:
     @override_settings(FIREBASE_CREDENTIALS_PATH="/fake/path.json")
     def test_init_called_only_once(self):
         from apps.notifications.firebase import _initialize, _reset
+
         _reset()
         with (
             patch("firebase_admin.initialize_app") as mock_init,
@@ -46,6 +50,7 @@ class TestSendPushNotification:
     def test_send_without_init_falls_back_to_dev(self):
         with patch("apps.notifications.firebase._initialize", return_value=False):
             from apps.notifications.firebase import send_push_notification
+
             result = send_push_notification(
                 token="device-token",
                 title="Test",
@@ -61,6 +66,7 @@ class TestSendPushNotification:
             patch("firebase_admin.messaging.send", return_value="msg-id-1") as mock_send,
         ):
             from apps.notifications.firebase import send_push_notification
+
             result = send_push_notification(
                 token="device-token",
                 title="Test Title",
@@ -78,6 +84,7 @@ class TestSendPushNotification:
             patch("firebase_admin.messaging.send", side_effect=Exception("FCM error")),
         ):
             from apps.notifications.firebase import send_push_notification
+
             result = send_push_notification(
                 token="bad-token",
                 title="Fail",
@@ -94,6 +101,7 @@ class TestSendPushNotification:
             patch.object(mock_msg, "return_value", create=True),
         ):
             from apps.notifications.firebase import send_push_notification
+
             result = send_push_notification(
                 token="t",
                 title="T",

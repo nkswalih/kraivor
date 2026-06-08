@@ -47,6 +47,7 @@ def make_request(method: str, path: str, user_id: uuid.UUID, data=None):
 
 # ─── User IDs ─────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def owner_id() -> uuid.UUID:
     return uuid.uuid4()
@@ -74,6 +75,7 @@ def outsider_id() -> uuid.UUID:
 
 
 # ─── Workspace + members ──────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def workspace(owner_id) -> Workspace:
@@ -122,6 +124,7 @@ def viewer_member(workspace, viewer_id) -> WorkspaceMember:
 
 
 # ─── KnowledgeSpace ───────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def knowledge_space(workspace, owner_id) -> KnowledgeSpace:

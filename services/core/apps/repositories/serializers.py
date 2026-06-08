@@ -19,6 +19,7 @@ from .models import Repository
 
 # ─── Output Serializer ────────────────────────────────────────────────────────
 
+
 class RepositorySerializer(serializers.ModelSerializer):
     """
     Full repository representation returned by list and connect responses.
@@ -59,6 +60,7 @@ class RepositorySerializer(serializers.ModelSerializer):
 
 # ─── Input Serializer ─────────────────────────────────────────────────────────
 
+
 class RepositoryConnectSerializer(serializers.Serializer):
     """
     POST /workspaces/{id}/repos/
@@ -84,9 +86,7 @@ class RepositoryConnectSerializer(serializers.Serializer):
 
     # GitHub naming rules: letters, digits, hyphens, underscores, dots.
     # Owner and repo are separated by exactly one slash.
-    _GITHUB_REPO_RE = re.compile(
-        r"^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?/[a-zA-Z0-9._-]+$"
-    )
+    _GITHUB_REPO_RE = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?/[a-zA-Z0-9._-]+$")
 
     def validate_github_repo(self, value: str) -> str:
         value = value.strip()

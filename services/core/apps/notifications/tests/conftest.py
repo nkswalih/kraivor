@@ -29,6 +29,7 @@ def other_user_id():
 @pytest.fixture
 def notification(user_id, db):
     from apps.notifications.models import Notification
+
     return Notification.objects.create(
         user_id=user_id,
         notification_type="workspace.invitation",
@@ -41,6 +42,7 @@ def notification(user_id, db):
 @pytest.fixture
 def fcm_token(user_id, db):
     from apps.notifications.models import FCMToken
+
     return FCMToken.objects.create(
         user_id=user_id,
         token="test-fcm-token-12345",
@@ -51,6 +53,7 @@ def fcm_token(user_id, db):
 @pytest.fixture
 def api_request_factory():
     from rest_framework.test import APIRequestFactory
+
     return APIRequestFactory()
 
 
@@ -59,6 +62,7 @@ def workspace(db):
     import uuid
 
     from apps.workspaces.models import Workspace
+
     return Workspace.objects.create(
         owner_id=uuid.uuid4(),
         name="Test Workspace",

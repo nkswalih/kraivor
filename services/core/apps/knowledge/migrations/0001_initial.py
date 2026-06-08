@@ -7,31 +7,81 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('workspaces', '0001_initial'),
+        ("workspaces", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='KnowledgeSpace',
+            name="KnowledgeSpace",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('deleted_at', models.DateTimeField(blank=True, db_index=True, null=True)),
-                ('name', models.CharField(help_text="Human-readable name for this canvas (e.g. 'Authentication System').", max_length=255)),
-                ('description', models.TextField(blank=True, help_text='Optional description of the canvas purpose and scope.', max_length=1000, null=True)),
-                ('canvas_data', models.JSONField(blank=True, default=dict, help_text='Full infinite canvas state as an opaque JSONB blob. The backend stores and retrieves this field atomically; the frontend owns the shape and rendering.')),
-                ('created_by', models.UUIDField(db_index=True, help_text='identity.users.id of the user who created this canvas.')),
-                ('updated_by', models.UUIDField(blank=True, help_text='identity.users.id of the user who last updated this canvas. Null until the first update after creation.', null=True)),
-                ('workspace', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='knowledge_spaces', to='workspaces.workspace')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("deleted_at", models.DateTimeField(blank=True, db_index=True, null=True)),
+                (
+                    "name",
+                    models.CharField(
+                        help_text="Human-readable name for this canvas (e.g. 'Authentication System').",
+                        max_length=255,
+                    ),
+                ),
+                (
+                    "description",
+                    models.TextField(
+                        blank=True,
+                        help_text="Optional description of the canvas purpose and scope.",
+                        max_length=1000,
+                        null=True,
+                    ),
+                ),
+                (
+                    "canvas_data",
+                    models.JSONField(
+                        blank=True,
+                        default=dict,
+                        help_text="Full infinite canvas state as an opaque JSONB blob. The backend stores and retrieves this field atomically; the frontend owns the shape and rendering.",
+                    ),
+                ),
+                (
+                    "created_by",
+                    models.UUIDField(
+                        db_index=True,
+                        help_text="identity.users.id of the user who created this canvas.",
+                    ),
+                ),
+                (
+                    "updated_by",
+                    models.UUIDField(
+                        blank=True,
+                        help_text="identity.users.id of the user who last updated this canvas. Null until the first update after creation.",
+                        null=True,
+                    ),
+                ),
+                (
+                    "workspace",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="knowledge_spaces",
+                        to="workspaces.workspace",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'knowledge_spaces',
-                'indexes': [models.Index(fields=['workspace', 'deleted_at'], name='idx_ks_workspace_active'), models.Index(fields=['workspace', 'name'], name='idx_ks_workspace_name')],
+                "db_table": "knowledge_spaces",
+                "indexes": [
+                    models.Index(
+                        fields=["workspace", "deleted_at"], name="idx_ks_workspace_active"
+                    ),
+                    models.Index(fields=["workspace", "name"], name="idx_ks_workspace_name"),
+                ],
             },
         ),
     ]

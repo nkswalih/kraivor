@@ -32,7 +32,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self._add_presence()
 
         await self.accept()
-        logger.info("chat.connect.accepted", extra={"room_id": self.room_id, "user_id": self.user_id})
+        logger.info(
+            "chat.connect.accepted", extra={"room_id": self.room_id, "user_id": self.user_id}
+        )
 
     async def disconnect(self, close_code):
         # Remove from presence set
@@ -40,7 +42,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         # Leave room group
         await self.channel_layer.group_discard(self.room_group, self.channel_name)
-        logger.info("chat.disconnected", extra={"room_id": self.room_id, "user_id": self.user_id, "code": close_code})
+        logger.info(
+            "chat.disconnected",
+            extra={"room_id": self.room_id, "user_id": self.user_id, "code": close_code},
+        )
 
     async def receive(self, text_data):
         try:
@@ -66,33 +71,45 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def chat_message(self, event):
         """Broadcast chat message to room."""
-        await self.send(text_data=json.dumps({
-            "type": "message",
-            "message_id": event["message_id"],
-            "sender_id": event["sender_id"],
-            "sender_name": event["sender_name"],
-            "content": event["content"],
-            "content_type": event["content_type"],
-            "reply_to": event.get("reply_to", ""),
-            "mentions": event.get("mentions", []),
-            "created_at": event["created_at"],
-        }))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "message",
+                    "message_id": event["message_id"],
+                    "sender_id": event["sender_id"],
+                    "sender_name": event["sender_name"],
+                    "content": event["content"],
+                    "content_type": event["content_type"],
+                    "reply_to": event.get("reply_to", ""),
+                    "mentions": event.get("mentions", []),
+                    "created_at": event["created_at"],
+                }
+            )
+        )
 
     async def typing_event(self, event):
         """Broadcast typing indicator."""
-        await self.send(text_data=json.dumps({
-            "type": event["event_type"],
-            "user_id": event["user_id"],
-            "user_name": event["user_name"],
-        }))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": event["event_type"],
+                    "user_id": event["user_id"],
+                    "user_name": event["user_name"],
+                }
+            )
+        )
 
     async def presence_update(self, event):
         """Broadcast presence change."""
-        await self.send(text_data=json.dumps({
-            "type": "presence",
-            "user_id": event["user_id"],
-            "status": event["status"],
-        }))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "presence",
+                    "user_id": event["user_id"],
+                    "status": event["status"],
+                }
+            )
+        )
 
     async def _handle_message(self, data):
         content = data.get("content", "").strip()
@@ -143,7 +160,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 room_id=self.room_id,
                 message_id=message_id,
                 content=content,
-                workspace_id=self.scope.get("workspace_ids", [None])[0] if self.scope.get("workspace_ids") else "",
+                workspace_id=self.scope.get("workspace_ids", [None])[0]
+                if self.scope.get("workspace_ids")
+                else "",
             )
 
     async def _handle_typing(self, data, event_type):
@@ -248,17 +267,21 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
     async def send_notification(self, event):
         """Send notification payload to the client."""
-        await self.send(text_data=json.dumps({
-            "type": "notification",
-            "id": event["id"],
-            "notification_type": event["notification_type"],
-            "title": event["title"],
-            "body": event["body"],
-            "link": event.get("link", ""),
-            "workspace_id": event.get("workspace_id", ""),
-            "actor_id": event.get("actor_id", ""),
-            "created_at": event["created_at"],
-        }))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "notification",
+                    "id": event["id"],
+                    "notification_type": event["notification_type"],
+                    "title": event["title"],
+                    "body": event["body"],
+                    "link": event.get("link", ""),
+                    "workspace_id": event.get("workspace_id", ""),
+                    "actor_id": event.get("actor_id", ""),
+                    "created_at": event["created_at"],
+                }
+            )
+        )
 
     @database_sync_to_async
     def _mark_read(self, notification_id):

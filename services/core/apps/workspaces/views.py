@@ -85,6 +85,7 @@ def _resolve_member_users(member_data: list[dict]) -> dict[str, dict]:
 
 class WorkspaceCursorPagination(CursorPagination):
     """Stable cursor pagination — safe during concurrent workspace creation."""
+
     page_size = 20
     page_size_query_param = "page_size"
     max_page_size = 100
@@ -92,6 +93,7 @@ class WorkspaceCursorPagination(CursorPagination):
 
 
 # ─── Mixins ───────────────────────────────────────────────────────────────────
+
 
 class WorkspaceContextMixin:
     """
@@ -126,13 +128,16 @@ class WorkspaceContextMixin:
         user_id = self._get_user_id()
 
         workspace = (
-            Workspace.objects
-            .filter(id=workspace_id)
-            .annotate(active_member_count=Count("members", filter=Q(members__deleted_at__isnull=True)))
+            Workspace.objects.filter(id=workspace_id)
+            .annotate(
+                active_member_count=Count("members", filter=Q(members__deleted_at__isnull=True))
+            )
             .prefetch_related(
                 Prefetch(
                     "members",
-                    queryset=WorkspaceMember.objects.filter(deleted_at__isnull=True).order_by("joined_at"),
+                    queryset=WorkspaceMember.objects.filter(deleted_at__isnull=True).order_by(
+                        "joined_at"
+                    ),
                 )
             )
             .first()
@@ -145,6 +150,7 @@ class WorkspaceContextMixin:
 
 
 # ─── Workspace ViewSet (KRV-019) ──────────────────────────────────────────────
+
 
 class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
     """
@@ -168,9 +174,10 @@ class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
         ).values_list("workspace_id", flat=True)
 
         workspaces = (
-            Workspace.objects
-            .filter(id__in=member_workspace_ids)
-            .annotate(active_member_count=Count("members", filter=Q(members__deleted_at__isnull=True)))
+            Workspace.objects.filter(id__in=member_workspace_ids)
+            .annotate(
+                active_member_count=Count("members", filter=Q(members__deleted_at__isnull=True))
+            )
             .order_by("-created_at")
         )
 
@@ -198,12 +205,16 @@ class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
             raise ValidationError({"detail": str(exc)}) from exc
 
         from django.db.models import Q
+
         workspace = (
-            Workspace.objects
-            .filter(id=workspace.id)
-            .annotate(active_member_count=Count("members", filter=Q(members__deleted_at__isnull=True)))
+            Workspace.objects.filter(id=workspace.id)
+            .annotate(
+                active_member_count=Count("members", filter=Q(members__deleted_at__isnull=True))
+            )
             .prefetch_related(
-                Prefetch("members", queryset=WorkspaceMember.objects.filter(deleted_at__isnull=True))
+                Prefetch(
+                    "members", queryset=WorkspaceMember.objects.filter(deleted_at__isnull=True)
+                )
             )
             .first()
         )
@@ -246,6 +257,7 @@ class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
 
 # ─── Member ViewSet (KRV-020) ─────────────────────────────────────────────────
 
+
 class WorkspaceMemberViewSet(WorkspaceContextMixin, ViewSet):
     """
     Member management endpoints nested under workspaces.
@@ -269,10 +281,8 @@ class WorkspaceMemberViewSet(WorkspaceContextMixin, ViewSet):
         Includes resolved user info (name, email) via the Identity service.
         """
         workspace = self._get_workspace_or_404(workspace_pk)
-        members = (
-            workspace.members
-            .filter(deleted_at__isnull=True)
-            .order_by("joined_at", "created_at")
+        members = workspace.members.filter(deleted_at__isnull=True).order_by(
+            "joined_at", "created_at"
         )
         data = WorkspaceMemberSerializer(members, many=True).data
         resolved = _resolve_member_users(data)
@@ -391,6 +401,7 @@ class WorkspaceMemberViewSet(WorkspaceContextMixin, ViewSet):
 
 # ─── Invitation Admin Views ───────────────────────────────────────────────────
 
+
 class WorkspaceInvitationListView(WorkspaceContextMixin, APIView):
     """
     GET /workspace/workspaces/{workspace_pk}/invitations/
@@ -452,6 +463,7 @@ class InvitationRevokeView(WorkspaceContextMixin, APIView):
 
 
 # ─── Invitation Accept View (KRV-020) ─────────────────────────────────────────
+
 
 class InvitationAcceptView(APIView):
     """

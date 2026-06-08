@@ -92,6 +92,7 @@ class TestDispatchNotificationTask:
         with patch("apps.notifications.models.Notification.objects.create") as mock_create:
             mock_create.side_effect = Exception("DB error")
             from celery.exceptions import MaxRetriesExceededError
+
             try:
                 dispatch_notification(
                     user_id=str(user_id),
@@ -140,11 +141,15 @@ class TestSweepStalePresenceTask:
         assert result["status"] in ("skipped", "completed")
 
     def test_sweep_with_mock_redis(self, db):
-        mock_redis = type("MockRedis", (), {
-            "scan_iter": lambda self, **kw: iter(["presence:user:1", "presence:user:2"]),
-            "ttl": lambda self, key: -1,
-            "delete": lambda self, key: None,
-        })()
+        mock_redis = type(
+            "MockRedis",
+            (),
+            {
+                "scan_iter": lambda self, **kw: iter(["presence:user:1", "presence:user:2"]),
+                "ttl": lambda self, key: -1,
+                "delete": lambda self, key: None,
+            },
+        )()
         with patch("core.infrastructure.redis.get_redis", return_value=mock_redis):
             result = sweep_stale_presence()
             assert result["status"] == "completed"

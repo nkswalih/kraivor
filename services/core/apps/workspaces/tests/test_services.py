@@ -41,7 +41,8 @@ class TestCreateWorkspace:
             slug="event-test",
         )
         mock_event_publisher.workspace_created.assert_called_once_with(
-            workspace=ws, actor_id=owner_id,
+            workspace=ws,
+            actor_id=owner_id,
         )
 
     def test_creates_with_optional_fields(self, db, mock_event_publisher):
@@ -109,7 +110,9 @@ class TestDeleteWorkspace:
         assert workspace.deleted_at is not None
         assert workspace.is_deleted
 
-    def test_soft_deletes_all_members(self, workspace, owner_member, admin_member, db, mock_event_publisher):
+    def test_soft_deletes_all_members(
+        self, workspace, owner_member, admin_member, db, mock_event_publisher
+    ):
         service = WorkspaceService(event_publisher=mock_event_publisher)
         service.delete_workspace(workspace=workspace, actor_id=workspace.owner_id)
         admin_member.refresh_from_db()
@@ -124,7 +127,8 @@ class TestDeleteWorkspace:
         service = WorkspaceService(event_publisher=mock_event_publisher)
         service.delete_workspace(workspace=workspace, actor_id=workspace.owner_id)
         mock_event_publisher.workspace_deleted.assert_called_once_with(
-            workspace=workspace, actor_id=workspace.owner_id,
+            workspace=workspace,
+            actor_id=workspace.owner_id,
         )
 
 
@@ -162,7 +166,9 @@ class TestAddMember:
                 role=WorkspaceRole.OWNER,
             )
 
-    def test_raises_for_duplicate_active_member(self, workspace, admin_member, regular_member, db, mock_event_publisher):
+    def test_raises_for_duplicate_active_member(
+        self, workspace, admin_member, regular_member, db, mock_event_publisher
+    ):
         service = WorkspaceService(event_publisher=mock_event_publisher)
         with pytest.raises(WorkspaceServiceError, match="already a member"):
             service.add_member(
@@ -224,7 +230,9 @@ class TestAddMember:
 
 
 class TestUpdateMemberRole:
-    def test_admin_can_update_member_role(self, workspace, admin_member, regular_member, db, mock_event_publisher):
+    def test_admin_can_update_member_role(
+        self, workspace, admin_member, regular_member, db, mock_event_publisher
+    ):
         service = WorkspaceService(event_publisher=mock_event_publisher)
         updated = service.update_member_role(
             workspace=workspace,
@@ -244,7 +252,9 @@ class TestUpdateMemberRole:
                 new_role=WorkspaceRole.VIEWER,
             )
 
-    def test_raises_for_owner_role_assignment(self, workspace, admin_member, regular_member, db, mock_event_publisher):
+    def test_raises_for_owner_role_assignment(
+        self, workspace, admin_member, regular_member, db, mock_event_publisher
+    ):
         service = WorkspaceService(event_publisher=mock_event_publisher)
         with pytest.raises(WorkspacePermissionError, match="owner"):
             service.update_member_role(
@@ -254,7 +264,9 @@ class TestUpdateMemberRole:
                 new_role=WorkspaceRole.OWNER,
             )
 
-    def test_raises_for_non_existent_target(self, workspace, admin_member, db, mock_event_publisher):
+    def test_raises_for_non_existent_target(
+        self, workspace, admin_member, db, mock_event_publisher
+    ):
         service = WorkspaceService(event_publisher=mock_event_publisher)
         with pytest.raises(WorkspaceNotFoundError, match="not a member"):
             service.update_member_role(
@@ -264,7 +276,9 @@ class TestUpdateMemberRole:
                 new_role=WorkspaceRole.VIEWER,
             )
 
-    def test_raises_when_changing_owner_role(self, workspace, owner_member, admin_member, db, mock_event_publisher):
+    def test_raises_when_changing_owner_role(
+        self, workspace, owner_member, admin_member, db, mock_event_publisher
+    ):
         service = WorkspaceService(event_publisher=mock_event_publisher)
         with pytest.raises(WorkspacePermissionError, match="owner"):
             service.update_member_role(
@@ -296,7 +310,9 @@ class TestUpdateMemberRole:
                 new_role=WorkspaceRole.MEMBER,
             )
 
-    def test_owner_can_change_admin_role(self, workspace, owner_member, admin_member, db, mock_event_publisher):
+    def test_owner_can_change_admin_role(
+        self, workspace, owner_member, admin_member, db, mock_event_publisher
+    ):
         service = WorkspaceService(event_publisher=mock_event_publisher)
         updated = service.update_member_role(
             workspace=workspace,
@@ -318,7 +334,9 @@ class TestRemoveMember:
         regular_member.refresh_from_db()
         assert regular_member.deleted_at is not None
 
-    def test_admin_can_remove_member(self, workspace, admin_member, regular_member, db, mock_event_publisher):
+    def test_admin_can_remove_member(
+        self, workspace, admin_member, regular_member, db, mock_event_publisher
+    ):
         service = WorkspaceService(event_publisher=mock_event_publisher)
         service.remove_member(
             workspace=workspace,
@@ -328,7 +346,9 @@ class TestRemoveMember:
         regular_member.refresh_from_db()
         assert regular_member.deleted_at is not None
 
-    def test_raises_for_non_existent_member(self, workspace, admin_member, db, mock_event_publisher):
+    def test_raises_for_non_existent_member(
+        self, workspace, admin_member, db, mock_event_publisher
+    ):
         service = WorkspaceService(event_publisher=mock_event_publisher)
         with pytest.raises(WorkspaceNotFoundError, match="not a member"):
             service.remove_member(
@@ -337,7 +357,9 @@ class TestRemoveMember:
                 target_user_id=uuid.uuid4(),
             )
 
-    def test_raises_when_removing_owner(self, workspace, owner_member, admin_member, db, mock_event_publisher):
+    def test_raises_when_removing_owner(
+        self, workspace, owner_member, admin_member, db, mock_event_publisher
+    ):
         service = WorkspaceService(event_publisher=mock_event_publisher)
         with pytest.raises(WorkspacePermissionError, match="owner cannot be removed"):
             service.remove_member(
@@ -367,7 +389,9 @@ class TestRemoveMember:
                 target_user_id=admin2.user_id,
             )
 
-    def test_owner_can_remove_admin(self, workspace, owner_member, admin_member, db, mock_event_publisher):
+    def test_owner_can_remove_admin(
+        self, workspace, owner_member, admin_member, db, mock_event_publisher
+    ):
         service = WorkspaceService(event_publisher=mock_event_publisher)
         service.remove_member(
             workspace=workspace,
@@ -377,7 +401,9 @@ class TestRemoveMember:
         admin_member.refresh_from_db()
         assert admin_member.deleted_at is not None
 
-    def test_raises_for_non_admin_removing_others(self, workspace, regular_member, db, mock_event_publisher):
+    def test_raises_for_non_admin_removing_others(
+        self, workspace, regular_member, db, mock_event_publisher
+    ):
         other = WorkspaceMember.objects.create(
             workspace=workspace,
             user_id=uuid.uuid4(),

@@ -14,8 +14,8 @@ from apps.repositories.serializers import RepositoryConnectSerializer, Repositor
 
 # ─── RepositoryConnectSerializer ─────────────────────────────────────────────
 
-class TestRepositoryConnectSerializer:
 
+class TestRepositoryConnectSerializer:
     def test_valid_owner_slash_repo(self):
         s = RepositoryConnectSerializer(data={"github_repo": "acme/api"})
         assert s.is_valid(), s.errors
@@ -71,16 +71,27 @@ class TestRepositoryConnectSerializer:
 
 # ─── RepositorySerializer ─────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestRepositorySerializer:
-
     def test_output_contains_all_expected_fields(self, repository):
         data = RepositorySerializer(repository).data
         expected_fields = {
-            "id", "workspace_id", "github_repo", "github_id",
-            "default_branch", "language", "description", "is_private",
-            "last_analyzed_at", "last_analysis_score", "indexed",
-            "connected_by_id", "status", "created_at", "updated_at",
+            "id",
+            "workspace_id",
+            "github_repo",
+            "github_id",
+            "default_branch",
+            "language",
+            "description",
+            "is_private",
+            "last_analyzed_at",
+            "last_analysis_score",
+            "indexed",
+            "connected_by_id",
+            "status",
+            "created_at",
+            "updated_at",
         }
         assert set(data.keys()) == expected_fields
 

@@ -9,73 +9,242 @@ import apps.workspaces.models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Workspace',
+            name="Workspace",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('deleted_at', models.DateTimeField(blank=True, db_index=True, null=True)),
-                ('name', models.CharField(max_length=255)),
-                ('slug', models.SlugField(help_text='URL-safe unique identifier. Immutable after creation.', max_length=100, unique=True)),
-                ('owner_id', models.UUIDField(db_index=True, help_text='identity.users.id — denormalized for query efficiency.')),
-                ('plan', models.CharField(choices=[('free', 'Free'), ('pro', 'Pro'), ('team', 'Team'), ('enterprise', 'Enterprise')], db_index=True, default='free', max_length=20)),
-                ('settings', models.JSONField(blank=True, default=dict, help_text='Workspace-scoped feature flags and preferences.')),
-                ('avatar_url', models.URLField(blank=True, null=True)),
-                ('description', models.TextField(blank=True, max_length=500, null=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("deleted_at", models.DateTimeField(blank=True, db_index=True, null=True)),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "slug",
+                    models.SlugField(
+                        help_text="URL-safe unique identifier. Immutable after creation.",
+                        max_length=100,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "owner_id",
+                    models.UUIDField(
+                        db_index=True,
+                        help_text="identity.users.id — denormalized for query efficiency.",
+                    ),
+                ),
+                (
+                    "plan",
+                    models.CharField(
+                        choices=[
+                            ("free", "Free"),
+                            ("pro", "Pro"),
+                            ("team", "Team"),
+                            ("enterprise", "Enterprise"),
+                        ],
+                        db_index=True,
+                        default="free",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "settings",
+                    models.JSONField(
+                        blank=True,
+                        default=dict,
+                        help_text="Workspace-scoped feature flags and preferences.",
+                    ),
+                ),
+                ("avatar_url", models.URLField(blank=True, null=True)),
+                ("description", models.TextField(blank=True, max_length=500, null=True)),
             ],
             options={
-                'db_table': 'workspaces',
-                'indexes': [models.Index(fields=['owner_id', 'deleted_at'], name='idx_workspaces_owner_active'), models.Index(fields=['plan', 'deleted_at'], name='idx_workspaces_plan_active')],
+                "db_table": "workspaces",
+                "indexes": [
+                    models.Index(
+                        fields=["owner_id", "deleted_at"], name="idx_workspaces_owner_active"
+                    ),
+                    models.Index(fields=["plan", "deleted_at"], name="idx_workspaces_plan_active"),
+                ],
             },
         ),
         migrations.CreateModel(
-            name='WorkspaceInvitation',
+            name="WorkspaceInvitation",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('deleted_at', models.DateTimeField(blank=True, db_index=True, null=True)),
-                ('email', models.EmailField(db_index=True, help_text='Invited email address. May or may not have a Kraivor account.', max_length=254)),
-                ('role', models.CharField(choices=[('admin', 'Admin'), ('member', 'Member'), ('viewer', 'Viewer')], default='member', help_text='Role the invitee will receive upon acceptance.', max_length=20)),
-                ('token', models.CharField(db_index=True, default=apps.workspaces.models._default_token, help_text='Secure random URL token. Unique, one-time use.', max_length=128, unique=True)),
-                ('invited_by_id', models.UUIDField(db_index=True, help_text='identity.users.id of the user who sent the invitation.')),
-                ('invited_by_name', models.CharField(blank=True, default='', help_text='Denormalized inviter display name for email rendering.', max_length=255)),
-                ('expires_at', models.DateTimeField(db_index=True, default=apps.workspaces.models._default_expiry, help_text='Invitation expires after this time. Default: 48 hours from creation.')),
-                ('accepted_at', models.DateTimeField(blank=True, db_index=True, help_text='Set when the invitation is accepted. Null = pending.', null=True)),
-                ('email_sent_at', models.DateTimeField(blank=True, help_text='When the invitation email was successfully sent.', null=True)),
-                ('workspace', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='invitations', to='workspaces.workspace')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("deleted_at", models.DateTimeField(blank=True, db_index=True, null=True)),
+                (
+                    "email",
+                    models.EmailField(
+                        db_index=True,
+                        help_text="Invited email address. May or may not have a Kraivor account.",
+                        max_length=254,
+                    ),
+                ),
+                (
+                    "role",
+                    models.CharField(
+                        choices=[("admin", "Admin"), ("member", "Member"), ("viewer", "Viewer")],
+                        default="member",
+                        help_text="Role the invitee will receive upon acceptance.",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "token",
+                    models.CharField(
+                        db_index=True,
+                        default=apps.workspaces.models._default_token,
+                        help_text="Secure random URL token. Unique, one-time use.",
+                        max_length=128,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "invited_by_id",
+                    models.UUIDField(
+                        db_index=True,
+                        help_text="identity.users.id of the user who sent the invitation.",
+                    ),
+                ),
+                (
+                    "invited_by_name",
+                    models.CharField(
+                        blank=True,
+                        default="",
+                        help_text="Denormalized inviter display name for email rendering.",
+                        max_length=255,
+                    ),
+                ),
+                (
+                    "expires_at",
+                    models.DateTimeField(
+                        db_index=True,
+                        default=apps.workspaces.models._default_expiry,
+                        help_text="Invitation expires after this time. Default: 48 hours from creation.",
+                    ),
+                ),
+                (
+                    "accepted_at",
+                    models.DateTimeField(
+                        blank=True,
+                        db_index=True,
+                        help_text="Set when the invitation is accepted. Null = pending.",
+                        null=True,
+                    ),
+                ),
+                (
+                    "email_sent_at",
+                    models.DateTimeField(
+                        blank=True,
+                        help_text="When the invitation email was successfully sent.",
+                        null=True,
+                    ),
+                ),
+                (
+                    "workspace",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="invitations",
+                        to="workspaces.workspace",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'workspace_invitations',
-                'indexes': [models.Index(fields=['workspace', 'email', 'accepted_at'], name='idx_inv_ws_email'), models.Index(fields=['token', 'accepted_at'], name='idx_inv_token_acc'), models.Index(fields=['workspace', 'expires_at', 'accepted_at'], name='idx_invitations_pending')],
+                "db_table": "workspace_invitations",
+                "indexes": [
+                    models.Index(
+                        fields=["workspace", "email", "accepted_at"], name="idx_inv_ws_email"
+                    ),
+                    models.Index(fields=["token", "accepted_at"], name="idx_inv_token_acc"),
+                    models.Index(
+                        fields=["workspace", "expires_at", "accepted_at"],
+                        name="idx_invitations_pending",
+                    ),
+                ],
             },
         ),
         migrations.CreateModel(
-            name='WorkspaceMember',
+            name="WorkspaceMember",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('deleted_at', models.DateTimeField(blank=True, db_index=True, null=True)),
-                ('user_id', models.UUIDField(db_index=True, help_text='identity.users.id — cross-service ref, no DB FK.')),
-                ('role', models.CharField(choices=[('owner', 'Owner'), ('admin', 'Admin'), ('member', 'Member'), ('viewer', 'Viewer')], db_index=True, default='member', max_length=20)),
-                ('joined_at', models.DateTimeField(blank=True, help_text='When the user accepted the invitation. Null for direct adds.', null=True)),
-                ('invited_by_id', models.UUIDField(blank=True, help_text='identity.users.id of the inviter. Audit trail.', null=True)),
-                ('workspace', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='members', to='workspaces.workspace')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("deleted_at", models.DateTimeField(blank=True, db_index=True, null=True)),
+                (
+                    "user_id",
+                    models.UUIDField(
+                        db_index=True, help_text="identity.users.id — cross-service ref, no DB FK."
+                    ),
+                ),
+                (
+                    "role",
+                    models.CharField(
+                        choices=[
+                            ("owner", "Owner"),
+                            ("admin", "Admin"),
+                            ("member", "Member"),
+                            ("viewer", "Viewer"),
+                        ],
+                        db_index=True,
+                        default="member",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "joined_at",
+                    models.DateTimeField(
+                        blank=True,
+                        help_text="When the user accepted the invitation. Null for direct adds.",
+                        null=True,
+                    ),
+                ),
+                (
+                    "invited_by_id",
+                    models.UUIDField(
+                        blank=True,
+                        help_text="identity.users.id of the inviter. Audit trail.",
+                        null=True,
+                    ),
+                ),
+                (
+                    "workspace",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="members",
+                        to="workspaces.workspace",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'workspace_members',
-                'default_manager_name': 'objects',
-                'indexes': [models.Index(fields=['user_id', 'deleted_at'], name='idx_members_user_active'), models.Index(fields=['workspace', 'role'], name='idx_members_workspace_role')],
-                'unique_together': {('workspace', 'user_id')},
+                "db_table": "workspace_members",
+                "default_manager_name": "objects",
+                "indexes": [
+                    models.Index(fields=["user_id", "deleted_at"], name="idx_members_user_active"),
+                    models.Index(fields=["workspace", "role"], name="idx_members_workspace_role"),
+                ],
+                "unique_together": {("workspace", "user_id")},
             },
         ),
     ]

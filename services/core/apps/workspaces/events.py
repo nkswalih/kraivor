@@ -75,6 +75,7 @@ class WorkspaceEventPublisher:
     def _get_producer(self):
         try:
             from core.infrastructure.kafka import get_producer
+
             return get_producer()
         except (ImportError, Exception) as exc:
             logger.warning("kafka.producer.unavailable", extra={"reason": str(exc)})

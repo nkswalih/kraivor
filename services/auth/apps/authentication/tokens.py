@@ -378,6 +378,7 @@ class CustomRefreshToken(RefreshToken):
     def for_user(cls, user, device_id: str = ""):
         token = super().for_user(user)
         token["name"] = user.name
+        token["email"] = user.email
         if device_id:
             token["device_id"] = device_id
         token["token_id"] = _generate_token_id()

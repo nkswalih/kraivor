@@ -1,5 +1,7 @@
 import logging
+import uuid
 
+from django.conf import settings
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -216,3 +218,96 @@ class UserProfileView(APIView):
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+
+class ResolveUsersView(APIView):
+    """
+    POST /api/auth/internal/resolve-users/
+
+    Internal endpoint. Resolves email addresses to user IDs.
+    Used by Core service to find users when dispatching notifications.
+
+    Request:
+      {"emails": ["user@example.com", "other@example.com"]}
+
+    Response:
+      {"users": {"user@example.com": {"id": "uuid", "name": "User Name"}}}
+
+    Security:
+      - Requires X-Internal-Request: 1 header
+      - Only returns data for active, verified users
+      - Not exposed to external clients
+    """
+
+    permission_classes = []
+
+    def post(self, request):
+        internal_header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
+        if request.headers.get(internal_header) != "1":
+            return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+
+        emails = request.data.get("emails", [])
+        if not isinstance(emails, list) or not emails:
+            return Response({"users": {}}, status=status.HTTP_200_OK)
+
+        users = User.objects.filter(
+            email__in=[e.strip().lower() for e in emails],
+            is_active=True,
+            email_verified=True,
+        )
+
+        result = {
+            user.email: {"id": str(user.id), "name": user.name}
+            for user in users
+        }
+
+        return Response({"users": result})
+
+
+class ResolveUsersByIdView(APIView):
+    """
+    POST /api/auth/internal/resolve-users-by-id/
+
+    Internal endpoint. Resolves user IDs to user info (name, email, avatar_url).
+    Used by Core service to enrich member lists with display names.
+
+    Request:
+      {"user_ids": ["uuid1", "uuid2"]}
+
+    Response:
+      {"users": {"uuid1": {"id": "uuid1", "name": "User Name", "email": "user@example.com", "avatar_url": null}}}
+
+    Security:
+      - Requires X-Internal-Request: 1 header
+      - Only returns data for active, verified users
+      - Not exposed to external clients
+    """
+
+    permission_classes = []
+
+    def post(self, request):
+        internal_header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
+        if request.headers.get(internal_header) != "1":
+            return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+
+        user_ids = request.data.get("user_ids", [])
+        if not isinstance(user_ids, list) or not user_ids:
+            return Response({"users": {}}, status=status.HTTP_200_OK)
+
+        users = User.objects.filter(
+            id__in=[uuid.UUID(uid) for uid in user_ids if uid],
+            is_active=True,
+            email_verified=True,
+        )
+
+        result = {
+            str(user.id): {
+                "id": str(user.id),
+                "name": user.name,
+                "email": user.email,
+                "avatar_url": None,
+            }
+            for user in users
+        }
+
+        return Response({"users": result})

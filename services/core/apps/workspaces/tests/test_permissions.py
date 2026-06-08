@@ -53,7 +53,9 @@ class TestIsWorkspaceMember:
         perm = IsWorkspaceMember()
         assert not perm.has_object_permission(request, None, workspace)
 
-    def test_has_object_permission_accepts_workspace_member_object(self, workspace, owner_member, db):
+    def test_has_object_permission_accepts_workspace_member_object(
+        self, workspace, owner_member, db
+    ):
         request = RequestFactory().get("/")
         request.user_id = workspace.owner_id
         perm = IsWorkspaceMember()
@@ -101,7 +103,9 @@ class TestIsWorkspaceAdmin:
         perm = IsWorkspaceAdmin()
         assert not perm.has_object_permission(request, None, workspace)
 
-    def test_has_object_permission_accepts_workspace_member_object(self, workspace, admin_member, db):
+    def test_has_object_permission_accepts_workspace_member_object(
+        self, workspace, admin_member, db
+    ):
         request = RequestFactory().get("/")
         request.user_id = admin_member.user_id
         perm = IsWorkspaceAdmin()
@@ -136,7 +140,9 @@ class TestIsWorkspaceOwner:
         perm = IsWorkspaceOwner()
         assert not perm.has_object_permission(request, None, workspace)
 
-    def test_has_object_permission_returns_true_for_owner_with_member_object(self, workspace, owner_member, db):
+    def test_has_object_permission_returns_true_for_owner_with_member_object(
+        self, workspace, owner_member, db
+    ):
         request = RequestFactory().get("/")
         request.user_id = workspace.owner_id
         perm = IsWorkspaceOwner()

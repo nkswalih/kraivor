@@ -20,7 +20,6 @@ from apps.workspaces.models import Workspace
 
 @pytest.mark.django_db
 class TestRepositoryModel:
-
     # ── Creation defaults ─────────────────────────────────────────────────────
 
     def test_creates_with_uuid_pk(self, repository):
@@ -87,7 +86,7 @@ class TestRepositoryModel:
         with pytest.raises(IntegrityError):
             Repository.objects.create(
                 workspace=workspace,
-                github_repo="acme/api-fork",   # different name, same github_id
+                github_repo="acme/api-fork",  # different name, same github_id
                 github_id=repository.github_id,
                 connected_by_id=owner_id,
             )

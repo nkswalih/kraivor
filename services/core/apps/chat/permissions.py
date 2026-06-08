@@ -37,7 +37,9 @@ class CanDeleteMessage(BasePermission):
         if not user_id:
             return False
 
-        sender_id = obj.get("sender_id") if isinstance(obj, dict) else getattr(obj, "sender_id", None)
+        sender_id = (
+            obj.get("sender_id") if isinstance(obj, dict) else getattr(obj, "sender_id", None)
+        )
         if sender_id == user_id:
             return True
 

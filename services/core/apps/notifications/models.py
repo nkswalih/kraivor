@@ -65,7 +65,9 @@ class FCMToken(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user_id = models.UUIDField(db_index=True)
     token = models.TextField()
-    platform = models.CharField(max_length=20, choices=[("ios", "iOS"), ("android", "Android"), ("web", "Web")])
+    platform = models.CharField(
+        max_length=20, choices=[("ios", "iOS"), ("android", "Android"), ("web", "Web")]
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

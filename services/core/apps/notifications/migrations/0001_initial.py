@@ -7,52 +7,100 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('workspaces', '0001_initial'),
+        ("workspaces", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='FCMToken',
+            name="FCMToken",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('user_id', models.UUIDField(db_index=True)),
-                ('token', models.TextField()),
-                ('platform', models.CharField(choices=[('ios', 'iOS'), ('android', 'Android'), ('web', 'Web')], max_length=20)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("user_id", models.UUIDField(db_index=True)),
+                ("token", models.TextField()),
+                (
+                    "platform",
+                    models.CharField(
+                        choices=[("ios", "iOS"), ("android", "Android"), ("web", "Web")],
+                        max_length=20,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'verbose_name': 'FCM Token',
-                'verbose_name_plural': 'FCM Tokens',
-                'db_table': 'fcm_tokens',
-                'unique_together': {('user_id', 'token')},
+                "verbose_name": "FCM Token",
+                "verbose_name_plural": "FCM Tokens",
+                "db_table": "fcm_tokens",
+                "unique_together": {("user_id", "token")},
             },
         ),
         migrations.CreateModel(
-            name='Notification',
+            name="Notification",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('user_id', models.UUIDField(db_index=True)),
-                ('notification_type', models.CharField(choices=[('workspace.invitation', 'Workspace Invitation'), ('workspace.member.joined', 'Member Joined'), ('workspace.member.removed', 'Member Removed'), ('workspace.member.role_changed', 'Role Changed'), ('analysis.completed', 'Analysis Completed'), ('analysis.failed', 'Analysis Failed'), ('ai.index.completed', 'AI Index Completed'), ('ai.analysis.completed', 'AI Analysis Completed'), ('chat.mention', 'Chat Mention'), ('system', 'System Notification')], max_length=50)),
-                ('title', models.CharField(max_length=255)),
-                ('body', models.TextField(blank=True, default='')),
-                ('link', models.URLField(blank=True, default='', max_length=500)),
-                ('actor_id', models.UUIDField(blank=True, null=True)),
-                ('read_at', models.DateTimeField(blank=True, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('expires_at', models.DateTimeField(blank=True, null=True)),
-                ('workspace', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='notifications', to='workspaces.workspace')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("user_id", models.UUIDField(db_index=True)),
+                (
+                    "notification_type",
+                    models.CharField(
+                        choices=[
+                            ("workspace.invitation", "Workspace Invitation"),
+                            ("workspace.member.joined", "Member Joined"),
+                            ("workspace.member.removed", "Member Removed"),
+                            ("workspace.member.role_changed", "Role Changed"),
+                            ("analysis.completed", "Analysis Completed"),
+                            ("analysis.failed", "Analysis Failed"),
+                            ("ai.index.completed", "AI Index Completed"),
+                            ("ai.analysis.completed", "AI Analysis Completed"),
+                            ("chat.mention", "Chat Mention"),
+                            ("system", "System Notification"),
+                        ],
+                        max_length=50,
+                    ),
+                ),
+                ("title", models.CharField(max_length=255)),
+                ("body", models.TextField(blank=True, default="")),
+                ("link", models.URLField(blank=True, default="", max_length=500)),
+                ("actor_id", models.UUIDField(blank=True, null=True)),
+                ("read_at", models.DateTimeField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("expires_at", models.DateTimeField(blank=True, null=True)),
+                (
+                    "workspace",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="notifications",
+                        to="workspaces.workspace",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Notification',
-                'verbose_name_plural': 'Notifications',
-                'db_table': 'notifications',
-                'indexes': [models.Index(fields=['user_id', '-created_at'], name='notificatio_user_id_611c58_idx'), models.Index(fields=['user_id', 'read_at'], name='notificatio_user_id_6c7360_idx')],
+                "verbose_name": "Notification",
+                "verbose_name_plural": "Notifications",
+                "db_table": "notifications",
+                "indexes": [
+                    models.Index(
+                        fields=["user_id", "-created_at"], name="notificatio_user_id_611c58_idx"
+                    ),
+                    models.Index(
+                        fields=["user_id", "read_at"], name="notificatio_user_id_6c7360_idx"
+                    ),
+                ],
             },
         ),
     ]

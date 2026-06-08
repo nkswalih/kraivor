@@ -71,7 +71,9 @@ class TestNotificationModel:
 
     def test_filter_by_user(self, user_id, other_user_id, db):
         Notification.objects.create(user_id=user_id, notification_type="system", title="Mine")
-        Notification.objects.create(user_id=other_user_id, notification_type="system", title="Theirs")
+        Notification.objects.create(
+            user_id=other_user_id, notification_type="system", title="Theirs"
+        )
         assert Notification.objects.filter(user_id=user_id).count() == 1
         assert Notification.objects.count() == 2
 
@@ -107,7 +109,10 @@ class TestNotificationModel:
 
     def test_indexes_exist(self, db):
         from django.db import connection
-        indexes = connection.introspection.get_constraints(connection.cursor(), Notification._meta.db_table)
+
+        indexes = connection.introspection.get_constraints(
+            connection.cursor(), Notification._meta.db_table
+        )
         assert any("user_id" in str(idx) for idx in indexes)
 
 
@@ -130,6 +135,7 @@ class TestFCMTokenModel:
         )
         import pytest
         from django.db import IntegrityError
+
         with pytest.raises(IntegrityError):
             FCMToken.objects.create(
                 user_id=user_id,
@@ -144,6 +150,7 @@ class TestFCMTokenModel:
 
     def test_token_updated_at_changes(self, user_id, db):
         import time
+
         token = FCMToken.objects.create(
             user_id=user_id,
             token="test-token",

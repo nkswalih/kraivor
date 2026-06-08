@@ -51,23 +51,28 @@ logger = logging.getLogger(__name__)
 
 # ─── Exception hierarchy ──────────────────────────────────────────────────────
 
+
 class RepositoryServiceError(Exception):
     """Base exception for all repository service errors."""
+
     pass
 
 
 class RepositoryPermissionError(RepositoryServiceError):
     """User lacks permission for the requested operation."""
+
     pass
 
 
 class RepositoryNotFoundError(RepositoryServiceError):
     """Repository not found or not accessible to the requesting user."""
+
     pass
 
 
 class RepositoryAlreadyConnectedError(RepositoryServiceError):
     """Repository is already connected (and active) in this workspace."""
+
     pass
 
 
@@ -76,6 +81,7 @@ class GitHubAuthError(RepositoryServiceError):
     User has no linked GitHub account, the stored token is invalid/expired,
     or the auth service was unreachable.
     """
+
     pass
 
 
@@ -84,10 +90,12 @@ class GitHubAPIError(RepositoryServiceError):
     GitHub API returned a non-200 response (repo not found, access denied,
     rate limit exceeded, etc.).
     """
+
     pass
 
 
 # ─── GitHub Token Client ──────────────────────────────────────────────────────
+
 
 class GitHubTokenClient:
     """
@@ -153,8 +161,7 @@ class GitHubTokenClient:
                 extra={"user_id": str(user_id), "status_code": response.status_code},
             )
             raise GitHubAuthError(
-                "Failed to retrieve GitHub credentials. "
-                "Please reconnect your GitHub account."
+                "Failed to retrieve GitHub credentials. Please reconnect your GitHub account."
             )
 
         data = response.json()
@@ -165,14 +172,14 @@ class GitHubTokenClient:
                 extra={"user_id": str(user_id)},
             )
             raise GitHubAuthError(
-                "No GitHub access token found. "
-                "Please reconnect your GitHub account."
+                "No GitHub access token found. Please reconnect your GitHub account."
             )
 
         return token
 
 
 # ─── GitHub API Client ────────────────────────────────────────────────────────
+
 
 class GitHubAPIClient:
     """
@@ -215,9 +222,7 @@ class GitHubAPIClient:
                 "github.api.network_error",
                 extra={"github_repo": github_repo, "error": str(exc)},
             )
-            raise GitHubAPIError(
-                "Unable to reach GitHub. Please try again later."
-            ) from exc
+            raise GitHubAPIError("Unable to reach GitHub. Please try again later.") from exc
 
         if response.status_code == 404:
             raise GitHubAPIError(
@@ -233,8 +238,7 @@ class GitHubAPIClient:
 
         if response.status_code == 401:
             raise GitHubAuthError(
-                "Your GitHub token is invalid or has expired. "
-                "Please reconnect your GitHub account."
+                "Your GitHub token is invalid or has expired. Please reconnect your GitHub account."
             )
 
         if response.status_code != 200:
@@ -271,6 +275,7 @@ class GitHubAPIClient:
 
 
 # ─── Repository Service ───────────────────────────────────────────────────────
+
 
 class RepositoryService:
     """
@@ -337,8 +342,7 @@ class RepositoryService:
             # concurrent requests for the same repo from both proceeding past
             # the duplicate check and attempting a double-create.
             existing = (
-                Repository.all_objects
-                .select_for_update(nowait=False)
+                Repository.all_objects.select_for_update(nowait=False)
                 .filter(workspace=workspace, github_id=metadata["github_id"])
                 .first()
             )
@@ -360,15 +364,17 @@ class RepositoryService:
                 existing.indexed = False
                 existing.last_analyzed_at = None
                 existing.last_analysis_score = None
-                existing.save(update_fields=[
-                    *list(metadata.keys()),
-                    "deleted_at",
-                    "connected_by_id",
-                    "indexed",
-                    "last_analyzed_at",
-                    "last_analysis_score",
-                    "updated_at",
-                ])
+                existing.save(
+                    update_fields=[
+                        *list(metadata.keys()),
+                        "deleted_at",
+                        "connected_by_id",
+                        "indexed",
+                        "last_analyzed_at",
+                        "last_analysis_score",
+                        "updated_at",
+                    ]
+                )
                 repository = existing
             else:
                 repository = Repository.objects.create(
@@ -410,11 +416,7 @@ class RepositoryService:
         enforced at the view layer via workspace membership check.
         Ordered newest-first to match other list endpoints in the service.
         """
-        return (
-            Repository.objects
-            .filter(workspace=workspace)
-            .order_by("-created_at")
-        )
+        return Repository.objects.filter(workspace=workspace).order_by("-created_at")
 
     # ── Disconnect ────────────────────────────────────────────────────────────
 
@@ -450,9 +452,7 @@ class RepositoryService:
         try:
             repository = Repository.objects.get(id=repository_id, workspace=workspace)
         except Repository.DoesNotExist as exc:
-            raise RepositoryNotFoundError(
-                "Repository not found or already disconnected."
-            ) from exc
+            raise RepositoryNotFoundError("Repository not found or already disconnected.") from exc
 
         # ── Soft delete ───────────────────────────────────────────────────────
         # TimestampedModel.delete() sets deleted_at on both the DB row and the

@@ -8,6 +8,7 @@ from apps.notifications.views import FCMTokenViewSet, NotificationViewSet
 
 def _build_request(method, path, user_id=None, data=None):
     from rest_framework.test import APIRequestFactory
+
     factory = APIRequestFactory()
     if data is not None:
         request = getattr(factory, method)(path, data, format="json")
@@ -34,7 +35,9 @@ class TestNotificationViewSetList:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 0
 
-    def test_does_not_show_other_users_notifications(self, notification, user_id, other_user_id, db):
+    def test_does_not_show_other_users_notifications(
+        self, notification, user_id, other_user_id, db
+    ):
         request = _build_request("get", "/api/notifications/", user_id=other_user_id)
         view = NotificationViewSet.as_view(actions={"get": "list"})
         response = view(request)
@@ -65,13 +68,17 @@ class TestNotificationViewSetRetrieve:
         assert response.data["id"] == str(notification.id)
 
     def test_retrieve_others_notification_404(self, notification, other_user_id, db):
-        request = _build_request("get", f"/api/notifications/{notification.id}/", user_id=other_user_id)
+        request = _build_request(
+            "get", f"/api/notifications/{notification.id}/", user_id=other_user_id
+        )
         view = NotificationViewSet.as_view(actions={"get": "retrieve"})
         response = view(request, pk=str(notification.id))
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_retrieve_nonexistent_404(self, user_id, db):
-        request = _build_request("get", "/api/notifications/00000000-0000-0000-0000-000000000000/", user_id=user_id)
+        request = _build_request(
+            "get", "/api/notifications/00000000-0000-0000-0000-000000000000/", user_id=user_id
+        )
         view = NotificationViewSet.as_view(actions={"get": "retrieve"})
         response = view(request, pk="00000000-0000-0000-0000-000000000000")
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -90,7 +97,10 @@ class TestNotificationViewSetMarkAllRead:
 
     def test_mark_all_read_idempotent(self, user_id, db):
         from django.utils import timezone
-        Notification.objects.create(user_id=user_id, notification_type="system", title="A", read_at=timezone.now())
+
+        Notification.objects.create(
+            user_id=user_id, notification_type="system", title="A", read_at=timezone.now()
+        )
         request = _build_request("post", "/api/notifications/mark_all_read/", user_id=user_id)
         view = NotificationViewSet.as_view(actions={"post": "mark_all_read"})
         response = view(request)
@@ -99,7 +109,9 @@ class TestNotificationViewSetMarkAllRead:
 
 class TestNotificationViewSetMarkRead:
     def test_mark_read_single(self, notification, user_id, db):
-        request = _build_request("post", f"/api/notifications/{notification.id}/mark_read/", user_id=user_id)
+        request = _build_request(
+            "post", f"/api/notifications/{notification.id}/mark_read/", user_id=user_id
+        )
         view = NotificationViewSet.as_view(actions={"post": "mark_read"})
         response = view(request, pk=str(notification.id))
         assert response.status_code == status.HTTP_200_OK
@@ -108,7 +120,9 @@ class TestNotificationViewSetMarkRead:
         assert notification.read_at is not None
 
     def test_mark_read_others_notification_404(self, notification, other_user_id, db):
-        request = _build_request("post", f"/api/notifications/{notification.id}/mark_read/", user_id=other_user_id)
+        request = _build_request(
+            "post", f"/api/notifications/{notification.id}/mark_read/", user_id=other_user_id
+        )
         view = NotificationViewSet.as_view(actions={"post": "mark_read"})
         response = view(request, pk=str(notification.id))
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -122,7 +136,9 @@ class TestNotificationViewSetMarkRead:
 
 class TestNotificationViewSetDismiss:
     def test_dismiss_own_notification(self, notification, user_id, db):
-        request = _build_request("post", f"/api/notifications/{notification.id}/dismiss/", user_id=user_id)
+        request = _build_request(
+            "post", f"/api/notifications/{notification.id}/dismiss/", user_id=user_id
+        )
         view = NotificationViewSet.as_view(actions={"post": "dismiss"})
         response = view(request, pk=str(notification.id))
         assert response.status_code == status.HTTP_200_OK
@@ -130,7 +146,9 @@ class TestNotificationViewSetDismiss:
         assert Notification.objects.filter(id=notification.id).count() == 0
 
     def test_dismiss_others_notification_404(self, notification, other_user_id, db):
-        request = _build_request("post", f"/api/notifications/{notification.id}/dismiss/", user_id=other_user_id)
+        request = _build_request(
+            "post", f"/api/notifications/{notification.id}/dismiss/", user_id=other_user_id
+        )
         view = NotificationViewSet.as_view(actions={"post": "dismiss"})
         response = view(request, pk=str(notification.id))
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -147,6 +165,7 @@ class TestNotificationViewSetUnreadCount:
         Notification.objects.create(user_id=user_id, notification_type="system", title="Unread 1")
         Notification.objects.create(user_id=user_id, notification_type="system", title="Unread 2")
         from django.utils import timezone
+
         n = Notification.objects.create(user_id=user_id, notification_type="system", title="Read")
         n.read_at = timezone.now()
         n.save(update_fields=["read_at"])
@@ -163,7 +182,9 @@ class TestNotificationViewSetUnreadCount:
         assert response.data["unread_count"] == 0
 
     def test_unread_count_ignores_others(self, user_id, other_user_id, db):
-        Notification.objects.create(user_id=other_user_id, notification_type="system", title="Theirs")
+        Notification.objects.create(
+            user_id=other_user_id, notification_type="system", title="Theirs"
+        )
         request = _build_request("get", "/api/notifications/unread_count/", user_id=user_id)
         view = NotificationViewSet.as_view(actions={"get": "unread_count"})
         response = view(request)
@@ -227,7 +248,9 @@ class TestFCMTokenViewSetDestroy:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_delete_other_users_token(self, fcm_token, other_user_id, db):
-        request = _build_request("delete", f"/api/fcm-tokens/{fcm_token.token}/", user_id=other_user_id)
+        request = _build_request(
+            "delete", f"/api/fcm-tokens/{fcm_token.token}/", user_id=other_user_id
+        )
         view = FCMTokenViewSet.as_view(actions={"delete": "destroy"})
         response = view(request, pk=fcm_token.token)
         assert response.status_code == status.HTTP_404_NOT_FOUND

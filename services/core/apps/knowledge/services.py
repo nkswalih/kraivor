@@ -37,22 +37,27 @@ logger = logging.getLogger(__name__)
 
 # ─── Exception hierarchy ──────────────────────────────────────────────────────
 
+
 class KnowledgeSpaceServiceError(Exception):
     """Base exception for all knowledge space service errors."""
+
     pass
 
 
 class KnowledgePermissionError(KnowledgeSpaceServiceError):
     """User lacks permission for the requested operation."""
+
     pass
 
 
 class KnowledgeSpaceNotFoundError(KnowledgeSpaceServiceError):
     """Knowledge space not found or not accessible to the requesting user."""
+
     pass
 
 
 # ─── Knowledge Space Service ──────────────────────────────────────────────────
+
 
 class KnowledgeSpaceService:
     """
@@ -146,9 +151,7 @@ class KnowledgeSpaceService:
         qs = KnowledgeSpace.objects.filter(workspace=workspace)
 
         if search:
-            qs = qs.filter(
-                Q(name__icontains=search) | Q(description__icontains=search)
-            )
+            qs = qs.filter(Q(name__icontains=search) | Q(description__icontains=search))
 
         return qs.order_by("-created_at")
 

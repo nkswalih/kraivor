@@ -79,7 +79,9 @@ def get_messages(
         logger.debug("dynamodb.messages.query", extra={"room_id": room_id, "count": len(items)})
         return items, last_key
     except ClientError as exc:
-        logger.error("dynamodb.messages.query_failed", extra={"room_id": room_id, "error": str(exc)})
+        logger.error(
+            "dynamodb.messages.query_failed", extra={"room_id": room_id, "error": str(exc)}
+        )
         raise
 
 
@@ -91,9 +93,14 @@ def delete_message(room_id: str, message_id: str) -> None:
             UpdateExpression="SET deleted_at = :now",
             ExpressionAttributeValues={":now": now},
         )
-        logger.debug("dynamodb.message.deleted", extra={"room_id": room_id, "message_id": message_id})
+        logger.debug(
+            "dynamodb.message.deleted", extra={"room_id": room_id, "message_id": message_id}
+        )
     except ClientError as exc:
-        logger.error("dynamodb.message.delete_failed", extra={"room_id": room_id, "message_id": message_id, "error": str(exc)})
+        logger.error(
+            "dynamodb.message.delete_failed",
+            extra={"room_id": room_id, "message_id": message_id, "error": str(exc)},
+        )
         raise
 
 
@@ -102,12 +109,19 @@ def get_message_by_id(room_id: str, message_id: str) -> dict | None:
         response = _table().get_item(Key={"room_id": room_id, "message_id": message_id})
         item = response.get("Item")
         if item:
-            logger.debug("dynamodb.message.get", extra={"room_id": room_id, "message_id": message_id})
+            logger.debug(
+                "dynamodb.message.get", extra={"room_id": room_id, "message_id": message_id}
+            )
             return item
-        logger.debug("dynamodb.message.not_found", extra={"room_id": room_id, "message_id": message_id})
+        logger.debug(
+            "dynamodb.message.not_found", extra={"room_id": room_id, "message_id": message_id}
+        )
         return None
     except ClientError as exc:
-        logger.error("dynamodb.message.get_failed", extra={"room_id": room_id, "message_id": message_id, "error": str(exc)})
+        logger.error(
+            "dynamodb.message.get_failed",
+            extra={"room_id": room_id, "message_id": message_id, "error": str(exc)},
+        )
         raise
 
 
@@ -124,10 +138,15 @@ def update_message(room_id: str, message_id: str, content: str) -> dict | None:
             ReturnValues="ALL_NEW",
         )
         updated = response.get("Attributes", {})
-        logger.debug("dynamodb.message.updated", extra={"room_id": room_id, "message_id": message_id})
+        logger.debug(
+            "dynamodb.message.updated", extra={"room_id": room_id, "message_id": message_id}
+        )
         return updated
     except ClientError as exc:
-        logger.error("dynamodb.message.update_failed", extra={"room_id": room_id, "message_id": message_id, "error": str(exc)})
+        logger.error(
+            "dynamodb.message.update_failed",
+            extra={"room_id": room_id, "message_id": message_id, "error": str(exc)},
+        )
         raise
 
 
@@ -148,5 +167,7 @@ def batch_get_messages(room_id: str, message_ids: list[str]) -> list[dict]:
         logger.debug("dynamodb.messages.batch_get", extra={"room_id": room_id, "count": len(items)})
         return items
     except ClientError as exc:
-        logger.error("dynamodb.messages.batch_get_failed", extra={"room_id": room_id, "error": str(exc)})
+        logger.error(
+            "dynamodb.messages.batch_get_failed", extra={"room_id": room_id, "error": str(exc)}
+        )
         raise

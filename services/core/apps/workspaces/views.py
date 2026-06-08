@@ -53,8 +53,39 @@ from .services import (
 logger = logging.getLogger(__name__)
 
 
+def _resolve_member_users(member_data: list[dict]) -> dict[str, dict]:
+    """
+    Batch-resolve user info (name, email) for a list of serialized member dicts.
+    Calls the Identity internal API.
+
+    Returns a dict keyed by user_id: {"id", "name", "email", "avatar_url"}.
+    """
+    import requests
+    from django.conf import settings
+
+    user_ids = [m["user_id"] for m in member_data if "user_id" in m]
+    if not user_ids:
+        return {}
+
+    identity_url = getattr(settings, "IDENTITY_SERVICE_URL", "http://identity:8001")
+    endpoint = f"{identity_url}/api/auth/internal/resolve-users-by-id/"
+    try:
+        resp = requests.post(
+            endpoint,
+            json={"user_ids": user_ids},
+            headers={settings.INTERNAL_REQUEST_HEADER: "1"},
+            timeout=5,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("users", {})
+    except requests.exceptions.RequestException:
+        logger.warning("member_user_resolve.failed", extra={"user_ids": user_ids})
+    return {}
+
+
 class WorkspaceCursorPagination(CursorPagination):
     """Stable cursor pagination — safe during concurrent workspace creation."""
+
     page_size = 20
     page_size_query_param = "page_size"
     max_page_size = 100
@@ -62,6 +93,7 @@ class WorkspaceCursorPagination(CursorPagination):
 
 
 # ─── Mixins ───────────────────────────────────────────────────────────────────
+
 
 class WorkspaceContextMixin:
     """
@@ -96,13 +128,16 @@ class WorkspaceContextMixin:
         user_id = self._get_user_id()
 
         workspace = (
-            Workspace.objects
-            .filter(id=workspace_id)
-            .annotate(active_member_count=Count("members", filter=Q(members__deleted_at__isnull=True)))
+            Workspace.objects.filter(id=workspace_id)
+            .annotate(
+                active_member_count=Count("members", filter=Q(members__deleted_at__isnull=True))
+            )
             .prefetch_related(
                 Prefetch(
                     "members",
-                    queryset=WorkspaceMember.objects.filter(deleted_at__isnull=True).order_by("joined_at"),
+                    queryset=WorkspaceMember.objects.filter(deleted_at__isnull=True).order_by(
+                        "joined_at"
+                    ),
                 )
             )
             .first()
@@ -115,6 +150,7 @@ class WorkspaceContextMixin:
 
 
 # ─── Workspace ViewSet (KRV-019) ──────────────────────────────────────────────
+
 
 class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
     """
@@ -138,9 +174,10 @@ class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
         ).values_list("workspace_id", flat=True)
 
         workspaces = (
-            Workspace.objects
-            .filter(id__in=member_workspace_ids)
-            .annotate(active_member_count=Count("members", filter=Q(members__deleted_at__isnull=True)))
+            Workspace.objects.filter(id__in=member_workspace_ids)
+            .annotate(
+                active_member_count=Count("members", filter=Q(members__deleted_at__isnull=True))
+            )
             .order_by("-created_at")
         )
 
@@ -168,12 +205,16 @@ class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
             raise ValidationError({"detail": str(exc)}) from exc
 
         from django.db.models import Q
+
         workspace = (
-            Workspace.objects
-            .filter(id=workspace.id)
-            .annotate(active_member_count=Count("members", filter=Q(members__deleted_at__isnull=True)))
+            Workspace.objects.filter(id=workspace.id)
+            .annotate(
+                active_member_count=Count("members", filter=Q(members__deleted_at__isnull=True))
+            )
             .prefetch_related(
-                Prefetch("members", queryset=WorkspaceMember.objects.filter(deleted_at__isnull=True))
+                Prefetch(
+                    "members", queryset=WorkspaceMember.objects.filter(deleted_at__isnull=True)
+                )
             )
             .first()
         )
@@ -216,6 +257,7 @@ class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
 
 # ─── Member ViewSet (KRV-020) ─────────────────────────────────────────────────
 
+
 class WorkspaceMemberViewSet(WorkspaceContextMixin, ViewSet):
     """
     Member management endpoints nested under workspaces.
@@ -236,15 +278,25 @@ class WorkspaceMemberViewSet(WorkspaceContextMixin, ViewSet):
         GET /workspace/workspaces/{workspace_pk}/members/
 
         Returns all active members ordered by joined_at.
-        Optimized: single query with no N+1.
+        Includes resolved user info (name, email) via the Identity service.
         """
         workspace = self._get_workspace_or_404(workspace_pk)
-        members = (
-            workspace.members
-            .filter(deleted_at__isnull=True)
-            .order_by("joined_at", "created_at")
+        members = workspace.members.filter(deleted_at__isnull=True).order_by(
+            "joined_at", "created_at"
         )
-        return Response(WorkspaceMemberSerializer(members, many=True).data)
+        data = WorkspaceMemberSerializer(members, many=True).data
+        resolved = _resolve_member_users(data)
+        for m in data:
+            uid = m["user_id"]
+            info = resolved.get(uid)
+            if info:
+                m["user"] = {
+                    "id": uid,
+                    "name": info.get("name", uid[:8]),
+                    "email": info.get("email", ""),
+                    "avatar_url": info.get("avatar_url", None),
+                }
+        return Response(data)
 
     def invite(self, request, workspace_pk=None):
         """
@@ -306,7 +358,18 @@ class WorkspaceMemberViewSet(WorkspaceContextMixin, ViewSet):
         except WorkspaceNotFoundError as exc:
             raise NotFound("Member not found.") from exc
 
-        return Response(WorkspaceMemberSerializer(member).data)
+        data = WorkspaceMemberSerializer(member).data
+        resolved = _resolve_member_users([data])
+        uid = data["user_id"]
+        info = resolved.get(uid)
+        if info:
+            data["user"] = {
+                "id": uid,
+                "name": info.get("name", uid[:8]),
+                "email": info.get("email", ""),
+                "avatar_url": info.get("avatar_url", None),
+            }
+        return Response(data)
 
     def destroy(self, request, workspace_pk=None, pk=None):
         """
@@ -337,6 +400,7 @@ class WorkspaceMemberViewSet(WorkspaceContextMixin, ViewSet):
 
 
 # ─── Invitation Admin Views ───────────────────────────────────────────────────
+
 
 class WorkspaceInvitationListView(WorkspaceContextMixin, APIView):
     """
@@ -399,6 +463,7 @@ class InvitationRevokeView(WorkspaceContextMixin, APIView):
 
 
 # ─── Invitation Accept View (KRV-020) ─────────────────────────────────────────
+
 
 class InvitationAcceptView(APIView):
     """

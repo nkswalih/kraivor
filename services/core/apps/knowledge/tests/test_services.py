@@ -38,9 +38,9 @@ def _service(mock_events=None):
 
 # ─── create_knowledge_space ───────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestCreateKnowledgeSpace:
-
     def test_creates_db_row(self, workspace, owner_member, owner_id):
         ks = _service().create_knowledge_space(
             workspace=workspace,
@@ -151,9 +151,9 @@ class TestCreateKnowledgeSpace:
 
 # ─── list_knowledge_spaces ────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestListKnowledgeSpaces:
-
     def test_returns_active_spaces(self, workspace, owner_member, knowledge_space):
         results = list(_service().list_knowledge_spaces(workspace=workspace))
         assert len(results) == 1
@@ -179,7 +179,11 @@ class TestListKnowledgeSpaces:
         assert results[1].id == knowledge_space.id
 
     def test_excludes_spaces_from_other_workspaces(
-        self, workspace, owner_member, owner_id, knowledge_space,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        knowledge_space,
     ):
         other = Workspace.objects.create(
             owner_id=owner_id,
@@ -203,7 +207,9 @@ class TestListKnowledgeSpaces:
         assert len(results) == 1
 
     def test_search_is_case_insensitive(self, workspace, owner_member, knowledge_space):
-        results = list(_service().list_knowledge_spaces(workspace=workspace, search="AUTHENTICATION"))
+        results = list(
+            _service().list_knowledge_spaces(workspace=workspace, search="AUTHENTICATION")
+        )
         assert len(results) == 1
 
     def test_search_matches_description(self, workspace, owner_member, knowledge_space):
@@ -213,13 +219,22 @@ class TestListKnowledgeSpaces:
 
     def test_search_or_semantics_across_fields(self, workspace, owner_member, owner_id):
         KnowledgeSpace.objects.create(
-            workspace=workspace, name="Alpha", description="beta content", created_by=owner_id,
+            workspace=workspace,
+            name="Alpha",
+            description="beta content",
+            created_by=owner_id,
         )
         KnowledgeSpace.objects.create(
-            workspace=workspace, name="beta title", description="other", created_by=owner_id,
+            workspace=workspace,
+            name="beta title",
+            description="other",
+            created_by=owner_id,
         )
         KnowledgeSpace.objects.create(
-            workspace=workspace, name="Gamma", description="gamma", created_by=owner_id,
+            workspace=workspace,
+            name="Gamma",
+            description="gamma",
+            created_by=owner_id,
         )
         results = list(_service().list_knowledge_spaces(workspace=workspace, search="beta"))
         assert len(results) == 2
@@ -230,7 +245,9 @@ class TestListKnowledgeSpaces:
 
     def test_no_search_returns_all(self, workspace, owner_member, owner_id, knowledge_space):
         KnowledgeSpace.objects.create(
-            workspace=workspace, name="Another", created_by=owner_id,
+            workspace=workspace,
+            name="Another",
+            created_by=owner_id,
         )
         results = list(_service().list_knowledge_spaces(workspace=workspace))
         assert len(results) == 2
@@ -238,9 +255,9 @@ class TestListKnowledgeSpaces:
 
 # ─── update_knowledge_space ───────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestUpdateKnowledgeSpace:
-
     def test_updates_name(self, workspace, owner_member, owner_id, knowledge_space):
         updated = _service().update_knowledge_space(
             knowledge_space=knowledge_space,
@@ -267,7 +284,11 @@ class TestUpdateKnowledgeSpace:
         assert updated.canvas_data == new_canvas
 
     def test_canvas_data_preserved_when_absent_from_updates(
-        self, workspace, owner_member, owner_id, knowledge_space,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        knowledge_space,
     ):
         """Absent canvas_data in updates must not overwrite existing canvas."""
         original_canvas = knowledge_space.canvas_data
@@ -304,7 +325,11 @@ class TestUpdateKnowledgeSpace:
 
     @pytest.mark.django_db(transaction=True)
     def test_event_published_after_commit(
-        self, workspace, owner_member, owner_id, knowledge_space,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        knowledge_space,
     ):
         publisher = MagicMock()
         _service(publisher).update_knowledge_space(
@@ -318,7 +343,11 @@ class TestUpdateKnowledgeSpace:
         assert kwargs["knowledge_space"].id == knowledge_space.id
 
     def test_ignores_unknown_fields_in_updates(
-        self, workspace, owner_member, owner_id, knowledge_space,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        knowledge_space,
     ):
         """Fields outside safe_fields must not be applied (e.g. workspace_id)."""
         original_workspace_id = knowledge_space.workspace_id
@@ -350,9 +379,9 @@ class TestUpdateKnowledgeSpace:
 
 # ─── delete_knowledge_space ───────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestDeleteKnowledgeSpace:
-
     def test_soft_deletes_space(self, workspace, owner_member, owner_id, knowledge_space):
         """
         TimestampedModel.delete() mutates the in-memory instance.
@@ -366,7 +395,11 @@ class TestDeleteKnowledgeSpace:
         assert knowledge_space.is_deleted
 
     def test_deleted_space_absent_from_active_queryset(
-        self, workspace, owner_member, owner_id, knowledge_space,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        knowledge_space,
     ):
         ks_id = knowledge_space.id
         _service().delete_knowledge_space(
@@ -376,7 +409,11 @@ class TestDeleteKnowledgeSpace:
         assert not KnowledgeSpace.objects.filter(id=ks_id).exists()
 
     def test_deleted_space_visible_via_all_objects(
-        self, workspace, owner_member, owner_id, knowledge_space,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        knowledge_space,
     ):
         ks_id = knowledge_space.id
         _service().delete_knowledge_space(
@@ -394,7 +431,11 @@ class TestDeleteKnowledgeSpace:
 
     @pytest.mark.django_db(transaction=True)
     def test_event_published_after_commit(
-        self, workspace, owner_member, owner_id, knowledge_space,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        knowledge_space,
     ):
         publisher = MagicMock()
         _service(publisher).delete_knowledge_space(

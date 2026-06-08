@@ -23,6 +23,7 @@ from .models import Workspace, WorkspaceInvitation, WorkspaceMember
 
 # ─── Member Serializers ────────────────────────────────────────────────────────
 
+
 class WorkspaceMemberSerializer(serializers.ModelSerializer):
     """
     Full member representation.
@@ -70,7 +71,9 @@ class MemberRoleUpdateSerializer(serializers.Serializer):
             raise serializers.ValidationError("Ownership transfer is a separate flow.")
         return value
 
+
 # ─── Workspace Serializers (KRV-019) ──────────────────────────────────────────
+
 
 class WorkspaceListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views. No members list."""
@@ -81,8 +84,16 @@ class WorkspaceListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Workspace
         fields = [
-            "id", "name", "slug", "plan", "avatar_url", "description",
-            "active_member_count", "current_user_role", "created_at", "updated_at",
+            "id",
+            "name",
+            "slug",
+            "plan",
+            "avatar_url",
+            "description",
+            "active_member_count",
+            "current_user_role",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = fields
 
@@ -104,13 +115,30 @@ class WorkspaceDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Workspace
         fields = [
-            "id", "name", "slug", "owner_id", "plan", "settings",
-            "avatar_url", "description", "members", "active_member_count",
-            "current_user_role", "created_at", "updated_at",
+            "id",
+            "name",
+            "slug",
+            "owner_id",
+            "plan",
+            "settings",
+            "avatar_url",
+            "description",
+            "members",
+            "active_member_count",
+            "current_user_role",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = [
-            "id", "slug", "owner_id", "plan", "members",
-            "active_member_count", "current_user_role", "created_at", "updated_at",
+            "id",
+            "slug",
+            "owner_id",
+            "plan",
+            "members",
+            "active_member_count",
+            "current_user_role",
+            "created_at",
+            "updated_at",
         ]
 
     def get_current_user_role(self, obj: Workspace) -> str | None:
@@ -152,7 +180,13 @@ class WorkspaceCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate_settings(self, value: dict) -> dict:
-        allowed = {"default_branch", "ai_model_preference", "notifications_enabled", "theme", "timezone"}
+        allowed = {
+            "default_branch",
+            "ai_model_preference",
+            "notifications_enabled",
+            "theme",
+            "timezone",
+        }
         return {k: v for k, v in value.items() if k in allowed}
 
     def validate(self, attrs: dict) -> dict:
@@ -193,12 +227,19 @@ class WorkspaceUpdateSerializer(serializers.ModelSerializer):
         return value
 
     def validate_settings(self, value: dict) -> dict:
-        allowed = {"default_branch", "ai_model_preference", "notifications_enabled", "theme", "timezone"}
+        allowed = {
+            "default_branch",
+            "ai_model_preference",
+            "notifications_enabled",
+            "theme",
+            "timezone",
+        }
         existing = self.instance.settings if self.instance else {}
         return {**existing, **{k: v for k, v in value.items() if k in allowed}}
 
 
 # ─── Invitation Serializers (KRV-020) ─────────────────────────────────────────
+
 
 class WorkspaceInvitationSerializer(serializers.ModelSerializer):
     """
@@ -254,9 +295,7 @@ class WorkspaceInvitationCreateSerializer(serializers.Serializer):
     the JWT sub claim display name) — not from user input.
     """
 
-    email = serializers.EmailField(
-        help_text="Email address of the person being invited."
-    )
+    email = serializers.EmailField(help_text="Email address of the person being invited.")
     role = serializers.ChoiceField(
         choices=[
             (WorkspaceRole.ADMIN, "Admin"),
@@ -278,6 +317,7 @@ class InvitationAcceptSerializer(serializers.Serializer):
     The user_id comes from the gateway header (request.user_id).
     No body fields required — the token IS the credential.
     """
+
     # No input fields — token is path param, user is from gateway header
     pass
 

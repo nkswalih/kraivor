@@ -22,7 +22,14 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "workspace", "created_by", "created_at", "updated_at", "is_active"]
+        read_only_fields = [
+            "id",
+            "workspace",
+            "created_by",
+            "created_at",
+            "updated_at",
+            "is_active",
+        ]
 
 
 class ChatRoomDetailSerializer(serializers.ModelSerializer):
@@ -62,7 +69,9 @@ class ChatRoomCreateSerializer(serializers.ModelSerializer):
     def validate_room_type(self, value):
         valid_types = [t.value for t in ChatRoom.RoomType]
         if value not in valid_types:
-            raise serializers.ValidationError(f"Invalid room type. Choose from: {', '.join(valid_types)}")
+            raise serializers.ValidationError(
+                f"Invalid room type. Choose from: {', '.join(valid_types)}"
+            )
         return value
 
 
@@ -95,9 +104,18 @@ class MessageSerializer(serializers.Serializer):
 
     class Meta:
         fields = [
-            "message_id", "room_id", "sender_id", "sender_name",
-            "content", "content_type", "reply_to", "mentions",
-            "attachment_url", "created_at", "edited_at", "deleted_at",
+            "message_id",
+            "room_id",
+            "sender_id",
+            "sender_name",
+            "content",
+            "content_type",
+            "reply_to",
+            "mentions",
+            "attachment_url",
+            "created_at",
+            "edited_at",
+            "deleted_at",
         ]
 
 

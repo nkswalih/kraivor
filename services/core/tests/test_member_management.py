@@ -41,6 +41,7 @@ from apps.workspaces.services import (
 
 # ─── Fixtures ─────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def owner_id():
     return uuid.uuid4()
@@ -83,28 +84,37 @@ def workspace(owner_id):
     )
     return ws
 
+
 @pytest.fixture
 def team_workspace(workspace):
     workspace.plan = WorkspacePlan.TEAM
     workspace.save(update_fields=["plan"])
     return workspace
 
+
 @pytest.fixture
 def workspace_with_members(workspace, admin_id, member_id, viewer_id):
     """Workspace with owner + admin + member + viewer."""
     WorkspaceMember.objects.create(
-        workspace=workspace, user_id=admin_id,
-        role=WorkspaceRole.ADMIN, joined_at=timezone.now(),
+        workspace=workspace,
+        user_id=admin_id,
+        role=WorkspaceRole.ADMIN,
+        joined_at=timezone.now(),
     )
     WorkspaceMember.objects.create(
-        workspace=workspace, user_id=member_id,
-        role=WorkspaceRole.MEMBER, joined_at=timezone.now(),
+        workspace=workspace,
+        user_id=member_id,
+        role=WorkspaceRole.MEMBER,
+        joined_at=timezone.now(),
     )
     WorkspaceMember.objects.create(
-        workspace=workspace, user_id=viewer_id,
-        role=WorkspaceRole.VIEWER, joined_at=timezone.now(),
+        workspace=workspace,
+        user_id=viewer_id,
+        role=WorkspaceRole.VIEWER,
+        joined_at=timezone.now(),
     )
     return workspace
+
 
 @pytest.fixture
 def team_workspace_with_members(team_workspace, admin_id, member_id, viewer_id):
@@ -145,7 +155,9 @@ def api_client():
     return APIClient()
 
 
-def _authed_client(user_id: uuid.UUID, user_name: str = "Test User", email: str = "test@example.com") -> APIClient:
+def _authed_client(
+    user_id: uuid.UUID, user_name: str = "Test User", email: str = "test@example.com"
+) -> APIClient:
     """
     Create an API client with gateway-injected auth simulation.
 
@@ -169,7 +181,7 @@ def _authed_client(user_id: uuid.UUID, user_name: str = "Test User", email: str 
     mock_user = _MM()
     mock_user.is_authenticated = True
     mock_user.id = user_id
-    mock_user.user_id = user_id      # mirrors what middleware sets on request
+    mock_user.user_id = user_id  # mirrors what middleware sets on request
     mock_user.user_name = user_name
     mock_user.pk = user_id
     mock_user.email = email
@@ -236,6 +248,7 @@ def patch_request_user_id(monkeypatch):
 
     monkeypatch.setattr(v.WorkspaceContextMixin, "_get_user_id", patched_get_user_id)
 
+
 @pytest.fixture(autouse=True)
 def bypass_jwt_middleware(monkeypatch):
     from core.middleware.jwt_auth import JWTAuthenticationMiddleware
@@ -246,15 +259,9 @@ def bypass_jwt_middleware(monkeypatch):
         user = getattr(request, "user", None)
 
         if user and getattr(user, "is_authenticated", False):
-            request.user_id = (
-                getattr(user, "user_id", None)
-                or getattr(user, "id", None)
-            )
+            request.user_id = getattr(user, "user_id", None) or getattr(user, "id", None)
             request.user_name = getattr(user, "user_name", "")
-            request.user_email = (
-                getattr(user, "user_email", None)
-                or getattr(user, "email", None)
-            )
+            request.user_email = getattr(user, "user_email", None) or getattr(user, "email", None)
 
             return self.get_response(request)
 
@@ -269,9 +276,9 @@ def bypass_jwt_middleware(monkeypatch):
 
 # ─── WorkspaceService Tests ───────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestWorkspaceService:
-
     def test_create_workspace_creates_owner_member(self, mock_events):
         owner_id = uuid.uuid4()
         service = WorkspaceService(event_publisher=mock_events)
@@ -296,7 +303,9 @@ class TestWorkspaceService:
         ws = service.create_workspace(owner_id=owner_id, name="X", slug="x-ws-slug")
         mock_events.workspace_created.assert_called_once_with(workspace=ws, actor_id=owner_id)
 
-    def test_delete_workspace_only_owner(self, workspace_with_members, owner_id, admin_id, mock_events):
+    def test_delete_workspace_only_owner(
+        self, workspace_with_members, owner_id, admin_id, mock_events
+    ):
         service = WorkspaceService(event_publisher=mock_events)
 
         with pytest.raises(WorkspacePermissionError):
@@ -307,7 +316,9 @@ class TestWorkspaceService:
         workspace_with_members.refresh_from_db()
         assert workspace_with_members.is_deleted
 
-    def test_delete_workspace_soft_deletes_members(self, workspace_with_members, owner_id, mock_events):
+    def test_delete_workspace_soft_deletes_members(
+        self, workspace_with_members, owner_id, mock_events
+    ):
         service = WorkspaceService(event_publisher=mock_events)
         member_count_before = workspace_with_members.members.count()
         assert member_count_before > 0
@@ -320,7 +331,9 @@ class TestWorkspaceService:
         )
         assert active_members.count() == 0
 
-    def test_update_workspace_requires_admin(self, workspace_with_members, viewer_id, member_id, mock_events):
+    def test_update_workspace_requires_admin(
+        self, workspace_with_members, viewer_id, member_id, mock_events
+    ):
         service = WorkspaceService(event_publisher=mock_events)
 
         for user_id in [viewer_id, member_id]:
@@ -340,7 +353,9 @@ class TestWorkspaceService:
         )
         assert updated.name == "Updated Name"
 
-    def test_update_member_role_prevents_owner_assignment(self, workspace_with_members, owner_id, member_id, mock_events):
+    def test_update_member_role_prevents_owner_assignment(
+        self, workspace_with_members, owner_id, member_id, mock_events
+    ):
         service = WorkspaceService(event_publisher=mock_events)
         with pytest.raises(WorkspacePermissionError, match="owner"):
             service.update_member_role(
@@ -371,7 +386,9 @@ class TestWorkspaceService:
                 new_role=WorkspaceRole.MEMBER,
             )
 
-    def test_update_member_role_publishes_event(self, workspace_with_members, owner_id, member_id, mock_events):
+    def test_update_member_role_publishes_event(
+        self, workspace_with_members, owner_id, member_id, mock_events
+    ):
         service = WorkspaceService(event_publisher=mock_events)
         service.update_member_role(
             workspace=workspace_with_members,
@@ -381,7 +398,9 @@ class TestWorkspaceService:
         )
         mock_events.member_role_changed.assert_called_once()
 
-    def test_remove_member_owner_cannot_be_removed(self, workspace_with_members, owner_id, admin_id, mock_events):
+    def test_remove_member_owner_cannot_be_removed(
+        self, workspace_with_members, owner_id, admin_id, mock_events
+    ):
         service = WorkspaceService(event_publisher=mock_events)
         with pytest.raises(WorkspacePermissionError, match="owner"):
             service.remove_member(
@@ -390,7 +409,9 @@ class TestWorkspaceService:
                 target_user_id=owner_id,
             )
 
-    def test_remove_member_self_removal_always_allowed(self, workspace_with_members, member_id, mock_events):
+    def test_remove_member_self_removal_always_allowed(
+        self, workspace_with_members, member_id, mock_events
+    ):
         service = WorkspaceService(event_publisher=mock_events)
         service.remove_member(
             workspace=workspace_with_members,
@@ -418,7 +439,9 @@ class TestWorkspaceService:
                 target_user_id=second_admin_id,
             )
 
-    def test_remove_member_viewer_cannot_remove_others(self, workspace_with_members, viewer_id, member_id, mock_events):
+    def test_remove_member_viewer_cannot_remove_others(
+        self, workspace_with_members, viewer_id, member_id, mock_events
+    ):
         service = WorkspaceService(event_publisher=mock_events)
         with pytest.raises(WorkspacePermissionError):
             service.remove_member(
@@ -453,9 +476,9 @@ class TestWorkspaceService:
 
 # ─── InvitationService Tests ──────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestInvitationService:
-
     def test_create_invitation_success(self, workspace, owner_id, mock_events):
         service = InvitationService(event_publisher=mock_events)
         with patch("apps.workspaces.services._dispatch_invitation_email"):
@@ -612,7 +635,9 @@ class TestInvitationService:
 
         service = InvitationService(event_publisher=mock_events)
         with patch("apps.workspaces.services._dispatch_member_joined_notification"):
-            service.accept_invitation(token=invitation.token, user_id=new_user_id, user_email=invitation.email)
+            service.accept_invitation(
+                token=invitation.token, user_id=new_user_id, user_email=invitation.email
+            )
 
         invitation.refresh_from_db()
         assert invitation.accepted_at is not None
@@ -629,12 +654,16 @@ class TestInvitationService:
 
         service = InvitationService(event_publisher=mock_events)
         with pytest.raises(InvitationError, match="expired"):
-            service.accept_invitation(token=invitation.token, user_id=uuid.uuid4(), user_email=invitation.email)
+            service.accept_invitation(
+                token=invitation.token, user_id=uuid.uuid4(), user_email=invitation.email
+            )
 
     def test_accept_invalid_token_fails(self, mock_events):
         service = InvitationService(event_publisher=mock_events)
         with pytest.raises(InvitationError, match="invalid"):
-            service.accept_invitation(token="not-a-real-token", user_id=uuid.uuid4(), user_email="test@gmail.com")
+            service.accept_invitation(
+                token="not-a-real-token", user_id=uuid.uuid4(), user_email="test@gmail.com"
+            )
 
     def test_accept_revoked_invitation_fails(self, workspace, owner_id, mock_events):
         invitation = WorkspaceInvitation.objects.create(
@@ -648,7 +677,9 @@ class TestInvitationService:
 
         service = InvitationService(event_publisher=mock_events)
         with pytest.raises(InvitationError, match="invalid"):
-            service.accept_invitation(token=invitation.token, user_id=uuid.uuid4(), user_email=invitation.email)
+            service.accept_invitation(
+                token=invitation.token, user_id=uuid.uuid4(), user_email=invitation.email
+            )
 
     def test_accept_already_accepted_invitation_fails(self, workspace, owner_id, mock_events):
         """Replay attack prevention: cannot accept the same invitation twice."""
@@ -664,9 +695,13 @@ class TestInvitationService:
 
         service = InvitationService(event_publisher=mock_events)
         with pytest.raises(InvitationError, match="already been accepted"):
-            service.accept_invitation(token=invitation.token, user_id=new_user_id, user_email=invitation.email)
+            service.accept_invitation(
+                token=invitation.token, user_id=new_user_id, user_email=invitation.email
+            )
 
-    def test_accept_already_member_is_idempotent(self, workspace_with_members, owner_id, member_id, mock_events):
+    def test_accept_already_member_is_idempotent(
+        self, workspace_with_members, owner_id, member_id, mock_events
+    ):
         """
         If the user is already a member (e.g. accepted invite from another workspace
         session), return success without creating a duplicate member row.
@@ -687,14 +722,19 @@ class TestInvitationService:
         )
 
         # Should succeed, not duplicate
-        assert WorkspaceMember.objects.filter(
-            workspace=workspace_with_members, user_id=member_id
-        ).count() == 1
+        assert (
+            WorkspaceMember.objects.filter(
+                workspace=workspace_with_members, user_id=member_id
+            ).count()
+            == 1
+        )
 
     def test_revoke_invitation(self, workspace, owner_id, admin_id, mock_events):
         WorkspaceMember.objects.create(
-            workspace=workspace, user_id=admin_id,
-            role=WorkspaceRole.ADMIN, joined_at=timezone.now(),
+            workspace=workspace,
+            user_id=admin_id,
+            role=WorkspaceRole.ADMIN,
+            joined_at=timezone.now(),
         )
         invitation = WorkspaceInvitation.objects.create(
             workspace=workspace,
@@ -727,18 +767,27 @@ class TestInvitationService:
         # Create 2 pending, 1 accepted, 1 expired
         for i in range(2):
             WorkspaceInvitation.objects.create(
-                workspace=workspace, email=f"pending{i}@x.com",
-                role=WorkspaceRole.MEMBER, invited_by_id=owner_id, invited_by_name="O",
+                workspace=workspace,
+                email=f"pending{i}@x.com",
+                role=WorkspaceRole.MEMBER,
+                invited_by_id=owner_id,
+                invited_by_name="O",
             )
         accepted = WorkspaceInvitation.objects.create(
-            workspace=workspace, email="accepted@x.com",
-            role=WorkspaceRole.MEMBER, invited_by_id=owner_id, invited_by_name="O",
+            workspace=workspace,
+            email="accepted@x.com",
+            role=WorkspaceRole.MEMBER,
+            invited_by_id=owner_id,
+            invited_by_name="O",
         )
         accepted.accept()
 
         WorkspaceInvitation.objects.create(
-            workspace=workspace, email="expired@x.com",
-            role=WorkspaceRole.MEMBER, invited_by_id=owner_id, invited_by_name="O",
+            workspace=workspace,
+            email="expired@x.com",
+            role=WorkspaceRole.MEMBER,
+            invited_by_id=owner_id,
+            invited_by_name="O",
             expires_at=timezone.now() - timedelta(hours=1),
         )
 
@@ -749,7 +798,7 @@ class TestInvitationService:
         emails = {inv.email for inv in pending}
         assert "pending0@x.com" in emails
         assert "pending1@x.com" in emails
-    
+
     def test_accept_invitation_wrong_email_fails(
         self,
         workspace,
@@ -779,9 +828,9 @@ class TestInvitationService:
 
 # ─── HTTP View Tests ──────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestWorkspaceViews:
-
     def test_create_workspace(self, owner_id, ws_url):
         client = _authed_client(owner_id, "Owner")
         resp = client.post(
@@ -821,7 +870,9 @@ class TestWorkspaceViews:
         assert resp.status_code == 200
         assert resp.data["id"] == str(workspace_with_members.id)
 
-    def test_retrieve_workspace_outsider_gets_404(self, workspace_with_members, outsider_id, ws_url):
+    def test_retrieve_workspace_outsider_gets_404(
+        self, workspace_with_members, outsider_id, ws_url
+    ):
         """Security: non-members receive 404, not 403. Never confirm existence."""
         client = _authed_client(outsider_id)
         resp = client.get(ws_url(f"workspaces/{workspace_with_members.id}/"))
@@ -844,14 +895,15 @@ class TestWorkspaceViews:
 
 @pytest.mark.django_db
 class TestMemberViews:
-
     def test_list_members(self, workspace_with_members, member_id, ws_url):
         client = _authed_client(member_id)
         resp = client.get(ws_url(f"workspaces/{workspace_with_members.id}/members/"))
         assert resp.status_code == 200
         assert len(resp.data) >= 4  # owner, admin, member, viewer
 
-    def test_update_role_admin_can_promote_member(self, workspace_with_members, admin_id, member_id, ws_url):
+    def test_update_role_admin_can_promote_member(
+        self, workspace_with_members, admin_id, member_id, ws_url
+    ):
         client = _authed_client(admin_id)
         resp = client.patch(
             ws_url(f"workspaces/{workspace_with_members.id}/members/{member_id}/"),
@@ -861,7 +913,9 @@ class TestMemberViews:
         assert resp.status_code == 200
         assert resp.data["role"] == "admin"
 
-    def test_update_role_member_cannot_change_roles(self, workspace_with_members, member_id, viewer_id, ws_url):
+    def test_update_role_member_cannot_change_roles(
+        self, workspace_with_members, member_id, viewer_id, ws_url
+    ):
         client = _authed_client(member_id)
         resp = client.patch(
             ws_url(f"workspaces/{workspace_with_members.id}/members/{viewer_id}/"),
@@ -870,7 +924,9 @@ class TestMemberViews:
         )
         assert resp.status_code == 403
 
-    def test_update_role_cannot_assign_owner(self, workspace_with_members, owner_id, member_id, ws_url):
+    def test_update_role_cannot_assign_owner(
+        self, workspace_with_members, owner_id, member_id, ws_url
+    ):
         client = _authed_client(owner_id)
         resp = client.patch(
             ws_url(f"workspaces/{workspace_with_members.id}/members/{member_id}/"),
@@ -900,7 +956,6 @@ class TestMemberViews:
 
 @pytest.mark.django_db
 class TestInvitationViews:
-
     def test_invite_member_success(self, team_workspace_with_members, admin_id, ws_url):
         client = _authed_client(admin_id, "Admin User")
 
@@ -1043,7 +1098,9 @@ class TestInvitationViews:
         ]:
             client = _authed_client(user_id)
             resp = client.get(ws_url(f"workspaces/{workspace_with_members.id}/invitations/"))
-            assert resp.status_code == expected, f"user {user_id} expected {expected} got {resp.status_code}"
+            assert resp.status_code == expected, (
+                f"user {user_id} expected {expected} got {resp.status_code}"
+            )
 
     def test_revoke_invitation(self, workspace_with_members, admin_id, owner_id, ws_url):
         invitation = WorkspaceInvitation.objects.create(
@@ -1064,9 +1121,9 @@ class TestInvitationViews:
 
 # ─── Kafka Event Tests ────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestKafkaEvents:
-
     def test_invitation_created_publishes_event(
         self,
         workspace,
@@ -1158,9 +1215,9 @@ class TestKafkaEvents:
 
 # ─── Celery Task Tests ────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestCeleryTasks:
-
     def test_invitation_email_task_dispatched_on_invite(
         self,
         workspace,

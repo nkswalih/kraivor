@@ -5,3 +5,5 @@ export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
 export { Separator } from './separator';
 export { Avatar, AvatarImage, AvatarFallback } from './avatar';
 export { Spinner } from './spinner';
+export { Badge } from './badge';
+export { Skeleton } from './skeleton';

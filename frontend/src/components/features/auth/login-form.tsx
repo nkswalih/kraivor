@@ -8,16 +8,8 @@ import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authApi } from '@/lib/api/auth-api';
-import { DEFAULT_DASHBOARD_ROUTE, ROUTES } from '@/constants';
-
-/* ─── Helpers & Icons ────────────────────────────────────────────── */
-
-const maskEmail = (email: string) => {
-  const [localPart, domain] = email.split('@');
-  if (!localPart || !domain) return email;
-  const maskedLocal = localPart.substring(0, 2) + '*'.repeat(5);
-  return `${maskedLocal}@${domain}`;
-};
+import { useAuthStore } from '@/lib/stores/auth-store';
+import { ROUTES } from '@/constants';
 
 const GithubIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -61,9 +53,9 @@ type Step = 'IDENTIFY' | 'CHOOSE_METHOD' | 'PASSWORD' | 'OTP_ENTER';
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || DEFAULT_DASHBOARD_ROUTE;
-  
-  // State Machine
+  const callbackUrl = searchParams.get('callbackUrl');
+  const { initWorkspace } = useAuthStore();
+
   const [step, setStep] = useState<Step>('IDENTIFY');
   const [email, setEmail] = useState('');
   const [methods, setMethods] = useState<string[]>([]);
@@ -77,21 +69,22 @@ export function LoginForm() {
     setServerError(null);
   };
 
-  const handleAuthSuccess = (mfaRequired = false) => {
+  const handleAuthSuccess = async (mfaRequired = false) => {
     if (mfaRequired) {
       router.push('/mfa/verify');
     } else {
-      router.replace(callbackUrl);
+      await initWorkspace();
+      const slug = useAuthStore.getState().workspaceSlug;
+      router.replace(callbackUrl || (slug ? `/${slug}` : '/new-workspace'));
     }
   };
 
   return (
     <div className="mx-auto w-full max-w-[420px] animate-fade-up">
-      {/* ── Brand & Headers ─────────────────────────────────────────── */}
       <div className="mb-8 text-center">
         <div className="mb-3 inline-flex items-center gap-2">
           <span className="text-2xl font-bold bg-gradient-to-br from-[hsl(var(--primary-light))] to-[hsl(var(--primary))] bg-clip-text text-transparent">
-            ✦ Kraivor
+            Kraivor
           </span>
         </div>
         <h1 className="text-[28px] font-bold leading-tight tracking-tight text-white">
@@ -104,71 +97,58 @@ export function LoginForm() {
         {step !== 'IDENTIFY' && <p className="mt-1.5 text-sm font-medium text-slate-400">{email}</p>}
       </div>
 
-      {/* ── Glass card ────────────────────────────────────── */}
-      <div
-        className="rounded-2xl p-8 relative overflow-hidden transition-all duration-300"
-        style={{
-          background: 'rgba(255, 255, 255, 0.03)',
-          backdropFilter: 'blur(24px)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 24px 64px -12px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
-        }}
-      >
+      <div className="rounded-2xl p-8 bg-krait-surface1 border border-krait-border">
         {serverError && (
           <div className="mb-4 rounded-lg px-4 py-3 text-sm text-red-300 bg-red-500/10 border border-red-500/20" role="alert">
             {serverError}
           </div>
         )}
 
-        {/* Step 1 */}
         {step === 'IDENTIFY' && (
-          <IdentifyStep 
-            onSuccess={(e: string, m: string[]) => { setEmail(e); setMethods(m); setStep('CHOOSE_METHOD'); }} 
-            setGlobalError={setServerError} 
-            isLoading={isLoading} 
-            setIsLoading={setIsLoading} 
+          <IdentifyStep
+            onSuccess={(e: string, m: string[]) => { setEmail(e); setMethods(m); setStep('CHOOSE_METHOD'); }}
+            setGlobalError={setServerError}
+            isLoading={isLoading}
+            setIsLoading={setIsLoading}
           />
         )}
 
-        {/* Step 2 */}
         {step === 'CHOOSE_METHOD' && (
-          <ChooseMethodStep 
-            methods={methods} 
+          <ChooseMethodStep
+            methods={methods}
             email={email}
             onSelectPassword={() => setStep('PASSWORD')}
             onSelectOtp={async () => {
               try {
-                setIsLoading(true); 
+                setIsLoading(true);
                 setServerError(null);
                 await authApi.sendOTP({ email });
                 setStep('OTP_ENTER');
               } catch (err: any) {
                 setServerError(err.message || 'Failed to send code.');
-              } finally { 
-                setIsLoading(false); 
+              } finally {
+                setIsLoading(false);
               }
             }}
-            isLoading={isLoading} 
+            isLoading={isLoading}
             onBack={resetFlow}
           />
         )}
 
-        {/* Step 3 */}
         {step === 'PASSWORD' && (
-          <PasswordStep 
-            email={email} 
-            onSuccess={handleAuthSuccess} 
-            setError={setServerError} 
-            onBack={() => setStep('CHOOSE_METHOD')} 
+          <PasswordStep
+            email={email}
+            onSuccess={handleAuthSuccess}
+            setError={setServerError}
+            onBack={() => setStep('CHOOSE_METHOD')}
             onReset={resetFlow}
           />
         )}
 
-        {/* Step 4 */}
         {step === 'OTP_ENTER' && (
-          <OtpStep 
-            email={email} 
-            onSuccess={() => handleAuthSuccess(false)} 
+          <OtpStep
+            email={email}
+            onSuccess={() => handleAuthSuccess(false)}
             setError={setServerError}
             onBack={() => setStep('CHOOSE_METHOD')}
           />
@@ -188,7 +168,7 @@ export function LoginForm() {
 }
 
 /* ──────────────────────────────────────────────────────────────────
-    SUB-COMPONENTS 
+    SUB-COMPONENTS
 ────────────────────────────────────────────────────────────────── */
 
 function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: any) {
@@ -196,11 +176,11 @@ function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: an
   const { register, handleSubmit, setError: setFieldError, formState: { errors } } = useForm({ resolver: zodResolver(schema) });
 
   const onSubmit = async (data: any) => {
-    setGlobalError(null); 
+    setGlobalError(null);
     setIsLoading(true);
     try {
       const res = await authApi.identify(data.email);
-      
+
       if (res.user_exists === false) {
         setFieldError('email', { type: 'manual', message: 'Account not found. Please register.' });
         return;
@@ -216,7 +196,6 @@ function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: an
       } else {
         setFieldError('email', { type: 'manual', message: 'No login methods available.' });
       }
-
     } catch (err: any) {
       const errorData = err.response?.data || err;
       if (errorData?.user_exists === false) {
@@ -231,22 +210,17 @@ function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: an
     }
   };
 
-  // --- UPDATED OAUTH HANDLER ---
   const handleOAuth = async (provider: 'github' | 'google') => {
     try {
       setIsLoading(true);
       setGlobalError(null);
 
       if (provider === 'google') {
-        // Google Backend Endpoint returns a 302 Redirect.
-        // We MUST use standard browser navigation to avoid CORS errors.
         window.location.href = `/api/auth/oauth/${provider}/`;
         return;
       }
 
       if (provider === 'github') {
-        // GitHub Backend Endpoint returns a 200 OK with JSON {"authorization_url": "..."}
-        // We fetch the URL via our API client, then redirect.
         const res = await authApi.initiateOAuth(provider);
         if (res.authorization_url) {
           window.location.href = res.authorization_url;
@@ -264,17 +238,17 @@ function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: an
   return (
     <div className="animate-fade-up">
       <div className="space-y-3 mb-6">
-        <button 
-          type="button" 
-          onClick={() => handleOAuth('github')} 
+        <button
+          type="button"
+          onClick={() => handleOAuth('github')}
           disabled={isLoading}
           className="oauth-btn flex w-full items-center justify-center gap-3 px-4 py-3 text-sm font-medium disabled:opacity-60"
         >
           <GithubIcon /> Continue with GitHub
         </button>
-        <button 
-          type="button" 
-          onClick={() => handleOAuth('google')} 
+        <button
+          type="button"
+          onClick={() => handleOAuth('google')}
           disabled={isLoading}
           className="oauth-btn flex w-full items-center justify-center gap-3 px-4 py-3 text-sm font-medium disabled:opacity-60"
         >
@@ -291,17 +265,17 @@ function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: an
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1.5">
           <label className="block text-sm font-medium text-slate-300">Email address</label>
-          <input 
-            {...register('email')} 
-            autoFocus 
-            className={`auth-input w-full px-4 py-3 text-sm ${errors.email ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' : ''}`} 
-            placeholder="you@company.com" 
+          <input
+            {...register('email')}
+            autoFocus
+            className={`auth-input w-full px-4 py-3 text-sm ${errors.email ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' : ''}`}
+            placeholder="you@company.com"
           />
           {errors.email && <p className="text-xs text-red-400 mt-1">{errors.email.message as string}</p>}
         </div>
-        <button 
-          type="submit" 
-          disabled={isLoading} 
+        <button
+          type="submit"
+          disabled={isLoading}
           className="btn-shimmer relative flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isLoading ? (
@@ -322,18 +296,24 @@ function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: an
 }
 
 function ChooseMethodStep({ methods, email, onSelectPassword, onSelectOtp, isLoading, onBack }: any) {
+  const maskEmail = (email: string) => {
+    const [localPart, domain] = email.split('@');
+    if (!localPart || !domain) return email;
+    const maskedLocal = localPart.substring(0, 2) + '*'.repeat(5);
+    return `${maskedLocal}@${domain}`;
+  };
   const masked = maskEmail(email);
   return (
     <div className="animate-fade-up space-y-4">
       <p className="text-sm text-slate-300 text-center mb-6">How would you like to sign in?</p>
-      
+
       {methods?.includes('password') && (
         <button onClick={onSelectPassword} className="w-full flex items-center p-4 border border-white/10 rounded-xl hover:bg-white/5 transition-colors text-left group">
           <div className="flex-1">
             <h3 className="text-sm font-medium text-white group-hover:text-[hsl(var(--primary-light))] transition-colors">Use your password</h3>
             <p className="text-xs text-slate-400 mt-1">Sign in with your Kraivor account password</p>
           </div>
-          <ArrowLeftIcon /> 
+          <ArrowLeftIcon />
         </button>
       )}
 
@@ -383,7 +363,7 @@ function PasswordStep({ email, onSuccess, setError, onBack, onReset }: any) {
           </button>
         </div>
       </div>
-      
+
       <button type="submit" disabled={isSubmitting} className="btn-shimmer flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 disabled:cursor-not-allowed">
         {isSubmitting ? (
           <>
@@ -414,6 +394,13 @@ function OtpStep({ email, onSuccess, setError, onBack }: any) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isVerifying, setIsVerifying] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const maskEmail = (email: string) => {
+    const [localPart, domain] = email.split('@');
+    if (!localPart || !domain) return email;
+    const maskedLocal = localPart.substring(0, 2) + '*'.repeat(5);
+    return `${maskedLocal}@${domain}`;
+  };
   const masked = maskEmail(email);
 
   const handleChange = (index: number, val: string) => {
@@ -431,11 +418,11 @@ function OtpStep({ email, onSuccess, setError, onBack }: any) {
   };
 
   const verify = async (code: string) => {
-    setIsVerifying(true); 
+    setIsVerifying(true);
     setError(null);
     try {
       await authApi.verifyOTP({ email, otp_code: code });
-      onSuccess(); // Triggers Zustand setAuth implicitly inside API, then redirect
+      onSuccess();
     } catch (err: any) {
       setError(err.message || 'Invalid or expired code.');
     } finally {
@@ -447,18 +434,18 @@ function OtpStep({ email, onSuccess, setError, onBack }: any) {
     e.preventDefault();
     const pasted = e.clipboardData.getData('text').slice(0, 6).split('');
     if (pasted.length === 6 && pasted.every(c => /^\d$/.test(c))) {
-      setOtp(pasted); 
+      setOtp(pasted);
       verify(pasted.join(''));
     }
   };
 
   const handleResend = async () => {
     setError(null);
-    try { 
-      await authApi.sendOTP({ email }); 
-      setError('New code sent successfully!'); 
-    } catch { 
-      setError('Failed to resend. Please wait a moment.'); 
+    try {
+      await authApi.sendOTP({ email });
+      setError('New code sent successfully!');
+    } catch {
+      setError('Failed to resend. Please wait a moment.');
     }
   };
 
@@ -473,8 +460,8 @@ function OtpStep({ email, onSuccess, setError, onBack }: any) {
           <input
             key={i}
             ref={(el) => { inputRefs.current[i] = el; }}
-            type="text" 
-            maxLength={1} 
+            type="text"
+            maxLength={1}
             value={digit}
             onChange={(e) => handleChange(i, e.target.value)}
             onKeyDown={(e) => handleKeyDown(i, e)}
@@ -484,8 +471,8 @@ function OtpStep({ email, onSuccess, setError, onBack }: any) {
         ))}
       </div>
 
-      <button 
-        onClick={() => verify(otp.join(''))} 
+      <button
+        onClick={() => verify(otp.join(''))}
         disabled={isVerifying || otp.join('').length < 6}
         className="btn-shimmer flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
       >

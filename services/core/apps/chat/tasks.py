@@ -56,7 +56,7 @@ def persist_to_dynamodb(
             "task.chat.persist.failed",
             extra={"room_id": room_id, "error": str(exc)},
         )
-        raise self.retry(exc=exc, countdown=30 * (2 ** self.request.retries)) from exc
+        raise self.retry(exc=exc, countdown=30 * (2**self.request.retries)) from exc
 
 
 @shared_task(

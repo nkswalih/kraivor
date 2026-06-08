@@ -17,7 +17,6 @@ from apps.knowledge.models import KnowledgeSpace
 
 @pytest.mark.django_db
 class TestKnowledgeSpaceModel:
-
     # ── Creation and defaults ─────────────────────────────────────────────────
 
     def test_creates_with_uuid_pk(self, knowledge_space):

@@ -21,18 +21,20 @@ from apps.knowledge.serializers import (
 
 # ─── KnowledgeSpaceCreateSerializer ──────────────────────────────────────────
 
-class TestKnowledgeSpaceCreateSerializer:
 
+class TestKnowledgeSpaceCreateSerializer:
     def test_valid_minimal_input(self):
         s = KnowledgeSpaceCreateSerializer(data={"name": "Auth Flow"})
         assert s.is_valid(), s.errors
 
     def test_valid_full_input(self):
-        s = KnowledgeSpaceCreateSerializer(data={
-            "name": "Auth Flow",
-            "description": "OAuth and JWT diagrams.",
-            "canvas_data": {"nodes": [], "edges": []},
-        })
+        s = KnowledgeSpaceCreateSerializer(
+            data={
+                "name": "Auth Flow",
+                "description": "OAuth and JWT diagrams.",
+                "canvas_data": {"nodes": [], "edges": []},
+            }
+        )
         assert s.is_valid(), s.errors
 
     def test_name_is_stripped(self):
@@ -86,18 +88,20 @@ class TestKnowledgeSpaceCreateSerializer:
 
 # ─── KnowledgeSpaceUpdateSerializer ──────────────────────────────────────────
 
-class TestKnowledgeSpaceUpdateSerializer:
 
+class TestKnowledgeSpaceUpdateSerializer:
     def test_valid_name_only(self):
         s = KnowledgeSpaceUpdateSerializer(data={"name": "Renamed Canvas"})
         assert s.is_valid(), s.errors
 
     def test_valid_all_fields(self):
-        s = KnowledgeSpaceUpdateSerializer(data={
-            "name": "Payment Service",
-            "description": "Updated description.",
-            "canvas_data": {"nodes": [{"id": "n1"}]},
-        })
+        s = KnowledgeSpaceUpdateSerializer(
+            data={
+                "name": "Payment Service",
+                "description": "Updated description.",
+                "canvas_data": {"nodes": [{"id": "n1"}]},
+            }
+        )
         assert s.is_valid(), s.errors
 
     def test_name_is_stripped(self):
@@ -123,10 +127,12 @@ class TestKnowledgeSpaceUpdateSerializer:
         assert "canvas_data" not in s.validated_data
 
     def test_canvas_data_present_is_in_validated(self):
-        s = KnowledgeSpaceUpdateSerializer(data={
-            "name": "X",
-            "canvas_data": {"nodes": []},
-        })
+        s = KnowledgeSpaceUpdateSerializer(
+            data={
+                "name": "X",
+                "canvas_data": {"nodes": []},
+            }
+        )
         assert s.is_valid(), s.errors
         assert "canvas_data" in s.validated_data
 
@@ -138,9 +144,9 @@ class TestKnowledgeSpaceUpdateSerializer:
 
 # ─── KnowledgeSpaceListSerializer ────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestKnowledgeSpaceListSerializer:
-
     def test_output_excludes_canvas_data(self, knowledge_space):
         data = KnowledgeSpaceListSerializer(knowledge_space).data
         assert "canvas_data" not in data
@@ -148,8 +154,14 @@ class TestKnowledgeSpaceListSerializer:
     def test_output_contains_expected_fields(self, knowledge_space):
         data = KnowledgeSpaceListSerializer(knowledge_space).data
         expected = {
-            "id", "workspace_id", "name", "description",
-            "created_by", "updated_by", "created_at", "updated_at",
+            "id",
+            "workspace_id",
+            "name",
+            "description",
+            "created_by",
+            "updated_by",
+            "created_at",
+            "updated_at",
         }
         assert set(data.keys()) == expected
 
@@ -168,9 +180,9 @@ class TestKnowledgeSpaceListSerializer:
 
 # ─── KnowledgeSpaceSerializer (full) ─────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestKnowledgeSpaceSerializer:
-
     def test_output_contains_canvas_data(self, knowledge_space):
         data = KnowledgeSpaceSerializer(knowledge_space).data
         assert "canvas_data" in data
@@ -178,8 +190,15 @@ class TestKnowledgeSpaceSerializer:
     def test_output_contains_all_expected_fields(self, knowledge_space):
         data = KnowledgeSpaceSerializer(knowledge_space).data
         expected = {
-            "id", "workspace_id", "name", "description", "canvas_data",
-            "created_by", "updated_by", "created_at", "updated_at",
+            "id",
+            "workspace_id",
+            "name",
+            "description",
+            "canvas_data",
+            "created_by",
+            "updated_by",
+            "created_at",
+            "updated_at",
         }
         assert set(data.keys()) == expected
 

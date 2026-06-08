@@ -60,6 +60,7 @@ logger = logging.getLogger(__name__)
 
 # ─── List + Create ────────────────────────────────────────────────────────────
 
+
 class KnowledgeSpaceListCreateView(WorkspaceContextMixin, APIView):
     """
     GET  /workspace/workspaces/{workspace_pk}/knowledge/
@@ -88,9 +89,7 @@ class KnowledgeSpaceListCreateView(WorkspaceContextMixin, APIView):
             workspace=workspace,
             search=search,
         )
-        return Response(
-            KnowledgeSpaceListSerializer(knowledge_spaces, many=True).data
-        )
+        return Response(KnowledgeSpaceListSerializer(knowledge_spaces, many=True).data)
 
     def post(self, request, workspace_pk=None):
         """
@@ -122,6 +121,7 @@ class KnowledgeSpaceListCreateView(WorkspaceContextMixin, APIView):
 
 # ─── Detail (Retrieve / Update / Delete) ─────────────────────────────────────
 
+
 class KnowledgeSpaceDetailView(APIView):
     """
     GET    /workspace/knowledge/{pk}/
@@ -138,7 +138,7 @@ class KnowledgeSpaceDetailView(APIView):
 
     def _get_knowledge_space_or_404(self, pk) -> KnowledgeSpace:
         """
-        F 
+        F
         Returns 404 for both "doesn't exist" and "requesting user is not a
         workspace member" to avoid leaking information about workspace contents
         to outsiders — same security model as WorkspaceContextMixin.
@@ -153,12 +153,7 @@ class KnowledgeSpaceDetailView(APIView):
 
         user_id = self.request.user_id
 
-        ks = (
-            KnowledgeSpace.objects
-            .select_related("workspace")
-            .filter(id=ks_id)
-            .first()
-        )
+        ks = KnowledgeSpace.objects.select_related("workspace").filter(id=ks_id).first()
 
         if not ks or not ks.workspace.is_member(user_id):
             raise NotFound("Knowledge space not found.")

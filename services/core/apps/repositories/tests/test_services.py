@@ -35,9 +35,9 @@ from apps.repositories.services import (
 
 # ─── connect_repository ───────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db(transaction=True)
 class TestConnectRepository:
-
     def _service(self, mock_events=None):
         """Return a RepositoryService with a mocked event publisher."""
         publisher = mock_events or MagicMock()
@@ -46,8 +46,13 @@ class TestConnectRepository:
     # ── Happy path — new repository ───────────────────────────────────────────
 
     def test_creates_repository_row(
-        self, workspace, owner_member, owner_id,
-        mock_github_token, mock_github_api, github_repo_payload,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        mock_github_token,
+        mock_github_api,
+        github_repo_payload,
     ):
         repo = self._service().connect_repository(
             workspace=workspace,
@@ -59,8 +64,13 @@ class TestConnectRepository:
         assert repo.github_id == github_repo_payload["id"]
 
     def test_stores_metadata_from_github(
-        self, workspace, owner_member, owner_id,
-        mock_github_token, mock_github_api, github_repo_payload,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        mock_github_token,
+        mock_github_api,
+        github_repo_payload,
     ):
         repo = self._service().connect_repository(
             workspace=workspace,
@@ -73,8 +83,12 @@ class TestConnectRepository:
         assert repo.is_private == github_repo_payload["private"]
 
     def test_sets_connected_by_id(
-        self, workspace, owner_member, owner_id,
-        mock_github_token, mock_github_api,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        mock_github_token,
+        mock_github_api,
     ):
         repo = self._service().connect_repository(
             workspace=workspace,
@@ -84,8 +98,12 @@ class TestConnectRepository:
         assert repo.connected_by_id == owner_id
 
     def test_new_repo_not_indexed(
-        self, workspace, owner_member, owner_id,
-        mock_github_token, mock_github_api,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        mock_github_token,
+        mock_github_api,
     ):
         repo = self._service().connect_repository(
             workspace=workspace,
@@ -95,8 +113,12 @@ class TestConnectRepository:
         assert repo.indexed is False
 
     def test_admin_can_connect(
-        self, workspace, admin_member, admin_id,
-        mock_github_token, mock_github_api,
+        self,
+        workspace,
+        admin_member,
+        admin_id,
+        mock_github_token,
+        mock_github_api,
     ):
         repo = self._service().connect_repository(
             workspace=workspace,
@@ -106,8 +128,12 @@ class TestConnectRepository:
         assert repo.pk is not None
 
     def test_event_scheduled_after_commit(
-        self, workspace, owner_member, owner_id,
-        mock_github_token, mock_github_api,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        mock_github_token,
+        mock_github_api,
     ):
         # transaction.on_commit fires immediately in tests (no real transaction
         # wrapping the test body), so the publisher is called synchronously.
@@ -125,7 +151,11 @@ class TestConnectRepository:
     # ── Happy path — restore soft-deleted repository ──────────────────────────
 
     def test_restores_soft_deleted_repo(
-        self, workspace, owner_member, owner_id, repository,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        repository,
         mock_github_token,
     ):
         """
@@ -141,7 +171,7 @@ class TestConnectRepository:
         restored_payload = {
             "id": repository.github_id,
             "full_name": "acme/api",
-            "default_branch": "develop",   # metadata may have changed on GitHub
+            "default_branch": "develop",  # metadata may have changed on GitHub
             "language": "Go",
             "description": "Updated description",
             "private": True,
@@ -156,18 +186,22 @@ class TestConnectRepository:
                 github_repo="acme/api",
             )
 
-        assert repo.id == original_id           # same primary key preserved
-        assert repo.deleted_at is None           # soft-delete cleared
+        assert repo.id == original_id  # same primary key preserved
+        assert repo.deleted_at is None  # soft-delete cleared
         assert repo.default_branch == "develop"  # metadata refreshed
         assert repo.language == "Go"
-        assert repo.indexed is False             # re-indexing required
-        assert repo.last_analyzed_at is None     # analysis reset
+        assert repo.indexed is False  # re-indexing required
+        assert repo.last_analyzed_at is None  # analysis reset
 
     # ── Permission errors ─────────────────────────────────────────────────────
 
     def test_member_cannot_connect(
-        self, workspace, regular_member, member_id,
-        mock_github_token, mock_github_api,
+        self,
+        workspace,
+        regular_member,
+        member_id,
+        mock_github_token,
+        mock_github_api,
     ):
         with pytest.raises(RepositoryPermissionError):
             self._service().connect_repository(
@@ -177,8 +211,12 @@ class TestConnectRepository:
             )
 
     def test_viewer_cannot_connect(
-        self, workspace, viewer_member, viewer_id,
-        mock_github_token, mock_github_api,
+        self,
+        workspace,
+        viewer_member,
+        viewer_id,
+        mock_github_token,
+        mock_github_api,
     ):
         with pytest.raises(RepositoryPermissionError):
             self._service().connect_repository(
@@ -188,8 +226,12 @@ class TestConnectRepository:
             )
 
     def test_non_member_cannot_connect(
-        self, workspace, owner_member, outsider_id,
-        mock_github_token, mock_github_api,
+        self,
+        workspace,
+        owner_member,
+        outsider_id,
+        mock_github_token,
+        mock_github_api,
     ):
         with pytest.raises(RepositoryPermissionError):
             self._service().connect_repository(
@@ -201,7 +243,11 @@ class TestConnectRepository:
     # ── Duplicate error ───────────────────────────────────────────────────────
 
     def test_raises_already_connected_if_active_repo_exists(
-        self, workspace, owner_member, owner_id, repository,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        repository,
         mock_github_token,
     ):
         # repository fixture uses github_id=123456789; mock GitHub to return same ID
@@ -213,10 +259,13 @@ class TestConnectRepository:
             "description": None,
             "private": False,
         }
-        with patch(
-            "apps.repositories.services.GitHubAPIClient.get_repository",
-            return_value=existing_payload,
-        ), pytest.raises(RepositoryAlreadyConnectedError):
+        with (
+            patch(
+                "apps.repositories.services.GitHubAPIClient.get_repository",
+                return_value=existing_payload,
+            ),
+            pytest.raises(RepositoryAlreadyConnectedError),
+        ):
             self._service().connect_repository(
                 workspace=workspace,
                 actor_id=owner_id,
@@ -226,12 +275,18 @@ class TestConnectRepository:
     # ── GitHub integration errors ─────────────────────────────────────────────
 
     def test_raises_github_auth_error_when_no_token(
-        self, workspace, owner_member, owner_id,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
     ):
-        with patch(
-            "apps.repositories.services.GitHubTokenClient.get_token",
-            side_effect=GitHubAuthError("No GitHub account connected."),
-        ), pytest.raises(GitHubAuthError):
+        with (
+            patch(
+                "apps.repositories.services.GitHubTokenClient.get_token",
+                side_effect=GitHubAuthError("No GitHub account connected."),
+            ),
+            pytest.raises(GitHubAuthError),
+        ):
             self._service().connect_repository(
                 workspace=workspace,
                 actor_id=owner_id,
@@ -239,12 +294,19 @@ class TestConnectRepository:
             )
 
     def test_raises_github_api_error_when_repo_not_found(
-        self, workspace, owner_member, owner_id, mock_github_token,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        mock_github_token,
     ):
-        with patch(
-            "apps.repositories.services.GitHubAPIClient.get_repository",
-            side_effect=GitHubAPIError("Repository not found."),
-        ), pytest.raises(GitHubAPIError):
+        with (
+            patch(
+                "apps.repositories.services.GitHubAPIClient.get_repository",
+                side_effect=GitHubAPIError("Repository not found."),
+            ),
+            pytest.raises(GitHubAPIError),
+        ):
             self._service().connect_repository(
                 workspace=workspace,
                 actor_id=owner_id,
@@ -252,14 +314,21 @@ class TestConnectRepository:
             )
 
     def test_no_db_row_created_when_github_api_fails(
-        self, workspace, owner_member, owner_id, mock_github_token,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        mock_github_token,
     ):
         """GitHub errors before the DB write must leave the DB unchanged."""
         count_before = Repository.objects.filter(workspace=workspace).count()
-        with patch(
-            "apps.repositories.services.GitHubAPIClient.get_repository",
-            side_effect=GitHubAPIError("GitHub error"),
-        ), pytest.raises(GitHubAPIError):
+        with (
+            patch(
+                "apps.repositories.services.GitHubAPIClient.get_repository",
+                side_effect=GitHubAPIError("GitHub error"),
+            ),
+            pytest.raises(GitHubAPIError),
+        ):
             self._service().connect_repository(
                 workspace=workspace,
                 actor_id=owner_id,
@@ -270,9 +339,9 @@ class TestConnectRepository:
 
 # ─── list_repositories ────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestListRepositories:
-
     def test_returns_active_repos_for_workspace(self, workspace, owner_member, repository):
         repos = list(RepositoryService().list_repositories(workspace=workspace))
         assert len(repos) == 1
@@ -284,9 +353,14 @@ class TestListRepositories:
         assert len(repos) == 0
 
     def test_excludes_repos_from_other_workspaces(
-        self, workspace, owner_member, owner_id, repository,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        repository,
     ):
         from apps.workspaces.models import Workspace
+
         other_workspace = Workspace.objects.create(
             owner_id=owner_id,
             name="Other",
@@ -314,7 +388,9 @@ class TestListRepositories:
         assert repos[1].id == repository.id
 
     def test_returns_empty_queryset_for_workspace_with_no_repos(
-        self, workspace, owner_member,
+        self,
+        workspace,
+        owner_member,
     ):
         repos = list(RepositoryService().list_repositories(workspace=workspace))
         assert repos == []
@@ -322,9 +398,9 @@ class TestListRepositories:
 
 # ─── disconnect_repository ────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db(transaction=True)
 class TestDisconnectRepository:
-
     def _service(self, mock_events=None):
         publisher = mock_events or MagicMock()
         return RepositoryService(event_publisher=publisher)
@@ -352,7 +428,11 @@ class TestDisconnectRepository:
         assert repo.is_deleted
 
     def test_disconnected_repo_absent_from_active_queryset(
-        self, workspace, owner_member, owner_id, repository,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        repository,
     ):
         repo_id = repository.id
         self._service().disconnect_repository(
@@ -363,7 +443,11 @@ class TestDisconnectRepository:
         assert not Repository.objects.filter(id=repo_id).exists()
 
     def test_disconnected_repo_visible_via_all_objects(
-        self, workspace, owner_member, owner_id, repository,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        repository,
     ):
         repo_id = repository.id
         self._service().disconnect_repository(
@@ -374,7 +458,11 @@ class TestDisconnectRepository:
         assert Repository.all_objects.filter(id=repo_id).exists()
 
     def test_event_scheduled_after_commit(
-        self, workspace, owner_member, owner_id, repository,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        repository,
     ):
         publisher = MagicMock()
         self._service(publisher).disconnect_repository(
@@ -390,7 +478,11 @@ class TestDisconnectRepository:
     # ── Permission errors ─────────────────────────────────────────────────────
 
     def test_member_cannot_disconnect(
-        self, workspace, regular_member, member_id, repository,
+        self,
+        workspace,
+        regular_member,
+        member_id,
+        repository,
     ):
         with pytest.raises(RepositoryPermissionError):
             self._service().disconnect_repository(
@@ -400,7 +492,11 @@ class TestDisconnectRepository:
             )
 
     def test_viewer_cannot_disconnect(
-        self, workspace, viewer_member, viewer_id, repository,
+        self,
+        workspace,
+        viewer_member,
+        viewer_id,
+        repository,
     ):
         with pytest.raises(RepositoryPermissionError):
             self._service().disconnect_repository(
@@ -410,7 +506,11 @@ class TestDisconnectRepository:
             )
 
     def test_outsider_cannot_disconnect(
-        self, workspace, owner_member, outsider_id, repository,
+        self,
+        workspace,
+        owner_member,
+        outsider_id,
+        repository,
     ):
         with pytest.raises(RepositoryPermissionError):
             self._service().disconnect_repository(
@@ -422,7 +522,10 @@ class TestDisconnectRepository:
     # ── Not-found errors ──────────────────────────────────────────────────────
 
     def test_raises_not_found_for_nonexistent_repo(
-        self, workspace, owner_member, owner_id,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
     ):
         with pytest.raises(RepositoryNotFoundError):
             self._service().disconnect_repository(
@@ -432,7 +535,11 @@ class TestDisconnectRepository:
             )
 
     def test_raises_not_found_for_already_disconnected_repo(
-        self, workspace, owner_member, owner_id, repository,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        repository,
     ):
         repository.delete()  # soft-delete sets deleted_at on in-memory instance
         with pytest.raises(RepositoryNotFoundError):
@@ -443,10 +550,15 @@ class TestDisconnectRepository:
             )
 
     def test_raises_not_found_for_repo_in_different_workspace(
-        self, workspace, owner_member, owner_id, repository,
+        self,
+        workspace,
+        owner_member,
+        owner_id,
+        repository,
     ):
         from apps.workspaces.constants import WorkspaceRole
         from apps.workspaces.models import Workspace, WorkspaceMember
+
         other_workspace = Workspace.objects.create(
             owner_id=owner_id,
             name="Other",

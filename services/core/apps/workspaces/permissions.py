@@ -45,16 +45,13 @@ class IsWorkspaceMember(BasePermission):
 
     def has_object_permission(self, request, view, obj) -> bool:
         from .models import WorkspaceMember
+
         user_id = getattr(request, "user_id", None)
         if not user_id:
             return False
 
         # obj could be Workspace or WorkspaceMember
-        workspace = (
-            obj.workspace
-            if isinstance(obj, WorkspaceMember)
-            else obj
-        )
+        workspace = obj.workspace if isinstance(obj, WorkspaceMember) else obj
 
         return workspace.is_member(user_id)
 
@@ -72,15 +69,12 @@ class IsWorkspaceAdmin(BasePermission):
 
     def has_object_permission(self, request, view, obj) -> bool:
         from .models import WorkspaceMember
+
         user_id = getattr(request, "user_id", None)
         if not user_id:
             return False
 
-        workspace = (
-            obj.workspace
-            if isinstance(obj, WorkspaceMember)
-            else obj
-        )
+        workspace = obj.workspace if isinstance(obj, WorkspaceMember) else obj
 
         member = workspace.get_member(user_id)
         return bool(member and member.can_admin)

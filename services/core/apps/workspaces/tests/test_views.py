@@ -66,7 +66,9 @@ class TestWorkspaceViewSetCreate:
 
 class TestWorkspaceViewSetRetrieve:
     def test_returns_workspace(self, workspace, owner_member, db):
-        request = _build_request("get", f"/workspace/workspaces/{workspace.id}/", user_id=workspace.owner_id)
+        request = _build_request(
+            "get", f"/workspace/workspaces/{workspace.id}/", user_id=workspace.owner_id
+        )
         view = WorkspaceViewSet.as_view(actions={"get": "retrieve"})
         response = view(request, pk=str(workspace.id))
         assert response.status_code == status.HTTP_200_OK
@@ -74,13 +76,17 @@ class TestWorkspaceViewSetRetrieve:
         assert response.data["owner_id"] == str(workspace.owner_id)
 
     def test_returns_404_for_non_member(self, workspace, owner_member, db):
-        request = _build_request("get", f"/workspace/workspaces/{workspace.id}/", user_id=uuid.uuid4())
+        request = _build_request(
+            "get", f"/workspace/workspaces/{workspace.id}/", user_id=uuid.uuid4()
+        )
         view = WorkspaceViewSet.as_view(actions={"get": "retrieve"})
         response = view(request, pk=str(workspace.id))
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_returns_404_for_invalid_uuid(self, workspace, owner_member, db):
-        request = _build_request("get", "/workspace/workspaces/invalid/", user_id=workspace.owner_id)
+        request = _build_request(
+            "get", "/workspace/workspaces/invalid/", user_id=workspace.owner_id
+        )
         view = WorkspaceViewSet.as_view(actions={"get": "retrieve"})
         response = view(request, pk="not-a-uuid")
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -89,7 +95,12 @@ class TestWorkspaceViewSetRetrieve:
 class TestWorkspaceViewSetUpdate:
     def test_admin_can_update(self, workspace, admin_member, db):
         data = {"name": "Updated Name"}
-        request = _build_request("patch", f"/workspace/workspaces/{workspace.id}/", user_id=admin_member.user_id, data=data)
+        request = _build_request(
+            "patch",
+            f"/workspace/workspaces/{workspace.id}/",
+            user_id=admin_member.user_id,
+            data=data,
+        )
         view = WorkspaceViewSet.as_view(actions={"patch": "partial_update"})
         response = view(request, pk=str(workspace.id))
         assert response.status_code == status.HTTP_200_OK
@@ -97,14 +108,21 @@ class TestWorkspaceViewSetUpdate:
 
     def test_member_cannot_update(self, workspace, regular_member, db):
         data = {"name": "Hacked"}
-        request = _build_request("patch", f"/workspace/workspaces/{workspace.id}/", user_id=regular_member.user_id, data=data)
+        request = _build_request(
+            "patch",
+            f"/workspace/workspaces/{workspace.id}/",
+            user_id=regular_member.user_id,
+            data=data,
+        )
         view = WorkspaceViewSet.as_view(actions={"patch": "partial_update"})
         response = view(request, pk=str(workspace.id))
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_returns_404_for_non_member(self, workspace, owner_member, db):
         data = {"name": "Hacked"}
-        request = _build_request("patch", f"/workspace/workspaces/{workspace.id}/", user_id=uuid.uuid4(), data=data)
+        request = _build_request(
+            "patch", f"/workspace/workspaces/{workspace.id}/", user_id=uuid.uuid4(), data=data
+        )
         view = WorkspaceViewSet.as_view(actions={"patch": "partial_update"})
         response = view(request, pk=str(workspace.id))
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -112,7 +130,9 @@ class TestWorkspaceViewSetUpdate:
 
 class TestWorkspaceViewSetDelete:
     def test_owner_can_delete(self, workspace, owner_member, db):
-        request = _build_request("delete", f"/workspace/workspaces/{workspace.id}/", user_id=workspace.owner_id)
+        request = _build_request(
+            "delete", f"/workspace/workspaces/{workspace.id}/", user_id=workspace.owner_id
+        )
         view = WorkspaceViewSet.as_view(actions={"delete": "destroy"})
         response = view(request, pk=str(workspace.id))
         assert response.status_code == status.HTTP_204_NO_CONTENT
@@ -120,13 +140,17 @@ class TestWorkspaceViewSetDelete:
         assert workspace.is_deleted
 
     def test_admin_cannot_delete(self, workspace, admin_member, db):
-        request = _build_request("delete", f"/workspace/workspaces/{workspace.id}/", user_id=admin_member.user_id)
+        request = _build_request(
+            "delete", f"/workspace/workspaces/{workspace.id}/", user_id=admin_member.user_id
+        )
         view = WorkspaceViewSet.as_view(actions={"delete": "destroy"})
         response = view(request, pk=str(workspace.id))
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_returns_404_for_non_member(self, workspace, owner_member, db):
-        request = _build_request("delete", f"/workspace/workspaces/{workspace.id}/", user_id=uuid.uuid4())
+        request = _build_request(
+            "delete", f"/workspace/workspaces/{workspace.id}/", user_id=uuid.uuid4()
+        )
         view = WorkspaceViewSet.as_view(actions={"delete": "destroy"})
         response = view(request, pk=str(workspace.id))
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -134,14 +158,18 @@ class TestWorkspaceViewSetDelete:
 
 class TestWorkspaceMemberViewSetList:
     def test_lists_members(self, workspace, owner_member, admin_member, db):
-        request = _build_request("get", f"/workspace/workspaces/{workspace.id}/members/", user_id=workspace.owner_id)
+        request = _build_request(
+            "get", f"/workspace/workspaces/{workspace.id}/members/", user_id=workspace.owner_id
+        )
         view = WorkspaceMemberViewSet.as_view(actions={"get": "list"})
         response = view(request, workspace_pk=str(workspace.id))
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 2
 
     def test_returns_404_for_non_member(self, workspace, owner_member, db):
-        request = _build_request("get", f"/workspace/workspaces/{workspace.id}/members/", user_id=uuid.uuid4())
+        request = _build_request(
+            "get", f"/workspace/workspaces/{workspace.id}/members/", user_id=uuid.uuid4()
+        )
         view = WorkspaceMemberViewSet.as_view(actions={"get": "list"})
         response = view(request, workspace_pk=str(workspace.id))
         assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -151,15 +179,16 @@ class TestWorkspaceMemberViewSetCreate:
     def test_admin_can_add_member(self, workspace, admin_member, db):
         # Bind view to the 'invite' custom action instead of 'create'
         view = WorkspaceMemberViewSet.as_view(actions={"post": "invite"})
-        
+
         # Payload requires an email address under KRV-020 contract
         data = {"email": "new_invitee@example.com", "role": "member"}
         request = _build_request(
-            "post", f"/workspace/workspaces/{workspace.id}/members/invite/",
+            "post",
+            f"/workspace/workspaces/{workspace.id}/members/invite/",
             user_id=admin_member.user_id,
             data=data,
         )
-        
+
         response = view(request, workspace_pk=str(workspace.id))
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["email"] == "new_invitee@example.com"
@@ -169,28 +198,30 @@ class TestWorkspaceMemberViewSetCreate:
     def test_returns_400_without_user_id(self, workspace, admin_member, db):
         # Renamed to reflect missing email payload criteria
         view = WorkspaceMemberViewSet.as_view(actions={"post": "invite"})
-        
+
         data = {"role": "member"}  # Missing "email"
         request = _build_request(
-            "post", f"/workspace/workspaces/{workspace.id}/members/invite/",
+            "post",
+            f"/workspace/workspaces/{workspace.id}/members/invite/",
             user_id=admin_member.user_id,
             data=data,
         )
-        
+
         response = view(request, workspace_pk=str(workspace.id))
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "email" in response.data
 
     def test_returns_400_for_invalid_role(self, workspace, admin_member, db):
         view = WorkspaceMemberViewSet.as_view(actions={"post": "invite"})
-        
+
         data = {"email": "test@example.com", "role": "superadmin"}
         request = _build_request(
-            "post", f"/workspace/workspaces/{workspace.id}/members/invite/",
+            "post",
+            f"/workspace/workspaces/{workspace.id}/members/invite/",
             user_id=admin_member.user_id,
             data=data,
         )
-        
+
         response = view(request, workspace_pk=str(workspace.id))
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "role" in response.data
@@ -200,7 +231,8 @@ class TestWorkspaceMemberViewSetUpdate:
     def test_admin_can_update_role(self, workspace, admin_member, regular_member, db):
         data = {"role": "viewer"}
         request = _build_request(
-            "patch", f"/workspace/workspaces/{workspace.id}/members/{regular_member.user_id}/",
+            "patch",
+            f"/workspace/workspaces/{workspace.id}/members/{regular_member.user_id}/",
             user_id=admin_member.user_id,
             data=data,
         )
@@ -212,7 +244,8 @@ class TestWorkspaceMemberViewSetUpdate:
     def test_returns_404_for_invalid_user_id(self, workspace, admin_member, db):
         data = {"role": "viewer"}
         request = _build_request(
-            "patch", f"/workspace/workspaces/{workspace.id}/members/invalid/",
+            "patch",
+            f"/workspace/workspaces/{workspace.id}/members/invalid/",
             user_id=admin_member.user_id,
             data=data,
         )
@@ -224,7 +257,8 @@ class TestWorkspaceMemberViewSetUpdate:
 class TestWorkspaceMemberViewSetDelete:
     def test_admin_can_remove_member(self, workspace, admin_member, regular_member, db):
         request = _build_request(
-            "delete", f"/workspace/workspaces/{workspace.id}/members/{regular_member.user_id}/",
+            "delete",
+            f"/workspace/workspaces/{workspace.id}/members/{regular_member.user_id}/",
             user_id=admin_member.user_id,
         )
         view = WorkspaceMemberViewSet.as_view(actions={"delete": "destroy"})
@@ -233,7 +267,8 @@ class TestWorkspaceMemberViewSetDelete:
 
     def test_member_can_leave(self, workspace, regular_member, db):
         request = _build_request(
-            "delete", f"/workspace/workspaces/{workspace.id}/members/{regular_member.user_id}/",
+            "delete",
+            f"/workspace/workspaces/{workspace.id}/members/{regular_member.user_id}/",
             user_id=regular_member.user_id,
         )
         view = WorkspaceMemberViewSet.as_view(actions={"delete": "destroy"})
@@ -242,7 +277,8 @@ class TestWorkspaceMemberViewSetDelete:
 
     def test_returns_404_for_non_member(self, workspace, admin_member, db):
         request = _build_request(
-            "delete", f"/workspace/workspaces/{workspace.id}/members/{uuid.uuid4()}/",
+            "delete",
+            f"/workspace/workspaces/{workspace.id}/members/{uuid.uuid4()}/",
             user_id=admin_member.user_id,
         )
         view = WorkspaceMemberViewSet.as_view(actions={"delete": "destroy"})

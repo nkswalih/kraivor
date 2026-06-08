@@ -34,9 +34,9 @@ logger = logging.getLogger(__name__)
     bind=True,
     queue="notifications",
     max_retries=3,
-    default_retry_delay=30,         # 30s → 60s → 120s (exponential via retry countdown)
-    acks_late=True,                  # ack after task completes, not when received
-    reject_on_worker_lost=True,      # re-queue if worker crashes mid-task
+    default_retry_delay=30,  # 30s → 60s → 120s (exponential via retry countdown)
+    acks_late=True,  # ack after task completes, not when received
+    reject_on_worker_lost=True,  # re-queue if worker crashes mid-task
     name="workspaces.send_workspace_invitation_email",
 )
 def send_workspace_invitation_email(
@@ -69,11 +69,7 @@ def send_workspace_invitation_email(
 
     try:
         # Fresh DB fetch — task may have been queued seconds/minutes ago
-        invitation = (
-            WorkspaceInvitation.objects
-            .select_related("workspace")
-            .get(id=invitation_id)
-        )
+        invitation = WorkspaceInvitation.objects.select_related("workspace").get(id=invitation_id)
     except WorkspaceInvitation.DoesNotExist:
         # Invitation deleted between task dispatch and execution — skip silently
         logger.warning(
@@ -153,7 +149,7 @@ def send_workspace_invitation_email(
             },
         )
         # Exponential backoff: 30s, 60s, 120s
-        raise self.retry(exc=exc, countdown=30 * (2 ** self.request.retries)) from exc
+        raise self.retry(exc=exc, countdown=30 * (2**self.request.retries)) from exc
 
     # Mark email sent
     invitation.mark_email_sent()
@@ -280,7 +276,11 @@ def notify_member_removed(
         return {"status": "skipped", "reason": "workspace_not_found"}
 
     title = f"Removed from {workspace.name}"
-    body = f"You have been removed from {workspace.name}." if reason == "removed_by_admin" else f"You left {workspace.name}."
+    body = (
+        f"You have been removed from {workspace.name}."
+        if reason == "removed_by_admin"
+        else f"You left {workspace.name}."
+    )
 
     try:
         dispatch_notification.delay(
@@ -294,7 +294,11 @@ def notify_member_removed(
     except Exception as exc:
         logger.error(
             "task.notify_member_removed.failed",
-            extra={"workspace_id": workspace_id, "removed_user_id": removed_user_id, "error": str(exc)},
+            extra={
+                "workspace_id": workspace_id,
+                "removed_user_id": removed_user_id,
+                "error": str(exc),
+            },
         )
         return {"status": "failed", "error": str(exc)}
 
@@ -313,6 +317,7 @@ def notify_member_removed(
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
+
 
 def _fallback_invitation_text(context: dict) -> str:
     """Plain-text invitation email when templates fail to render."""

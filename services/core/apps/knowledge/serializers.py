@@ -19,6 +19,7 @@ from .models import KnowledgeSpace
 
 # ─── Output Serializers ───────────────────────────────────────────────────────
 
+
 class KnowledgeSpaceListSerializer(serializers.ModelSerializer):
     """
     Lightweight serializer for list views.
@@ -77,6 +78,7 @@ class KnowledgeSpaceSerializer(serializers.ModelSerializer):
 
 
 # ─── Input Serializers ────────────────────────────────────────────────────────
+
 
 class KnowledgeSpaceCreateSerializer(serializers.Serializer):
     """

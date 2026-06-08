@@ -33,7 +33,9 @@ class NotificationViewSet(ReadOnlyModelViewSet):
             user_id=request.user_id,
             read_at__isnull=True,
         ).update(read_at=timezone.now())
-        logger.info("notifications.mark_all_read", extra={"user_id": request.user_id, "count": updated})
+        logger.info(
+            "notifications.mark_all_read", extra={"user_id": request.user_id, "count": updated}
+        )
         return Response({"status": "ok", "marked_read": updated})
 
     @action(detail=True, methods=["post"])

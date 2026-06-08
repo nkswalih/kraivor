@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 class ChatRoomService:
-
     @staticmethod
     @transaction.atomic
     def create_room(
@@ -86,7 +85,6 @@ class ChatRoomService:
 
 
 class ChatMessageService:
-
     @staticmethod
     def get_messages(
         room_id: str,
@@ -167,7 +165,10 @@ class ChatMessageService:
         try:
             ChatRoom.objects.filter(id=room_id).update(last_message_at=datetime.now(tz=UTC))
         except Exception as exc:
-            logger.warning("chat.room.last_message_at_update_failed", extra={"room_id": room_id, "error": str(exc)})
+            logger.warning(
+                "chat.room.last_message_at_update_failed",
+                extra={"room_id": room_id, "error": str(exc)},
+            )
 
         logger.info(
             "chat.message.api_sent",

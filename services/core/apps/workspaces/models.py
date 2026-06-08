@@ -22,6 +22,7 @@ from .constants import WorkspacePlan, WorkspaceRole
 
 # ─── Soft Delete Infrastructure ───────────────────────────────────────────────
 
+
 class SoftDeleteQuerySet(models.QuerySet):
     """Base queryset that excludes soft-deleted rows by default."""
 
@@ -83,6 +84,7 @@ class TimestampedModel(models.Model):
 
 # ─── Workspace ─────────────────────────────────────────────────────────────────
 
+
 class Workspace(TimestampedModel):
     """
     Multi-tenancy boundary. Every resource in Kraivor belongs to a workspace.
@@ -143,13 +145,14 @@ class Workspace(TimestampedModel):
 
     def is_member(self, user_id: uuid.UUID) -> bool:
         return self.members.filter(user_id=user_id).exists()
-    
+
     @property
     def member_count(self):
         return self.members.count()
 
 
 # ─── Workspace Member ──────────────────────────────────────────────────────────
+
 
 class WorkspaceMember(TimestampedModel):
     """
@@ -380,5 +383,6 @@ class WorkspaceInvitation(TimestampedModel):
     def accept_url(self) -> str:
         """Frontend URL the invitee clicks to accept the invitation."""
         from django.conf import settings
+
         base = getattr(settings, "FRONTEND_BASE_URL", "https://localhost")
         return f"{base}/invitations/{self.token}"

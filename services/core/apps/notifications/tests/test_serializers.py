@@ -25,6 +25,7 @@ class TestNotificationSerializer:
 
     def test_serialize_read_notification(self, user_id, db):
         from django.utils import timezone
+
         notif = Notification.objects.create(
             user_id=user_id,
             notification_type="system",
@@ -83,10 +84,12 @@ class TestNotificationMarkReadSerializer:
 
 class TestFCMTokenSerializer:
     def test_valid_token(self):
-        serializer = FCMTokenSerializer(data={
-            "token": "valid-fcm-token-123",
-            "platform": "android",
-        })
+        serializer = FCMTokenSerializer(
+            data={
+                "token": "valid-fcm-token-123",
+                "platform": "android",
+            }
+        )
         assert serializer.is_valid() is True
 
     def test_missing_token(self):
@@ -94,23 +97,29 @@ class TestFCMTokenSerializer:
         assert serializer.is_valid() is False
 
     def test_invalid_platform(self):
-        serializer = FCMTokenSerializer(data={
-            "token": "abc",
-            "platform": "windows",
-        })
+        serializer = FCMTokenSerializer(
+            data={
+                "token": "abc",
+                "platform": "windows",
+            }
+        )
         assert serializer.is_valid() is False
 
     @pytest.mark.parametrize("platform", ["ios", "android", "web"])
     def test_valid_platforms(self, platform):
-        serializer = FCMTokenSerializer(data={
-            "token": "abc",
-            "platform": platform,
-        })
+        serializer = FCMTokenSerializer(
+            data={
+                "token": "abc",
+                "platform": platform,
+            }
+        )
         assert serializer.is_valid() is True
 
     def test_empty_token(self):
-        serializer = FCMTokenSerializer(data={
-            "token": "",
-            "platform": "web",
-        })
+        serializer = FCMTokenSerializer(
+            data={
+                "token": "",
+                "platform": "web",
+            }
+        )
         assert serializer.is_valid() is False

@@ -54,6 +54,7 @@ def make_request(method: str, path: str, user_id: uuid.UUID, data=None):
 
 # ─── User IDs (no DB rows — identity is a separate service) ──────────────────
 
+
 @pytest.fixture
 def owner_id() -> uuid.UUID:
     return uuid.uuid4()
@@ -81,6 +82,7 @@ def outsider_id() -> uuid.UUID:
 
 
 # ─── Workspace + members ──────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def workspace(owner_id) -> Workspace:
@@ -130,6 +132,7 @@ def viewer_member(workspace, viewer_id) -> WorkspaceMember:
 
 # ─── Repository ───────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def repository(workspace, owner_id) -> Repository:
     """A connected (active) repository in the test workspace."""
@@ -146,6 +149,7 @@ def repository(workspace, owner_id) -> Repository:
 
 
 # ─── GitHub API mock helpers ──────────────────────────────────────────────────
+
 
 @pytest.fixture
 def github_repo_payload() -> dict:

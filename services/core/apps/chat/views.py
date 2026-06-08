@@ -168,7 +168,9 @@ class MessageViewSet(ViewSet):
                 message_id=_str_uuid(pk),
             )
         except Exception as exc:
-            logger.error("chat.message.get_failed", extra={"message_id": str(pk), "error": str(exc)})
+            logger.error(
+                "chat.message.get_failed", extra={"message_id": str(pk), "error": str(exc)}
+            )
             raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
 
         if not message:
@@ -194,7 +196,9 @@ class MessageViewSet(ViewSet):
                 new_content=serializer.validated_data["content"],
             )
         except Exception as exc:
-            logger.error("chat.message.edit_failed", extra={"message_id": str(pk), "error": str(exc)})
+            logger.error(
+                "chat.message.edit_failed", extra={"message_id": str(pk), "error": str(exc)}
+            )
             raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
 
         if updated is None:
@@ -212,7 +216,9 @@ class MessageViewSet(ViewSet):
                 message_id=_str_uuid(pk),
             )
         except Exception as exc:
-            logger.error("chat.message.delete_failed", extra={"message_id": str(pk), "error": str(exc)})
+            logger.error(
+                "chat.message.delete_failed", extra={"message_id": str(pk), "error": str(exc)}
+            )
             raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
 
         if not success:
@@ -267,12 +273,17 @@ class MessageViewSet(ViewSet):
                     },
                 )
         except Exception as exc:
-            logger.warning("chat.message.broadcast_failed", extra={"room_id": room_id, "error": str(exc)})
+            logger.warning(
+                "chat.message.broadcast_failed", extra={"room_id": room_id, "error": str(exc)}
+            )
 
         try:
             ChatRoom.objects.filter(id=room_id).update(last_message_at=now)
         except Exception as exc:
-            logger.warning("chat.message.last_message_at_update_failed", extra={"room_id": room_id, "error": str(exc)})
+            logger.warning(
+                "chat.message.last_message_at_update_failed",
+                extra={"room_id": room_id, "error": str(exc)},
+            )
 
         logger.info(
             "chat.message.sent_via_api",
@@ -298,7 +309,9 @@ class MessageViewSet(ViewSet):
                 query=query,
             )
         except Exception as exc:
-            logger.error("chat.messages.search_failed", extra={"room_id": str(room_pk), "error": str(exc)})
+            logger.error(
+                "chat.messages.search_failed", extra={"room_id": str(room_pk), "error": str(exc)}
+            )
             raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
 
         serializer = MessageSerializer(results, many=True)

@@ -88,7 +88,9 @@ def _dispatch_task(event_type: str, data: dict) -> None:
         workspace_id=data.get("workspace_id"),
         actor_id=data.get("actor_id"),
     )
-    logger.info("consumer.event.dispatched", extra={"event_type": event_type, "user_id": str(user_id)})
+    logger.info(
+        "consumer.event.dispatched", extra={"event_type": event_type, "user_id": str(user_id)}
+    )
 
 
 def _dispatch_workspace_event(event_type: str, data: dict) -> None:
@@ -145,6 +147,7 @@ def _dispatch_workspace_event(event_type: str, data: dict) -> None:
 
     user_id = user_info["id"]
     from celery import current_app
+
     task = current_app.tasks.get(task_name)
     if task is None:
         logger.error("consumer.task.not_found", extra={"task_name": task_name})

@@ -48,7 +48,7 @@ class Repository(TimestampedModel):
         max_length=255,
         db_index=True,
         help_text="GitHub repository in 'owner/repo' format (e.g. 'acme/api'). "
-                  "Updated automatically when metadata is refreshed.",
+        "Updated automatically when metadata is refreshed.",
     )
     github_id = models.BigIntegerField(
         db_index=True,

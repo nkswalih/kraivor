@@ -129,6 +129,10 @@ class AuthApi {
       const response = await apiClient.post<{ access_token?: string; accessToken?: string; user?: User }>(API_ENDPOINTS.AUTH.REFRESH);
       const token = response.access_token || response.accessToken || '';
       if (!token) throw new Error('No access token returned from refresh');
+
+      // Store token immediately so subsequent API calls (getCurrentUser) include the Bearer header
+      useAuthStore.setState({ accessToken: token, isLoading: false });
+
       if (response.user) {
         useAuthStore.getState().setAuth(response.user, token);
         return;

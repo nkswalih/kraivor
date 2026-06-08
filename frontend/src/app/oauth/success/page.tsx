@@ -3,13 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores/auth-store';
-import { DEFAULT_DASHBOARD_ROUTE } from '@/constants';
 
 export default function OAuthSuccessPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const { setAuth } = useAuthStore();
-  
+  const { setAuth, initWorkspace } = useAuthStore();
+
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('Authenticating...');
 
@@ -25,7 +24,6 @@ export default function OAuthSuccessPage() {
 
     async function loadUser() {
       try {
-        // NOTE: Adjust this URL if your backend requires the full path (e.g. 'http://localhost:8001/api/auth/me/')
         const response = await fetch('/api/auth/me/', {
           credentials: 'include',
           headers: {
@@ -37,16 +35,15 @@ export default function OAuthSuccessPage() {
         if (!response.ok) throw new Error('Failed to fetch user details');
 
         const user = await response.json();
-        
-        // Save to Zustand
+
         setAuth(user, token as string);
-        
-        // Show success briefly before redirecting for a smoother UX
+
+        const slug = await initWorkspace();
+
         setStatus('success');
         setTimeout(() => {
-          router.replace(DEFAULT_DASHBOARD_ROUTE);
+          router.replace(slug ? `/${slug}` : '/');
         }, 800);
-
       } catch (error) {
         console.error('OAuth finalize error:', error);
         setStatus('error');
@@ -56,15 +53,14 @@ export default function OAuthSuccessPage() {
     }
 
     loadUser();
-  }, [params, router, setAuth]);
+  }, [params, router, setAuth, initWorkspace]);
 
   return (
     <div className="mx-auto w-full max-w-[420px] animate-fade-up">
-      {/* ── Brand ─────────────────────────────────────────── */}
       <div className="mb-8 text-center">
         <div className="mb-3 inline-flex items-center gap-2">
           <span className="text-2xl font-bold bg-gradient-to-br from-[hsl(var(--primary-light))] to-[hsl(var(--primary))] bg-clip-text text-transparent">
-            ✦ Kraivor
+            Kraivor
           </span>
         </div>
         <h1 className="text-[28px] font-bold leading-tight tracking-tight text-white">
@@ -75,7 +71,6 @@ export default function OAuthSuccessPage() {
         </p>
       </div>
 
-      {/* ── Glass card / Dynamic State ────────────────────── */}
       <div
         className="relative flex min-h-[280px] flex-col items-center justify-center overflow-hidden rounded-2xl p-8 text-center transition-all duration-500"
         style={{
@@ -86,16 +81,13 @@ export default function OAuthSuccessPage() {
           boxShadow: '0 24px 64px -12px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
         }}
       >
-        {/* Ambient background glow based on state */}
-        <div 
+        <div
           className={`absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[64px] transition-colors duration-700 ${
             status === 'error' ? 'bg-red-500/20' : status === 'success' ? 'bg-green-500/20' : 'bg-[hsl(var(--primary))]/20'
           }`}
         />
 
         <div className="relative z-10 flex flex-col items-center animate-fade-up-delay-1">
-          
-          {/* Loading Spinner */}
           {status === 'loading' && (
             <div className="relative flex items-center justify-center mb-6">
               <div className="absolute h-16 w-16 animate-pulse-ring rounded-full border-2 border-[hsl(var(--primary))] opacity-20"></div>
@@ -106,7 +98,6 @@ export default function OAuthSuccessPage() {
             </div>
           )}
 
-          {/* Success Checkmark */}
           {status === 'success' && (
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 text-green-400 border border-green-500/20 animate-fade-up">
               <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -115,7 +106,6 @@ export default function OAuthSuccessPage() {
             </div>
           )}
 
-          {/* Error Cross */}
           {status === 'error' && (
             <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10 text-red-400 border border-red-500/20 animate-fade-up">
               <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">

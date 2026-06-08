@@ -3,9 +3,7 @@ import type { Config } from 'tailwindcss';
 const config: Config = {
   darkMode: ['class'],
   content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/**/*.{ts,tsx}',
   ],
   theme: {
     extend: {
@@ -18,6 +16,8 @@ const config: Config = {
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
+          light: 'hsl(var(--primary-light))',
+          dark: 'hsl(var(--primary-dark))',
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
@@ -43,11 +43,44 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        krait: {
+          void:      'var(--krait-void)',
+          obsidian:  'var(--krait-obsidian)',
+          surface1:  'var(--krait-surface-1)',
+          surface2:  'var(--krait-surface-2)',
+          surface3:  'var(--krait-surface-3)',
+          surface4:  'var(--krait-surface-4)',
+          border:    'var(--krait-border)',
+          borderHi:  'var(--krait-border-hi)',
+        },
+        venom: {
+          yellow:  'var(--venom-yellow)',
+          gold:    'var(--venom-gold)',
+          orange:  'var(--venom-orange)',
+          amber:   'var(--venom-amber)',
+        },
+        text: {
+          primary:   'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
+          tertiary:  'var(--text-tertiary)',
+          accent:    'var(--text-accent)',
+        },
+      },
+      fontFamily: {
+        sans: ['Geist', '-apple-system', 'sans-serif'],
+        mono: ['IBM Plex Mono', 'monospace'],
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      boxShadow: {
+        venom: 'var(--shadow-venom)',
+      },
+      transitionTimingFunction: {
+        strike: 'var(--ease-strike)',
+        smooth: 'var(--ease-smooth)',
       },
       keyframes: {
         'accordion-down': {
@@ -82,6 +115,18 @@ const config: Config = {
           from: { transform: 'translateX(100%)' },
           to: { transform: 'translateX(0)' },
         },
+        shimmer: {
+          '0%':   { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+        'pulse-venom': {
+          '0%, 100%': { opacity: '1' },
+          '50%':      { opacity: '0.4' },
+        },
+        'in-up': {
+          '0%':   { opacity: '0', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -92,6 +137,9 @@ const config: Config = {
         'slide-in-from-bottom': 'slide-in-from-bottom 0.2s ease-out',
         'slide-in-from-left': 'slide-in-from-left 0.2s ease-out',
         'slide-in-from-right': 'slide-in-from-right 0.2s ease-out',
+        shimmer: 'shimmer 1.5s infinite',
+        'pulse-venom': 'pulse-venom 2s infinite',
+        'in-up': 'in-up 0.2s var(--ease-strike) both',
       },
     },
   },

@@ -1,79 +1,483 @@
-import { Activity, GitBranch, Sparkles, Edit3, ArrowRight } from 'lucide-react';
+'use client';
 
-export default function DashboardHome() {
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import {
+  GitBranch, MessageSquare, Users, Layers, ArrowRight,
+  Clock, Hash, Sparkles, Activity, BookOpen, Circle,
+  AlertCircle, Plus, Loader2,
+} from 'lucide-react';
+import { useDashboard, type DashboardData } from '@/lib/hooks/use-dashboard';
+import { Badge, Skeleton } from '@/components/ui/shadcn';
+import { formatRelativeTime } from '@/lib/utils';
+
+/* ─── Stat Card ──────────────────────────────────────────────────── */
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  color,
+  loading,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string | number;
+  color: string;
+  loading?: boolean;
+}) {
   return (
-    <div className="p-8 max-w-[1200px] mx-auto animate-fade-up">
-      <h1 className="text-2xl font-semibold mb-6">Good morning, Developer.</h1>
-      
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
-        {[
-          { label: 'Health Score', value: '94%', icon: Activity, color: 'text-primary' },
-          { label: 'Active Repos', value: '12', icon: GitBranch, color: 'text-foreground' },
-          { label: 'AI Sessions', value: '4', icon: Sparkles, color: 'text-primary' },
-          { label: 'Draft Notes', value: '7', icon: Edit3, color: 'text-foreground' },
-        ].map((stat, i) => (
-          <div key={i} className="bg-card border border-border rounded-lg p-4 flex flex-col hover:border-primary/50 transition-colors">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[13px] text-muted-foreground">{stat.label}</span>
-              <stat.icon className={`w-4 h-4 ${stat.color}`} />
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="group relative bg-krait-surface1 border border-krait-border rounded-lg p-4 flex flex-col
+                 hover:border-venom-yellow/40 hover:shadow-venom transition-all duration-[var(--duration-fast)] ease-strike"
+    >
+      {/* Snake band active indicator */}
+      <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-transparent group-hover:bg-venom-yellow
+                      transition-all duration-[var(--duration-normal)] ease-strike" />
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[13px] text-text-secondary">{label}</span>
+        {loading ? (
+          <Skeleton className="h-4 w-4" />
+        ) : (
+          <Icon className={`w-4 h-4 ${color}`} />
+        )}
+      </div>
+      {loading ? (
+        <Skeleton className="h-7 w-16" />
+      ) : (
+        <span className="text-2xl font-medium text-text-primary">{value}</span>
+      )}
+    </motion.div>
+  );
+}
+
+/* ─── Chat Activity Row ─────────────────────────────────────────── */
+
+function RecentChatActivity({ rooms, loading }: { rooms: DashboardData['rooms']; loading: boolean }) {
+  const recent = [...rooms]
+    .filter(r => r.last_message_at)
+    .sort((a, b) => new Date(b.last_message_at!).getTime() - new Date(a.last_message_at!).getTime())
+    .slice(0, 5);
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 p-3">
+            <Skeleton variant="circle" className="h-8 w-8" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-3.5 w-32" />
+              <Skeleton className="h-3 w-48" />
             </div>
-            <span className="text-2xl font-medium">{stat.value}</span>
+            <Skeleton className="h-3 w-12" />
           </div>
         ))}
       </div>
+    );
+  }
 
-      {/* Main Content Split */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Recent Repos */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[14px] font-medium text-muted-foreground">Recent Repositories</h2>
-            <button className="text-[12px] text-primary hover:text-primary-light flex items-center gap-1">
-              View all <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-          
-          <div className="bg-card border border-border rounded-lg divide-y divide-border">
-            {['kraivor-core', 'auth-service', 'frontend-monorepo'].map((repo) => (
-              <div key={repo} className="flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors cursor-pointer group">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded bg-background border border-border flex items-center justify-center">
-                    <GitBranch className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </div>
-                  <div>
-                    <h3 className="text-[13px] font-medium">{repo}</h3>
-                    <p className="text-[12px] text-muted-foreground">Updated 2 hours ago</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="px-2 py-1 rounded bg-primary/10 text-primary text-[11px] font-medium border border-primary/20">
-                    98% Health
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Actions (Using your btn-shimmer) */}
-        <div className="space-y-4">
-          <h2 className="text-[14px] font-medium text-muted-foreground">Quick Actions</h2>
-          <div className="space-y-2">
-            <button className="w-full btn-shimmer text-primary-foreground text-[13px] font-medium py-2.5 px-4 rounded-lg flex items-center gap-2">
-              <Sparkles className="w-4 h-4" /> New AI Analysis
-            </button>
-            <button className="w-full btn-shimmer-secondary text-foreground text-[13px] font-medium py-2.5 px-4 rounded-lg flex items-center gap-2">
-              <GitBranch className="w-4 h-4" /> Connect Repository
-            </button>
-            <button className="w-full btn-shimmer-secondary text-foreground text-[13px] font-medium py-2.5 px-4 rounded-lg flex items-center gap-2">
-              <Edit3 className="w-4 h-4" /> Create Canvas
-            </button>
-          </div>
-        </div>
-
+  if (recent.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <MessageSquare className="w-8 h-8 text-text-tertiary mb-2" />
+        <p className="text-sm text-text-secondary font-medium">No activity yet</p>
+        <p className="text-xs text-text-tertiary mt-1">Start a conversation to see it here</p>
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-0.5">
+      {recent.map((room, i) => (
+        <motion.div
+          key={room.id}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.04 }}
+          className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-krait-surface2 transition-colors cursor-pointer group"
+        >
+          <div className="w-8 h-8 rounded-md bg-krait-surface2 border border-krait-border flex items-center justify-center shrink-0">
+            <Hash className="w-3.5 h-3.5 text-text-tertiary group-hover:text-venom-yellow transition-colors" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-medium text-text-primary truncate">{room.name}</p>
+            <p className="text-[12px] text-text-tertiary truncate">
+              {room.topic || `${room.room_type_display} room`}
+            </p>
+          </div>
+          <span className="text-[11px] text-text-tertiary shrink-0 font-mono">
+            {room.last_message_at ? formatRelativeTime(room.last_message_at) : ''}
+          </span>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Repository Row ────────────────────────────────────────────── */
+
+function RecentRepositories({ repos, loading }: { repos: DashboardData['repositories']; loading: boolean }) {
+  const recent = repos.slice(0, 3);
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 p-3">
+            <Skeleton variant="rect" className="h-8 w-8" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-3.5 w-36" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+            <Skeleton className="h-5 w-16 rounded-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (recent.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <GitBranch className="w-8 h-8 text-text-tertiary mb-2" />
+        <p className="text-sm text-text-secondary font-medium">No repositories</p>
+        <p className="text-xs text-text-tertiary mt-1">Connect a repo to get started</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-0.5">
+      {recent.map((repo, i) => (
+        <motion.div
+          key={repo.id}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.04 }}
+          className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-krait-surface2 transition-colors cursor-pointer group"
+        >
+          <div className="w-8 h-8 rounded-md bg-krait-surface2 border border-krait-border flex items-center justify-center shrink-0">
+            <GitBranch className="w-3.5 h-3.5 text-text-tertiary group-hover:text-venom-yellow transition-colors" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-medium text-text-primary truncate">{repo.github_repo}</p>
+            <p className="text-[12px] text-text-tertiary">
+              {repo.language ?? 'Unknown'} · Updated {formatRelativeTime(repo.updated_at)}
+            </p>
+          </div>
+          <Badge variant={repo.status === 'connected' ? 'success' : 'default'}>
+            {repo.status === 'connected' ? 'Connected' : 'Disconnected'}
+          </Badge>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Active Members ────────────────────────────────────────────── */
+
+function ActiveMembers({ members, workspaceName, loading }: {
+  members: DashboardData['members'];
+  workspaceName: string;
+  loading: boolean;
+}) {
+  const displayMembers = members.filter(m => m.status === 'active').slice(0, 6);
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 p-2">
+            <Skeleton variant="circle" className="h-8 w-8" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (displayMembers.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <Users className="w-8 h-8 text-text-tertiary mb-2" />
+        <p className="text-sm text-text-secondary font-medium">No members yet</p>
+        <p className="text-xs text-text-tertiary mt-1">Invite your team to get started</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-0.5">
+      {displayMembers.map((member, i) => (
+        <motion.div
+          key={member.user_id}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.04 }}
+          className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-krait-surface2 transition-colors group"
+        >
+          <div className="relative shrink-0">
+            <div className="w-8 h-8 rounded-full bg-krait-surface3 border border-krait-border flex items-center justify-center text-xs font-medium text-text-primary">
+              {member.user?.name ? member.user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
+            </div>
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#22c55e] border-2 border-krait-surface1" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-medium text-text-primary truncate">
+              {member.user?.name ?? member.user_id.slice(0, 8)}
+            </p>
+            <p className="text-[11px] text-text-tertiary">
+              {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+            </p>
+          </div>
+          <Badge variant={member.role === 'owner' ? 'venom' : 'default'}>{member.role}</Badge>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Knowledge Cards ───────────────────────────────────────────── */
+
+function KnowledgeSpaces({ spaces, loading, workspaceSlug }: {
+  spaces: DashboardData['knowledgeSpaces'];
+  loading: boolean;
+  workspaceSlug: string;
+}) {
+  const display = spaces.slice(0, 6);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} variant="rect" className="h-28" />
+        ))}
+      </div>
+    );
+  }
+
+  if (display.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <BookOpen className="w-8 h-8 text-text-tertiary mb-2" />
+        <p className="text-sm text-text-secondary font-medium">No knowledge spaces</p>
+        <p className="text-xs text-text-tertiary mt-1">Create your first space to document your architecture</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {display.map((space, i) => (
+        <motion.div
+          key={space.id}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.05 }}
+        >
+          <Link
+            href={`/${workspaceSlug}/knowledge/${space.id}`}
+            className="block p-4 rounded-lg bg-krait-surface1 border border-krait-border
+                       hover:border-venom-yellow/30 hover:shadow-venom
+                       transition-all duration-[var(--duration-normal)] ease-strike group h-full"
+          >
+            <div className="flex items-start justify-between mb-2">
+              <Layers className="w-4 h-4 text-venom-yellow/60 group-hover:text-venom-yellow transition-colors mt-0.5" />
+              <span className="text-[11px] text-text-tertiary font-mono">
+                {formatRelativeTime(space.updated_at)}
+              </span>
+            </div>
+            <p className="text-[13px] font-medium text-text-primary group-hover:text-venom-yellow transition-colors truncate">
+              {space.name}
+            </p>
+            {space.description && (
+              <p className="text-[12px] text-text-tertiary mt-1 line-clamp-2">{space.description}</p>
+            )}
+          </Link>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Section Header ────────────────────────────────────────────── */
+
+function SectionHeader({ title, href }: { title: string; href?: string }) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <h2 className="text-[13px] font-medium text-text-secondary uppercase tracking-wider">{title}</h2>
+      {href && (
+        <Link href={href} className="text-[12px] text-venom-yellow hover:text-venom-gold flex items-center gap-1 transition-colors">
+          View all <ArrowRight className="w-3 h-3" />
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/* ─── Page Section Wrapper ──────────────────────────────────────── */
+
+function DashboardSection({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`bg-krait-surface1 border border-krait-border rounded-lg p-4 ${className ?? ''}`}>
+      {children}
+    </div>
+  );
+}
+
+/* ─── Error State ───────────────────────────────────────────────── */
+
+function DashboardError({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <AlertCircle className="w-10 h-10 text-color-error mb-3" />
+      <p className="text-base font-medium text-text-primary mb-1">Failed to load dashboard</p>
+      <p className="text-sm text-text-tertiary max-w-md">{message}</p>
+    </div>
+  );
+}
+
+/* ─── Greeting ──────────────────────────────────────────────────── */
+
+function Greeting() {
+  const hour = new Date().getHours();
+  let timeStr = 'evening';
+  if (hour < 12) timeStr = 'morning';
+  else if (hour < 17) timeStr = 'afternoon';
+  return `Good ${timeStr}`;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DASHBOARD PAGE
+   ════════════════════════════════════════════════════════════════════ */
+
+export default function DashboardPage() {
+  const params = useParams<{ workspace: string }>();
+  const workspaceSlug = params?.workspace ?? '';
+  const { workspace, rooms, repositories, knowledgeSpaces, members, stats, isLoading, error } =
+    useDashboard();
+
+  if (error) {
+    return (
+      <div className="p-8 max-w-[1100px] w-full mx-auto">
+        <DashboardError message={error instanceof Error ? error.message : 'An unexpected error occurred'} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8 max-w-[1100px] w-full mx-auto">
+      {/* Page header */}
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8"
+      >
+        <div className="flex items-center gap-3 mb-1">
+          <h1 className="text-xl font-semibold text-text-primary tracking-tight">
+            {isLoading ? (
+              <Skeleton className="h-6 w-48 inline-block" />
+            ) : (
+              <>{Greeting()}, {workspace?.name ?? 'Developer'}.</>
+            )}
+          </h1>
+          {isLoading && <Loader2 className="w-4 h-4 text-venom-yellow animate-spin" />}
+        </div>
+        <div className="text-sm text-text-tertiary">
+          {isLoading ? (
+            <Skeleton className="h-4 w-64" />
+          ) : (
+            `${stats.repoCount} repositories · ${stats.memberCount} members · ${stats.roomCount} rooms`
+          )}
+        </div>
+      </motion.div>
+
+      {/* Row 1: Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        <StatCard icon={GitBranch} label="Repositories" value={stats.repoCount} color="text-venom-yellow" loading={isLoading} />
+        <StatCard icon={Users} label="Members" value={stats.memberCount} color="text-color-info" loading={isLoading} />
+        <StatCard icon={MessageSquare} label="Active Rooms" value={stats.roomCount} color="text-color-success" loading={isLoading} />
+        <StatCard icon={BookOpen} label="Knowledge Spaces" value={stats.knowledgeCount} color="text-venom-amber" loading={isLoading} />
+      </div>
+
+      {/* Row 2: 3-column middle section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+        <DashboardSection>
+          <SectionHeader title="Recent Chat Activity" href={`/${workspaceSlug}/chat`} />
+          <RecentChatActivity rooms={rooms} loading={isLoading} />
+        </DashboardSection>
+
+        <DashboardSection>
+          <SectionHeader title="Recent Repositories" href={`/${workspaceSlug}/repositories`} />
+          <RecentRepositories repos={repositories} loading={isLoading} />
+        </DashboardSection>
+
+        <DashboardSection>
+          <SectionHeader title="Active Members" />
+          <ActiveMembers members={members} workspaceName={workspace?.name ?? ''} loading={isLoading} />
+        </DashboardSection>
+      </div>
+
+      {/* Row 3: Knowledge Spaces */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <SectionHeader title="Knowledge Spaces" href={`/${workspaceSlug}/knowledge`} />
+        <KnowledgeSpaces spaces={knowledgeSpaces} loading={isLoading} workspaceSlug={workspaceSlug} />
+      </motion.div>
+
+      {/* Quick Actions */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="mt-8"
+      >
+        <SectionHeader title="Quick Actions" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Link
+            href={`/${workspaceSlug}/analysis`}
+            className="flex items-center gap-2.5 px-4 py-3 rounded-lg
+                       btn-shimmer text-text-inverse text-[13px] font-semibold
+                       transition-all duration-[var(--duration-fast)] ease-strike active:scale-[0.98]"
+          >
+            <Sparkles className="w-4 h-4" />
+            New AI Analysis
+          </Link>
+          <Link
+            href={`/${workspaceSlug}/repositories`}
+            className="flex items-center gap-2.5 px-4 py-3 rounded-lg
+                       btn-shimmer-secondary text-text-primary text-[13px] font-medium
+                       transition-all duration-[var(--duration-fast)] ease-strike active:scale-[0.98]"
+          >
+            <GitBranch className="w-4 h-4" />
+            Connect Repository
+          </Link>
+          <Link
+            href={`/${workspaceSlug}/knowledge`}
+            className="flex items-center gap-2.5 px-4 py-3 rounded-lg
+                       btn-shimmer-secondary text-text-primary text-[13px] font-medium
+                       transition-all duration-[var(--duration-fast)] ease-strike active:scale-[0.98]"
+          >
+            <Plus className="w-4 h-4" />
+            Create Knowledge Space
+          </Link>
+        </div>
+      </motion.div>
     </div>
   );
 }

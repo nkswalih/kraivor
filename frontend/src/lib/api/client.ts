@@ -163,3 +163,106 @@ class ApiClient {
 
 export const apiClient = new ApiClient();
 export default apiClient;
+
+/* ─── CORE BACKEND API (native fetch, no axios) ──────────────────── */
+
+class CoreApiError extends Error {
+  constructor(public status: number, public code: string, message: string) {
+    super(message);
+    this.name = 'CoreApiError';
+  }
+}
+
+function getJwt(): string | null {
+  if (typeof window === 'undefined') return null;
+  return useAuthStore.getState().accessToken;
+}
+
+/* Token refresh with dedup — multiple 401s queue behind a single refresh call */
+let coreRefreshing = false;
+let coreRefreshPromise: Promise<string | null> | null = null;
+
+async function tryRefreshToken(): Promise<string | null> {
+  if (coreRefreshing && coreRefreshPromise) return coreRefreshPromise;
+  coreRefreshing = true;
+  const base = process.env.NEXT_PUBLIC_API_URL ?? '/api';
+  coreRefreshPromise = (async () => {
+    try {
+      const r = await fetch(`${base}/auth/refresh/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      if (!r.ok) return null;
+      const data = await r.json();
+      const t = data.access_token ?? data.accessToken ?? null;
+      if (t) useAuthStore.setState({ accessToken: t });
+      return t;
+    } catch {
+      return null;
+    } finally {
+      coreRefreshing = false;
+      coreRefreshPromise = null;
+    }
+  })();
+  return coreRefreshPromise;
+}
+
+async function coreRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const base = process.env.NEXT_PUBLIC_API_URL ?? '/api';
+  const token = getJwt();
+
+  let res = await fetch(`${base}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...init.headers,
+    },
+  });
+
+  /* ── On 401, try to refresh the token and retry once ── */
+  if (res.status === 401) {
+    const newToken = await tryRefreshToken();
+    if (newToken) {
+      res = await fetch(`${base}${path}`, {
+        ...init,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${newToken}`,
+          ...init.headers,
+        },
+      });
+    }
+  }
+
+  if (res.status === 401) {
+    useAuthStore.getState().clearAuth();
+    throw new CoreApiError(401, 'token_expired', 'Session expired');
+  }
+
+  if (res.status === 204) return undefined as T;
+
+  const body = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new CoreApiError(
+      res.status,
+      body.error ?? body.code ?? 'unknown_error',
+      body.message ?? body.detail ?? 'Request failed'
+    );
+  }
+
+  return body as T;
+}
+
+export const coreApi = {
+  get:    <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'GET', ...init }),
+  post:   <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, { method: 'POST', body: body != null ? JSON.stringify(body) : undefined, ...init }),
+  patch:  <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, { method: 'PATCH', body: body != null ? JSON.stringify(body) : undefined, ...init }),
+  put:    <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, { method: 'PUT', body: body != null ? JSON.stringify(body) : undefined, ...init }),
+  delete: <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'DELETE', ...init }),
+};

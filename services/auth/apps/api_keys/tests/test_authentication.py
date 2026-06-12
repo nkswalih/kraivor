@@ -58,9 +58,8 @@ class TestAPIKeyAuthentication:
         with patch(
             "api_keys.authentication.backend.authenticate_api_key",
             side_effect=ValueError("surprise"),
-        ):
-            with pytest.raises(AuthenticationFailed, match="Authentication error"):
-                backend.authenticate(make_request("Bearer krv_live_" + "a" * 64))
+        ), pytest.raises(AuthenticationFailed, match="Authentication error"):
+            backend.authenticate(make_request("Bearer krv_live_" + "a" * 64))
 
     def test_authenticate_header_returns_bearer_realm(self, backend):
         header = backend.authenticate_header(MagicMock())

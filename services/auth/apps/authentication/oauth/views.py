@@ -3,11 +3,10 @@ GitHub OAuth Views
 """
 
 import logging
-import secrets
 
+from django.conf import settings
 from django.shortcuts import redirect
 from rest_framework import status
-from django.conf import settings
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -18,8 +17,6 @@ from ..services.user_service import find_or_create_oauth_user
 from .encryption import get_encryption_service
 from .github import GitHubOAuthError, get_github_oauth_service
 from .state_manager import OAuthStateError, get_state_manager
-from apps.authentication.oauth.github import GitHubOAuthService
-
 
 logger = logging.getLogger(__name__)
 

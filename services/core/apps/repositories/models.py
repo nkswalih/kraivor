@@ -15,6 +15,11 @@ from django.db import models
 
 from apps.workspaces.models import TimestampedModel, Workspace
 
+from .github_app.models import (
+    GitHubAppInstallation,
+    GitHubAppInstallationRepo,  # noqa: F401 — needed for migration discovery
+)
+
 
 class Repository(TimestampedModel):
     """
@@ -97,6 +102,15 @@ class Repository(TimestampedModel):
         null=True,
         blank=True,
         help_text="identity.users.id of the user who connected the repository. Audit trail.",
+    )
+    installation = models.ForeignKey(
+        GitHubAppInstallation,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="repositories",
+        help_text="GitHub App installation used to access this repository. "
+        "Null for repos connected via legacy OAuth.",
     )
 
     class Meta:

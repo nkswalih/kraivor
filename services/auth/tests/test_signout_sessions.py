@@ -449,3 +449,14 @@ class TestSessionRevokeAll:
         """Unauthenticated request is rejected by the configured test auth backend."""
         response = anon_client.delete(reverse("session-revoke-all"))
         assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test_session_serializer_get_is_current_no_device_id(user):
+    """Cover get_is_current returning False when context lacks current_device_id."""
+    from authentication.serializers import SessionSerializer
+
+    make_session(user)
+    session = RefreshToken.objects.filter(user=user).first()
+    serializer = SessionSerializer(session, context={})
+    assert serializer.data["is_current"] is False

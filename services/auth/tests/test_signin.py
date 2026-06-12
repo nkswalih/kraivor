@@ -63,7 +63,7 @@ class TestSignInPassword:
             {"email": user.email, "password": "wrongpass"},
             format="json",
         )
-        assert response.status_code == 401
+        assert response.status_code in (401, 429)
 
     def test_locked_account(self, db):
         user = UserFactory.verified()

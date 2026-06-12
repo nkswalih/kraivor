@@ -164,6 +164,8 @@ services:
         condition: service_healthy
       dynamodb-local:
         condition: service_started
+    volumes:
+      - ./.keys:/app/.keys:ro
     ports:
       - "8002:8002"
     restart: unless-stopped

@@ -42,40 +42,20 @@ from .views import (
 
 # ─── Workspace CRUD ────────────────────────────────────────────────────────────
 
-workspace_list = WorkspaceViewSet.as_view(
-    {
-        "get": "list",
-        "post": "create",
-    }
-)
+workspace_list = WorkspaceViewSet.as_view({"get": "list", "post": "create"})
 
 workspace_detail = WorkspaceViewSet.as_view(
-    {
-        "get": "retrieve",
-        "patch": "partial_update",
-        "delete": "destroy",
-    }
+    {"get": "retrieve", "patch": "partial_update", "delete": "destroy"}
 )
 
 # ─── Member management ─────────────────────────────────────────────────────────
 
-member_list_invite = WorkspaceMemberViewSet.as_view(
-    {
-        "get": "list",
-    }
-)
+member_list_invite = WorkspaceMemberViewSet.as_view({"get": "list"})
 
-member_invite = WorkspaceMemberViewSet.as_view(
-    {
-        "post": "invite",
-    }
-)
+member_invite = WorkspaceMemberViewSet.as_view({"post": "invite"})
 
 member_detail = WorkspaceMemberViewSet.as_view(
-    {
-        "patch": "partial_update",
-        "delete": "destroy",
-    }
+    {"patch": "partial_update", "delete": "destroy"}
 )
 
 # ─── URL patterns ──────────────────────────────────────────────────────────────

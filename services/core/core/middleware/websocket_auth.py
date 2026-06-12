@@ -65,7 +65,9 @@ class JWTAuthMiddleware(BaseMiddleware):
     def _verify_token(token: str) -> dict:
         client = _get_jwks_client()
         signing_key = client.get_signing_key_from_jwt(token)
-        decode_options = {"verify_exp": getattr(settings, "JWT_VERIFY_EXPIRATION", True)}
+        decode_options = {
+            "verify_exp": getattr(settings, "JWT_VERIFY_EXPIRATION", True)
+        }
         audience = getattr(settings, "JWT_AUDIENCE", None)
         issuer = getattr(settings, "JWT_ISSUER", None)
         payload = jwt.decode(

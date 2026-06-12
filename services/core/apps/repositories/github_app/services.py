@@ -18,6 +18,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.workspaces.models import Workspace
+from core.infrastructure.redis import get_redis
 
 from .client import GitHubAppClient, GitHubAppError, _token_cache
 from .models import GitHubAppInstallation, GitHubAppInstallationRepo
@@ -44,7 +45,7 @@ class InstallationStateManager:
 
     def _get_redis(self):
         try:
-            from core.infrastructure.redis import get_redis
+
             return get_redis()
         except ImportError:
             logger.warning(
@@ -60,17 +61,14 @@ class InstallationStateManager:
         Returns the raw state string to be passed as a query parameter.
         """
         state = secrets.token_urlsafe(32)
-        payload = json.dumps({
-            "workspace_id": str(workspace_id),
-            "user_id": str(user_id),
-        })
+        payload = json.dumps(
+            {"workspace_id": str(workspace_id), "user_id": str(user_id)}
+        )
 
         redis_client = self._get_redis()
         if redis_client:
             redis_client.setex(
-                f"{self.REDIS_PREFIX}{state}",
-                self.STATE_TTL_SECONDS,
-                payload,
+                f"{self.REDIS_PREFIX}{state}", self.STATE_TTL_SECONDS, payload
             )
         else:
             logger.warning(
@@ -125,27 +123,19 @@ class GitHubAppInstallationService:
 
     # ── Initiate Installation ─────────────────────────────────────────────────
 
-    def initiate_installation(
-        self,
-        workspace: Workspace,
-        actor_id: uuid.UUID,
-    ) -> str:
+    def initiate_installation(self, workspace: Workspace, actor_id: uuid.UUID) -> str:
         """
         Generate a state token and return the GitHub App installation URL.
 
         The frontend should redirect the user to this URL.
         """
         state = self._state_manager.create_state(
-            workspace_id=workspace.id,
-            user_id=actor_id,
+            workspace_id=workspace.id, user_id=actor_id
         )
         return self._client.get_installation_url(state=state)
 
     def get_configure_url(
-        self,
-        installation_id: int,
-        workspace: Workspace,
-        actor_id: uuid.UUID,
+        self, installation_id: int, workspace: Workspace, actor_id: uuid.UUID
     ) -> str:
         """
         Return the GitHub App reconfigure URL for an existing installation.
@@ -165,8 +155,7 @@ class GitHubAppInstallationService:
             ) from exc
 
         state = self._state_manager.create_state(
-            workspace_id=workspace.id,
-            user_id=actor_id,
+            workspace_id=workspace.id, user_id=actor_id
         )
         return (
             f"https://github.com/apps/{self._client._slug}"
@@ -178,10 +167,7 @@ class GitHubAppInstallationService:
 
     @transaction.atomic
     def complete_installation(
-        self,
-        state: str,
-        installation_id: int,
-        setup_action: str,
+        self, state: str, installation_id: int, setup_action: str
     ) -> dict[str, Any]:
         """
         Process the GitHub App installation callback.
@@ -229,10 +215,7 @@ class GitHubAppInstallationService:
         except GitHubAppError as exc:
             logger.error(
                 "github_app.installation.sync_failed",
-                extra={
-                    "installation_id": installation_id,
-                    "error": str(exc),
-                },
+                extra={"installation_id": installation_id, "error": str(exc)},
             )
 
         logger.info(
@@ -269,9 +252,7 @@ class GitHubAppInstallationService:
         # the unique constraint on (installation_id, github_id) would otherwise
         # conflict with existing soft-deleted rows. A regular QuerySet.delete()
         # issues a real SQL DELETE.
-        GitHubAppInstallationRepo.all_objects.filter(
-            installation=installation,
-        ).delete()
+        GitHubAppInstallationRepo.all_objects.filter(installation=installation).delete()
 
         # Bulk-create new ones
         repo_objs = [
@@ -309,13 +290,10 @@ class GitHubAppInstallationService:
         """
         try:
             installation = GitHubAppInstallation.objects.get(
-                installation_id=installation_id,
-                deleted_at__isnull=True,
+                installation_id=installation_id, deleted_at__isnull=True
             )
         except GitHubAppInstallation.DoesNotExist as exc:
-            raise GitHubAppError(
-                f"Installation {installation_id} not found."
-            ) from exc
+            raise GitHubAppError(f"Installation {installation_id} not found.") from exc
 
         self._sync_repos(installation)
         return installation
@@ -332,13 +310,10 @@ class GitHubAppInstallationService:
         list_user_repos. Results are filtered locally by search string.
         """
         installations = GitHubAppInstallation.objects.filter(
-            workspace=workspace,
-            deleted_at__isnull=True,
+            workspace=workspace, deleted_at__isnull=True
         )
 
-        repos = GitHubAppInstallationRepo.objects.filter(
-            installation__in=installations,
-        )
+        repos = GitHubAppInstallationRepo.objects.filter(installation__in=installations)
 
         if search.strip():
             repos = repos.filter(github_repo__icontains=search.strip())
@@ -368,25 +343,20 @@ class GitHubAppInstallationService:
 
     # ── List Workspace Installations ──────────────────────────────────────────
 
-    def list_installations(
-        self, workspace: Workspace
-    ) -> list[GitHubAppInstallation]:
+    def list_installations(self, workspace: Workspace) -> list[GitHubAppInstallation]:
         """
         Return all active installations for a workspace.
         """
         return list(
             GitHubAppInstallation.objects.filter(
-                workspace=workspace,
-                deleted_at__isnull=True,
+                workspace=workspace, deleted_at__isnull=True
             ).order_by("-created_at")
         )
 
     # ── Remove Installation ───────────────────────────────────────────────────
 
     @transaction.atomic
-    def remove_installation(
-        self, installation_id: int, workspace: Workspace
-    ) -> None:
+    def remove_installation(self, installation_id: int, workspace: Workspace) -> None:
         """
         Soft-delete a GitHub App installation and disconnect its repos.
         """
@@ -404,9 +374,7 @@ class GitHubAppInstallationService:
         # Disconnect repos that were connected through this installation
         from apps.repositories.models import Repository
 
-        Repository.objects.filter(installation=installation).update(
-            installation=None
-        )
+        Repository.objects.filter(installation=installation).update(installation=None)
 
         installation.delete()
         _token_cache.invalidate(installation_id)

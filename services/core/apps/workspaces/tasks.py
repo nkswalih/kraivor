@@ -39,10 +39,7 @@ logger = logging.getLogger(__name__)
     reject_on_worker_lost=True,  # re-queue if worker crashes mid-task
     name="workspaces.send_workspace_invitation_email",
 )
-def send_workspace_invitation_email(
-    self,
-    invitation_id: str,
-) -> dict:
+def send_workspace_invitation_email(self, invitation_id: str) -> dict:
     """
     Send an invitation email to the invitee.
 
@@ -69,12 +66,13 @@ def send_workspace_invitation_email(
 
     try:
         # Fresh DB fetch — task may have been queued seconds/minutes ago
-        invitation = WorkspaceInvitation.objects.select_related("workspace").get(id=invitation_id)
+        invitation = WorkspaceInvitation.objects.select_related("workspace").get(
+            id=invitation_id
+        )
     except WorkspaceInvitation.DoesNotExist:
         # Invitation deleted between task dispatch and execution — skip silently
         logger.warning(
-            "task.invitation_email.not_found",
-            extra={"invitation_id": invitation_id},
+            "task.invitation_email.not_found", extra={"invitation_id": invitation_id}
         )
         return {"status": "skipped", "reason": "invitation_not_found"}
 
@@ -88,8 +86,7 @@ def send_workspace_invitation_email(
 
     if invitation.is_expired:
         logger.info(
-            "task.invitation_email.expired",
-            extra={"invitation_id": invitation_id},
+            "task.invitation_email.expired", extra={"invitation_id": invitation_id}
         )
         return {"status": "skipped", "reason": "expired"}
 
@@ -97,7 +94,10 @@ def send_workspace_invitation_email(
         # Email was already sent — don't send twice (handles duplicate task dispatch)
         logger.info(
             "task.invitation_email.already_sent",
-            extra={"invitation_id": invitation_id, "sent_at": str(invitation.email_sent_at)},
+            extra={
+                "invitation_id": invitation_id,
+                "sent_at": str(invitation.email_sent_at),
+            },
         )
         return {"status": "skipped", "reason": "already_sent"}
 
@@ -179,12 +179,7 @@ def send_workspace_invitation_email(
     acks_late=True,
     name="workspaces.notify_member_joined",
 )
-def notify_member_joined(
-    self,
-    workspace_id: str,
-    user_id: str,
-    role: str,
-) -> dict:
+def notify_member_joined(self, workspace_id: str, user_id: str, role: str) -> dict:
     """
     Notify existing workspace members when a new member joins.
 
@@ -217,8 +212,7 @@ def notify_member_joined(
 
     # Get all admin/owner members to notify (they care about new joins)
     admin_members = workspace.members.filter(
-        role__in=["owner", "admin"],
-        deleted_at__isnull=True,
+        role__in=["owner", "admin"], deleted_at__isnull=True
     ).exclude(user_id=uuid.UUID(user_id))
 
     notified = 0

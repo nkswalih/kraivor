@@ -50,10 +50,7 @@ from .serializers import (
     KnowledgeSpaceSerializer,
     KnowledgeSpaceUpdateSerializer,
 )
-from .services import (
-    KnowledgePermissionError,
-    KnowledgeSpaceService,
-)
+from .services import KnowledgePermissionError, KnowledgeSpaceService
 
 logger = logging.getLogger(__name__)
 
@@ -86,8 +83,7 @@ class KnowledgeSpaceListCreateView(WorkspaceContextMixin, APIView):
         search = request.query_params.get("search", "").strip() or None
 
         knowledge_spaces = KnowledgeSpaceService().list_knowledge_spaces(
-            workspace=workspace,
-            search=search,
+            workspace=workspace, search=search
         )
         return Response(KnowledgeSpaceListSerializer(knowledge_spaces, many=True).data)
 
@@ -204,8 +200,7 @@ class KnowledgeSpaceDetailView(APIView):
 
         try:
             KnowledgeSpaceService().delete_knowledge_space(
-                knowledge_space=knowledge_space,
-                actor_id=self.request.user_id,
+                knowledge_space=knowledge_space, actor_id=self.request.user_id
             )
         except KnowledgePermissionError as exc:
             raise PermissionDenied(str(exc)) from exc

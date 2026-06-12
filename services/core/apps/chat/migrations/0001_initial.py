@@ -9,9 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
     initial = True
 
-    dependencies = [
-        ("workspaces", "0001_initial"),
-    ]
+    dependencies = [("workspaces", "0001_initial")]
 
     operations = [
         migrations.CreateModel(
@@ -20,7 +18,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.UUIDField(
-                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
                     ),
                 ),
                 ("name", models.CharField(max_length=255)),
@@ -55,9 +56,10 @@ class Migration(migrations.Migration):
                 "db_table": "chat_rooms",
                 "indexes": [
                     models.Index(
-                        fields=["workspace", "room_type"], name="chat_rooms_workspa_657517_idx"
+                        fields=["workspace", "room_type"],
+                        name="chat_rooms_workspa_657517_idx",
                     )
                 ],
             },
-        ),
+        )
     ]

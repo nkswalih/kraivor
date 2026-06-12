@@ -35,10 +35,7 @@ def _now_iso() -> str:
 
 
 def _envelope(
-    event_type: str,
-    workspace_id: uuid.UUID,
-    actor_id: uuid.UUID,
-    data: dict,
+    event_type: str, workspace_id: uuid.UUID, actor_id: uuid.UUID, data: dict
 ) -> dict:
     """
     Standard platform event envelope (system design §14).
@@ -104,7 +101,11 @@ class RepositoryEventPublisher:
             self._producer.flush(timeout=KAFKA_FLUSH_TIMEOUT_SECONDS)
             logger.debug(
                 "event.published",
-                extra={"topic": topic, "event_type": event_type, "workspace_id": workspace_id},
+                extra={
+                    "topic": topic,
+                    "event_type": event_type,
+                    "workspace_id": workspace_id,
+                },
             )
         except Exception as exc:
             # IMPORTANT: log and continue — event failure must never crash a request
@@ -121,10 +122,7 @@ class RepositoryEventPublisher:
     # ── Repository events (KRV-021) ───────────────────────────────────────────
 
     def repository_connected(
-        self,
-        *,
-        repository: "Repository",
-        actor_id: uuid.UUID,
+        self, *, repository: "Repository", actor_id: uuid.UUID
     ) -> None:
         """
         Published after a repository is connected to a workspace.
@@ -147,10 +145,7 @@ class RepositoryEventPublisher:
         self._publish(TOPIC_REPOSITORY, event)
 
     def repository_disconnected(
-        self,
-        *,
-        repository: "Repository",
-        actor_id: uuid.UUID,
+        self, *, repository: "Repository", actor_id: uuid.UUID
     ) -> None:
         """
         Published after a repository is disconnected from a workspace.

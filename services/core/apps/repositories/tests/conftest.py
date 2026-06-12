@@ -97,36 +97,28 @@ def workspace(owner_id) -> Workspace:
 @pytest.fixture
 def owner_member(workspace, owner_id) -> WorkspaceMember:
     return WorkspaceMember.objects.create(
-        workspace=workspace,
-        user_id=owner_id,
-        role=WorkspaceRole.OWNER,
+        workspace=workspace, user_id=owner_id, role=WorkspaceRole.OWNER
     )
 
 
 @pytest.fixture
 def admin_member(workspace, admin_id) -> WorkspaceMember:
     return WorkspaceMember.objects.create(
-        workspace=workspace,
-        user_id=admin_id,
-        role=WorkspaceRole.ADMIN,
+        workspace=workspace, user_id=admin_id, role=WorkspaceRole.ADMIN
     )
 
 
 @pytest.fixture
 def regular_member(workspace, member_id) -> WorkspaceMember:
     return WorkspaceMember.objects.create(
-        workspace=workspace,
-        user_id=member_id,
-        role=WorkspaceRole.MEMBER,
+        workspace=workspace, user_id=member_id, role=WorkspaceRole.MEMBER
     )
 
 
 @pytest.fixture
 def viewer_member(workspace, viewer_id) -> WorkspaceMember:
     return WorkspaceMember.objects.create(
-        workspace=workspace,
-        user_id=viewer_id,
-        role=WorkspaceRole.VIEWER,
+        workspace=workspace, user_id=viewer_id, role=WorkspaceRole.VIEWER
     )
 
 

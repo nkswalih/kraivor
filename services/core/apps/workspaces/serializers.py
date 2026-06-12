@@ -156,7 +156,15 @@ class WorkspaceCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Workspace
-        fields = ["id", "name", "slug", "avatar_url", "description", "settings", "created_at"]
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "avatar_url",
+            "description",
+            "settings",
+            "created_at",
+        ]
         read_only_fields = ["id", "created_at"]
 
     def validate_name(self, value: str) -> str:
@@ -251,15 +259,9 @@ class WorkspaceInvitationSerializer(serializers.ModelSerializer):
     status = serializers.ReadOnlyField()
     accept_url = serializers.ReadOnlyField()
 
-    workspace_name = serializers.CharField(
-        source="workspace.name",
-        read_only=True,
-    )
+    workspace_name = serializers.CharField(source="workspace.name", read_only=True)
 
-    workspace_slug = serializers.CharField(
-        source="workspace.slug",
-        read_only=True,
-    )
+    workspace_slug = serializers.CharField(source="workspace.slug", read_only=True)
 
     class Meta:
         model = WorkspaceInvitation
@@ -295,7 +297,9 @@ class WorkspaceInvitationCreateSerializer(serializers.Serializer):
     the JWT sub claim display name) — not from user input.
     """
 
-    email = serializers.EmailField(help_text="Email address of the person being invited.")
+    email = serializers.EmailField(
+        help_text="Email address of the person being invited."
+    )
     role = serializers.ChoiceField(
         choices=[
             (WorkspaceRole.ADMIN, "Admin"),

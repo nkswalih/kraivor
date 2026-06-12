@@ -1,0 +1,42 @@
+# Development dependencies
+-r base.txt
+
+# Formatting
+black>=24.0
+isort>=5.13
+
+# Linting
+flake8>=7.0
+flake8-bugbear>=24.0
+flake8-builtins>=2.2
+flake8-comprehensions>=3.14
+flake8-docstrings>=1.7
+flake8-import-order>=0.18
+pep8-naming>=0.14
+ruff>=0.3.0
+
+# Type checking
+mypy>=1.8
+django-stubs>=4.2
+djangorestframework-stubs>=3.14
+types-requests>=2.31
+typing-extensions>=4.9
+
+# Testing
+pytest>=8.0
+pytest-django>=4.5
+pytest-cov>=5.0
+pytest-mock>=3.12
+pytest-xdist>=3.5
+pytest-sugar>=1.1
+factory-boy>=3.3
+faker>=22.0
+
+# Security
+bandit>=1.7
+pip-audit>=2.7
+
+# DevX
+pre-commit>=3.6
+tox>=4.14
+rich>=13.0

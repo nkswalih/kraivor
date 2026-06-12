@@ -28,15 +28,13 @@ class GitHubAppInstallation(TimestampedModel):
         help_text="GitHub App installation ID (assigned by GitHub).",
     )
     github_account_id = models.BigIntegerField(
-        help_text="GitHub account (user or org) ID that installed the app.",
+        help_text="GitHub account (user or org) ID that installed the app."
     )
     github_account_login = models.CharField(
-        max_length=255,
-        help_text="GitHub account login (e.g. 'acme-corp' or 'john').",
+        max_length=255, help_text="GitHub account login (e.g. 'acme-corp' or 'john')."
     )
     github_account_type = models.CharField(
-        max_length=20,
-        help_text="'User' or 'Organization'.",
+        max_length=20, help_text="'User' or 'Organization'."
     )
     installed_by_id = models.UUIDField(
         null=True,
@@ -53,9 +51,8 @@ class GitHubAppInstallation(TimestampedModel):
         db_table = "github_app_installations"
         indexes = [
             models.Index(
-                fields=["workspace", "deleted_at"],
-                name="idx_gh_install_ws_active",
-            ),
+                fields=["workspace", "deleted_at"], name="idx_gh_install_ws_active"
+            )
         ]
 
     def __str__(self):
@@ -83,18 +80,14 @@ class GitHubAppInstallationRepo(TimestampedModel):
         db_index=True,
     )
     github_id = models.BigIntegerField(
-        db_index=True,
-        help_text="Stable GitHub repository ID.",
+        db_index=True, help_text="Stable GitHub repository ID."
     )
     github_repo = models.CharField(
         max_length=255,
         db_index=True,
         help_text="Full repo name in 'owner/repo' format.",
     )
-    default_branch = models.CharField(
-        max_length=255,
-        default="main",
-    )
+    default_branch = models.CharField(max_length=255, default="main")
     is_private = models.BooleanField(default=False)
     description = models.TextField(null=True, blank=True, max_length=500)
     language = models.CharField(max_length=100, null=True, blank=True)
@@ -104,9 +97,8 @@ class GitHubAppInstallationRepo(TimestampedModel):
         unique_together = [("installation", "github_id")]
         indexes = [
             models.Index(
-                fields=["installation", "github_repo"],
-                name="idx_install_repo_name",
-            ),
+                fields=["installation", "github_repo"], name="idx_install_repo_name"
+            )
         ]
 
     def __str__(self):

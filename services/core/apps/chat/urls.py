@@ -2,41 +2,19 @@ from django.urls import path
 
 from apps.chat.views import ChatRoomViewSet, MessageViewSet
 
-chat_rooms_list = ChatRoomViewSet.as_view(
-    {
-        "get": "list",
-        "post": "create",
-    }
-)
+chat_rooms_list = ChatRoomViewSet.as_view({"get": "list", "post": "create"})
 
 chat_rooms_detail = ChatRoomViewSet.as_view(
-    {
-        "get": "retrieve",
-        "patch": "partial_update",
-        "delete": "destroy",
-    }
+    {"get": "retrieve", "patch": "partial_update", "delete": "destroy"}
 )
 
-messages_list = MessageViewSet.as_view(
-    {
-        "get": "list",
-        "post": "send",
-    }
-)
+messages_list = MessageViewSet.as_view({"get": "list", "post": "send"})
 
 messages_detail = MessageViewSet.as_view(
-    {
-        "get": "retrieve",
-        "patch": "partial_update",
-        "delete": "destroy",
-    }
+    {"get": "retrieve", "patch": "partial_update", "delete": "destroy"}
 )
 
-messages_search = MessageViewSet.as_view(
-    {
-        "get": "search",
-    }
-)
+messages_search = MessageViewSet.as_view({"get": "search"})
 
 urlpatterns = [
     path(

@@ -63,7 +63,9 @@ class ChatRoomViewSet(ViewSet):
         user_id = _str_uuid(getattr(request, "user_id", ""))
         workspace_id = _str_uuid(workspace_pk)
         rooms = ChatRoomService.list_rooms(workspace_id=workspace_id, user_id=user_id)
-        serializer = ChatRoomListSerializer(rooms, many=True, context={"request": request})
+        serializer = ChatRoomListSerializer(
+            rooms, many=True, context={"request": request}
+        )
         return Response(serializer.data)
 
     def create(self, request, workspace_pk=None):
@@ -75,7 +77,9 @@ class ChatRoomViewSet(ViewSet):
         room = ChatRoomService.create_room(
             workspace_id=workspace_id,
             name=serializer.validated_data["name"],
-            room_type=serializer.validated_data.get("room_type", ChatRoom.RoomType.GROUP),
+            room_type=serializer.validated_data.get(
+                "room_type", ChatRoom.RoomType.GROUP
+            ),
             created_by=user_id,
             topic=serializer.validated_data.get("topic", ""),
         )
@@ -95,9 +99,7 @@ class ChatRoomViewSet(ViewSet):
         serializer.is_valid(raise_exception=True)
 
         room = ChatRoomService.update_room(
-            room_id=_str_uuid(pk),
-            user_id=user_id,
-            data=serializer.validated_data,
+            room_id=_str_uuid(pk), user_id=user_id, data=serializer.validated_data
         )
         if not room:
             raise NotFound("Chat room not found.")
@@ -141,19 +143,19 @@ class MessageViewSet(ViewSet):
 
         try:
             messages, last_key = ChatMessageService.get_messages(
-                room_id=room_id,
-                limit=min(limit, 200),
-                start_key=start_key,
+                room_id=room_id, limit=min(limit, 200), start_key=start_key
             )
         except Exception as exc:
-            logger.error("chat.messages.list_failed", extra={"room_id": room_id, "error": str(exc)})
-            raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
+            logger.error(
+                "chat.messages.list_failed",
+                extra={"room_id": room_id, "error": str(exc)},
+            )
+            raise ServiceUnavailable(
+                "Message store is temporarily unavailable."
+            ) from exc
 
         serializer = MessageSerializer(messages, many=True)
-        response_data = {
-            "results": serializer.data,
-            "has_next": last_key is not None,
-        }
+        response_data = {"results": serializer.data, "has_next": last_key is not None}
         if last_key:
             response_data["next_start_key"] = json.dumps(last_key)
 
@@ -164,14 +166,16 @@ class MessageViewSet(ViewSet):
 
         try:
             message = ChatMessageService.get_message(
-                room_id=_str_uuid(room_pk),
-                message_id=_str_uuid(pk),
+                room_id=_str_uuid(room_pk), message_id=_str_uuid(pk)
             )
         except Exception as exc:
             logger.error(
-                "chat.message.get_failed", extra={"message_id": str(pk), "error": str(exc)}
+                "chat.message.get_failed",
+                extra={"message_id": str(pk), "error": str(exc)},
             )
-            raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
+            raise ServiceUnavailable(
+                "Message store is temporarily unavailable."
+            ) from exc
 
         if not message:
             raise NotFound("Message not found.")
@@ -197,9 +201,12 @@ class MessageViewSet(ViewSet):
             )
         except Exception as exc:
             logger.error(
-                "chat.message.edit_failed", extra={"message_id": str(pk), "error": str(exc)}
+                "chat.message.edit_failed",
+                extra={"message_id": str(pk), "error": str(exc)},
             )
-            raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
+            raise ServiceUnavailable(
+                "Message store is temporarily unavailable."
+            ) from exc
 
         if updated is None:
             raise NotFound("Message not found or you can only edit your own messages.")
@@ -212,14 +219,16 @@ class MessageViewSet(ViewSet):
 
         try:
             success = ChatMessageService.delete_message(
-                room_id=_str_uuid(room_pk),
-                message_id=_str_uuid(pk),
+                room_id=_str_uuid(room_pk), message_id=_str_uuid(pk)
             )
         except Exception as exc:
             logger.error(
-                "chat.message.delete_failed", extra={"message_id": str(pk), "error": str(exc)}
+                "chat.message.delete_failed",
+                extra={"message_id": str(pk), "error": str(exc)},
             )
-            raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
+            raise ServiceUnavailable(
+                "Message store is temporarily unavailable."
+            ) from exc
 
         if not success:
             raise NotFound("Message not found or already deleted.")
@@ -234,7 +243,9 @@ class MessageViewSet(ViewSet):
 
         content = request.data.get("content", "").strip()
         if not content:
-            return Response({"error": "Content is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Content is required."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         room_id = _str_uuid(room_pk)
         message_id = str(uuid.uuid4())
@@ -274,7 +285,8 @@ class MessageViewSet(ViewSet):
                 )
         except Exception as exc:
             logger.warning(
-                "chat.message.broadcast_failed", extra={"room_id": room_id, "error": str(exc)}
+                "chat.message.broadcast_failed",
+                extra={"room_id": room_id, "error": str(exc)},
             )
 
         try:
@@ -305,14 +317,16 @@ class MessageViewSet(ViewSet):
 
         try:
             results = ChatMessageService.search_messages(
-                room_id=_str_uuid(room_pk),
-                query=query,
+                room_id=_str_uuid(room_pk), query=query
             )
         except Exception as exc:
             logger.error(
-                "chat.messages.search_failed", extra={"room_id": str(room_pk), "error": str(exc)}
+                "chat.messages.search_failed",
+                extra={"room_id": str(room_pk), "error": str(exc)},
             )
-            raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
+            raise ServiceUnavailable(
+                "Message store is temporarily unavailable."
+            ) from exc
 
         serializer = MessageSerializer(results, many=True)
         return Response({"results": serializer.data, "count": len(results)})

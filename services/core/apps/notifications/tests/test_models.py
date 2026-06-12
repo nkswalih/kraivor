@@ -30,9 +30,7 @@ class TestNotificationModel:
     def test_notification_default_values(self, db):
         user_id = uuid.uuid4()
         notif = Notification.objects.create(
-            user_id=user_id,
-            notification_type="system",
-            title="System Notification",
+            user_id=user_id, notification_type="system", title="System Notification"
         )
         assert notif.body == ""
         assert notif.link == ""
@@ -57,20 +55,18 @@ class TestNotificationModel:
 
     def test_notification_ordering(self, user_id, db):
         notif1 = Notification.objects.create(
-            user_id=user_id,
-            notification_type="system",
-            title="First",
+            user_id=user_id, notification_type="system", title="First"
         )
         notif2 = Notification.objects.create(
-            user_id=user_id,
-            notification_type="system",
-            title="Second",
+            user_id=user_id, notification_type="system", title="Second"
         )
         qs = Notification.objects.filter(user_id=user_id).order_by("-created_at")
         assert list(qs) == [notif2, notif1]
 
     def test_filter_by_user(self, user_id, other_user_id, db):
-        Notification.objects.create(user_id=user_id, notification_type="system", title="Mine")
+        Notification.objects.create(
+            user_id=user_id, notification_type="system", title="Mine"
+        )
         Notification.objects.create(
             user_id=other_user_id, notification_type="system", title="Theirs"
         )
@@ -78,9 +74,15 @@ class TestNotificationModel:
         assert Notification.objects.count() == 2
 
     def test_filter_unread(self, user_id, db):
-        Notification.objects.create(user_id=user_id, notification_type="system", title="Unread 1")
-        Notification.objects.create(user_id=user_id, notification_type="system", title="Unread 2")
-        n3 = Notification.objects.create(user_id=user_id, notification_type="system", title="Read")
+        Notification.objects.create(
+            user_id=user_id, notification_type="system", title="Unread 1"
+        )
+        Notification.objects.create(
+            user_id=user_id, notification_type="system", title="Unread 2"
+        )
+        n3 = Notification.objects.create(
+            user_id=user_id, notification_type="system", title="Read"
+        )
         n3.read_at = timezone.now()
         n3.save(update_fields=["read_at"])
         unread = Notification.objects.filter(user_id=user_id, read_at__isnull=True)
@@ -90,9 +92,7 @@ class TestNotificationModel:
         user_id = uuid.uuid4()
         for ntype, _ in Notification.NotificationType.choices:
             notif = Notification.objects.create(
-                user_id=user_id,
-                notification_type=ntype,
-                title=f"Test {ntype}",
+                user_id=user_id, notification_type=ntype, title=f"Test {ntype}"
             )
             assert notif.notification_type == ntype
 
@@ -119,9 +119,7 @@ class TestNotificationModel:
 class TestFCMTokenModel:
     def test_create_fcm_token(self, user_id, db):
         token = FCMToken.objects.create(
-            user_id=user_id,
-            token="device-token-abc",
-            platform="android",
+            user_id=user_id, token="device-token-abc", platform="android"
         )
         assert token.id is not None
         assert str(token) == f"{user_id} (android)"
@@ -129,18 +127,14 @@ class TestFCMTokenModel:
 
     def test_unique_together_user_token(self, user_id, db):
         FCMToken.objects.create(
-            user_id=user_id,
-            token="duplicate-token",
-            platform="web",
+            user_id=user_id, token="duplicate-token", platform="web"
         )
         import pytest
         from django.db import IntegrityError
 
         with pytest.raises(IntegrityError):
             FCMToken.objects.create(
-                user_id=user_id,
-                token="duplicate-token",
-                platform="ios",
+                user_id=user_id, token="duplicate-token", platform="ios"
             )
 
     def test_multiple_tokens_per_user(self, user_id, db):
@@ -152,9 +146,7 @@ class TestFCMTokenModel:
         import time
 
         token = FCMToken.objects.create(
-            user_id=user_id,
-            token="test-token",
-            platform="web",
+            user_id=user_id, token="test-token", platform="web"
         )
         original_updated = token.updated_at
         time.sleep(0.001)
@@ -166,13 +158,13 @@ class TestFCMTokenModel:
     def test_platform_choices(self, user_id, db):
         for platform_code in ["ios", "android", "web"]:
             token = FCMToken.objects.create(
-                user_id=user_id,
-                token=f"token-{platform_code}",
-                platform=platform_code,
+                user_id=user_id, token=f"token-{platform_code}", platform=platform_code
             )
             assert token.platform == platform_code
 
     def test_different_users_same_token(self, user_id, other_user_id, db):
         FCMToken.objects.create(user_id=user_id, token="shared-token", platform="web")
-        FCMToken.objects.create(user_id=other_user_id, token="shared-token", platform="web")
+        FCMToken.objects.create(
+            user_id=other_user_id, token="shared-token", platform="web"
+        )
         assert FCMToken.objects.filter(token="shared-token").count() == 2

@@ -32,7 +32,10 @@ from apps.workspaces.permissions import IsAuthenticated
 from apps.workspaces.views import WorkspaceContextMixin
 
 from .client import GitHubAppAPIError, GitHubAppAuthError, GitHubAppError
-from .serializers import GitHubAppInstallationSerializer, GitHubAppInstallInitiateSerializer
+from .serializers import (
+    GitHubAppInstallationSerializer,
+    GitHubAppInstallInitiateSerializer,
+)
 from .services import GitHubAppInstallationService
 
 logger = logging.getLogger(__name__)
@@ -71,10 +74,12 @@ class GitHubAppInstallInitiateView(WorkspaceContextMixin, APIView):
             )
 
         if not getattr(settings, "GITHUB_APP_SLUG", ""):
-            raise ValidationError({
-                "detail": "GitHub App integration is not configured on this server.",
-                "code": "github_app_not_configured",
-            })
+            raise ValidationError(
+                {
+                    "detail": "GitHub App integration is not configured on this server.",
+                    "code": "github_app_not_configured",
+                }
+            )
 
         installation_id = request.query_params.get("installation_id")
 
@@ -88,20 +93,18 @@ class GitHubAppInstallInitiateView(WorkspaceContextMixin, APIView):
                     actor_id=actor_id,
                 )
                 return Response(
-                    GitHubAppInstallInitiateSerializer({
-                        "installation_url": None,
-                        "configure_url": configure_url,
-                    }).data
+                    GitHubAppInstallInitiateSerializer(
+                        {"installation_url": None, "configure_url": configure_url}
+                    ).data
                 )
             else:
                 installation_url = service.initiate_installation(
                     workspace=workspace, actor_id=actor_id
                 )
                 return Response(
-                    GitHubAppInstallInitiateSerializer({
-                        "installation_url": installation_url,
-                        "configure_url": None,
-                    }).data
+                    GitHubAppInstallInitiateSerializer(
+                        {"installation_url": installation_url, "configure_url": None}
+                    ).data
                 )
         except GitHubAppError as exc:
             raise ValidationError({"detail": str(exc)}) from exc
@@ -130,11 +133,7 @@ class GitHubAppInstallCallbackView(APIView):
         setup_action = request.query_params.get("setup_action", "install")
         state = request.query_params.get("state")
 
-        frontend_url = getattr(
-            settings,
-            "FRONTEND_URL",
-            "http://localhost:3000",
-        )
+        frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
 
         def error_redirect(detail: str):
             return redirect(
@@ -155,9 +154,11 @@ class GitHubAppInstallCallbackView(APIView):
         if not state:
             logger.warning(
                 "github_app.callback.no_state",
-                extra={"installation_id": installation_id,
-                       "note": "Setup URL may lack state param. "
-                               "Webhook should have handled this."},
+                extra={
+                    "installation_id": installation_id,
+                    "note": "Setup URL may lack state param. "
+                    "Webhook should have handled this.",
+                },
             )
             return redirect(
                 f"{frontend_url}/oauth/success"
@@ -169,9 +170,7 @@ class GitHubAppInstallCallbackView(APIView):
         try:
             service = GitHubAppInstallationService()
             result = service.complete_installation(
-                state=state,
-                installation_id=installation_id,
-                setup_action=setup_action,
+                state=state, installation_id=installation_id, setup_action=setup_action
             )
         except GitHubAppError as exc:
             logger.error(
@@ -220,7 +219,9 @@ class GitHubAppInstallationImportView(WorkspaceContextMixin, APIView):
         try:
             installation_id = int(installation_id_raw)
         except (ValueError, TypeError):
-            raise ValidationError({"detail": "installation_id must be an integer."}) from None
+            raise ValidationError(
+                {"detail": "installation_id must be an integer."}
+            ) from None
 
         try:
             from .client import GitHubAppClient, GitHubAppError
@@ -282,10 +283,14 @@ class GitHubAppInstallationListView(WorkspaceContextMixin, APIView):
         service = GitHubAppInstallationService()
         installations = service.list_installations(workspace)
 
-        return Response({
-            "installations": GitHubAppInstallationSerializer(installations, many=True).data,
-            "can_admin": can_admin,
-        })
+        return Response(
+            {
+                "installations": GitHubAppInstallationSerializer(
+                    installations, many=True
+                ).data,
+                "can_admin": can_admin,
+            }
+        )
 
 
 class GitHubAppInstallationRefreshView(WorkspaceContextMixin, APIView):
@@ -342,8 +347,7 @@ class GitHubAppInstallationRemoveView(WorkspaceContextMixin, APIView):
         try:
             service = GitHubAppInstallationService()
             service.remove_installation(
-                installation_id=int(installation_pk),
-                workspace=workspace,
+                installation_id=int(installation_pk), workspace=workspace
             )
         except GitHubAppError as exc:
             raise NotFound(str(exc)) from exc

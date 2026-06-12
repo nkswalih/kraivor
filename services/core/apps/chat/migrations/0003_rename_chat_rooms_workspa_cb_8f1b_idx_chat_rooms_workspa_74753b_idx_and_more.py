@@ -5,19 +5,17 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('chat', '0002_chatroom_topic_last_message_at_indexes'),
-    ]
+    dependencies = [("chat", "0002_chatroom_topic_last_message_at_indexes")]
 
     operations = [
         migrations.RenameIndex(
-            model_name='chatroom',
-            new_name='chat_rooms_workspa_74753b_idx',
-            old_name='chat_rooms_workspa_cb_8f1b_idx',
+            model_name="chatroom",
+            new_name="chat_rooms_workspa_74753b_idx",
+            old_name="chat_rooms_workspa_cb_8f1b_idx",
         ),
         migrations.RenameIndex(
-            model_name='chatroom',
-            new_name='chat_rooms_is_acti_7265bf_idx',
-            old_name='chat_rooms_active_9a7e_idx',
+            model_name="chatroom",
+            new_name="chat_rooms_is_acti_7265bf_idx",
+            old_name="chat_rooms_active_9a7e_idx",
         ),
     ]

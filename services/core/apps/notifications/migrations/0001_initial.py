@@ -9,9 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
     initial = True
 
-    dependencies = [
-        ("workspaces", "0001_initial"),
-    ]
+    dependencies = [("workspaces", "0001_initial")]
 
     operations = [
         migrations.CreateModel(
@@ -20,7 +18,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.UUIDField(
-                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
                     ),
                 ),
                 ("user_id", models.UUIDField(db_index=True)),
@@ -28,7 +29,11 @@ class Migration(migrations.Migration):
                 (
                     "platform",
                     models.CharField(
-                        choices=[("ios", "iOS"), ("android", "Android"), ("web", "Web")],
+                        choices=[
+                            ("ios", "iOS"),
+                            ("android", "Android"),
+                            ("web", "Web"),
+                        ],
                         max_length=20,
                     ),
                 ),
@@ -48,7 +53,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.UUIDField(
-                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
                     ),
                 ),
                 ("user_id", models.UUIDField(db_index=True)),
@@ -95,10 +103,12 @@ class Migration(migrations.Migration):
                 "db_table": "notifications",
                 "indexes": [
                     models.Index(
-                        fields=["user_id", "-created_at"], name="notificatio_user_id_611c58_idx"
+                        fields=["user_id", "-created_at"],
+                        name="notificatio_user_id_611c58_idx",
                     ),
                     models.Index(
-                        fields=["user_id", "read_at"], name="notificatio_user_id_6c7360_idx"
+                        fields=["user_id", "read_at"],
+                        name="notificatio_user_id_6c7360_idx",
                     ),
                 ],
             },

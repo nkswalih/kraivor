@@ -66,28 +66,22 @@ class TestDispatchTask:
     def test_dispatches_known_event_with_user_id(self):
         mock_task = MagicMock()
         with patch(
-            "celery.current_app.tasks", {"notifications.tasks.dispatch_notification": mock_task}
+            "celery.current_app.tasks",
+            {"notifications.tasks.dispatch_notification": mock_task},
         ):
             _dispatch_task(
-                "analysis.completed",
-                {
-                    "user_id": "user-123",
-                    "github_repo": "repo",
-                },
+                "analysis.completed", {"user_id": "user-123", "github_repo": "repo"}
             )
             mock_task.delay.assert_called_once()
 
     def test_dispatches_known_event_with_workspace_id_fallback(self):
         mock_task = MagicMock()
         with patch(
-            "celery.current_app.tasks", {"notifications.tasks.dispatch_notification": mock_task}
+            "celery.current_app.tasks",
+            {"notifications.tasks.dispatch_notification": mock_task},
         ):
             _dispatch_task(
-                "ai.index.completed",
-                {
-                    "workspace_id": "ws-456",
-                    "github_repo": "repo",
-                },
+                "ai.index.completed", {"workspace_id": "ws-456", "github_repo": "repo"}
             )
             mock_task.delay.assert_called_once()
 
@@ -103,24 +97,23 @@ class TestDispatchTask:
     def test_skips_event_without_recipient(self):
         mock_task = MagicMock()
         with patch(
-            "celery.current_app.tasks", {"notifications.tasks.dispatch_notification": mock_task}
+            "celery.current_app.tasks",
+            {"notifications.tasks.dispatch_notification": mock_task},
         ):
             _dispatch_task("analysis.completed", {})
             mock_task.delay.assert_not_called()
 
     def test_logs_warning_for_missing_task(self):
-        with patch("apps.notifications.management.commands.consume_events.logger") as mock_logger:
+        with patch(
+            "apps.notifications.management.commands.consume_events.logger"
+        ) as mock_logger:
             _dispatch_task("analysis.completed", {"user_id": "u-1"})
             mock_logger.error.assert_called_once()
 
 
 class TestCommand:
     def test_topics_constant(self):
-        assert TOPICS == [
-            "analysis.events",
-            "ai.events",
-            "workspace.events",
-        ]
+        assert TOPICS == ["analysis.events", "ai.events", "workspace.events"]
 
     @override_settings(KAFKA_BOOTSTRAP_SERVERS="localhost:9092")
     def test_create_consumer_with_kafka_settings(self):
@@ -186,7 +179,9 @@ class TestCommand:
         cmd = Command()
         mock_msg = MagicMock()
         mock_msg.value.return_value = b"not-json"
-        with patch("apps.notifications.management.commands.consume_events.logger") as mock_logger:
+        with patch(
+            "apps.notifications.management.commands.consume_events.logger"
+        ) as mock_logger:
             cmd._process_message(mock_msg)
             mock_logger.error.assert_called_once()
 
@@ -196,7 +191,9 @@ class TestCommand:
         cmd = Command()
         mock_msg = MagicMock()
         mock_msg.value.return_value = json.dumps({"data": {}}).encode()
-        with patch("apps.notifications.management.commands.consume_events.logger") as mock_logger:
+        with patch(
+            "apps.notifications.management.commands.consume_events.logger"
+        ) as mock_logger:
             cmd._process_message(mock_msg)
             mock_logger.warning.assert_called_once()
 

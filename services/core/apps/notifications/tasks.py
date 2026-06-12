@@ -111,7 +111,9 @@ def dispatch_notification(
     # ── 3. Send push notification ──────────────────────────────────────────
     if send_push:
         try:
-            tokens = FCMToken.objects.filter(user_id=user_id).values_list("token", flat=True)
+            tokens = FCMToken.objects.filter(user_id=user_id).values_list(
+                "token", flat=True
+            )
             for token in tokens:
                 from apps.notifications.firebase import send_push_notification
 

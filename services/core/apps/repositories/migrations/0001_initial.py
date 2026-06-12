@@ -9,9 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
     initial = True
 
-    dependencies = [
-        ("workspaces", "0001_initial"),
-    ]
+    dependencies = [("workspaces", "0001_initial")]
 
     operations = [
         migrations.CreateModel(
@@ -20,12 +18,18 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.UUIDField(
-                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
                     ),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
-                ("deleted_at", models.DateTimeField(blank=True, db_index=True, null=True)),
+                (
+                    "deleted_at",
+                    models.DateTimeField(blank=True, db_index=True, null=True),
+                ),
                 (
                     "github_repo",
                     models.CharField(
@@ -70,7 +74,8 @@ class Migration(migrations.Migration):
                 (
                     "is_private",
                     models.BooleanField(
-                        default=False, help_text="Whether the GitHub repository is private."
+                        default=False,
+                        help_text="Whether the GitHub repository is private.",
                     ),
                 ),
                 (
@@ -121,13 +126,15 @@ class Migration(migrations.Migration):
                 "db_table": "repositories",
                 "indexes": [
                     models.Index(
-                        fields=["workspace", "deleted_at"], name="idx_repos_workspace_active"
+                        fields=["workspace", "deleted_at"],
+                        name="idx_repos_workspace_active",
                     ),
                     models.Index(
-                        fields=["workspace", "github_repo"], name="idx_workspace_github_repo"
+                        fields=["workspace", "github_repo"],
+                        name="idx_workspace_github_repo",
                     ),
                 ],
                 "unique_together": {("workspace", "github_id")},
             },
-        ),
+        )
     ]

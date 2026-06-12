@@ -20,9 +20,7 @@ class IsChatRoomMember(BasePermission):
             return False
 
         return WorkspaceMember.objects.filter(
-            workspace_id=workspace_pk,
-            user_id=user_id,
-            deleted_at__isnull=True,
+            workspace_id=workspace_pk, user_id=user_id, deleted_at__isnull=True
         ).exists()
 
 
@@ -38,7 +36,9 @@ class CanDeleteMessage(BasePermission):
             return False
 
         sender_id = (
-            obj.get("sender_id") if isinstance(obj, dict) else getattr(obj, "sender_id", None)
+            obj.get("sender_id")
+            if isinstance(obj, dict)
+            else getattr(obj, "sender_id", None)
         )
         if sender_id == user_id:
             return True

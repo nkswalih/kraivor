@@ -86,7 +86,9 @@ class RepositoryConnectSerializer(serializers.Serializer):
 
     # GitHub naming rules: letters, digits, hyphens, underscores, dots.
     # Owner and repo are separated by exactly one slash.
-    _GITHUB_REPO_RE = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?/[a-zA-Z0-9._-]+$")
+    _GITHUB_REPO_RE = re.compile(
+        r"^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?/[a-zA-Z0-9._-]+$"
+    )
 
     def validate_github_repo(self, value: str) -> str:
         value = value.strip()

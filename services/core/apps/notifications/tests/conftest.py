@@ -44,9 +44,7 @@ def fcm_token(user_id, db):
     from apps.notifications.models import FCMToken
 
     return FCMToken.objects.create(
-        user_id=user_id,
-        token="test-fcm-token-12345",
-        platform="web",
+        user_id=user_id, token="test-fcm-token-12345", platform="web"
     )
 
 
@@ -64,7 +62,5 @@ def workspace(db):
     from apps.workspaces.models import Workspace
 
     return Workspace.objects.create(
-        owner_id=uuid.uuid4(),
-        name="Test Workspace",
-        slug="test-workspace",
+        owner_id=uuid.uuid4(), name="Test Workspace", slug="test-workspace"
     )

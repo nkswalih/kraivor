@@ -26,7 +26,9 @@ def _initialize():
 
     cred_path = getattr(settings, "FIREBASE_CREDENTIALS_PATH", None)
     if not cred_path:
-        logger.info("firebase.disabled", extra={"reason": "FIREBASE_CREDENTIALS_PATH not set"})
+        logger.info(
+            "firebase.disabled", extra={"reason": "FIREBASE_CREDENTIALS_PATH not set"}
+        )
         return False
 
     try:
@@ -44,11 +46,7 @@ def _initialize():
 
 
 def send_push_notification(
-    *,
-    token: str,
-    title: str,
-    body: str,
-    data: dict | None = None,
+    *, token: str, title: str, body: str, data: dict | None = None
 ) -> dict:
     if not _initialize():
         logger.info(

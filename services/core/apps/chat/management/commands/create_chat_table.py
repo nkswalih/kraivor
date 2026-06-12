@@ -46,7 +46,7 @@ TABLE_SCHEMA: dict[str, Any] = {
                 {"AttributeName": "created_at", "KeyType": "RANGE"},
             ],
             "Projection": {"ProjectionType": "ALL"},
-        },
+        }
     ],
     "BillingMode": "PAY_PER_REQUEST",
 }
@@ -69,12 +69,16 @@ class Command(BaseCommand):
 
             table = dynamodb.create_table(**TABLE_SCHEMA)
             table.wait_until_exists()
-            self.stdout.write(self.style.SUCCESS(f"Table '{table_name}' created successfully."))
+            self.stdout.write(
+                self.style.SUCCESS(f"Table '{table_name}' created successfully.")
+            )
 
         except ClientError as exc:
             error_code = exc.response["Error"]["Code"]
             if error_code == "ResourceInUseException":
-                self.stdout.write(f"Table '{table_name}' already exists (concurrent creation).")
+                self.stdout.write(
+                    f"Table '{table_name}' already exists (concurrent creation)."
+                )
             else:
                 self.stderr.write(self.style.ERROR(f"Failed to create table: {exc}"))
                 raise

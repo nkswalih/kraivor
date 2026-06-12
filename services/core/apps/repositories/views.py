@@ -98,8 +98,7 @@ class RepositoryView(WorkspaceContextMixin, APIView):
             raise ValidationError({"detail": str(exc)}) from exc
 
         return Response(
-            RepositorySerializer(repository).data,
-            status=status.HTTP_201_CREATED,
+            RepositorySerializer(repository).data, status=status.HTTP_201_CREATED
         )
 
 
@@ -140,6 +139,7 @@ class RepositoryDetailView(WorkspaceContextMixin, APIView):
             raise NotFound(str(exc)) from exc
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class GitHubRepoSearchView(WorkspaceContextMixin, APIView):
     """
@@ -204,6 +204,7 @@ class GitHubRepoSearchView(WorkspaceContextMixin, APIView):
         )
         return response
 
+
 class GitHubOAuthConnectView(APIView):
     """
     GET /api/oauth/github/connect/
@@ -213,19 +214,19 @@ class GitHubOAuthConnectView(APIView):
     properly manages OAuth state via Redis. The frontend should call
     /auth/oauth/github/connect/ directly instead.
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         # Delegate to auth service's connect endpoint via internal HTTP call
         auth_service_url = getattr(
-            settings,
-            "GITHUB_TOKEN_SERVICE_URL",
-            "http://identity:8001",
+            settings, "GITHUB_TOKEN_SERVICE_URL", "http://identity:8001"
         )
         endpoint = f"{auth_service_url}/api/auth/oauth/github/connect/"
 
         try:
             import requests as ext_requests
+
             response = ext_requests.get(
                 endpoint,
                 headers={
@@ -236,14 +237,11 @@ class GitHubOAuthConnectView(APIView):
             )
             if response.status_code == 200:
                 return Response(response.json())
-            raise ValidationError({
-                "detail": "Failed to obtain GitHub authorization URL."
-            })
-        except Exception as exc:
-            logger.error(
-                "github.connect.delegation_failed",
-                extra={"error": str(exc)},
+            raise ValidationError(
+                {"detail": "Failed to obtain GitHub authorization URL."}
             )
-            raise ValidationError({
-                "detail": "Unable to initiate GitHub connection. Please try again."
-            }) from exc
+        except Exception as exc:
+            logger.error("github.connect.delegation_failed", extra={"error": str(exc)})
+            raise ValidationError(
+                {"detail": "Unable to initiate GitHub connection. Please try again."}
+            ) from exc

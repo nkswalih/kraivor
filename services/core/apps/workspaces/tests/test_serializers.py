@@ -31,10 +31,7 @@ class TestWorkspaceMemberSerializer:
     def test_read_only_fields(self, owner_member, db):
         serializer = WorkspaceMemberSerializer(
             owner_member,
-            data={
-                "user_id": uuid.uuid4(),
-                "role": WorkspaceRole.ADMIN,
-            },
+            data={"user_id": uuid.uuid4(), "role": WorkspaceRole.ADMIN},
             partial=True,
         )
         serializer.is_valid()
@@ -166,10 +163,7 @@ class TestWorkspaceCreateSerializer:
     def test_settings_whitelist_strips_unknown_keys(self, db):
         data = {
             "name": "Test",
-            "settings": {
-                "theme": "dark",
-                "unknown_key": "should be stripped",
-            },
+            "settings": {"theme": "dark", "unknown_key": "should be stripped"},
         }
         serializer = WorkspaceCreateSerializer(data=data)
         assert serializer.is_valid()
@@ -179,7 +173,9 @@ class TestWorkspaceCreateSerializer:
         data = {"name": "Test", "slug": "test-slug"}
         serializer = WorkspaceCreateSerializer(data=data)
         serializer.is_valid()
-        with pytest.raises(NotImplementedError, match="Use WorkspaceService.create_workspace"):
+        with pytest.raises(
+            NotImplementedError, match="Use WorkspaceService.create_workspace"
+        ):
             serializer.save()
 
     def test_unique_slug_appends_counter(self, workspace, db):

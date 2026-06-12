@@ -24,17 +24,13 @@ class TestKnowledgeSpaceModel:
 
     def test_canvas_data_defaults_to_empty_dict(self, workspace, owner_id):
         ks = KnowledgeSpace.objects.create(
-            workspace=workspace,
-            name="Minimal Space",
-            created_by=owner_id,
+            workspace=workspace, name="Minimal Space", created_by=owner_id
         )
         assert ks.canvas_data == {}
 
     def test_description_defaults_to_null(self, workspace, owner_id):
         ks = KnowledgeSpace.objects.create(
-            workspace=workspace,
-            name="No Description",
-            created_by=owner_id,
+            workspace=workspace, name="No Description", created_by=owner_id
         )
         assert ks.description is None
 
@@ -90,11 +86,11 @@ class TestKnowledgeSpaceModel:
 
     # ── SoftDeleteManager queryset ────────────────────────────────────────────
 
-    def test_objects_returns_only_active_spaces(self, workspace, owner_id, knowledge_space):
+    def test_objects_returns_only_active_spaces(
+        self, workspace, owner_id, knowledge_space
+    ):
         active = KnowledgeSpace.objects.create(
-            workspace=workspace,
-            name="Active Space",
-            created_by=owner_id,
+            workspace=workspace, name="Active Space", created_by=owner_id
         )
         knowledge_space.delete()
 
@@ -102,11 +98,11 @@ class TestKnowledgeSpaceModel:
         assert len(live) == 1
         assert live[0].id == active.id
 
-    def test_all_objects_returns_active_and_deleted(self, workspace, owner_id, knowledge_space):
+    def test_all_objects_returns_active_and_deleted(
+        self, workspace, owner_id, knowledge_space
+    ):
         KnowledgeSpace.objects.create(
-            workspace=workspace,
-            name="Active Space",
-            created_by=owner_id,
+            workspace=workspace, name="Active Space", created_by=owner_id
         )
         knowledge_space.delete()
 
@@ -117,7 +113,9 @@ class TestKnowledgeSpaceModel:
 
     def test_canvas_data_stores_complex_json(self, workspace, owner_id):
         payload = {
-            "nodes": [{"id": "n1", "type": "text", "x": 100, "y": 200, "data": "hello"}],
+            "nodes": [
+                {"id": "n1", "type": "text", "x": 100, "y": 200, "data": "hello"}
+            ],
             "edges": [{"from": "n1", "to": "n2"}],
             "viewport": {"x": 0, "y": 0, "zoom": 1.0},
         }

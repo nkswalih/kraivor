@@ -33,7 +33,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         await self.accept()
         logger.info(
-            "chat.connect.accepted", extra={"room_id": self.room_id, "user_id": self.user_id}
+            "chat.connect.accepted",
+            extra={"room_id": self.room_id, "user_id": self.user_id},
         )
 
     async def disconnect(self, close_code):
@@ -44,7 +45,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_discard(self.room_group, self.channel_name)
         logger.info(
             "chat.disconnected",
-            extra={"room_id": self.room_id, "user_id": self.user_id, "code": close_code},
+            extra={
+                "room_id": self.room_id,
+                "user_id": self.user_id,
+                "code": close_code,
+            },
         )
 
     async def receive(self, text_data):
@@ -67,7 +72,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         elif action == "delete":
             await self._handle_delete(data)
         else:
-            await self.send(text_data=json.dumps({"error": f"unknown_action: {action}"}))
+            await self.send(
+                text_data=json.dumps({"error": f"unknown_action: {action}"})
+            )
 
     async def chat_message(self, event):
         """Broadcast chat message to room."""
@@ -160,9 +167,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 room_id=self.room_id,
                 message_id=message_id,
                 content=content,
-                workspace_id=self.scope.get("workspace_ids", [None])[0]
-                if self.scope.get("workspace_ids")
-                else "",
+                workspace_id=(
+                    self.scope.get("workspace_ids", [None])[0]
+                    if self.scope.get("workspace_ids")
+                    else ""
+                ),
             )
 
     async def _handle_typing(self, data, event_type):
@@ -182,11 +191,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
         await self.channel_layer.group_send(
             self.room_group,
-            {
-                "type": "chat_message",
-                "message_id": message_id,
-                "read_by": self.user_id,
-            },
+            {"type": "chat_message", "message_id": message_id, "read_by": self.user_id},
         )
 
     async def _handle_delete(self, data):
@@ -249,7 +254,9 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         logger.info("notif.connect.accepted", extra={"user_id": self.user_id})
 
     async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(self.notification_group, self.channel_name)
+        await self.channel_layer.group_discard(
+            self.notification_group, self.channel_name
+        )
 
     async def receive(self, text_data):
         try:
@@ -287,28 +294,23 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     def _mark_read(self, notification_id):
         from apps.notifications.models import Notification
 
-        Notification.objects.filter(
-            id=notification_id,
-            user_id=self.user_id,
-        ).update(read_at=timezone.now())
+        Notification.objects.filter(id=notification_id, user_id=self.user_id).update(
+            read_at=timezone.now()
+        )
 
     @database_sync_to_async
     def _mark_all_read(self):
         from apps.notifications.models import Notification
 
-        Notification.objects.filter(
-            user_id=self.user_id,
-            read_at__isnull=True,
-        ).update(read_at=timezone.now())
+        Notification.objects.filter(user_id=self.user_id, read_at__isnull=True).update(
+            read_at=timezone.now()
+        )
 
     @database_sync_to_async
     def _dismiss(self, notification_id):
         from apps.notifications.models import Notification
 
-        Notification.objects.filter(
-            id=notification_id,
-            user_id=self.user_id,
-        ).delete()
+        Notification.objects.filter(id=notification_id, user_id=self.user_id).delete()
 
 
 class PresenceConsumer(AsyncWebsocketConsumer):

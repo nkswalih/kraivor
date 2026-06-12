@@ -79,7 +79,11 @@ class InstallationRepoItemSerializer(serializers.Serializer):
     updated_at = serializers.DateTimeField(allow_null=True)
 
     def get_name(self, obj: GitHubAppInstallationRepo) -> str:
-        return obj.github_repo.split("/")[-1] if "/" in obj.github_repo else obj.github_repo
+        return (
+            obj.github_repo.split("/")[-1]
+            if "/" in obj.github_repo
+            else obj.github_repo
+        )
 
     def get_owner(self, obj: GitHubAppInstallationRepo) -> str:
         return obj.github_repo.split("/")[0] if "/" in obj.github_repo else ""

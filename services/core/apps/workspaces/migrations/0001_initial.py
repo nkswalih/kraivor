@@ -20,12 +20,18 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.UUIDField(
-                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
                     ),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
-                ("deleted_at", models.DateTimeField(blank=True, db_index=True, null=True)),
+                (
+                    "deleted_at",
+                    models.DateTimeField(blank=True, db_index=True, null=True),
+                ),
                 ("name", models.CharField(max_length=255)),
                 (
                     "slug",
@@ -65,15 +71,21 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("avatar_url", models.URLField(blank=True, null=True)),
-                ("description", models.TextField(blank=True, max_length=500, null=True)),
+                (
+                    "description",
+                    models.TextField(blank=True, max_length=500, null=True),
+                ),
             ],
             options={
                 "db_table": "workspaces",
                 "indexes": [
                     models.Index(
-                        fields=["owner_id", "deleted_at"], name="idx_workspaces_owner_active"
+                        fields=["owner_id", "deleted_at"],
+                        name="idx_workspaces_owner_active",
                     ),
-                    models.Index(fields=["plan", "deleted_at"], name="idx_workspaces_plan_active"),
+                    models.Index(
+                        fields=["plan", "deleted_at"], name="idx_workspaces_plan_active"
+                    ),
                 ],
             },
         ),
@@ -83,12 +95,18 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.UUIDField(
-                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
                     ),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
-                ("deleted_at", models.DateTimeField(blank=True, db_index=True, null=True)),
+                (
+                    "deleted_at",
+                    models.DateTimeField(blank=True, db_index=True, null=True),
+                ),
                 (
                     "email",
                     models.EmailField(
@@ -100,7 +118,11 @@ class Migration(migrations.Migration):
                 (
                     "role",
                     models.CharField(
-                        choices=[("admin", "Admin"), ("member", "Member"), ("viewer", "Viewer")],
+                        choices=[
+                            ("admin", "Admin"),
+                            ("member", "Member"),
+                            ("viewer", "Viewer"),
+                        ],
                         default="member",
                         help_text="Role the invitee will receive upon acceptance.",
                         max_length=20,
@@ -170,9 +192,12 @@ class Migration(migrations.Migration):
                 "db_table": "workspace_invitations",
                 "indexes": [
                     models.Index(
-                        fields=["workspace", "email", "accepted_at"], name="idx_inv_ws_email"
+                        fields=["workspace", "email", "accepted_at"],
+                        name="idx_inv_ws_email",
                     ),
-                    models.Index(fields=["token", "accepted_at"], name="idx_inv_token_acc"),
+                    models.Index(
+                        fields=["token", "accepted_at"], name="idx_inv_token_acc"
+                    ),
                     models.Index(
                         fields=["workspace", "expires_at", "accepted_at"],
                         name="idx_invitations_pending",
@@ -186,16 +211,23 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.UUIDField(
-                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
                     ),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
-                ("deleted_at", models.DateTimeField(blank=True, db_index=True, null=True)),
+                (
+                    "deleted_at",
+                    models.DateTimeField(blank=True, db_index=True, null=True),
+                ),
                 (
                     "user_id",
                     models.UUIDField(
-                        db_index=True, help_text="identity.users.id — cross-service ref, no DB FK."
+                        db_index=True,
+                        help_text="identity.users.id — cross-service ref, no DB FK.",
                     ),
                 ),
                 (
@@ -241,8 +273,12 @@ class Migration(migrations.Migration):
                 "db_table": "workspace_members",
                 "default_manager_name": "objects",
                 "indexes": [
-                    models.Index(fields=["user_id", "deleted_at"], name="idx_members_user_active"),
-                    models.Index(fields=["workspace", "role"], name="idx_members_workspace_role"),
+                    models.Index(
+                        fields=["user_id", "deleted_at"], name="idx_members_user_active"
+                    ),
+                    models.Index(
+                        fields=["workspace", "role"], name="idx_members_workspace_role"
+                    ),
                 ],
                 "unique_together": {("workspace", "user_id")},
             },

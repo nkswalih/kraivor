@@ -12,9 +12,7 @@ class ChatRoom(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     workspace = models.ForeignKey(
-        "workspaces.Workspace",
-        on_delete=models.CASCADE,
-        related_name="chat_rooms",
+        "workspaces.Workspace", on_delete=models.CASCADE, related_name="chat_rooms"
     )
     name = models.CharField(max_length=255)
     room_type = models.CharField(max_length=20, choices=RoomType.choices)

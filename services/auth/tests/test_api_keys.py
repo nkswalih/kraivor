@@ -471,6 +471,90 @@ def test_model_is_valid_revoked_key(user):
 
 
 @pytest.mark.django_db
+def test_authentication_backend_expired_key_raises(user):
+    """Cover the except APIKeyExpiredError branch in APIKeyAuthentication."""
+    from datetime import timedelta
+    from unittest.mock import MagicMock
+
+    from api_keys.authentication.backend import APIKeyAuthentication
+    from api_keys.services.key_service import create_api_key
+    from django.utils import timezone
+
+    result = create_api_key(
+        user, "Exp Key", ["analysis:read"],
+        expires_at=timezone.now() - timedelta(seconds=1),
+    )
+    backend = APIKeyAuthentication()
+    request = MagicMock()
+    request.META = {"HTTP_AUTHORIZATION": f"Bearer {result.raw_key}"}
+    from rest_framework.exceptions import AuthenticationFailed
+    with pytest.raises(AuthenticationFailed, match="expired"):
+        backend.authenticate(request)
+
+
+def test_authentication_backend_no_header_returns_none():
+    from unittest.mock import MagicMock
+
+    from api_keys.authentication.backend import APIKeyAuthentication
+
+    backend = APIKeyAuthentication()
+    request = MagicMock()
+    request.META = {"HTTP_AUTHORIZATION": ""}
+    assert backend.authenticate(request) is None
+
+
+def test_authentication_backend_bearer_only_returns_none():
+    from unittest.mock import MagicMock
+
+    from api_keys.authentication.backend import APIKeyAuthentication
+
+    backend = APIKeyAuthentication()
+    request = MagicMock()
+    request.META = {"HTTP_AUTHORIZATION": "Bearer"}
+    assert backend.authenticate(request) is None
+
+
+def test_authentication_backend_basic_auth_returns_none():
+    from unittest.mock import MagicMock
+
+    from api_keys.authentication.backend import APIKeyAuthentication
+
+    backend = APIKeyAuthentication()
+    request = MagicMock()
+    request.META = {"HTTP_AUTHORIZATION": "Basic dXNlcjpwYXNz"}
+    assert backend.authenticate(request) is None
+
+
+def test_authentication_backend_jwt_token_returns_none():
+    from unittest.mock import MagicMock
+
+    from api_keys.authentication.backend import APIKeyAuthentication
+
+    backend = APIKeyAuthentication()
+    request = MagicMock()
+    request.META = {"HTTP_AUTHORIZATION": "Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig"}
+    assert backend.authenticate(request) is None
+
+
+def test_authentication_backend_unexpected_error_raises():
+    """Cover the except Exception branch in APIKeyAuthentication."""
+    from unittest.mock import MagicMock, patch
+
+    from api_keys.authentication.backend import APIKeyAuthentication
+    from rest_framework.exceptions import AuthenticationFailed
+
+    backend = APIKeyAuthentication()
+    request = MagicMock()
+    request.META = {"HTTP_AUTHORIZATION": "Bearer krv_live_" + "a" * 64}
+    with (
+        patch("api_keys.authentication.backend.authenticate_api_key",
+              side_effect=ValueError("surprise")),
+        pytest.raises(AuthenticationFailed, match="Authentication error"),
+    ):
+        backend.authenticate(request)
+
+
+@pytest.mark.django_db
 def test_model_is_valid_expired_key(user):
     from datetime import timedelta
 
@@ -483,3 +567,11 @@ def test_model_is_valid_expired_key(user):
         expires_at=timezone.now() - timedelta(seconds=1),
     )
     assert result.api_key.is_valid() is False
+
+
+@pytest.mark.django_db
+def test_model_str(user):
+    from api_keys.services.key_service import create_api_key
+
+    result = create_api_key(user, "My Key", ["analysis:read"])
+    assert str(result.api_key) == f"My Key ({user.id})"

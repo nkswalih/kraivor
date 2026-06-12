@@ -117,22 +117,22 @@ class WorkspaceService:
         return workspace
 
     def update_workspace(
-        self,
-        *,
-        workspace: Workspace,
-        actor_id: uuid.UUID,
-        updates: dict,
+        self, *, workspace: Workspace, actor_id: uuid.UUID, updates: dict
     ) -> Workspace:
         member = workspace.get_member(actor_id)
         if not member or not member.can_admin:
-            raise WorkspacePermissionError("Only workspace admins and owners can update settings.")
+            raise WorkspacePermissionError(
+                "Only workspace admins and owners can update settings."
+            )
 
         safe_fields = {"name", "avatar_url", "description", "settings"}
         for field, value in updates.items():
             if field in safe_fields:
                 setattr(workspace, field, value)
 
-        workspace.save(update_fields=[*[k for k in updates if k in safe_fields], "updated_at"])
+        workspace.save(
+            update_fields=[*[k for k in updates if k in safe_fields], "updated_at"]
+        )
         logger.info(
             "workspace.updated",
             extra={"workspace_id": str(workspace.id), "fields": list(updates.keys())},
@@ -142,9 +142,13 @@ class WorkspaceService:
     @transaction.atomic
     def delete_workspace(self, *, workspace: Workspace, actor_id: uuid.UUID) -> None:
         if not workspace.is_owner(actor_id):
-            raise WorkspacePermissionError("Only the workspace owner can delete the workspace.")
+            raise WorkspacePermissionError(
+                "Only the workspace owner can delete the workspace."
+            )
 
-        workspace.members.filter(deleted_at__isnull=True).update(deleted_at=timezone.now())
+        workspace.members.filter(deleted_at__isnull=True).update(
+            deleted_at=timezone.now()
+        )
         workspace.delete()
 
         logger.info(
@@ -163,7 +167,9 @@ class WorkspaceService:
     ) -> WorkspaceMember:
         actor_member = workspace.get_member(actor_id)
         if not actor_member or not actor_member.can_admin:
-            raise WorkspacePermissionError("Only admins and owners can change member roles.")
+            raise WorkspacePermissionError(
+                "Only admins and owners can change member roles."
+            )
 
         if new_role == WorkspaceRole.OWNER:
             raise WorkspacePermissionError(
@@ -177,7 +183,10 @@ class WorkspaceService:
         if target_member.is_owner:
             raise WorkspacePermissionError("Cannot change the owner's role.")
 
-        if target_member.role == WorkspaceRole.ADMIN and actor_member.role != WorkspaceRole.OWNER:
+        if (
+            target_member.role == WorkspaceRole.ADMIN
+            and actor_member.role != WorkspaceRole.OWNER
+        ):
             raise WorkspacePermissionError("Only the owner can change an admin's role.")
 
         old_role = target_member.role
@@ -206,18 +215,16 @@ class WorkspaceService:
         return target_member
 
     def remove_member(
-        self,
-        *,
-        workspace: Workspace,
-        actor_id: uuid.UUID,
-        target_user_id: uuid.UUID,
+        self, *, workspace: Workspace, actor_id: uuid.UUID, target_user_id: uuid.UUID
     ) -> None:
         target_member = workspace.get_member(target_user_id)
         if not target_member:
             raise WorkspaceNotFoundError(f"User {target_user_id} is not a member.")
 
         if target_member.is_owner:
-            raise WorkspacePermissionError("The owner cannot be removed. Transfer ownership first.")
+            raise WorkspacePermissionError(
+                "The owner cannot be removed. Transfer ownership first."
+            )
 
         # Self-removal (leaving) — always allowed for non-owners
         reason = "removed_by_admin"
@@ -226,7 +233,9 @@ class WorkspaceService:
         else:
             actor_member = workspace.get_member(actor_id)
             if not actor_member or not actor_member.can_admin:
-                raise WorkspacePermissionError("Only admins and owners can remove members.")
+                raise WorkspacePermissionError(
+                    "Only admins and owners can remove members."
+                )
             if (
                 target_member.role == WorkspaceRole.ADMIN
                 and actor_member.role != WorkspaceRole.OWNER
@@ -263,10 +272,7 @@ class WorkspaceService:
         _reason = reason
         transaction.on_commit(
             lambda: _dispatch_member_removed_notification(
-                workspace_id=_ws_id,
-                removed_user_id=_uid,
-                actor_id=_aid,
-                reason=_reason,
+                workspace_id=_ws_id, removed_user_id=_uid, actor_id=_aid, reason=_reason
             )
         )
 
@@ -293,12 +299,16 @@ class WorkspaceService:
     ) -> WorkspaceMember:
         actor_member = workspace.get_member(actor_id)
         if not actor_member or not actor_member.can_admin:
-            raise WorkspacePermissionError("Only admins and owners can add workspace members.")
+            raise WorkspacePermissionError(
+                "Only admins and owners can add workspace members."
+            )
         if role == WorkspaceRole.OWNER:
             raise WorkspacePermissionError("Cannot assign owner role directly.")
         self._check_member_limit(workspace)
 
-        existing = WorkspaceMember.all_objects.filter(workspace=workspace, user_id=user_id).first()
+        existing = WorkspaceMember.all_objects.filter(
+            workspace=workspace, user_id=user_id
+        ).first()
         if existing and not existing.is_deleted:
             raise WorkspaceServiceError(f"User {user_id} is already a member.")
         if existing and existing.is_deleted:
@@ -307,7 +317,13 @@ class WorkspaceService:
             existing.joined_at = timezone.now()
             existing.invited_by_id = actor_id
             existing.save(
-                update_fields=["role", "deleted_at", "joined_at", "invited_by_id", "updated_at"]
+                update_fields=[
+                    "role",
+                    "deleted_at",
+                    "joined_at",
+                    "invited_by_id",
+                    "updated_at",
+                ]
             )
             member = existing
         else:
@@ -364,7 +380,9 @@ class InvitationService:
         # ── Permission check ─────────────────────────────────────────────────
         actor_member = workspace.get_member(actor_id)
         if not actor_member or not actor_member.can_admin:
-            raise WorkspacePermissionError("Only workspace admins and owners can invite members.")
+            raise WorkspacePermissionError(
+                "Only workspace admins and owners can invite members."
+            )
 
         # ── Role validation ───────────────────────────────────────────────────
         if role == WorkspaceRole.OWNER:
@@ -439,9 +457,7 @@ class InvitationService:
         # See: https://docs.djangoproject.com/en/4.2/topics/db/transactions/#performing-actions-after-commit
         transaction.on_commit(
             lambda: self._events.member_invited(
-                workspace=workspace,
-                invitation=invitation,
-                actor_id=actor_id,
+                workspace=workspace, invitation=invitation, actor_id=actor_id
             )
         )
 
@@ -470,11 +486,7 @@ class InvitationService:
 
     @transaction.atomic
     def accept_invitation(
-        self,
-        *,
-        token: str,
-        user_id: uuid.UUID,
-        user_email: str,
+        self, *, token: str, user_id: uuid.UUID, user_email: str
     ) -> tuple[WorkspaceInvitation, WorkspaceMember]:
         """
         Accept a pending invitation and create a workspace membership.
@@ -499,7 +511,9 @@ class InvitationService:
                 .get(token=token, deleted_at__isnull=True)
             )
         except WorkspaceInvitation.DoesNotExist as exc:
-            raise InvitationError("This invitation link is invalid or has been revoked.") from exc
+            raise InvitationError(
+                "This invitation link is invalid or has been revoked."
+            ) from exc
 
         workspace = invitation.workspace
 
@@ -511,10 +525,14 @@ class InvitationService:
             raise InvitationError("This invitation has already been accepted.")
 
         if invitation.is_expired:
-            raise InvitationError("This invitation has expired. Ask an admin to send a new one.")
+            raise InvitationError(
+                "This invitation has expired. Ask an admin to send a new one."
+            )
 
         if invitation.email.lower() != user_email.lower():
-            raise InvitationError("This invitation was sent to a different email address.")
+            raise InvitationError(
+                "This invitation was sent to a different email address."
+            )
 
         # ── Duplicate member guard ────────────────────────────────────────────
         if workspace.is_member(user_id):
@@ -534,8 +552,7 @@ class InvitationService:
         # ── Create membership ─────────────────────────────────────────────────
         # Handles the case where a user was previously removed (soft-deleted member)
         existing_member = WorkspaceMember.all_objects.filter(
-            workspace=workspace,
-            user_id=user_id,
+            workspace=workspace, user_id=user_id
         ).first()
 
         if existing_member and existing_member.is_deleted:
@@ -545,7 +562,13 @@ class InvitationService:
             existing_member.joined_at = timezone.now()
             existing_member.invited_by_id = invitation.invited_by_id
             existing_member.save(
-                update_fields=["role", "deleted_at", "joined_at", "invited_by_id", "updated_at"]
+                update_fields=[
+                    "role",
+                    "deleted_at",
+                    "joined_at",
+                    "invited_by_id",
+                    "updated_at",
+                ]
             )
             member = existing_member
         else:
@@ -573,26 +596,19 @@ class InvitationService:
         # ── Post-commit side effects ──────────────────────────────────────────
         transaction.on_commit(
             lambda: self._events.member_joined(
-                workspace=workspace,
-                member=member,
-                actor_id=user_id,
+                workspace=workspace, member=member, actor_id=user_id
             )
         )
         transaction.on_commit(
             lambda: _dispatch_member_joined_notification(
-                workspace_id=str(workspace.id),
-                user_id=str(user_id),
-                role=member.role,
+                workspace_id=str(workspace.id), user_id=str(user_id), role=member.role
             )
         )
 
         return invitation, member
 
     def revoke_invitation(
-        self,
-        *,
-        invitation: WorkspaceInvitation,
-        actor_id: uuid.UUID,
+        self, *, invitation: WorkspaceInvitation, actor_id: uuid.UUID
     ) -> None:
         """
         Revoke (soft-delete) a pending invitation.
@@ -607,7 +623,9 @@ class InvitationService:
             )
 
         if invitation.is_accepted:
-            raise InvitationError("Cannot revoke an invitation that has already been accepted.")
+            raise InvitationError(
+                "Cannot revoke an invitation that has already been accepted."
+            )
 
         invitation.delete()  # soft delete
 
@@ -620,7 +638,9 @@ class InvitationService:
             },
         )
 
-    def list_pending_invitations(self, *, workspace: Workspace) -> "QuerySet[WorkspaceInvitation]":
+    def list_pending_invitations(
+        self, *, workspace: Workspace
+    ) -> "QuerySet[WorkspaceInvitation]":
         """Return pending (non-expired, non-accepted, non-revoked) invitations."""
         return (
             WorkspaceInvitation.objects.filter(
@@ -649,12 +669,16 @@ def _dispatch_invitation_email(invitation_id: str) -> None:
         )
 
 
-def _dispatch_member_joined_notification(workspace_id: str, user_id: str, role: str) -> None:
+def _dispatch_member_joined_notification(
+    workspace_id: str, user_id: str, role: str
+) -> None:
     """Fire-and-forget member-joined notification task."""
     try:
         from .tasks import notify_member_joined
 
-        notify_member_joined.delay(workspace_id=workspace_id, user_id=user_id, role=role)
+        notify_member_joined.delay(
+            workspace_id=workspace_id, user_id=user_id, role=role
+        )
     except Exception as exc:
         logger.error(
             "task.dispatch.member_joined.failed",
@@ -663,10 +687,7 @@ def _dispatch_member_joined_notification(workspace_id: str, user_id: str, role: 
 
 
 def _dispatch_member_removed_notification(
-    workspace_id: str,
-    removed_user_id: str,
-    actor_id: str,
-    reason: str,
+    workspace_id: str, removed_user_id: str, actor_id: str, reason: str
 ) -> None:
     """Fire-and-forget member-removed notification task."""
     try:
@@ -705,11 +726,7 @@ def _dispatch_invitation_notification(
     import requests
     from django.conf import settings
 
-    identity_url = getattr(
-        settings,
-        "IDENTITY_SERVICE_URL",
-        "http://identity:8001",
-    )
+    identity_url = getattr(settings, "IDENTITY_SERVICE_URL", "http://identity:8001")
     endpoint = f"{identity_url}/api/auth/internal/resolve-users/"
 
     try:
@@ -738,10 +755,7 @@ def _dispatch_invitation_notification(
     user_info = users.get(email)
     if not user_info:
         # User doesn't have an account yet — skip in-app notification
-        logger.debug(
-            "invitation.notification.user_not_found",
-            extra={"email": email},
-        )
+        logger.debug("invitation.notification.user_not_found", extra={"email": email})
         return
 
     user_id = user_info["id"]
@@ -757,7 +771,11 @@ def _dispatch_invitation_notification(
         )
         logger.info(
             "invitation.notification.dispatched",
-            extra={"user_id": user_id, "email": email, "workspace_name": workspace_name},
+            extra={
+                "user_id": user_id,
+                "email": email,
+                "workspace_name": workspace_name,
+            },
         )
     except Exception as exc:
         logger.error(

@@ -40,7 +40,7 @@ def _get_jwks() -> dict:
         logger.error(f"Failed to fetch JWKS: {e}")
         if _jwks_cache:
             return _jwks_cache
-        raise HTTPException(status_code=503, detail="JWKS unavailable")
+        raise HTTPException(status_code=503, detail="JWKS unavailable") from e
 
 
 def _verify_token(token: str) -> dict:
@@ -95,7 +95,7 @@ def get_current_user(request: Request) -> JWTPayload:
         raise HTTPException(
             status_code=401,
             detail={"error": "token_expired", "message": "Token has expired"}
-        )
+        ) from None
     except jwt.InvalidTokenError as e:
         logger.warning(f"JWT validation failed: {e}")
         raise HTTPException(
@@ -107,7 +107,7 @@ def get_current_user(request: Request) -> JWTPayload:
         raise HTTPException(
             status_code=401,
             detail={"error": "verification_failed", "message": "Token verification failed"}
-        )
+        ) from e
 
 
 def invalidate_jwks_cache():

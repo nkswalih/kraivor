@@ -1,7 +1,14 @@
-from authentication.oauth.google.views import GoogleOAuthCallbackView, GoogleOAuthInitiateView
+from authentication.oauth.google.views import (
+    GoogleOAuthCallbackView,
+    GoogleOAuthInitiateView,
+)
 from django.urls import path
 
-from .oauth.views import GitHubConnectView, GitHubOAuthCallbackView, GitHubOAuthInitiateView
+from .oauth.views import (
+    GitHubConnectView,
+    GitHubOAuthCallbackView,
+    GitHubOAuthInitiateView,
+)
 from .views import (
     LogoutAllView,
     LogoutView,

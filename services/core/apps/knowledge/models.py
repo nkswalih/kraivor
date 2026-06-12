@@ -84,14 +84,10 @@ class KnowledgeSpace(TimestampedModel):
         indexes = [
             # Hot path: list active spaces for a workspace
             models.Index(
-                fields=["workspace", "deleted_at"],
-                name="idx_ks_workspace_active",
+                fields=["workspace", "deleted_at"], name="idx_ks_workspace_active"
             ),
             # Search path: filter by workspace + name
-            models.Index(
-                fields=["workspace", "name"],
-                name="idx_ks_workspace_name",
-            ),
+            models.Index(fields=["workspace", "name"], name="idx_ks_workspace_name"),
         ]
 
     def __str__(self):

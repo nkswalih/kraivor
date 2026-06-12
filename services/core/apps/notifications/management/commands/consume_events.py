@@ -43,7 +43,7 @@ DISPATCH_TABLE: dict[str, str] = {
 # Workspace events are dispatched via a separate handler that
 # resolves email → user_id via the Identity service.
 WORKSPACE_EVENT_DISPATCH: dict[str, str] = {
-    "workspace.member.invited": "notifications.tasks.dispatch_notification",
+    "workspace.member.invited": "notifications.tasks.dispatch_notification"
 }
 
 TOPICS = ["analysis.events", "ai.events", "workspace.events"]
@@ -89,7 +89,8 @@ def _dispatch_task(event_type: str, data: dict) -> None:
         actor_id=data.get("actor_id"),
     )
     logger.info(
-        "consumer.event.dispatched", extra={"event_type": event_type, "user_id": str(user_id)}
+        "consumer.event.dispatched",
+        extra={"event_type": event_type, "user_id": str(user_id)},
     )
 
 
@@ -102,12 +103,16 @@ def _dispatch_workspace_event(event_type: str, data: dict) -> None:
     """
     task_name = WORKSPACE_EVENT_DISPATCH.get(event_type)
     if not task_name:
-        logger.debug("consumer.workspace_event.unknown_type", extra={"event_type": event_type})
+        logger.debug(
+            "consumer.workspace_event.unknown_type", extra={"event_type": event_type}
+        )
         return
 
     email = data.get("email")
     if not email:
-        logger.warning("consumer.workspace_event.no_email", extra={"event_type": event_type})
+        logger.warning(
+            "consumer.workspace_event.no_email", extra={"event_type": event_type}
+        )
         return
 
     # Resolve email → user_id via Identity service
@@ -131,7 +136,11 @@ def _dispatch_workspace_event(event_type: str, data: dict) -> None:
     if response.status_code != 200:
         logger.warning(
             "consumer.workspace_event.resolve_error",
-            extra={"event_type": event_type, "email": email, "status_code": response.status_code},
+            extra={
+                "event_type": event_type,
+                "email": email,
+                "status_code": response.status_code,
+            },
         )
         return
 
@@ -259,7 +268,9 @@ class Command(BaseCommand):
             consumer.subscribe(topics)
             return consumer
         except ImportError:
-            self.stderr.write("confluent-kafka is not installed. Cannot start consumer.")
+            self.stderr.write(
+                "confluent-kafka is not installed. Cannot start consumer."
+            )
             return None
         except KafkaException as exc:
             self.stderr.write(f"Failed to create Kafka consumer: {exc}")

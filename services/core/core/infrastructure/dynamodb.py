@@ -11,9 +11,8 @@ Usage:
     table.put_item(Item={...})
 """
 
-import logging
-
 import boto3
+import logging
 from botocore.config import Config as BotoConfig
 from django.conf import settings
 
@@ -36,7 +35,9 @@ def get_dynamodb():
             }
             dynamodb_local = getattr(settings, "DYNAMODB_LOCAL", False)
             if dynamodb_local:
-                endpoint = getattr(settings, "DYNAMODB_ENDPOINT", "http://localhost:8000")
+                endpoint = getattr(
+                    settings, "DYNAMODB_ENDPOINT", "http://localhost:8000"
+                )
                 kwargs["endpoint_url"] = endpoint
                 kwargs["aws_access_key_id"] = "dummy"
                 kwargs["aws_secret_access_key"] = "dummy"

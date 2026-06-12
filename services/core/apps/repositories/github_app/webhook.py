@@ -31,9 +31,9 @@ def _verify_signature(body: bytes, signature_header: str) -> bool:
     if not signature_header or not signature_header.startswith("sha256="):
         return False
 
-    expected = "sha256=" + hmac.new(
-        secret.encode("utf-8"), body, hashlib.sha256
-    ).hexdigest()
+    expected = (
+        "sha256=" + hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+    )
     return hmac.compare_digest(expected, signature_header)
 
 
@@ -68,10 +68,17 @@ def github_app_webhook(request):
 
     logger.info(
         "github_app.webhook.received",
-        extra={"event": event_type, "action": action, "installation_id": installation_id},
+        extra={
+            "event": event_type,
+            "action": action,
+            "installation_id": installation_id,
+        },
     )
 
-    if event_type == "installation" and action in ("created", "new_permissions_accepted"):
+    if event_type == "installation" and action in (
+        "created",
+        "new_permissions_accepted",
+    ):
         _handle_installation_created(payload, installation_id)
 
     elif event_type == "installation" and action == "deleted":
@@ -105,21 +112,25 @@ def _handle_installation_created(payload: dict, installation_id: int) -> None:
         service = GitHubAppInstallationService(client=client)
 
         existing = GitHubAppInstallation.objects.filter(
-            installation_id=installation_id,
-            deleted_at__isnull=True,
+            installation_id=installation_id, deleted_at__isnull=True
         ).first()
 
         if existing:
             service._sync_repos(existing)
             logger.info(
                 "github_app.webhook.repos_synced",
-                extra={"installation_id": installation_id, "workspace_id": str(existing.workspace_id)},
+                extra={
+                    "installation_id": installation_id,
+                    "workspace_id": str(existing.workspace_id),
+                },
             )
         else:
             logger.info(
                 "github_app.webhook.no_workspace_yet",
-                extra={"installation_id": installation_id,
-                       "account": account.get("login", "unknown")},
+                extra={
+                    "installation_id": installation_id,
+                    "account": account.get("login", "unknown"),
+                },
             )
     except GitHubAppError as exc:
         logger.error("github_app.webhook.sync_failed", extra={"error": str(exc)})
@@ -130,13 +141,15 @@ def _handle_installation_deleted(installation_id: int) -> None:
     from .models import GitHubAppInstallation
 
     GitHubAppInstallation.objects.filter(
-        installation_id=installation_id,
-        deleted_at__isnull=True,
+        installation_id=installation_id, deleted_at__isnull=True
     ).update(deleted_at=timezone.now())
 
     _token_cache.invalidate(installation_id)
 
-    logger.info("github_app.webhook.installation_deleted", extra={"installation_id": installation_id})
+    logger.info(
+        "github_app.webhook.installation_deleted",
+        extra={"installation_id": installation_id},
+    )
 
 
 def _handle_repos_changed(installation_id: int) -> None:
@@ -144,14 +157,17 @@ def _handle_repos_changed(installation_id: int) -> None:
     from .services import GitHubAppInstallationService
 
     installation = GitHubAppInstallation.objects.filter(
-        installation_id=installation_id,
-        deleted_at__isnull=True,
+        installation_id=installation_id, deleted_at__isnull=True
     ).first()
 
     if installation:
         try:
             GitHubAppInstallationService()._sync_repos(installation)
-            logger.info("github_app.webhook.repos_synced_on_change",
-                        extra={"installation_id": installation_id})
+            logger.info(
+                "github_app.webhook.repos_synced_on_change",
+                extra={"installation_id": installation_id},
+            )
         except Exception as exc:
-            logger.error("github_app.webhook.sync_failed_on_change", extra={"error": str(exc)})
+            logger.error(
+                "github_app.webhook.sync_failed_on_change", extra={"error": str(exc)}
+            )

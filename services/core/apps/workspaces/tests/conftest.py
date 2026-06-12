@@ -24,9 +24,7 @@ def workspace(db):
     from apps.workspaces.models import Workspace
 
     return Workspace.objects.create(
-        owner_id=uuid.uuid4(),
-        name="Test Workspace",
-        slug="test-workspace",
+        owner_id=uuid.uuid4(), name="Test Workspace", slug="test-workspace"
     )
 
 

@@ -5,14 +5,12 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('repositories', '0002_github_app_models'),
-    ]
+    dependencies = [("repositories", "0002_github_app_models")]
 
     operations = [
         migrations.RenameIndex(
-            model_name='githubappinstallation',
-            new_name='idx_gh_install_ws_active',
-            old_name='idx_gh_install_workspace_active',
-        ),
+            model_name="githubappinstallation",
+            new_name="idx_gh_install_ws_active",
+            old_name="idx_gh_install_workspace_active",
+        )
     ]

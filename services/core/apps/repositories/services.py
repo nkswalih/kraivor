@@ -128,9 +128,7 @@ class GitHubTokenClient:
                               auth service unreachable, or token field missing.
         """
         auth_service_url = getattr(
-            settings,
-            "GITHUB_TOKEN_SERVICE_URL",
-            "http://identity:8001",
+            settings, "GITHUB_TOKEN_SERVICE_URL", "http://identity:8001"
         )
         endpoint = f"{auth_service_url}/api/oauth/github/token/"
 
@@ -171,8 +169,7 @@ class GitHubTokenClient:
         token = data.get("access_token") or data.get("token")
         if not token:
             logger.error(
-                "github.token.fetch.missing_token",
-                extra={"user_id": str(user_id)},
+                "github.token.fetch.missing_token", extra={"user_id": str(user_id)}
             )
             raise GitHubAuthError(
                 "No GitHub access token found. Please reconnect your GitHub account."
@@ -225,7 +222,9 @@ class GitHubAPIClient:
                 "github.api.network_error",
                 extra={"github_repo": github_repo, "error": str(exc)},
             )
-            raise GitHubAPIError("Unable to reach GitHub. Please try again later.") from exc
+            raise GitHubAPIError(
+                "Unable to reach GitHub. Please try again later."
+            ) from exc
 
         if response.status_code == 404:
             raise GitHubAPIError(
@@ -259,16 +258,16 @@ class GitHubAPIClient:
             )
 
         return response.json()
-    
+
     def list_user_repos(self, *, search: str = "", per_page: int = 30) -> list[dict]:
         """
         Return repos the actor can access on GitHub.
-    
+
         If search is provided → uses /search/repositories filtered to user.
         Otherwise            → uses /user/repos (owner + collaborator, newest first).
-    
+
         Returns a flat list of dicts — only fields the frontend needs.
-    
+
         Raises:
             GitHubAPIError  — non-200 from GitHub
             GitHubAuthError — 401 (stale token)
@@ -288,12 +287,16 @@ class GitHubAPIClient:
                 "per_page": per_page,
                 "visibility": "all",
             }
-    
+
         try:
-            response = requests.get(url, headers=self._headers, params=params, timeout=10)
+            response = requests.get(
+                url, headers=self._headers, params=params, timeout=10
+            )
         except requests.exceptions.RequestException as exc:
-            raise GitHubAPIError("Unable to reach GitHub. Please try again later.") from exc
-    
+            raise GitHubAPIError(
+                "Unable to reach GitHub. Please try again later."
+            ) from exc
+
         if response.status_code == 401:
             raise GitHubAuthError(
                 "Your GitHub token is invalid or has expired. Please reconnect your GitHub account."
@@ -302,11 +305,11 @@ class GitHubAPIClient:
             raise GitHubAPIError(
                 f"GitHub returned HTTP {response.status_code}. Please try again."
             )
-    
+
         raw = response.json()
         # /search/repositories wraps results in {"items": [...]}
         items: list[dict] = raw.get("items", raw) if search.strip() else raw
-    
+
         return [
             {
                 "full_name": r["full_name"],
@@ -320,7 +323,6 @@ class GitHubAPIClient:
             }
             for r in items
         ]
- 
 
     @staticmethod
     def extract_metadata(github_data: dict) -> dict:
@@ -359,11 +361,7 @@ class RepositoryService:
     # ── Connect ───────────────────────────────────────────────────────────────
 
     def connect_repository(
-        self,
-        *,
-        workspace: Workspace,
-        actor_id: uuid.UUID,
-        github_repo: str,
+        self, *, workspace: Workspace, actor_id: uuid.UUID, github_repo: str
     ) -> Repository:
         """
         Connect a GitHub repository to a workspace.
@@ -483,8 +481,7 @@ class RepositoryService:
             _actor = actor_id
             transaction.on_commit(
                 lambda: self._events.repository_connected(
-                    repository=_repo,
-                    actor_id=_actor,
+                    repository=_repo, actor_id=_actor
                 )
             )
 
@@ -506,11 +503,7 @@ class RepositoryService:
 
     @transaction.atomic
     def disconnect_repository(
-        self,
-        *,
-        workspace: Workspace,
-        actor_id: uuid.UUID,
-        repository_id: uuid.UUID,
+        self, *, workspace: Workspace, actor_id: uuid.UUID, repository_id: uuid.UUID
     ) -> None:
         """
         Disconnect (soft-delete) a repository from a workspace.
@@ -536,7 +529,9 @@ class RepositoryService:
         try:
             repository = Repository.objects.get(id=repository_id, workspace=workspace)
         except Repository.DoesNotExist as exc:
-            raise RepositoryNotFoundError("Repository not found or already disconnected.") from exc
+            raise RepositoryNotFoundError(
+                "Repository not found or already disconnected."
+            ) from exc
 
         # ── Soft delete ───────────────────────────────────────────────────────
         # TimestampedModel.delete() sets deleted_at on both the DB row and the
@@ -558,7 +553,6 @@ class RepositoryService:
         _actor = actor_id
         transaction.on_commit(
             lambda: self._events.repository_disconnected(
-                repository=_repo,
-                actor_id=_actor,
+                repository=_repo, actor_id=_actor
             )
         )

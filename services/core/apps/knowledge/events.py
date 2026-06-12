@@ -36,10 +36,7 @@ def _now_iso() -> str:
 
 
 def _envelope(
-    event_type: str,
-    workspace_id: uuid.UUID,
-    actor_id: uuid.UUID,
-    data: dict,
+    event_type: str, workspace_id: uuid.UUID, actor_id: uuid.UUID, data: dict
 ) -> dict:
     """
     Standard platform event envelope (system design §14).
@@ -101,7 +98,11 @@ class KnowledgeEventPublisher:
             self._producer.flush(timeout=KAFKA_FLUSH_TIMEOUT_SECONDS)
             logger.debug(
                 "event.published",
-                extra={"topic": topic, "event_type": event_type, "workspace_id": workspace_id},
+                extra={
+                    "topic": topic,
+                    "event_type": event_type,
+                    "workspace_id": workspace_id,
+                },
             )
         except Exception as exc:
             # IMPORTANT: log and continue — event failure must never crash a request
@@ -118,10 +119,7 @@ class KnowledgeEventPublisher:
     # ── Knowledge Space events (KRV-022) ──────────────────────────────────────
 
     def knowledge_created(
-        self,
-        *,
-        knowledge_space: "KnowledgeSpace",
-        actor_id: uuid.UUID,
+        self, *, knowledge_space: "KnowledgeSpace", actor_id: uuid.UUID
     ) -> None:
         """
         Published after a knowledge space is created.
@@ -141,10 +139,7 @@ class KnowledgeEventPublisher:
         self._publish(TOPIC_KNOWLEDGE, event)
 
     def knowledge_updated(
-        self,
-        *,
-        knowledge_space: "KnowledgeSpace",
-        actor_id: uuid.UUID,
+        self, *, knowledge_space: "KnowledgeSpace", actor_id: uuid.UUID
     ) -> None:
         """
         Published after a knowledge space's metadata or canvas_data is updated.
@@ -165,10 +160,7 @@ class KnowledgeEventPublisher:
         self._publish(TOPIC_KNOWLEDGE, event)
 
     def knowledge_deleted(
-        self,
-        *,
-        knowledge_space: "KnowledgeSpace",
-        actor_id: uuid.UUID,
+        self, *, knowledge_space: "KnowledgeSpace", actor_id: uuid.UUID
     ) -> None:
         """
         Published after a knowledge space is soft-deleted.

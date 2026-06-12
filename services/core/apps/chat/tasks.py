@@ -33,7 +33,11 @@ def persist_to_dynamodb(
 
     logger.info(
         "task.chat.persist.started",
-        extra={"room_id": room_id, "sender_id": sender_id, "message_id": message_id or "auto"},
+        extra={
+            "room_id": room_id,
+            "sender_id": sender_id,
+            "message_id": message_id or "auto",
+        },
     )
     try:
         item = put_message(
@@ -53,8 +57,7 @@ def persist_to_dynamodb(
         return {"status": "persisted", "message_id": item["message_id"]}
     except Exception as exc:
         logger.error(
-            "task.chat.persist.failed",
-            extra={"room_id": room_id, "error": str(exc)},
+            "task.chat.persist.failed", extra={"room_id": room_id, "error": str(exc)}
         )
         raise self.retry(exc=exc, countdown=30 * (2**self.request.retries)) from exc
 
@@ -68,16 +71,10 @@ def persist_to_dynamodb(
     name="chat.trigger_ai_response",
 )
 def trigger_ai_response(
-    self,
-    *,
-    room_id: str,
-    message_id: str,
-    content: str,
-    workspace_id: str,
+    self, *, room_id: str, message_id: str, content: str, workspace_id: str
 ) -> dict:
     logger.info(
-        "task.chat.ai_triggered",
-        extra={"room_id": room_id, "message_id": message_id},
+        "task.chat.ai_triggered", extra={"room_id": room_id, "message_id": message_id}
     )
     # Placeholder: HTTP call to AI service goes here
     # ai_service_url = settings.AI_SERVICE_URL

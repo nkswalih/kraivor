@@ -4,7 +4,9 @@ from apps.chat.models import ChatRoom
 
 
 class ChatRoomListSerializer(serializers.ModelSerializer):
-    room_type_display = serializers.CharField(source="get_room_type_display", read_only=True)
+    room_type_display = serializers.CharField(
+        source="get_room_type_display", read_only=True
+    )
     last_message_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
@@ -33,7 +35,9 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
 
 
 class ChatRoomDetailSerializer(serializers.ModelSerializer):
-    room_type_display = serializers.CharField(source="get_room_type_display", read_only=True)
+    room_type_display = serializers.CharField(
+        source="get_room_type_display", read_only=True
+    )
 
     class Meta:
         model = ChatRoom
@@ -61,9 +65,13 @@ class ChatRoomCreateSerializer(serializers.ModelSerializer):
     def validate_name(self, value):
         value = value.strip()
         if len(value) < 2:
-            raise serializers.ValidationError("Room name must be at least 2 characters.")
+            raise serializers.ValidationError(
+                "Room name must be at least 2 characters."
+            )
         if len(value) > 255:
-            raise serializers.ValidationError("Room name must not exceed 255 characters.")
+            raise serializers.ValidationError(
+                "Room name must not exceed 255 characters."
+            )
         return value
 
     def validate_room_type(self, value):
@@ -84,7 +92,9 @@ class ChatRoomUpdateSerializer(serializers.ModelSerializer):
     def validate_name(self, value):
         value = value.strip()
         if len(value) < 2:
-            raise serializers.ValidationError("Room name must be at least 2 characters.")
+            raise serializers.ValidationError(
+                "Room name must be at least 2 characters."
+            )
         return value
 
 
@@ -127,5 +137,7 @@ class MessageUpdateSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError("Content cannot be empty.")
         if len(value) > 10000:
-            raise serializers.ValidationError("Content must not exceed 10000 characters.")
+            raise serializers.ValidationError(
+                "Content must not exceed 10000 characters."
+            )
         return value

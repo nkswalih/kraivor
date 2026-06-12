@@ -31,7 +31,10 @@ def notify_member_joined(sender, instance, created, **kwargs):
     )
     logger.info(
         "signal.member_joined.notification_dispatched",
-        extra={"user_id": str(instance.user_id), "workspace_id": str(instance.workspace_id)},
+        extra={
+            "user_id": str(instance.user_id),
+            "workspace_id": str(instance.workspace_id),
+        },
     )
 
 
@@ -51,5 +54,8 @@ def notify_member_removed(sender, instance, **kwargs):
     )
     logger.info(
         "signal.member_removed.notification_dispatched",
-        extra={"user_id": str(instance.user_id), "workspace_id": str(instance.workspace_id)},
+        extra={
+            "user_id": str(instance.user_id),
+            "workspace_id": str(instance.workspace_id),
+        },
     )

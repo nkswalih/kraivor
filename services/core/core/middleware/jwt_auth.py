@@ -52,7 +52,11 @@ class JWTAuthenticationMiddleware:
     """
 
     # Paths that bypass auth entirely
-    _EXEMPT_PATHS = ("/api/github-app/callback/", "/api/github-app/webhook/", "/api/health/")
+    _EXEMPT_PATHS = (
+        "/api/github-app/callback/",
+        "/api/github-app/webhook/",
+        "/api/health/",
+    )
     _SKIP_PREFIXES = ("/admin/", "/health/", "/api/health/")
 
     def __init__(self, get_response):
@@ -75,7 +79,10 @@ class JWTAuthenticationMiddleware:
         auth_header = request.headers.get("Authorization", "")
         if not auth_header.startswith("Bearer "):
             return JsonResponse(
-                {"error": "missing_authorization", "message": "Authorization header required"},
+                {
+                    "error": "missing_authorization",
+                    "message": "Authorization header required",
+                },
                 status=401,
             )
 
@@ -87,8 +94,7 @@ class JWTAuthenticationMiddleware:
 
         except jwt.ExpiredSignatureError:
             return JsonResponse(
-                {"error": "token_expired", "message": "Token has expired"},
-                status=401,
+                {"error": "token_expired", "message": "Token has expired"}, status=401
             )
         except jwt.InvalidTokenError as exc:
             logger.warning("jwt.invalid token=%s...: %s", token[:20], exc)
@@ -99,7 +105,10 @@ class JWTAuthenticationMiddleware:
         except Exception as exc:
             logger.error("jwt.verification_failed: %s", exc, exc_info=True)
             return JsonResponse(
-                {"error": "verification_failed", "message": "Token verification failed"},
+                {
+                    "error": "verification_failed",
+                    "message": "Token verification failed",
+                },
                 status=401,
             )
 
@@ -145,7 +154,7 @@ class JWTAuthenticationMiddleware:
                 raise
 
         decode_options = {
-            "verify_exp": getattr(settings, "JWT_VERIFY_EXPIRATION", True),
+            "verify_exp": getattr(settings, "JWT_VERIFY_EXPIRATION", True)
         }
 
         # Only verify audience/issuer if configured

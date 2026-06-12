@@ -61,11 +61,11 @@ class TestCreateAPIKey:
 
 @pytest.mark.django_db
 class TestRevokeAPIKey:
-    def test_revoke_sets_deleted_at(self, user):
+    def test_revoke_sets_revoked(self, user):
         result = create_api_key(user, "To Revoke", ["analysis:read"])
         revoke_api_key(user, str(result.api_key.id))
         result.api_key.refresh_from_db()
-        assert result.api_key.deleted_at is not None
+        assert result.api_key.revoked is True
 
     def test_revoke_wrong_user_raises(self, user, django_user_model):
         other = django_user_model.objects.create(
@@ -90,7 +90,8 @@ class TestAuthenticateAPIKey:
 
     def test_invalid_key_raises(self, user):
         with pytest.raises(APIKeyNotFoundError):
-            authenticate_api_key(generate_api_key())  # random, not in DB
+            raw_key, _ = generate_api_key()
+            authenticate_api_key(raw_key)  # random, not in DB
 
     def test_revoked_key_raises(self, user):
         result = create_api_key(user, "Key", ["analysis:read"])

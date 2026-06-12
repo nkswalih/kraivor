@@ -70,6 +70,7 @@ NEW_CORE_DESIGN.md
 system.md
 tickets.md
 tools.md
+docs/github-app-migration.md
 
 .opencode
 .keys
@@ -77,6 +78,8 @@ tools.md
 .keys/jwt-public.pem
 .keys/oauth-encryption.key
 oauth-encryption.key
-
+.keys/
+*.pem
+*.key
 
 services/core/celerybeat-schedule

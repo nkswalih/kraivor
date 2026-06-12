@@ -44,6 +44,9 @@ from django.db.models import QuerySet
 from apps.workspaces.models import Workspace
 
 from .events import RepositoryEventPublisher
+from .github_app.client import GitHubAppAPIError as GitHubAppAPIError_
+from .github_app.client import GitHubAppClient, GitHubAppError
+from .github_app.services import GitHubAppInstallationService
 from .models import Repository
 
 logger = logging.getLogger(__name__)
@@ -256,6 +259,68 @@ class GitHubAPIClient:
             )
 
         return response.json()
+    
+    def list_user_repos(self, *, search: str = "", per_page: int = 30) -> list[dict]:
+        """
+        Return repos the actor can access on GitHub.
+    
+        If search is provided → uses /search/repositories filtered to user.
+        Otherwise            → uses /user/repos (owner + collaborator, newest first).
+    
+        Returns a flat list of dicts — only fields the frontend needs.
+    
+        Raises:
+            GitHubAPIError  — non-200 from GitHub
+            GitHubAuthError — 401 (stale token)
+        """
+        if search.strip():
+            url = f"{self.GITHUB_API_BASE}/search/repositories"
+            params = {
+                "q": f"{search.strip()} user:@me fork:true",
+                "sort": "updated",
+                "per_page": min(per_page, 20),
+            }
+        else:
+            url = f"{self.GITHUB_API_BASE}/user/repos"
+            params = {
+                "affiliation": "owner,collaborator",
+                "sort": "updated",
+                "per_page": per_page,
+                "visibility": "all",
+            }
+    
+        try:
+            response = requests.get(url, headers=self._headers, params=params, timeout=10)
+        except requests.exceptions.RequestException as exc:
+            raise GitHubAPIError("Unable to reach GitHub. Please try again later.") from exc
+    
+        if response.status_code == 401:
+            raise GitHubAuthError(
+                "Your GitHub token is invalid or has expired. Please reconnect your GitHub account."
+            )
+        if response.status_code != 200:
+            raise GitHubAPIError(
+                f"GitHub returned HTTP {response.status_code}. Please try again."
+            )
+    
+        raw = response.json()
+        # /search/repositories wraps results in {"items": [...]}
+        items: list[dict] = raw.get("items", raw) if search.strip() else raw
+    
+        return [
+            {
+                "full_name": r["full_name"],
+                "name": r["name"],
+                "owner": r["owner"]["login"],
+                "private": r.get("private", False),
+                "description": (r.get("description") or "")[:120],
+                "language": r.get("language"),
+                "default_branch": r.get("default_branch") or "main",
+                "updated_at": r.get("updated_at"),
+            }
+            for r in items
+        ]
+ 
 
     @staticmethod
     def extract_metadata(github_data: dict) -> dict:
@@ -305,10 +370,11 @@ class RepositoryService:
 
         Steps (in order, transaction as narrow as possible):
           1. Verify actor has admin/owner role — fail fast before any I/O
-          2. Fetch actor's GitHub token from the auth service (external HTTP)
-          3. Verify repo access and fetch metadata via GitHub API (external HTTP)
-          4. Atomic DB write: create new row or restore soft-deleted row
-          5. Register post-commit event via transaction.on_commit
+          2. Check if repo is accessible through a GitHub App installation
+             - If yes: use installation token to fetch metadata
+             - If no: raise GitHubAPIError — installation required
+          3. Atomic DB write: create new row or restore soft-deleted row
+          4. Register post-commit event via transaction.on_commit
 
         Business rules:
           - Only workspace admins and owners can connect repositories
@@ -329,12 +395,29 @@ class RepositoryService:
                 "Only workspace admins and owners can connect repositories."
             )
 
-        # ── 2. Fetch GitHub OAuth token (external HTTP — outside transaction) ─
-        github_token = self._token_client.get_token(actor_id)
+        # ── 2. Find a GitHub App installation covering this repo ─────────────
+        install_service = GitHubAppInstallationService()
+        installation = install_service.find_installation_for_repo(
+            workspace=workspace, github_repo=github_repo
+        )
 
-        # ── 3. Call GitHub API (external HTTP — outside transaction) ──────────
-        github_data = GitHubAPIClient(github_token).get_repository(github_repo)
-        metadata = GitHubAPIClient.extract_metadata(github_data)
+        if installation:
+            # Use installation token to verify repo access and fetch metadata
+            try:
+                github_data = GitHubAppClient().get_repository(
+                    installation_id=installation.installation_id,
+                    github_repo=github_repo,
+                )
+            except (GitHubAppError, GitHubAppAPIError_) as exc:
+                raise GitHubAPIError(str(exc)) from exc
+            metadata = GitHubAPIClient.extract_metadata(github_data)
+            installation_ref = installation
+        else:
+            raise GitHubAPIError(
+                f"Repository '{github_repo}' is not accessible through any GitHub App "
+                "installation in this workspace. Install the GitHub App and grant access "
+                "to this repository first."
+            )
 
         # ── 4. Atomic DB write ────────────────────────────────────────────────
         with transaction.atomic():
@@ -380,6 +463,7 @@ class RepositoryService:
                 repository = Repository.objects.create(
                     workspace=workspace,
                     connected_by_id=actor_id,
+                    installation=installation_ref,
                     **metadata,
                 )
 

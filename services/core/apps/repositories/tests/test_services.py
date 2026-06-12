@@ -23,10 +23,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from apps.repositories.github_app.client import GitHubAppError
 from apps.repositories.models import Repository
 from apps.repositories.services import (
     GitHubAPIError,
-    GitHubAuthError,
     RepositoryAlreadyConnectedError,
     RepositoryNotFoundError,
     RepositoryPermissionError,
@@ -53,6 +53,8 @@ class TestConnectRepository:
         mock_github_token,
         mock_github_api,
         github_repo_payload,
+        github_app_installation_repo,
+        mock_github_app_client,
     ):
         repo = self._service().connect_repository(
             workspace=workspace,
@@ -71,6 +73,8 @@ class TestConnectRepository:
         mock_github_token,
         mock_github_api,
         github_repo_payload,
+        github_app_installation_repo,
+        mock_github_app_client,
     ):
         repo = self._service().connect_repository(
             workspace=workspace,
@@ -89,6 +93,8 @@ class TestConnectRepository:
         owner_id,
         mock_github_token,
         mock_github_api,
+        github_app_installation_repo,
+        mock_github_app_client,
     ):
         repo = self._service().connect_repository(
             workspace=workspace,
@@ -104,6 +110,8 @@ class TestConnectRepository:
         owner_id,
         mock_github_token,
         mock_github_api,
+        github_app_installation_repo,
+        mock_github_app_client,
     ):
         repo = self._service().connect_repository(
             workspace=workspace,
@@ -119,6 +127,8 @@ class TestConnectRepository:
         admin_id,
         mock_github_token,
         mock_github_api,
+        github_app_installation_repo,
+        mock_github_app_client,
     ):
         repo = self._service().connect_repository(
             workspace=workspace,
@@ -134,6 +144,8 @@ class TestConnectRepository:
         owner_id,
         mock_github_token,
         mock_github_api,
+        github_app_installation_repo,
+        mock_github_app_client,
     ):
         # transaction.on_commit fires immediately in tests (no real transaction
         # wrapping the test body), so the publisher is called synchronously.
@@ -163,6 +175,26 @@ class TestConnectRepository:
         row (same PK) rather than creating a new one, so that historical
         analysis data retains its foreign key reference.
         """
+        from apps.repositories.github_app.models import (
+            GitHubAppInstallation,
+            GitHubAppInstallationRepo,
+        )
+
+        installation = GitHubAppInstallation.objects.create(
+            workspace=workspace,
+            installation_id=99999999,
+            github_account_id=88888888,
+            github_account_login="test-org",
+            github_account_type="Organization",
+            installed_by_id=owner_id,
+        )
+        GitHubAppInstallationRepo.objects.create(
+            installation=installation,
+            github_id=repository.github_id,
+            github_repo="acme/api",
+            default_branch="main",
+            is_private=False,
+        )
         original_id = repository.id
         repository.delete()
         # TimestampedModel.delete() sets deleted_at on the in-memory instance
@@ -177,7 +209,7 @@ class TestConnectRepository:
             "private": True,
         }
         with patch(
-            "apps.repositories.services.GitHubAPIClient.get_repository",
+            "apps.repositories.services.GitHubAppClient.get_repository",
             return_value=restored_payload,
         ):
             repo = self._service().connect_repository(
@@ -250,6 +282,26 @@ class TestConnectRepository:
         repository,
         mock_github_token,
     ):
+        from apps.repositories.github_app.models import (
+            GitHubAppInstallation,
+            GitHubAppInstallationRepo,
+        )
+
+        install = GitHubAppInstallation.objects.create(
+            workspace=workspace,
+            installation_id=99999998,
+            github_account_id=88888887,
+            github_account_login="test-org",
+            github_account_type="Organization",
+            installed_by_id=owner_id,
+        )
+        GitHubAppInstallationRepo.objects.create(
+            installation=install,
+            github_id=repository.github_id,
+            github_repo="acme/api",
+            default_branch="main",
+            is_private=False,
+        )
         # repository fixture uses github_id=123456789; mock GitHub to return same ID
         existing_payload = {
             "id": repository.github_id,
@@ -261,7 +313,7 @@ class TestConnectRepository:
         }
         with (
             patch(
-                "apps.repositories.services.GitHubAPIClient.get_repository",
+                "apps.repositories.services.GitHubAppClient.get_repository",
                 return_value=existing_payload,
             ),
             pytest.raises(RepositoryAlreadyConnectedError),
@@ -274,18 +326,19 @@ class TestConnectRepository:
 
     # ── GitHub integration errors ─────────────────────────────────────────────
 
-    def test_raises_github_auth_error_when_no_token(
+    def test_raises_github_api_error_when_app_client_fails(
         self,
         workspace,
         owner_member,
         owner_id,
+        github_app_installation_repo,
     ):
         with (
             patch(
-                "apps.repositories.services.GitHubTokenClient.get_token",
-                side_effect=GitHubAuthError("No GitHub account connected."),
+                "apps.repositories.services.GitHubAppClient.get_repository",
+                side_effect=GitHubAppError("GitHub App token expired."),
             ),
-            pytest.raises(GitHubAuthError),
+            pytest.raises(GitHubAPIError),
         ):
             self._service().connect_repository(
                 workspace=workspace,
@@ -293,24 +346,24 @@ class TestConnectRepository:
                 github_repo="acme/new-service",
             )
 
-    def test_raises_github_api_error_when_repo_not_found(
+    def test_raises_github_api_error_when_app_client_repo_not_found(
         self,
         workspace,
         owner_member,
         owner_id,
-        mock_github_token,
+        github_app_installation_repo,
     ):
         with (
             patch(
-                "apps.repositories.services.GitHubAPIClient.get_repository",
-                side_effect=GitHubAPIError("Repository not found."),
+                "apps.repositories.services.GitHubAppClient.get_repository",
+                side_effect=GitHubAppError("Repository not found."),
             ),
             pytest.raises(GitHubAPIError),
         ):
             self._service().connect_repository(
                 workspace=workspace,
                 actor_id=owner_id,
-                github_repo="acme/nonexistent",
+                github_repo="acme/new-service",
             )
 
     def test_no_db_row_created_when_github_api_fails(
@@ -318,21 +371,21 @@ class TestConnectRepository:
         workspace,
         owner_member,
         owner_id,
-        mock_github_token,
+        github_app_installation_repo,
     ):
         """GitHub errors before the DB write must leave the DB unchanged."""
         count_before = Repository.objects.filter(workspace=workspace).count()
         with (
             patch(
-                "apps.repositories.services.GitHubAPIClient.get_repository",
-                side_effect=GitHubAPIError("GitHub error"),
+                "apps.repositories.services.GitHubAppClient.get_repository",
+                side_effect=GitHubAppError("GitHub error"),
             ),
             pytest.raises(GitHubAPIError),
         ):
             self._service().connect_repository(
                 workspace=workspace,
                 actor_id=owner_id,
-                github_repo="acme/fail",
+                github_repo="acme/new-service",
             )
         assert Repository.objects.filter(workspace=workspace).count() == count_before
 

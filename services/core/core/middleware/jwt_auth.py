@@ -52,12 +52,17 @@ class JWTAuthenticationMiddleware:
     """
 
     # Paths that bypass auth entirely
+    _EXEMPT_PATHS = ("/api/github-app/callback/", "/api/github-app/webhook/", "/api/health/")
     _SKIP_PREFIXES = ("/admin/", "/health/", "/api/health/")
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
+        # ── Skip: exempt paths (no JWT required) ────────────────────────────
+        if any(request.path.startswith(p) for p in self._EXEMPT_PATHS):
+            return self.get_response(request)
+
         # ── Skip: internal gateway request ───────────────────────────────────
         if request.headers.get(settings.INTERNAL_REQUEST_HEADER):
             return self.get_response(request)

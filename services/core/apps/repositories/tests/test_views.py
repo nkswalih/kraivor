@@ -126,6 +126,8 @@ class TestRepositoryConnectView:
         owner_id,
         mock_github_token,
         mock_github_api,
+        github_app_installation_repo,
+        mock_github_app_client,
     ):
         response = self._call(workspace, owner_id)
         assert response.status_code == status.HTTP_201_CREATED
@@ -137,6 +139,8 @@ class TestRepositoryConnectView:
         admin_id,
         mock_github_token,
         mock_github_api,
+        github_app_installation_repo,
+        mock_github_app_client,
     ):
         response = self._call(workspace, admin_id)
         assert response.status_code == status.HTTP_201_CREATED
@@ -149,6 +153,8 @@ class TestRepositoryConnectView:
         mock_github_token,
         mock_github_api,
         github_repo_payload,
+        github_app_installation_repo,
+        mock_github_app_client,
     ):
         response = self._call(workspace, owner_id)
         assert response.data["github_repo"] == github_repo_payload["full_name"]
@@ -160,6 +166,8 @@ class TestRepositoryConnectView:
         owner_id,
         mock_github_token,
         mock_github_api,
+        github_app_installation_repo,
+        mock_github_app_client,
     ):
         response = self._call(workspace, owner_id)
         assert response.data["status"] == "connected"
@@ -171,6 +179,8 @@ class TestRepositoryConnectView:
         owner_id,
         mock_github_token,
         mock_github_api,
+        github_app_installation_repo,
+        mock_github_app_client,
     ):
         response = self._call(workspace, owner_id)
         assert response.data["workspace_id"] == workspace.id

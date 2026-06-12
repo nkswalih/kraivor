@@ -51,7 +51,7 @@ class GitHubOAuthService:
         params = {
             "client_id": self.client_id,
             "redirect_uri": self.redirect_uri,
-            "scope": "user:email read:user",
+            "scope": "user:email read:user repo",
             "state": state,
         }
         return f"{self.AUTHORIZATION_URL}?{urlencode(params)}"

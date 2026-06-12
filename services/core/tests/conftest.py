@@ -73,6 +73,8 @@ def celery_task_always_eager(settings):
     No test should ever need a running broker.
     """
     settings.CELERY_TASK_ALWAYS_EAGER = True
-    settings.CELERY_TASK_EAGER_PROPAGATES = False  # don't let task errors break non-task tests
+    settings.CELERY_TASK_EAGER_PROPAGATES = (
+        False  # don't let task errors break non-task tests
+    )
     settings.CELERY_BROKER_URL = "memory://"  # in-memory broker, no network
     settings.CELERY_RESULT_BACKEND = "cache+memory://"

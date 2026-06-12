@@ -7,15 +7,16 @@ Covers:
   - Internal requests bypass JWT verification
 """
 
-from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, patch
-
 import jwt
 import pytest
+from datetime import UTC, datetime, timedelta
 from django.test import RequestFactory
+from unittest.mock import MagicMock, patch
 
 
-def generate_test_jwt(private_key_pem: bytes, payload: dict, algorithm: str = "RS256") -> str:
+def generate_test_jwt(
+    private_key_pem: bytes, payload: dict, algorithm: str = "RS256"
+) -> str:
     return jwt.encode(payload, private_key_pem, algorithm=algorithm)
 
 
@@ -32,7 +33,8 @@ def generate_test_rsa_keypair():
         encryption_algorithm=serialization.NoEncryption(),
     )
     public_pem = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
     return private_pem, public_pem
 
@@ -137,7 +139,9 @@ class TestJWTAuthenticationMiddleware:
     def test_invalid_token_returns_401(self, middleware):
         factory = RequestFactory()
 
-        request = factory.get("/api/test/", HTTP_AUTHORIZATION="Bearer invalid.token.here")
+        request = factory.get(
+            "/api/test/", HTTP_AUTHORIZATION="Bearer invalid.token.here"
+        )
         response = middleware(request)
 
         assert response.status_code == 401

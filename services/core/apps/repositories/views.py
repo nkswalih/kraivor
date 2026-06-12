@@ -23,6 +23,7 @@ Endpoints (all under /workspace/ gateway prefix → /api/ in Django):
 import logging
 import uuid
 
+from django.conf import settings
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
@@ -31,6 +32,8 @@ from rest_framework.views import APIView
 from apps.workspaces.permissions import IsAuthenticated
 from apps.workspaces.views import WorkspaceContextMixin
 
+from .github_app.serializers import InstallationRepoItemSerializer
+from .github_app.services import GitHubAppInstallationService
 from .serializers import RepositoryConnectSerializer, RepositorySerializer
 from .services import (
     GitHubAPIError,
@@ -137,3 +140,110 @@ class RepositoryDetailView(WorkspaceContextMixin, APIView):
             raise NotFound(str(exc)) from exc
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class GitHubRepoSearchView(WorkspaceContextMixin, APIView):
+    """
+    GET /workspace/workspaces/{workspace_pk}/repos/github/?search=query
+
+    Returns GitHub repositories available to the requesting user.
+    Used by the frontend repo picker to populate the connection dialog.
+
+    Behavior:
+      - No GitHub App installations exist → 400 with code `github_app_not_installed`
+        (frontend shows "Authorize with GitHub" button)
+      - Installations exist but no repos match → 200 with empty array + header
+        (frontend shows "Configure" option + empty state)
+      - Repos match → 200 with repo list
+
+    Returns:
+        200 — list of repo objects, X-GitHub-App-Installed header
+        400 — {"code": "github_app_not_installed", "detail": "..."}
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, workspace_pk=None):
+        workspace = self._get_workspace_or_404(workspace_pk)
+        actor_id = self._get_user_id()
+        actor_member = workspace.get_member(actor_id)
+        can_admin = actor_member and actor_member.can_admin
+
+        search = request.query_params.get("search", "").strip()
+
+        service = GitHubAppInstallationService()
+        installations = service.list_installations(workspace)
+
+        if not installations:
+            if can_admin:
+                if not getattr(settings, "GITHUB_APP_SLUG", ""):
+                    return Response(
+                        {
+                            "detail": "GitHub App integration is not configured "
+                            "on this server.",
+                            "code": "github_app_not_configured",
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                return Response(
+                    {
+                        "detail": "No GitHub App installation found. "
+                        "Authorize with GitHub to select repositories.",
+                        "code": "github_app_not_installed",
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            return Response([])
+
+        repos = service.list_available_repos(workspace=workspace, search=search)
+        serialized = InstallationRepoItemSerializer(repos, many=True).data
+
+        response = Response(serialized)
+        response["X-GitHub-App-Installed"] = str(len(installations))
+        response["X-GitHub-App-Accounts"] = ",".join(
+            i.github_account_login for i in installations
+        )
+        return response
+
+class GitHubOAuthConnectView(APIView):
+    """
+    GET /api/oauth/github/connect/
+    Returns GitHub OAuth URL with repo scope.
+
+    Deprecated: delegates to the auth service's connect endpoint which
+    properly manages OAuth state via Redis. The frontend should call
+    /auth/oauth/github/connect/ directly instead.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Delegate to auth service's connect endpoint via internal HTTP call
+        auth_service_url = getattr(
+            settings,
+            "GITHUB_TOKEN_SERVICE_URL",
+            "http://identity:8001",
+        )
+        endpoint = f"{auth_service_url}/api/auth/oauth/github/connect/"
+
+        try:
+            import requests as ext_requests
+            response = ext_requests.get(
+                endpoint,
+                headers={
+                    settings.INTERNAL_REQUEST_HEADER: "1",
+                    "X-User-ID": str(self._get_user_id()),
+                },
+                timeout=5,
+            )
+            if response.status_code == 200:
+                return Response(response.json())
+            raise ValidationError({
+                "detail": "Failed to obtain GitHub authorization URL."
+            })
+        except Exception as exc:
+            logger.error(
+                "github.connect.delegation_failed",
+                extra={"error": str(exc)},
+            )
+            raise ValidationError({
+                "detail": "Unable to initiate GitHub connection. Please try again."
+            }) from exc

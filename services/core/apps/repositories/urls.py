@@ -31,13 +31,11 @@ from .github_app.views import (
 from .views import GitHubRepoSearchView, RepositoryDetailView, RepositoryView
 
 urlpatterns = [
-
     path(
         "workspaces/<uuid:workspace_pk>/repos/github/",
         GitHubRepoSearchView.as_view(),
         name="workspace-github-repo-search",
     ),
-
     # GitHub App installation endpoints
     path(
         "workspaces/<uuid:workspace_pk>/repos/github/install/",
@@ -64,7 +62,6 @@ urlpatterns = [
         GitHubAppInstallationImportView.as_view(),
         name="workspace-github-app-installation-import",
     ),
-
     path(
         "workspaces/<uuid:workspace_pk>/repos/",
         RepositoryView.as_view(),

@@ -128,10 +128,7 @@ class TestKnowledgeSpaceUpdateSerializer:
 
     def test_canvas_data_present_is_in_validated(self):
         s = KnowledgeSpaceUpdateSerializer(
-            data={
-                "name": "X",
-                "canvas_data": {"nodes": []},
-            }
+            data={"name": "X", "canvas_data": {"nodes": []}}
         )
         assert s.is_valid(), s.errors
         assert "canvas_data" in s.validated_data

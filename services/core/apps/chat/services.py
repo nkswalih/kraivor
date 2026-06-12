@@ -33,24 +33,27 @@ class ChatRoomService:
         )
         logger.info(
             "chat.room.created",
-            extra={"room_id": str(room.id), "workspace_id": workspace_id, "room_type": room_type},
+            extra={
+                "room_id": str(room.id),
+                "workspace_id": workspace_id,
+                "room_type": room_type,
+            },
         )
         return room
 
     @staticmethod
     def get_room(room_id: str) -> ChatRoom | None:
         try:
-            return ChatRoom.objects.select_related("workspace").get(id=room_id, is_active=True)
+            return ChatRoom.objects.select_related("workspace").get(
+                id=room_id, is_active=True
+            )
         except ChatRoom.DoesNotExist:
             return None
 
     @staticmethod
     def list_rooms(workspace_id: str, user_id: str) -> list[ChatRoom]:
         return list(
-            ChatRoom.objects.filter(
-                workspace_id=workspace_id,
-                is_active=True,
-            )
+            ChatRoom.objects.filter(workspace_id=workspace_id, is_active=True)
             .order_by("-last_message_at", "name")
             .only("id", "name", "room_type", "topic", "last_message_at", "created_at")
         )
@@ -80,18 +83,20 @@ class ChatRoomService:
 
         room.is_active = False
         room.save(update_fields=["is_active", "updated_at"])
-        logger.info("chat.room.archived", extra={"room_id": room_id, "user_id": user_id})
+        logger.info(
+            "chat.room.archived", extra={"room_id": room_id, "user_id": user_id}
+        )
         return True
 
 
 class ChatMessageService:
     @staticmethod
     def get_messages(
-        room_id: str,
-        limit: int = 50,
-        start_key: dict | None = None,
+        room_id: str, limit: int = 50, start_key: dict | None = None
     ) -> tuple[list[dict], dict | None]:
-        messages, last_key = get_messages(room_id=room_id, limit=limit, start_key=start_key)
+        messages, last_key = get_messages(
+            room_id=room_id, limit=limit, start_key=start_key
+        )
         filtered = [m for m in messages if not m.get("deleted_at")]
         return filtered, last_key
 
@@ -101,10 +106,7 @@ class ChatMessageService:
 
     @staticmethod
     def update_message_content(
-        room_id: str,
-        message_id: str,
-        sender_id: str,
-        new_content: str,
+        room_id: str, message_id: str, sender_id: str, new_content: str
     ) -> dict | None:
         message = dynamodb_get_message(room_id=room_id, message_id=message_id)
         if not message:
@@ -115,13 +117,15 @@ class ChatMessageService:
             return None
 
         updated = dynamodb_update_message(
-            room_id=room_id,
-            message_id=message_id,
-            content=new_content,
+            room_id=room_id, message_id=message_id, content=new_content
         )
         logger.info(
             "chat.message.edited",
-            extra={"message_id": message_id, "room_id": room_id, "sender_id": sender_id},
+            extra={
+                "message_id": message_id,
+                "room_id": room_id,
+                "sender_id": sender_id,
+            },
         )
         return updated
 
@@ -134,7 +138,9 @@ class ChatMessageService:
             return False
 
         dynamodb_delete_message(room_id=room_id, message_id=message_id)
-        logger.info("chat.message.deleted", extra={"message_id": message_id, "room_id": room_id})
+        logger.info(
+            "chat.message.deleted", extra={"message_id": message_id, "room_id": room_id}
+        )
         return True
 
     @staticmethod
@@ -163,7 +169,9 @@ class ChatMessageService:
         )
 
         try:
-            ChatRoom.objects.filter(id=room_id).update(last_message_at=datetime.now(tz=UTC))
+            ChatRoom.objects.filter(id=room_id).update(
+                last_message_at=datetime.now(tz=UTC)
+            )
         except Exception as exc:
             logger.warning(
                 "chat.room.last_message_at_update_failed",
@@ -172,7 +180,11 @@ class ChatMessageService:
 
         logger.info(
             "chat.message.api_sent",
-            extra={"message_id": item["message_id"], "room_id": room_id, "sender_id": sender_id},
+            extra={
+                "message_id": item["message_id"],
+                "room_id": room_id,
+                "sender_id": sender_id,
+            },
         )
         return item
 

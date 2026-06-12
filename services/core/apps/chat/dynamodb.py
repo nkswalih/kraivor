@@ -52,17 +52,19 @@ def put_message(
     }
     try:
         _table().put_item(Item=item)
-        logger.debug("dynamodb.message.put", extra={"room_id": room_id, "message_id": message_id})
+        logger.debug(
+            "dynamodb.message.put", extra={"room_id": room_id, "message_id": message_id}
+        )
     except ClientError as exc:
-        logger.error("dynamodb.message.put_failed", extra={"room_id": room_id, "error": str(exc)})
+        logger.error(
+            "dynamodb.message.put_failed", extra={"room_id": room_id, "error": str(exc)}
+        )
         raise
     return item
 
 
 def get_messages(
-    room_id: str,
-    limit: int = 50,
-    start_key: dict | None = None,
+    room_id: str, limit: int = 50, start_key: dict | None = None
 ) -> tuple[list[dict[str, Any]], dict | None]:
     kwargs = {
         "KeyConditionExpression": "room_id = :room_id",
@@ -76,11 +78,14 @@ def get_messages(
         response = _table().query(**kwargs)
         items = response.get("Items", [])
         last_key = response.get("LastEvaluatedKey")
-        logger.debug("dynamodb.messages.query", extra={"room_id": room_id, "count": len(items)})
+        logger.debug(
+            "dynamodb.messages.query", extra={"room_id": room_id, "count": len(items)}
+        )
         return items, last_key
     except ClientError as exc:
         logger.error(
-            "dynamodb.messages.query_failed", extra={"room_id": room_id, "error": str(exc)}
+            "dynamodb.messages.query_failed",
+            extra={"room_id": room_id, "error": str(exc)},
         )
         raise
 
@@ -94,7 +99,8 @@ def delete_message(room_id: str, message_id: str) -> None:
             ExpressionAttributeValues={":now": now},
         )
         logger.debug(
-            "dynamodb.message.deleted", extra={"room_id": room_id, "message_id": message_id}
+            "dynamodb.message.deleted",
+            extra={"room_id": room_id, "message_id": message_id},
         )
     except ClientError as exc:
         logger.error(
@@ -110,11 +116,13 @@ def get_message_by_id(room_id: str, message_id: str) -> dict | None:
         item = response.get("Item")
         if item:
             logger.debug(
-                "dynamodb.message.get", extra={"room_id": room_id, "message_id": message_id}
+                "dynamodb.message.get",
+                extra={"room_id": room_id, "message_id": message_id},
             )
             return item
         logger.debug(
-            "dynamodb.message.not_found", extra={"room_id": room_id, "message_id": message_id}
+            "dynamodb.message.not_found",
+            extra={"room_id": room_id, "message_id": message_id},
         )
         return None
     except ClientError as exc:
@@ -131,15 +139,13 @@ def update_message(room_id: str, message_id: str, content: str) -> dict | None:
         response = _table().update_item(
             Key={"room_id": room_id, "message_id": message_id},
             UpdateExpression="SET content = :content, edited_at = :now",
-            ExpressionAttributeValues={
-                ":content": content,
-                ":now": now,
-            },
+            ExpressionAttributeValues={":content": content, ":now": now},
             ReturnValues="ALL_NEW",
         )
         updated = response.get("Attributes", {})
         logger.debug(
-            "dynamodb.message.updated", extra={"room_id": room_id, "message_id": message_id}
+            "dynamodb.message.updated",
+            extra={"room_id": room_id, "message_id": message_id},
         )
         return updated
     except ClientError as exc:
@@ -156,18 +162,17 @@ def batch_get_messages(room_id: str, message_ids: list[str]) -> list[dict]:
     try:
         keys = [{"room_id": room_id, "message_id": mid} for mid in message_ids]
         response = _table().meta.client.batch_get_item(
-            RequestItems={
-                _table().name: {
-                    "Keys": keys,
-                    "ConsistentRead": False,
-                }
-            }
+            RequestItems={_table().name: {"Keys": keys, "ConsistentRead": False}}
         )
         items = response.get("Responses", {}).get(_table().name, [])
-        logger.debug("dynamodb.messages.batch_get", extra={"room_id": room_id, "count": len(items)})
+        logger.debug(
+            "dynamodb.messages.batch_get",
+            extra={"room_id": room_id, "count": len(items)},
+        )
         return items
     except ClientError as exc:
         logger.error(
-            "dynamodb.messages.batch_get_failed", extra={"room_id": room_id, "error": str(exc)}
+            "dynamodb.messages.batch_get_failed",
+            extra={"room_id": room_id, "error": str(exc)},
         )
         raise

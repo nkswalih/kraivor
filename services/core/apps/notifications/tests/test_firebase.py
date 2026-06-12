@@ -52,9 +52,7 @@ class TestSendPushNotification:
             from apps.notifications.firebase import send_push_notification
 
             result = send_push_notification(
-                token="device-token",
-                title="Test",
-                body="Body",
+                token="device-token", title="Test", body="Body"
             )
             assert result["status"] == "dev_fallback"
 
@@ -63,7 +61,9 @@ class TestSendPushNotification:
         with (
             patch("apps.notifications.firebase._initialize", return_value=True),
             patch("firebase_admin.messaging.Message") as mock_msg,
-            patch("firebase_admin.messaging.send", return_value="msg-id-1") as mock_send,
+            patch(
+                "firebase_admin.messaging.send", return_value="msg-id-1"
+            ) as mock_send,
         ):
             from apps.notifications.firebase import send_push_notification
 
@@ -86,9 +86,7 @@ class TestSendPushNotification:
             from apps.notifications.firebase import send_push_notification
 
             result = send_push_notification(
-                token="bad-token",
-                title="Fail",
-                body="Fail",
+                token="bad-token", title="Fail", body="Fail"
             )
             assert result["status"] == "failed"
             assert "error" in result
@@ -103,9 +101,6 @@ class TestSendPushNotification:
             from apps.notifications.firebase import send_push_notification
 
             result = send_push_notification(
-                token="t",
-                title="T",
-                body="B",
-                data={"count": 42, "flag": True},
+                token="t", title="T", body="B", data={"count": 42, "flag": True}
             )
             assert result["status"] == "sent"

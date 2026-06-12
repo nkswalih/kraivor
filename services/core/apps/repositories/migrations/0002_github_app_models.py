@@ -8,65 +8,159 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('repositories', '0001_initial'),
-        ('workspaces', '0001_initial'),
-    ]
+    dependencies = [("repositories", "0001_initial"), ("workspaces", "0001_initial")]
 
     operations = [
         migrations.CreateModel(
-            name='GitHubAppInstallation',
+            name="GitHubAppInstallation",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('deleted_at', models.DateTimeField(blank=True, db_index=True, null=True)),
-                ('installation_id', models.BigIntegerField(db_index=True, help_text='GitHub App installation ID (assigned by GitHub).', unique=True)),
-                ('github_account_id', models.BigIntegerField(help_text='GitHub account (user or org) ID that installed the app.')),
-                ('github_account_login', models.CharField(help_text="GitHub account login (e.g. 'acme-corp' or 'john').", max_length=255)),
-                ('github_account_type', models.CharField(help_text="'User' or 'Organization'.", max_length=20)),
-                ('installed_by_id', models.UUIDField(blank=True, help_text='identity.users.id of the user who initiated the installation.', null=True)),
-                ('repositories_synced_at', models.DateTimeField(blank=True, help_text='Last time the accessible repo list was synced from GitHub.', null=True)),
-                ('workspace', models.ForeignKey(help_text='Workspace that owns this installation.', on_delete=django.db.models.deletion.CASCADE, related_name='github_app_installations', to='workspaces.workspace')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "deleted_at",
+                    models.DateTimeField(blank=True, db_index=True, null=True),
+                ),
+                (
+                    "installation_id",
+                    models.BigIntegerField(
+                        db_index=True,
+                        help_text="GitHub App installation ID (assigned by GitHub).",
+                        unique=True,
+                    ),
+                ),
+                (
+                    "github_account_id",
+                    models.BigIntegerField(
+                        help_text="GitHub account (user or org) ID that installed the app."
+                    ),
+                ),
+                (
+                    "github_account_login",
+                    models.CharField(
+                        help_text="GitHub account login (e.g. 'acme-corp' or 'john').",
+                        max_length=255,
+                    ),
+                ),
+                (
+                    "github_account_type",
+                    models.CharField(
+                        help_text="'User' or 'Organization'.", max_length=20
+                    ),
+                ),
+                (
+                    "installed_by_id",
+                    models.UUIDField(
+                        blank=True,
+                        help_text="identity.users.id of the user who initiated the installation.",
+                        null=True,
+                    ),
+                ),
+                (
+                    "repositories_synced_at",
+                    models.DateTimeField(
+                        blank=True,
+                        help_text="Last time the accessible repo list was synced from GitHub.",
+                        null=True,
+                    ),
+                ),
+                (
+                    "workspace",
+                    models.ForeignKey(
+                        help_text="Workspace that owns this installation.",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="github_app_installations",
+                        to="workspaces.workspace",
+                    ),
+                ),
             ],
-            options={
-                'db_table': 'github_app_installations',
-            },
+            options={"db_table": "github_app_installations"},
         ),
         migrations.AddField(
-            model_name='repository',
-            name='installation',
-            field=models.ForeignKey(blank=True, help_text='GitHub App installation used to access this repository. Null for repos connected via legacy OAuth.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='repositories', to='repositories.githubappinstallation'),
+            model_name="repository",
+            name="installation",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="GitHub App installation used to access this repository. Null for repos connected via legacy OAuth.",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="repositories",
+                to="repositories.githubappinstallation",
+            ),
         ),
         migrations.CreateModel(
-            name='GitHubAppInstallationRepo',
+            name="GitHubAppInstallationRepo",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('deleted_at', models.DateTimeField(blank=True, db_index=True, null=True)),
-                ('github_id', models.BigIntegerField(db_index=True, help_text='Stable GitHub repository ID.')),
-                ('github_repo', models.CharField(db_index=True, help_text="Full repo name in 'owner/repo' format.", max_length=255)),
-                ('default_branch', models.CharField(default='main', max_length=255)),
-                ('is_private', models.BooleanField(default=False)),
-                ('description', models.TextField(blank=True, max_length=500, null=True)),
-                ('language', models.CharField(blank=True, max_length=100, null=True)),
-                ('installation', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='repos', to='repositories.githubappinstallation')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "deleted_at",
+                    models.DateTimeField(blank=True, db_index=True, null=True),
+                ),
+                (
+                    "github_id",
+                    models.BigIntegerField(
+                        db_index=True, help_text="Stable GitHub repository ID."
+                    ),
+                ),
+                (
+                    "github_repo",
+                    models.CharField(
+                        db_index=True,
+                        help_text="Full repo name in 'owner/repo' format.",
+                        max_length=255,
+                    ),
+                ),
+                ("default_branch", models.CharField(default="main", max_length=255)),
+                ("is_private", models.BooleanField(default=False)),
+                (
+                    "description",
+                    models.TextField(blank=True, max_length=500, null=True),
+                ),
+                ("language", models.CharField(blank=True, max_length=100, null=True)),
+                (
+                    "installation",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="repos",
+                        to="repositories.githubappinstallation",
+                    ),
+                ),
             ],
-            options={
-                'db_table': 'github_app_installation_repos',
-            },
+            options={"db_table": "github_app_installation_repos"},
         ),
         migrations.AddIndex(
-            model_name='githubappinstallation',
-            index=models.Index(fields=['workspace', 'deleted_at'], name='idx_gh_install_workspace_active'),
+            model_name="githubappinstallation",
+            index=models.Index(
+                fields=["workspace", "deleted_at"],
+                name="idx_gh_install_workspace_active",
+            ),
         ),
         migrations.AddIndex(
-            model_name='githubappinstallationrepo',
-            index=models.Index(fields=['installation', 'github_repo'], name='idx_install_repo_name'),
+            model_name="githubappinstallationrepo",
+            index=models.Index(
+                fields=["installation", "github_repo"], name="idx_install_repo_name"
+            ),
         ),
         migrations.AlterUniqueTogether(
-            name='githubappinstallationrepo',
-            unique_together={('installation', 'github_id')},
+            name="githubappinstallationrepo",
+            unique_together={("installation", "github_id")},
         ),
     ]

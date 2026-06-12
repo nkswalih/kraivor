@@ -93,9 +93,7 @@ class TestRepositoryModel:
 
     def test_same_github_id_allowed_in_different_workspaces(self, workspace, owner_id):
         other_workspace = Workspace.objects.create(
-            owner_id=owner_id,
-            name="Other Workspace",
-            slug="other-workspace",
+            owner_id=owner_id, name="Other Workspace", slug="other-workspace"
         )
         repo1 = Repository.objects.create(
             workspace=workspace,

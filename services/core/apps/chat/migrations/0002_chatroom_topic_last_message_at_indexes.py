@@ -4,9 +4,7 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    dependencies = [
-        ("chat", "0001_initial"),
-    ]
+    dependencies = [("chat", "0001_initial")]
 
     operations = [
         migrations.AddField(
@@ -22,13 +20,15 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="chatroom",
             index=models.Index(
-                fields=["workspace", "created_by"], name="chat_rooms_workspa_cb_8f1b_idx"
+                fields=["workspace", "created_by"],
+                name="chat_rooms_workspa_cb_8f1b_idx",
             ),
         ),
         migrations.AddIndex(
             model_name="chatroom",
             index=models.Index(
-                fields=["is_active", "-last_message_at"], name="chat_rooms_active_9a7e_idx"
+                fields=["is_active", "-last_message_at"],
+                name="chat_rooms_active_9a7e_idx",
             ),
         ),
     ]

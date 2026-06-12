@@ -55,7 +55,9 @@ class TestDispatchNotificationTask:
         assert result["status"] == "dispatched"
 
     def test_dispatch_sends_fcm_push(self, user_id, db):
-        FCMToken.objects.create(user_id=user_id, token="fcm-device-token", platform="web")
+        FCMToken.objects.create(
+            user_id=user_id, token="fcm-device-token", platform="web"
+        )
         with patch("apps.notifications.firebase.send_push_notification") as mock_send:
             dispatch_notification(
                 user_id=str(user_id),
@@ -71,9 +73,7 @@ class TestDispatchNotificationTask:
 
     def test_dispatch_handles_missing_user_gracefully(self, db):
         result = dispatch_notification(
-            user_id=str(uuid.uuid4()),
-            notification_type="system",
-            title="No user",
+            user_id=str(uuid.uuid4()), notification_type="system", title="No user"
         )
         assert result["status"] == "dispatched"
 
@@ -89,15 +89,15 @@ class TestDispatchNotificationTask:
             mock_layer.group_send.assert_called_once()
 
     def test_dispatch_retries_on_failure(self, user_id, db):
-        with patch("apps.notifications.models.Notification.objects.create") as mock_create:
+        with patch(
+            "apps.notifications.models.Notification.objects.create"
+        ) as mock_create:
             mock_create.side_effect = Exception("DB error")
             from celery.exceptions import MaxRetriesExceededError
 
             try:
                 dispatch_notification(
-                    user_id=str(user_id),
-                    notification_type="system",
-                    title="Fail",
+                    user_id=str(user_id), notification_type="system", title="Fail"
                 )
             except MaxRetriesExceededError:
                 pass
@@ -109,9 +109,7 @@ class TestCleanupExpiredNotificationsTask:
     def test_removes_old_notifications(self, user_id, db):
         cutoff = timezone.now() - timedelta(days=31)
         old_notif = Notification.objects.create(
-            user_id=user_id,
-            notification_type="system",
-            title="Old",
+            user_id=user_id, notification_type="system", title="Old"
         )
         Notification.objects.filter(id=old_notif.id).update(created_at=cutoff)
         result = cleanup_expired_notifications()
@@ -120,9 +118,7 @@ class TestCleanupExpiredNotificationsTask:
 
     def test_keeps_recent_notifications(self, user_id, db):
         notif = Notification.objects.create(
-            user_id=user_id,
-            notification_type="system",
-            title="Recent",
+            user_id=user_id, notification_type="system", title="Recent"
         )
         result = cleanup_expired_notifications()
         assert result["deleted_count"] == 0
@@ -145,7 +141,9 @@ class TestSweepStalePresenceTask:
             "MockRedis",
             (),
             {
-                "scan_iter": lambda self, **kw: iter(["presence:user:1", "presence:user:2"]),
+                "scan_iter": lambda self, **kw: iter(
+                    ["presence:user:1", "presence:user:2"]
+                ),
                 "ttl": lambda self, key: -1,
                 "delete": lambda self, key: None,
             },

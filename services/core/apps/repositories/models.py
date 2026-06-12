@@ -15,9 +15,9 @@ from django.db import models
 
 from apps.workspaces.models import TimestampedModel, Workspace
 
-from .github_app.models import (
+from .github_app.models import (  # noqa: F401 — needed for migration discovery
     GitHubAppInstallation,
-    GitHubAppInstallationRepo,  # noqa: F401 — needed for migration discovery
+    GitHubAppInstallationRepo,
 )
 
 
@@ -44,10 +44,7 @@ class Repository(TimestampedModel):
     """
 
     workspace = models.ForeignKey(
-        Workspace,
-        on_delete=models.CASCADE,
-        related_name="repositories",
-        db_index=True,
+        Workspace, on_delete=models.CASCADE, related_name="repositories", db_index=True
     )
     github_repo = models.CharField(
         max_length=255,
@@ -77,8 +74,7 @@ class Repository(TimestampedModel):
         help_text="Repository description from GitHub. Truncated at 500 characters.",
     )
     is_private = models.BooleanField(
-        default=False,
-        help_text="Whether the GitHub repository is private.",
+        default=False, help_text="Whether the GitHub repository is private."
     )
     last_analyzed_at = models.DateTimeField(
         null=True,
@@ -122,13 +118,11 @@ class Repository(TimestampedModel):
         indexes = [
             # List active repos for a workspace (hot path)
             models.Index(
-                fields=["workspace", "deleted_at"],
-                name="idx_repos_workspace_active",
+                fields=["workspace", "deleted_at"], name="idx_repos_workspace_active"
             ),
             # Look up by owner/name string (duplicate-connect check)
             models.Index(
-                fields=["workspace", "github_repo"],
-                name="idx_workspace_github_repo",
+                fields=["workspace", "github_repo"], name="idx_workspace_github_repo"
             ),
         ]
 

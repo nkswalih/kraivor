@@ -15,6 +15,4 @@ router = DefaultRouter()
 router.register(r"notifications", NotificationViewSet, basename="notification")
 router.register(r"fcm-tokens", FCMTokenViewSet, basename="fcm-token")
 
-urlpatterns = [
-    path("", include(router.urls)),
-]
+urlpatterns = [path("", include(router.urls))]

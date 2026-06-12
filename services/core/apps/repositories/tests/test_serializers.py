@@ -10,7 +10,10 @@ import uuid
 
 import pytest
 
-from apps.repositories.serializers import RepositoryConnectSerializer, RepositorySerializer
+from apps.repositories.serializers import (
+    RepositoryConnectSerializer,
+    RepositorySerializer,
+)
 
 # ─── RepositoryConnectSerializer ─────────────────────────────────────────────
 

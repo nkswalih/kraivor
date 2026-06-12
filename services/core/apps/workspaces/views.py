@@ -63,7 +63,6 @@ def _resolve_member_users(member_data: list[dict]) -> dict[str, dict]:
     Returns a dict keyed by user_id: {"id", "name", "email", "avatar_url"}.
     """
 
-
     user_ids = [m["user_id"] for m in member_data if "user_id" in m]
     if not user_ids:
         return {}
@@ -131,14 +130,16 @@ class WorkspaceContextMixin:
         workspace = (
             Workspace.objects.filter(id=workspace_id)
             .annotate(
-                active_member_count=Count("members", filter=Q(members__deleted_at__isnull=True))
+                active_member_count=Count(
+                    "members", filter=Q(members__deleted_at__isnull=True)
+                )
             )
             .prefetch_related(
                 Prefetch(
                     "members",
-                    queryset=WorkspaceMember.objects.filter(deleted_at__isnull=True).order_by(
-                        "joined_at"
-                    ),
+                    queryset=WorkspaceMember.objects.filter(
+                        deleted_at__isnull=True
+                    ).order_by("joined_at"),
                 )
             )
             .first()
@@ -170,21 +171,24 @@ class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
     def list(self, request):
         user_id = self._get_user_id()
         member_workspace_ids = WorkspaceMember.objects.filter(
-            user_id=user_id,
-            deleted_at__isnull=True,
+            user_id=user_id, deleted_at__isnull=True
         ).values_list("workspace_id", flat=True)
 
         workspaces = (
             Workspace.objects.filter(id__in=member_workspace_ids)
             .annotate(
-                active_member_count=Count("members", filter=Q(members__deleted_at__isnull=True))
+                active_member_count=Count(
+                    "members", filter=Q(members__deleted_at__isnull=True)
+                )
             )
             .order_by("-created_at")
         )
 
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(workspaces, request)
-        serializer = WorkspaceListSerializer(page, many=True, context={"request": request})
+        serializer = WorkspaceListSerializer(
+            page, many=True, context={"request": request}
+        )
         return paginator.get_paginated_response(serializer.data)
 
     def create(self, request):
@@ -210,11 +214,14 @@ class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
         workspace = (
             Workspace.objects.filter(id=workspace.id)
             .annotate(
-                active_member_count=Count("members", filter=Q(members__deleted_at__isnull=True))
+                active_member_count=Count(
+                    "members", filter=Q(members__deleted_at__isnull=True)
+                )
             )
             .prefetch_related(
                 Prefetch(
-                    "members", queryset=WorkspaceMember.objects.filter(deleted_at__isnull=True)
+                    "members",
+                    queryset=WorkspaceMember.objects.filter(deleted_at__isnull=True),
                 )
             )
             .first()
@@ -226,11 +233,15 @@ class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
 
     def retrieve(self, request, pk=None):
         workspace = self._get_workspace_or_404(pk)
-        return Response(WorkspaceDetailSerializer(workspace, context={"request": request}).data)
+        return Response(
+            WorkspaceDetailSerializer(workspace, context={"request": request}).data
+        )
 
     def partial_update(self, request, pk=None):
         workspace = self._get_workspace_or_404(pk)
-        serializer = WorkspaceUpdateSerializer(workspace, data=request.data, partial=True)
+        serializer = WorkspaceUpdateSerializer(
+            workspace, data=request.data, partial=True
+        )
         serializer.is_valid(raise_exception=True)
 
         try:
@@ -242,14 +253,15 @@ class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
         except WorkspacePermissionError as exc:
             raise PermissionDenied(str(exc)) from exc
 
-        return Response(WorkspaceDetailSerializer(updated, context={"request": request}).data)
+        return Response(
+            WorkspaceDetailSerializer(updated, context={"request": request}).data
+        )
 
     def destroy(self, request, pk=None):
         workspace = self._get_workspace_or_404(pk)
         try:
             WorkspaceService().delete_workspace(
-                workspace=workspace,
-                actor_id=self._get_user_id(),
+                workspace=workspace, actor_id=self._get_user_id()
             )
         except WorkspacePermissionError as exc:
             raise PermissionDenied(str(exc)) from exc
@@ -327,7 +339,9 @@ class WorkspaceMemberViewSet(WorkspaceContextMixin, ViewSet):
             raise ValidationError({"detail": str(exc)}) from exc
 
         return Response(
-            WorkspaceInvitationSerializer(invitation, context={"request": request}).data,
+            WorkspaceInvitationSerializer(
+                invitation, context={"request": request}
+            ).data,
             status=status.HTTP_201_CREATED,
         )
 
@@ -419,7 +433,9 @@ class WorkspaceInvitationListView(WorkspaceContextMixin, APIView):
 
         member = workspace.get_member(user_id)
         if not member or not member.can_admin:
-            raise PermissionDenied("Only workspace admins can view pending invitations.")
+            raise PermissionDenied(
+                "Only workspace admins can view pending invitations."
+            )
 
         invitations = InvitationService().list_pending_invitations(workspace=workspace)
         return Response(WorkspaceInvitationSerializer(invitations, many=True).data)
@@ -444,16 +460,14 @@ class InvitationRevokeView(WorkspaceContextMixin, APIView):
 
         try:
             invitation = WorkspaceInvitation.objects.select_related("workspace").get(
-                id=inv_id,
-                workspace=workspace,
+                id=inv_id, workspace=workspace
             )
         except WorkspaceInvitation.DoesNotExist as exc:
             raise NotFound("Invitation not found.") from exc
 
         try:
             InvitationService().revoke_invitation(
-                invitation=invitation,
-                actor_id=self._get_user_id(),
+                invitation=invitation, actor_id=self._get_user_id()
             )
         except WorkspacePermissionError as exc:
             raise PermissionDenied(str(exc)) from exc
@@ -496,9 +510,7 @@ class InvitationAcceptView(APIView):
 
         try:
             invitation, member = InvitationService().accept_invitation(
-                token=token,
-                user_id=user_id,
-                user_email=request.user_email,
+                token=token, user_id=user_id, user_email=request.user_email
             )
         except InvitationError as exc:
             raise ValidationError({"detail": str(exc)}) from exc

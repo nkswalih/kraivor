@@ -8,7 +8,6 @@ Used by uvicorn in development and production.
 """
 
 import os
-
 from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
 
@@ -19,9 +18,9 @@ django_asgi = get_asgi_application()
 from apps.chat import routing as chat_routing  # noqa: E402
 from core.middleware.websocket_auth import JWTAuthMiddleware  # noqa: E402
 
-application = ProtocolTypeRouter({
-    "http": django_asgi,
-    "websocket": JWTAuthMiddleware(
-        URLRouter(chat_routing.websocket_urlpatterns)
-    ),
-})
+application = ProtocolTypeRouter(
+    {
+        "http": django_asgi,
+        "websocket": JWTAuthMiddleware(URLRouter(chat_routing.websocket_urlpatterns)),
+    }
+)

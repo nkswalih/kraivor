@@ -127,7 +127,9 @@ class GitHubAppClient:
             token = pyjwt.encode(payload, self._private_key, algorithm="RS256")
             return token if isinstance(token, str) else token.decode("utf-8")
         except Exception as exc:
-            raise GitHubAppAuthError(f"Failed to generate GitHub App JWT: {exc}") from exc
+            raise GitHubAppAuthError(
+                f"Failed to generate GitHub App JWT: {exc}"
+            ) from exc
 
     # ── Installation Token ────────────────────────────────────────────────────
 
@@ -148,7 +150,9 @@ class GitHubAppClient:
             return cached
 
         jwt_token = self._generate_jwt()
-        url = f"{self.GITHUB_API_BASE}/app/installations/{installation_id}/access_tokens"
+        url = (
+            f"{self.GITHUB_API_BASE}/app/installations/{installation_id}/access_tokens"
+        )
         headers = {
             "Authorization": f"Bearer {jwt_token}",
             "Accept": "application/vnd.github+json",
@@ -214,9 +218,7 @@ class GitHubAppClient:
 
         while url and page_count < 10:
             try:
-                response = requests.get(
-                    url, headers=headers, params=params, timeout=10
-                )
+                response = requests.get(url, headers=headers, params=params, timeout=10)
             except requests.exceptions.RequestException as exc:
                 raise GitHubAppAPIError(
                     f"Failed to list installation repos: {exc}"
@@ -276,9 +278,7 @@ class GitHubAppClient:
             ) from exc
 
         if response.status_code == 404:
-            raise GitHubAppAPIError(
-                f"Installation {installation_id} not found."
-            )
+            raise GitHubAppAPIError(f"Installation {installation_id} not found.")
         if response.status_code != 200:
             raise GitHubAppAPIError(
                 f"GitHub returned HTTP {response.status_code} for "
@@ -323,9 +323,7 @@ class GitHubAppClient:
             )
         if response.status_code == 401:
             _token_cache.invalidate(installation_id)
-            raise GitHubAppAuthError(
-                "Installation token expired. Please try again."
-            )
+            raise GitHubAppAuthError("Installation token expired. Please try again.")
         if response.status_code != 200:
             raise GitHubAppAPIError(
                 f"GitHub returned HTTP {response.status_code} for repo "
@@ -349,6 +347,5 @@ class GitHubAppClient:
                 "GitHub App slug is not configured. Set GITHUB_APP_SLUG."
             )
         return (
-            f"https://github.com/apps/{self._slug}/installations/new"
-            f"?state={state}"
+            f"https://github.com/apps/{self._slug}/installations/new?state={state}"
         )

@@ -120,10 +120,7 @@ class KnowledgeSpaceService:
         _ks = knowledge_space
         _actor = actor_id
         transaction.on_commit(
-            lambda: self._events.knowledge_created(
-                knowledge_space=_ks,
-                actor_id=_actor,
-            )
+            lambda: self._events.knowledge_created(knowledge_space=_ks, actor_id=_actor)
         )
 
         return knowledge_space
@@ -131,10 +128,7 @@ class KnowledgeSpaceService:
     # ── List ──────────────────────────────────────────────────────────────────
 
     def list_knowledge_spaces(
-        self,
-        *,
-        workspace: Workspace,
-        search: str | None = None,
+        self, *, workspace: Workspace, search: str | None = None
     ) -> QuerySet:
         """
         Return all active (non-deleted) knowledge spaces for a workspace.
@@ -159,11 +153,7 @@ class KnowledgeSpaceService:
 
     @transaction.atomic
     def update_knowledge_space(
-        self,
-        *,
-        knowledge_space: KnowledgeSpace,
-        actor_id: uuid.UUID,
-        updates: dict,
+        self, *, knowledge_space: KnowledgeSpace, actor_id: uuid.UUID, updates: dict
     ) -> KnowledgeSpace:
         """
         Update a knowledge space's name, description, and/or canvas_data.
@@ -211,10 +201,7 @@ class KnowledgeSpaceService:
         _ks = knowledge_space
         _actor = actor_id
         transaction.on_commit(
-            lambda: self._events.knowledge_updated(
-                knowledge_space=_ks,
-                actor_id=_actor,
-            )
+            lambda: self._events.knowledge_updated(knowledge_space=_ks, actor_id=_actor)
         )
 
         return knowledge_space
@@ -223,10 +210,7 @@ class KnowledgeSpaceService:
 
     @transaction.atomic
     def delete_knowledge_space(
-        self,
-        *,
-        knowledge_space: KnowledgeSpace,
-        actor_id: uuid.UUID,
+        self, *, knowledge_space: KnowledgeSpace, actor_id: uuid.UUID
     ) -> None:
         """
         Soft-delete a knowledge space.
@@ -261,8 +245,5 @@ class KnowledgeSpaceService:
         _ks = knowledge_space
         _actor = actor_id
         transaction.on_commit(
-            lambda: self._events.knowledge_deleted(
-                knowledge_space=_ks,
-                actor_id=_actor,
-            )
+            lambda: self._events.knowledge_deleted(knowledge_space=_ks, actor_id=_actor)
         )

@@ -98,11 +98,7 @@ class TestWorkspaceEventPublisher:
     def test_publish_logs_locally_when_no_producer(self):
         publisher = WorkspaceEventPublisher()
         publisher._producer = None
-        event = {
-            "event_type": "test",
-            "workspace_id": "ws-1",
-            "data": {},
-        }
+        event = {"event_type": "test", "workspace_id": "ws-1", "data": {}}
         with patch.object(publisher, "_publish", wraps=publisher._publish) as spy:
             publisher._publish("test.topic", event)
             spy.assert_called_once_with("test.topic", event)

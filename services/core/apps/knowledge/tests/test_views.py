@@ -40,8 +40,12 @@ from .conftest import make_request
 @pytest.mark.django_db
 class TestKnowledgeSpaceListView:
     def _call(self, workspace, user_id, data=None):
-        request = make_request("get", "/api/workspaces/x/knowledge/", user_id, data=data)
-        return KnowledgeSpaceListCreateView.as_view()(request, workspace_pk=workspace.id)
+        request = make_request(
+            "get", "/api/workspaces/x/knowledge/", user_id, data=data
+        )
+        return KnowledgeSpaceListCreateView.as_view()(
+            request, workspace_pk=workspace.id
+        )
 
     def test_returns_200_for_owner(self, workspace, owner_member, owner_id):
         assert self._call(workspace, owner_id).status_code == status.HTTP_200_OK
@@ -57,22 +61,14 @@ class TestKnowledgeSpaceListView:
         assert self._call(workspace, viewer_id).status_code == status.HTTP_200_OK
 
     def test_returns_knowledge_space_list(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         response = self._call(workspace, owner_id)
         assert len(response.data) == 1
         assert response.data[0]["name"] == knowledge_space.name
 
     def test_list_excludes_canvas_data(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         """List response uses KnowledgeSpaceListSerializer — no canvas_data."""
         response = self._call(workspace, owner_id)
@@ -83,65 +79,49 @@ class TestKnowledgeSpaceListView:
         assert response.data == []
 
     def test_excludes_deleted_spaces(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         knowledge_space.delete()
         response = self._call(workspace, owner_id)
         assert response.data == []
 
     def test_returns_404_for_non_member(self, workspace, outsider_id):
-        assert self._call(workspace, outsider_id).status_code == status.HTTP_404_NOT_FOUND
+        assert (
+            self._call(workspace, outsider_id).status_code == status.HTTP_404_NOT_FOUND
+        )
 
     def test_returns_403_without_user_id(self, workspace):
         raw = APIRequestFactory().get("/api/workspaces/x/knowledge/", format="json")
         # Deliberately omit raw.user_id
-        response = KnowledgeSpaceListCreateView.as_view()(raw, workspace_pk=workspace.id)
+        response = KnowledgeSpaceListCreateView.as_view()(
+            raw, workspace_pk=workspace.id
+        )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     # ── Search ────────────────────────────────────────────────────────────────
 
     def test_search_filters_by_name(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         # knowledge_space.name = "Authentication System"
         response = self._call(workspace, owner_id, data={"search": "Authentication"})
         assert len(response.data) == 1
 
     def test_search_returns_empty_for_no_match(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         response = self._call(workspace, owner_id, data={"search": "zzznomatch"})
         assert response.data == []
 
     def test_search_filters_by_description(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         # knowledge_space.description = "Diagrams and notes about the auth flow."
         response = self._call(workspace, owner_id, data={"search": "diagrams"})
         assert len(response.data) == 1
 
     def test_empty_search_returns_all(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         response = self._call(workspace, owner_id, data={"search": ""})
         assert len(response.data) == 1
@@ -161,7 +141,9 @@ class TestKnowledgeSpaceCreateView:
             user_id,
             data=data if data is not None else self._PAYLOAD,
         )
-        return KnowledgeSpaceListCreateView.as_view()(request, workspace_pk=workspace.id)
+        return KnowledgeSpaceListCreateView.as_view()(
+            request, workspace_pk=workspace.id
+        )
 
     def test_returns_201_for_owner(self, workspace, owner_member, owner_id):
         assert self._call(workspace, owner_id).status_code == status.HTTP_201_CREATED
@@ -187,7 +169,9 @@ class TestKnowledgeSpaceCreateView:
 
     def test_creates_with_canvas_data(self, workspace, owner_member, owner_id):
         canvas = {"nodes": [{"id": "n1", "type": "text"}]}
-        response = self._call(workspace, owner_id, data={"name": "X", "canvas_data": canvas})
+        response = self._call(
+            workspace, owner_id, data={"name": "X", "canvas_data": canvas}
+        )
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data["canvas_data"] == canvas
 
@@ -195,7 +179,9 @@ class TestKnowledgeSpaceCreateView:
         assert self._call(workspace, viewer_id).status_code == status.HTTP_403_FORBIDDEN
 
     def test_returns_404_for_non_member(self, workspace, outsider_id):
-        assert self._call(workspace, outsider_id).status_code == status.HTTP_404_NOT_FOUND
+        assert (
+            self._call(workspace, outsider_id).status_code == status.HTTP_404_NOT_FOUND
+        )
 
     def test_returns_400_for_missing_name(self, workspace, owner_member, owner_id):
         response = self._call(workspace, owner_id, data={})
@@ -206,8 +192,12 @@ class TestKnowledgeSpaceCreateView:
         response = self._call(workspace, owner_id, data={"name": "   "})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_returns_400_for_canvas_data_as_list(self, workspace, owner_member, owner_id):
-        response = self._call(workspace, owner_id, data={"name": "X", "canvas_data": [1, 2]})
+    def test_returns_400_for_canvas_data_as_list(
+        self, workspace, owner_member, owner_id
+    ):
+        response = self._call(
+            workspace, owner_id, data={"name": "X", "canvas_data": [1, 2]}
+        )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "canvas_data" in response.data
 
@@ -222,41 +212,29 @@ class TestKnowledgeSpaceRetrieveView:
         return KnowledgeSpaceDetailView.as_view()(request, pk=pk)
 
     def test_returns_200_for_owner(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
-        assert self._call(owner_id, knowledge_space.id).status_code == status.HTTP_200_OK
+        assert (
+            self._call(owner_id, knowledge_space.id).status_code == status.HTTP_200_OK
+        )
 
     def test_returns_200_for_viewer(
-        self,
-        workspace,
-        viewer_member,
-        viewer_id,
-        knowledge_space,
+        self, workspace, viewer_member, viewer_id, knowledge_space
     ):
         """Viewers can retrieve — all roles have read access."""
-        assert self._call(viewer_id, knowledge_space.id).status_code == status.HTTP_200_OK
+        assert (
+            self._call(viewer_id, knowledge_space.id).status_code == status.HTTP_200_OK
+        )
 
     def test_response_includes_canvas_data(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         response = self._call(owner_id, knowledge_space.id)
         assert "canvas_data" in response.data
         assert response.data["canvas_data"] == knowledge_space.canvas_data
 
     def test_response_contains_all_fields(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         response = self._call(owner_id, knowledge_space.id)
         expected = {
@@ -273,23 +251,29 @@ class TestKnowledgeSpaceRetrieveView:
         assert set(response.data.keys()) == expected
 
     def test_returns_404_for_non_member(self, workspace, outsider_id, knowledge_space):
-        assert self._call(outsider_id, knowledge_space.id).status_code == status.HTTP_404_NOT_FOUND
+        assert (
+            self._call(outsider_id, knowledge_space.id).status_code
+            == status.HTTP_404_NOT_FOUND
+        )
 
     def test_returns_404_for_soft_deleted_space(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         knowledge_space.delete()
-        assert self._call(owner_id, knowledge_space.id).status_code == status.HTTP_404_NOT_FOUND
+        assert (
+            self._call(owner_id, knowledge_space.id).status_code
+            == status.HTTP_404_NOT_FOUND
+        )
 
     def test_returns_404_for_nonexistent_id(self, workspace, owner_member, owner_id):
-        assert self._call(owner_id, uuid.uuid4()).status_code == status.HTTP_404_NOT_FOUND
+        assert (
+            self._call(owner_id, uuid.uuid4()).status_code == status.HTTP_404_NOT_FOUND
+        )
 
     def test_returns_403_without_user_id(self, workspace, knowledge_space):
-        raw = APIRequestFactory().get(f"/api/knowledge/{knowledge_space.id}/", format="json")
+        raw = APIRequestFactory().get(
+            f"/api/knowledge/{knowledge_space.id}/", format="json"
+        )
         response = KnowledgeSpaceDetailView.as_view()(raw, pk=knowledge_space.id)
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -303,114 +287,86 @@ class TestKnowledgeSpaceUpdateView:
 
     def _call(self, user_id, pk, data=None):
         request = make_request(
-            "put",
-            f"/api/knowledge/{pk}/",
-            user_id,
-            data=data or self._PAYLOAD,
+            "put", f"/api/knowledge/{pk}/", user_id, data=data or self._PAYLOAD
         )
         return KnowledgeSpaceDetailView.as_view()(request, pk=pk)
 
     def test_returns_200_for_owner(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
-        assert self._call(owner_id, knowledge_space.id).status_code == status.HTTP_200_OK
+        assert (
+            self._call(owner_id, knowledge_space.id).status_code == status.HTTP_200_OK
+        )
 
     def test_returns_200_for_admin(
-        self,
-        workspace,
-        admin_member,
-        admin_id,
-        knowledge_space,
+        self, workspace, admin_member, admin_id, knowledge_space
     ):
-        assert self._call(admin_id, knowledge_space.id).status_code == status.HTTP_200_OK
+        assert (
+            self._call(admin_id, knowledge_space.id).status_code == status.HTTP_200_OK
+        )
 
     def test_returns_200_for_member(
-        self,
-        workspace,
-        regular_member,
-        member_id,
-        knowledge_space,
+        self, workspace, regular_member, member_id, knowledge_space
     ):
-        assert self._call(member_id, knowledge_space.id).status_code == status.HTTP_200_OK
+        assert (
+            self._call(member_id, knowledge_space.id).status_code == status.HTTP_200_OK
+        )
 
     def test_response_reflects_updated_name(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         response = self._call(owner_id, knowledge_space.id, data={"name": "New Name"})
         assert response.data["name"] == "New Name"
 
     def test_response_includes_canvas_data(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         response = self._call(owner_id, knowledge_space.id)
         assert "canvas_data" in response.data
 
     def test_updates_canvas_data(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         new_canvas = {"nodes": [{"id": "sticky-1", "type": "sticky_note"}]}
         response = self._call(
-            owner_id,
-            knowledge_space.id,
-            data={"name": "X", "canvas_data": new_canvas},
+            owner_id, knowledge_space.id, data={"name": "X", "canvas_data": new_canvas}
         )
         assert response.data["canvas_data"] == new_canvas
 
     def test_returns_403_for_viewer(
-        self,
-        workspace,
-        viewer_member,
-        viewer_id,
-        knowledge_space,
+        self, workspace, viewer_member, viewer_id, knowledge_space
     ):
-        assert self._call(viewer_id, knowledge_space.id).status_code == status.HTTP_403_FORBIDDEN
+        assert (
+            self._call(viewer_id, knowledge_space.id).status_code
+            == status.HTTP_403_FORBIDDEN
+        )
 
     def test_returns_404_for_non_member(self, workspace, outsider_id, knowledge_space):
-        assert self._call(outsider_id, knowledge_space.id).status_code == status.HTTP_404_NOT_FOUND
+        assert (
+            self._call(outsider_id, knowledge_space.id).status_code
+            == status.HTTP_404_NOT_FOUND
+        )
 
     def test_returns_404_for_soft_deleted_space(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         knowledge_space.delete()
-        assert self._call(owner_id, knowledge_space.id).status_code == status.HTTP_404_NOT_FOUND
+        assert (
+            self._call(owner_id, knowledge_space.id).status_code
+            == status.HTTP_404_NOT_FOUND
+        )
 
     def test_returns_400_for_missing_name(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
-        response = self._call(owner_id, knowledge_space.id, data={"description": "no name"})
+        response = self._call(
+            owner_id, knowledge_space.id, data={"description": "no name"}
+        )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "name" in response.data
 
     def test_returns_400_for_canvas_data_as_list(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         response = self._call(
             owner_id,
@@ -430,29 +386,23 @@ class TestKnowledgeSpaceDeleteView:
         return KnowledgeSpaceDetailView.as_view()(request, pk=pk)
 
     def test_returns_204_for_owner(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
-        assert self._call(owner_id, knowledge_space.id).status_code == status.HTTP_204_NO_CONTENT
+        assert (
+            self._call(owner_id, knowledge_space.id).status_code
+            == status.HTTP_204_NO_CONTENT
+        )
 
     def test_returns_204_for_admin(
-        self,
-        workspace,
-        admin_member,
-        admin_id,
-        knowledge_space,
+        self, workspace, admin_member, admin_id, knowledge_space
     ):
-        assert self._call(admin_id, knowledge_space.id).status_code == status.HTTP_204_NO_CONTENT
+        assert (
+            self._call(admin_id, knowledge_space.id).status_code
+            == status.HTTP_204_NO_CONTENT
+        )
 
     def test_space_is_soft_deleted_after_call(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         """
         The view loads a new Python object via _get_knowledge_space_or_404(),
@@ -464,39 +414,41 @@ class TestKnowledgeSpaceDeleteView:
         assert ks.is_deleted
 
     def test_returns_403_for_member(
-        self,
-        workspace,
-        regular_member,
-        member_id,
-        knowledge_space,
+        self, workspace, regular_member, member_id, knowledge_space
     ):
-        assert self._call(member_id, knowledge_space.id).status_code == status.HTTP_403_FORBIDDEN
+        assert (
+            self._call(member_id, knowledge_space.id).status_code
+            == status.HTTP_403_FORBIDDEN
+        )
 
     def test_returns_403_for_viewer(
-        self,
-        workspace,
-        viewer_member,
-        viewer_id,
-        knowledge_space,
+        self, workspace, viewer_member, viewer_id, knowledge_space
     ):
-        assert self._call(viewer_id, knowledge_space.id).status_code == status.HTTP_403_FORBIDDEN
+        assert (
+            self._call(viewer_id, knowledge_space.id).status_code
+            == status.HTTP_403_FORBIDDEN
+        )
 
     def test_returns_404_for_non_member(self, workspace, outsider_id, knowledge_space):
         """
         Non-members receive 404 (not 403) — avoids leaking that the
         knowledge space exists at this ID.
         """
-        assert self._call(outsider_id, knowledge_space.id).status_code == status.HTTP_404_NOT_FOUND
+        assert (
+            self._call(outsider_id, knowledge_space.id).status_code
+            == status.HTTP_404_NOT_FOUND
+        )
 
     def test_returns_404_for_already_deleted_space(
-        self,
-        workspace,
-        owner_member,
-        owner_id,
-        knowledge_space,
+        self, workspace, owner_member, owner_id, knowledge_space
     ):
         knowledge_space.delete()
-        assert self._call(owner_id, knowledge_space.id).status_code == status.HTTP_404_NOT_FOUND
+        assert (
+            self._call(owner_id, knowledge_space.id).status_code
+            == status.HTTP_404_NOT_FOUND
+        )
 
     def test_returns_404_for_nonexistent_id(self, workspace, owner_member, owner_id):
-        assert self._call(owner_id, uuid.uuid4()).status_code == status.HTTP_404_NOT_FOUND
+        assert (
+            self._call(owner_id, uuid.uuid4()).status_code == status.HTTP_404_NOT_FOUND
+        )

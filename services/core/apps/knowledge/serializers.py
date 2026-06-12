@@ -90,8 +90,7 @@ class KnowledgeSpaceCreateSerializer(serializers.Serializer):
     """
 
     name = serializers.CharField(
-        max_length=255,
-        help_text="Name for this canvas (e.g. 'Authentication System').",
+        max_length=255, help_text="Name for this canvas (e.g. 'Authentication System')."
     )
     description = serializers.CharField(
         max_length=1000,
@@ -133,8 +132,7 @@ class KnowledgeSpaceUpdateSerializer(serializers.Serializer):
     """
 
     name = serializers.CharField(
-        max_length=255,
-        help_text="Updated name for this canvas.",
+        max_length=255, help_text="Updated name for this canvas."
     )
     description = serializers.CharField(
         max_length=1000,

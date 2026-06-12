@@ -70,7 +70,9 @@ class TestNotificationSerializer:
 
 class TestNotificationMarkReadSerializer:
     def test_valid_with_notification_id(self):
-        serializer = NotificationMarkReadSerializer(data={"notification_id": str(uuid.uuid4())})
+        serializer = NotificationMarkReadSerializer(
+            data={"notification_id": str(uuid.uuid4())}
+        )
         assert serializer.is_valid() is True
 
     def test_valid_without_notification_id(self):
@@ -78,17 +80,16 @@ class TestNotificationMarkReadSerializer:
         assert serializer.is_valid() is True
 
     def test_invalid_notification_id_type(self):
-        serializer = NotificationMarkReadSerializer(data={"notification_id": "not-a-uuid"})
+        serializer = NotificationMarkReadSerializer(
+            data={"notification_id": "not-a-uuid"}
+        )
         assert serializer.is_valid() is False
 
 
 class TestFCMTokenSerializer:
     def test_valid_token(self):
         serializer = FCMTokenSerializer(
-            data={
-                "token": "valid-fcm-token-123",
-                "platform": "android",
-            }
+            data={"token": "valid-fcm-token-123", "platform": "android"}
         )
         assert serializer.is_valid() is True
 
@@ -97,29 +98,14 @@ class TestFCMTokenSerializer:
         assert serializer.is_valid() is False
 
     def test_invalid_platform(self):
-        serializer = FCMTokenSerializer(
-            data={
-                "token": "abc",
-                "platform": "windows",
-            }
-        )
+        serializer = FCMTokenSerializer(data={"token": "abc", "platform": "windows"})
         assert serializer.is_valid() is False
 
     @pytest.mark.parametrize("platform", ["ios", "android", "web"])
     def test_valid_platforms(self, platform):
-        serializer = FCMTokenSerializer(
-            data={
-                "token": "abc",
-                "platform": platform,
-            }
-        )
+        serializer = FCMTokenSerializer(data={"token": "abc", "platform": platform})
         assert serializer.is_valid() is True
 
     def test_empty_token(self):
-        serializer = FCMTokenSerializer(
-            data={
-                "token": "",
-                "platform": "web",
-            }
-        )
+        serializer = FCMTokenSerializer(data={"token": "", "platform": "web"})
         assert serializer.is_valid() is False

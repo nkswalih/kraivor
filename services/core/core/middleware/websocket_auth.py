@@ -14,13 +14,12 @@ Usage:
     })
 """
 
-import logging
-from urllib.parse import parse_qs
-
 import jwt
+import logging
 from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
 from django.conf import settings
+from urllib.parse import parse_qs
 
 from core.middleware.jwt_auth import _get_jwks_client
 
@@ -65,7 +64,9 @@ class JWTAuthMiddleware(BaseMiddleware):
     def _verify_token(token: str) -> dict:
         client = _get_jwks_client()
         signing_key = client.get_signing_key_from_jwt(token)
-        decode_options = {"verify_exp": getattr(settings, "JWT_VERIFY_EXPIRATION", True)}
+        decode_options = {
+            "verify_exp": getattr(settings, "JWT_VERIFY_EXPIRATION", True)
+        }
         audience = getattr(settings, "JWT_AUDIENCE", None)
         issuer = getattr(settings, "JWT_ISSUER", None)
         payload = jwt.decode(

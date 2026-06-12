@@ -36,11 +36,11 @@ export default function AIWorkspacePage() {
       <div className="p-4 bg-card border-t border-border shrink-0">
         <div className="max-w-[800px] mx-auto bg-background border border-border rounded-xl flex items-end p-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
           <button className="p-2 text-muted-foreground hover:text-foreground shrink-0">
-            <Paperclip className="w-4 h-4" />
+            <Paperclip className="w-4" />
           </button>
           <textarea 
             placeholder="Ask Kraivor AI about your codebase..."
-            className="flex-1 bg-transparent border-none outline-none text-[13px] text-foreground resize-none p-2 min-h-[40px] max-h-[150px]"
+            className="flex-1 justify-center bg-transparent border-none outline-none text-[13px] text-foreground resize-none p-2 min-h-[40px] max-h-[150px]"
             rows={1}
           />
           <button className="p-2 bg-primary hover:bg-primary-light text-primary-foreground rounded-lg m-1 shrink-0 transition-colors">

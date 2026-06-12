@@ -189,16 +189,22 @@ services:
       DYNAMODB_LOCAL: "true"
       DYNAMODB_ENDPOINT: http://dynamodb-local:8000
       UV_LINK_MODE: copy
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: http://localhost
+      # ── NOTE ──
+      # Core uses FRONTEND_URL to redirect AFTER GitHub App install.
+      # Must be http://localhost (through nginx), NOT http://localhost:3000.
+      # The auth/identity service at line 137 still uses :3000 because it
+      # redirects users differently (direct to frontend dev server) and that
+      # is intentional.
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      dynamodb-local:
-        condition: service_started
       kafka:
         condition: service_healthy
+      dynamodb-local:
+        condition: service_started
     ports:
       - "8002:8002"
     volumes:

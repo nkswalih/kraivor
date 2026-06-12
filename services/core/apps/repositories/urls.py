@@ -21,9 +21,50 @@ URL design decisions:
 
 from django.urls import path
 
-from .views import RepositoryDetailView, RepositoryView
+from .github_app.views import (
+    GitHubAppInstallationImportView,
+    GitHubAppInstallationListView,
+    GitHubAppInstallationRefreshView,
+    GitHubAppInstallationRemoveView,
+    GitHubAppInstallInitiateView,
+)
+from .views import GitHubRepoSearchView, RepositoryDetailView, RepositoryView
 
 urlpatterns = [
+
+    path(
+        "workspaces/<uuid:workspace_pk>/repos/github/",
+        GitHubRepoSearchView.as_view(),
+        name="workspace-github-repo-search",
+    ),
+
+    # GitHub App installation endpoints
+    path(
+        "workspaces/<uuid:workspace_pk>/repos/github/install/",
+        GitHubAppInstallInitiateView.as_view(),
+        name="workspace-github-app-install",
+    ),
+    path(
+        "workspaces/<uuid:workspace_pk>/repos/github/installations/",
+        GitHubAppInstallationListView.as_view(),
+        name="workspace-github-app-installations",
+    ),
+    path(
+        "workspaces/<uuid:workspace_pk>/repos/github/installations/<int:installation_pk>/refresh/",
+        GitHubAppInstallationRefreshView.as_view(),
+        name="workspace-github-app-installation-refresh",
+    ),
+    path(
+        "workspaces/<uuid:workspace_pk>/repos/github/installations/<int:installation_pk>/",
+        GitHubAppInstallationRemoveView.as_view(),
+        name="workspace-github-app-installation-remove",
+    ),
+    path(
+        "workspaces/<uuid:workspace_pk>/repos/github/installations/import/",
+        GitHubAppInstallationImportView.as_view(),
+        name="workspace-github-app-installation-import",
+    ),
+
     path(
         "workspaces/<uuid:workspace_pk>/repos/",
         RepositoryView.as_view(),

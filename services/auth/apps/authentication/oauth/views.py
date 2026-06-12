@@ -4,6 +4,7 @@ GitHub OAuth Views
 
 import logging
 
+from django.conf import settings
 from django.shortcuts import redirect
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -50,14 +51,17 @@ class GitHubOAuthCallbackView(APIView):
                 {"error": "Missing code or state parameter"}, status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Detect whether this is a repo-connect flow vs login by trying
+        # the "github_connect" state provider first, falling back to "github".
+        state_manager = get_state_manager()
+        is_connect = state_manager.validate_state("github_connect", state)
+        if not is_connect and not state_manager.validate_state("github", state):
+            return Response(
+                {"error": "Invalid or expired state token"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
         provider = "github"
         try:
-            state_manager = get_state_manager()
-            if not state_manager.validate_state(provider, state):
-                return Response(
-                    {"error": "Invalid or expired state token"}, status=status.HTTP_400_BAD_REQUEST
-                )
-
             oauth_service = get_github_oauth_service()
             access_token = oauth_service.exchange_code_for_token(code)
             github_user = oauth_service.get_user(access_token)
@@ -82,17 +86,33 @@ class GitHubOAuthCallbackView(APIView):
                 avatar_url=github_user.avatar_url,
             )
 
+            # Store the encrypted token on the active OAuth identity.
+            # Fix: was deleted_at__isnull=False (deleted identities only).
             encryption_service = get_encryption_service()
             encrypted_token = encryption_service.encrypt(access_token)
-            user.oauth_identities.filter(provider=provider, deleted_at__isnull=False).update(
-                deleted_at=None, access_token_encrypted=encrypted_token
+            user.oauth_identities.filter(provider=provider, deleted_at__isnull=True).update(
+                access_token_encrypted=encrypted_token
             )
+
+            # If no active identity matched (e.g. first-time creation where the
+            # identity was just created with NULL deleted_at but the filter still
+            # missed it — edge case race), fall back to setting it directly.
+            if not user.oauth_identities.filter(
+                provider=provider, deleted_at__isnull=True, access_token_encrypted=encrypted_token
+            ).exists():
+                user.oauth_identities.filter(provider=provider).update(
+                    access_token_encrypted=encrypted_token
+                )
 
             tokens = generate_token_pair(user)
             frontend_url = (
-                f"http://localhost/oauth/success"
+                f"{settings.FRONTEND_URL}/oauth/success"
                 f"?access_token={tokens['access_token']}"
             )
+
+            # For repo-connect flow, signal the frontend to redirect to repos page
+            if is_connect:
+                frontend_url += "&github_connect=1"
 
             response = redirect(frontend_url)
 
@@ -111,4 +131,44 @@ class GitHubOAuthCallbackView(APIView):
             return Response(
                 {"error": "OAuth authentication failed"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            ) 
+ 
+class GitHubConnectView(APIView):
+    """
+    GET /api/auth/oauth/github/connect/
+  
+    Returns GitHub OAuth URL with 'repo' scope for connecting a repository.
+    Frontend redirects the user to this URL to authorize repo access.
+  
+    Uses "github_connect" state provider so the callback can differentiate
+    repo-connect flows from login flows and redirect the user back to the
+    repositories page instead of the dashboard.
+    """
+  
+    authentication_classes = []
+    permission_classes = []
+  
+    def get(self, request):
+        state_manager = get_state_manager()
+        state = state_manager.generate_state("github_connect")
+  
+        # Build authorization URL with repo scope
+        from urllib.parse import urlencode
+  
+        client_id = getattr(settings, "GITHUB_CLIENT_ID", "")
+        redirect_uri = getattr(
+            settings,
+            "GITHUB_REPO_CONNECT_REDIRECT_URI",
+            getattr(settings, "GITHUB_REDIRECT_URI", ""),
+        )
+  
+        params = {
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "scope": "user:email read:user repo",   # full repo scope
+            "state": state,
+        }
+  
+        auth_url = f"https://github.com/login/oauth/authorize?{urlencode(params)}"
+  
+        return Response({"authorization_url": auth_url})

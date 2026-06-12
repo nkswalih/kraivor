@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 
 from .email_service import email_service
 from .models import User
-from .rate_limiter import RateLimitExceeded, rate_limiter
+from .rate_limiter import RateLimitExceededError, rate_limiter
 from .serializers import SignUpSerializer, UserSerializer
 from .verification import decode_verification_token, generate_verification_token
 
@@ -161,7 +161,7 @@ class ResendVerificationView(APIView):
         rate_key = f"resend_verification:{email}"
         try:
             rate_limiter.is_allowed(rate_key, limit=_RESEND_LIMIT, window_seconds=_RESEND_WINDOW)
-        except RateLimitExceeded as exc:
+        except RateLimitExceededError as exc:
             response = Response(
                 {
                     "error": "Too many resend requests. Please wait before trying again.",

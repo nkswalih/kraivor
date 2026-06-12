@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from users.email_service import email_service
 from users.models import User
-from users.rate_limiter import RateLimitExceeded, rate_limiter
+from users.rate_limiter import RateLimitExceededError, rate_limiter
 from users.verification import decode_verification_token, generate_verification_token
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ class ForgotPasswordView(APIView):
         rate_key = f"forgot_password:{email}"
         try:
             rate_limiter.is_allowed(rate_key, limit=_RESEND_LIMIT, window_seconds=_RESEND_WINDOW)
-        except RateLimitExceeded as exc:
+        except RateLimitExceededError as exc:
             response = Response(
                 {
                     "error": "Too many requests. Please wait before trying again.",

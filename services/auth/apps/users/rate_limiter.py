@@ -21,7 +21,7 @@ import redis
 from django.conf import settings
 
 
-class RateLimitExceeded(Exception):
+class RateLimitExceededError(Exception):
     """Raised when a rate limit is exceeded."""
 
     def __init__(self, retry_after: int) -> None:
@@ -74,7 +74,7 @@ class RedisRateLimiter:
         """Convenience wrapper — returns True if allowed, raises RateLimitExceeded otherwise."""
         allowed, _, retry_after = self.check(key, limit, window_seconds)
         if not allowed:
-            raise RateLimitExceeded(retry_after=retry_after)
+            raise RateLimitExceededError(retry_after=retry_after)
         return True
 
 

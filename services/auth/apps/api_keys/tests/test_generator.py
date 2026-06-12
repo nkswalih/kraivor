@@ -9,27 +9,27 @@ from api_keys.services.generator import (
 
 class TestGenerateAPIKey:
     def test_returns_string(self):
-        key = generate_api_key()
+        key = generate_api_key()[0]
         assert isinstance(key, str)
 
     def test_has_correct_prefix(self):
-        key = generate_api_key()
+        key = generate_api_key()[0]
         assert key.startswith(API_KEY_PREFIX)
 
     def test_random_part_is_64_hex_chars(self):
-        key = generate_api_key()
+        key = generate_api_key()[0]
         random_part = key[len(API_KEY_PREFIX):]
         assert len(random_part) == 64
         assert all(c in "0123456789abcdef" for c in random_part)
 
     def test_keys_are_unique(self):
-        keys = {generate_api_key() for _ in range(100)}
+        keys = {generate_api_key()[0] for _ in range(100)}
         assert len(keys) == 100  # no collisions
 
 
 class TestIsAPIKeyFormat:
     def test_valid_key_passes(self):
-        key = generate_api_key()
+        key = generate_api_key()[0]
         assert is_api_key_format(key) is True
 
     def test_jwt_token_fails(self):

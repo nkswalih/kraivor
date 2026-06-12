@@ -141,7 +141,9 @@ class TestGoogleIDTokenVerifier:
 
     @patch("authentication.oauth.google.services.verifier.google_id_token.verify_oauth2_token")
     def test_unverified_email_raises(self, mock_verify, verifier):
-        from authentication.oauth.google.services.verifier import GoogleIDTokenVerificationError
+        from authentication.oauth.google.services.verifier import (
+            GoogleIDTokenVerificationError,
+        )
 
         claims = {**VALID_CLAIMS, "email_verified": False}
 
@@ -152,7 +154,9 @@ class TestGoogleIDTokenVerifier:
 
     @patch("authentication.oauth.google.services.verifier.google_id_token.verify_oauth2_token")
     def test_invalid_issuer_raises(self, mock_verify, verifier):
-        from authentication.oauth.google.services.verifier import GoogleIDTokenVerificationError
+        from authentication.oauth.google.services.verifier import (
+            GoogleIDTokenVerificationError,
+        )
 
         claims = {**VALID_CLAIMS, "iss": "https://evil.com"}
 
@@ -162,7 +166,9 @@ class TestGoogleIDTokenVerifier:
             verifier.verify({"id_token": "jwt"})
 
     def test_missing_id_token_raises(self, verifier):
-        from authentication.oauth.google.services.verifier import GoogleIDTokenVerificationError
+        from authentication.oauth.google.services.verifier import (
+            GoogleIDTokenVerificationError,
+        )
 
         with pytest.raises(GoogleIDTokenVerificationError):
             verifier.verify({"access_token": "only"})
@@ -319,7 +325,9 @@ class TestGoogleOAuthCallbackView:
         client,
         callback_url,
     ):
-        from authentication.oauth.google.services.exchange import GoogleTokenExchangeError
+        from authentication.oauth.google.services.exchange import (
+            GoogleTokenExchangeError,
+        )
 
         MockState.return_value.consume.return_value = True
 
@@ -346,7 +354,9 @@ class TestGoogleOAuthCallbackView:
         client,
         callback_url,
     ):
-        from authentication.oauth.google.services.verifier import GoogleIDTokenVerificationError
+        from authentication.oauth.google.services.verifier import (
+            GoogleIDTokenVerificationError,
+        )
 
         MockState.return_value.consume.return_value = True
 

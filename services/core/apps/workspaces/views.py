@@ -20,6 +20,8 @@ All authorization is layered:
 import logging
 import uuid
 
+import requests
+from django.conf import settings
 from django.db.models import Count, Prefetch, Q
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
@@ -60,8 +62,7 @@ def _resolve_member_users(member_data: list[dict]) -> dict[str, dict]:
 
     Returns a dict keyed by user_id: {"id", "name", "email", "avatar_url"}.
     """
-    import requests
-    from django.conf import settings
+
 
     user_ids = [m["user_id"] for m in member_data if "user_id" in m]
     if not user_ids:

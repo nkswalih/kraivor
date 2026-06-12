@@ -191,3 +191,48 @@ def mock_github_api(github_repo_payload):
         return_value=github_repo_payload,
     ) as mock:
         yield mock
+
+
+# ─── GitHub App installation fixtures ──────────────────────────────────────────
+
+
+@pytest.fixture
+def github_app_installation(workspace, owner_id):
+    """Create a GitHubAppInstallation row in the test workspace."""
+    from apps.repositories.github_app.models import GitHubAppInstallation
+
+    return GitHubAppInstallation.objects.create(
+        workspace=workspace,
+        installation_id=12345678,
+        github_account_id=87654321,
+        github_account_login="test-org",
+        github_account_type="Organization",
+        installed_by_id=owner_id,
+    )
+
+
+@pytest.fixture
+def github_app_installation_repo(github_app_installation, github_repo_payload):
+    """Create a GitHubAppInstallationRepo row linking the installation to the test repo."""
+    from apps.repositories.github_app.models import GitHubAppInstallationRepo
+
+    return GitHubAppInstallationRepo.objects.create(
+        installation=github_app_installation,
+        github_id=github_repo_payload["id"],
+        github_repo=github_repo_payload["full_name"],
+        default_branch=github_repo_payload.get("default_branch", "main"),
+        is_private=github_repo_payload.get("private", False),
+    )
+
+
+@pytest.fixture
+def mock_github_app_client(github_repo_payload):
+    """
+    Patch GitHubAppClient.get_repository to return the github_repo_payload
+    fixture without making any HTTP call to api.github.com.
+    """
+    with patch(
+        "apps.repositories.services.GitHubAppClient.get_repository",
+        return_value=github_repo_payload,
+    ) as mock:
+        yield mock

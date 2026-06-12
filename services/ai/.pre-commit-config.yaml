@@ -1,0 +1,86 @@
+# See https://pre-commit.com for documentation
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        name: trailing-whitespace
+        description: Trims trailing whitespace
+      - id: end-of-file-fixer
+        name: end-of-file-fixer
+        description: Ensures files end with a newline
+      - id: check-yaml
+        name: check-yaml
+        description: Validates YAML syntax
+        args: [--allow-multiple-documents]
+      - id: check-json
+        name: check-json
+        description: Validates JSON syntax
+      - id: check-toml
+        name: check-toml
+        description: Validates TOML syntax
+      - id: check-added-large-files
+        name: check-added-large-files
+        description: Prevents committing large files
+        args: [--maxkb=500]
+      - id: check-merge-conflict
+        name: check-merge-conflict
+        description: Detects unresolved merge conflict markers
+      - id: debug-statements
+        name: debug-statements
+        description: Catches leftover pdb/ipdb breakpoints
+
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+        name: black
+        description: Auto-formats Python code
+        language_version: python3.11
+        args: [--line-length=88]
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: isort
+        description: Sorts Python imports
+        args: [--profile=black, --line-length=88]
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        name: flake8
+        description: Lints Python code
+        additional_dependencies:
+          - flake8-bugbear>=24.0
+          - flake8-builtins>=2.2
+          - flake8-comprehensions>=3.14
+          - flake8-docstrings>=1.7
+          - flake8-import-order>=0.18
+          - pep8-naming>=0.14
+        args: [--config=.flake8]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.9.0
+    hooks:
+      - id: mypy
+        name: mypy
+        description: Static type checks Python code
+        language_version: python3.11
+        additional_dependencies:
+          - types-requests>=2.31
+          - typing-extensions>=4.9
+          - pydantic>=2.0
+        args: [--strict, --ignore-missing-imports]
+        exclude: ^tests/
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.8
+    hooks:
+      - id: bandit
+        name: bandit
+        description: Scans for security issues
+        args: [-r, -x, tests]
+        exclude: ^tests/

@@ -1,0 +1,3 @@
+# Production frozen dependencies
+# Generate via: uv export --format requirements-txt > requirements/prod.txt
+-r base.txt

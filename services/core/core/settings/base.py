@@ -127,6 +127,44 @@ JWT_KEY_ID = env('JWT_KEY_ID', default='kraivor-rs256-dev-key')
 JWT_JWKS_CACHE_TTL = env.int('JWT_JWKS_CACHE_TTL', default=3600)
 
 # =============================================================================
+# Github
+# =============================================================================
+
+GITHUB_CLIENT_ID = env('GITHUB_CLIENT_ID', default='')
+GITHUB_CONNECT_REDIRECT_URI = env('GITHUB_CONNECT_REDIRECT_URI', default='')
+
+# =============================================================================
+# GitHub App (Repository Access)
+# =============================================================================
+
+GITHUB_APP_ID = env('GITHUB_APP_ID', default='')
+GITHUB_APP_SLUG = env('GITHUB_APP_SLUG', default='')
+GITHUB_APP_CLIENT_ID = env('GITHUB_APP_CLIENT_ID', default='')
+GITHUB_APP_PRIVATE_KEY = env('GITHUB_APP_PRIVATE_KEY', default='')
+# Support file path instead of inline PEM content
+if GITHUB_APP_PRIVATE_KEY and not GITHUB_APP_PRIVATE_KEY.strip().startswith('-----'):
+    key_path = Path(GITHUB_APP_PRIVATE_KEY)
+    if not key_path.is_absolute():
+        for base in (PROJECT_ROOT, BASE_DIR):
+            candidate = base / key_path
+            if candidate.exists():
+                key_path = candidate
+                break
+    if key_path.exists():
+        GITHUB_APP_PRIVATE_KEY = key_path.read_text()
+GITHUB_APP_CALLBACK_URL = env(
+    'GITHUB_APP_CALLBACK_URL',
+    default='http://localhost:8002/api/github-app/callback/',
+)
+GITHUB_APP_WEBHOOK_SECRET = env('GITHUB_APP_WEBHOOK_SECRET', default='')
+
+# =============================================================================
+# Frontend URL (for post-installation redirect)
+# =============================================================================
+
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')
+
+# =============================================================================
 # Channels / Daphne — WebSocket & Real-Time
 # =============================================================================
 

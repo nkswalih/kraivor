@@ -19,6 +19,8 @@ urlpatterns = [
     path("api/", include("apps.knowledge.urls")),
     path("api/", include("apps.notifications.urls")),
     path("api/", include("apps.chat.urls")),
+    path("api/", include("apps.projects.urls")),
+
     path(
         "api/oauth/github/connect/",
         GitHubOAuthConnectView.as_view(),

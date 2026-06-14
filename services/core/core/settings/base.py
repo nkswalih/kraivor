@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "apps.knowledge",
     "apps.chat",
     "apps.notifications",
+    "apps.projects",
 ]
 
 MIDDLEWARE = [
@@ -196,6 +197,11 @@ CELERY_BEAT_SCHEDULE = {
     "sweep_stale_presence": {
         "task": "notifications.tasks.sweep_stale_presence",
         "schedule": 300.0,
+        "options": {"queue": "default"},
+    },
+    "check-overdue-tasks": {
+        "task": "projects.check_overdue_tasks",
+        "schedule": 3600.0,
         "options": {"queue": "default"},
     },
 }

@@ -17,6 +17,13 @@ MIDDLEWARE = [
     if m != "core.middleware.jwt_auth.JWTAuthenticationMiddleware"
 ]
 
+REST_FRAMEWORK = {
+    **base_settings.REST_FRAMEWORK,
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "core.middleware.test_auth.TestAuthentication",
+    ],
+}
+
 # =============================================================================
 # DATABASE
 # =============================================================================

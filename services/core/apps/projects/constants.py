@@ -1,7 +1,19 @@
+"""Enumerated types and domain constants for projects and tasks.
+
+Defines the full taxonomy used across the app:
+  - Project lifecycle: planning → active → completed → archived
+  - Task workflow: backlog → todo → in_progress → in_review → done / cancelled
+  - Priority levels, task types, dependency relationship types
+  - Position-rebalancing thresholds and circular-dependency depth limit
+
+ADR: Terminal statuses (DONE, CANCELLED) and active statuses are defined as
+frozensets for efficient membership checks in service queries.
+"""
 from django.db import models
 
 
 class ProjectStatus(models.TextChoices):
+    """Lifecycle stages for a project."""
     PLANNING = "planning", "Planning"
     ACTIVE = "active", "Active"
     COMPLETED = "completed", "Completed"

@@ -1,3 +1,18 @@
+"""Data models for projects and tasks.
+
+All entities use UUID primary keys and soft-delete via ``deleted_at`` (inherited
+from ``TimestampedModel``). The ``Project`` and ``Task`` models are workspace-scoped
+— every query in the service layer enforces ``workspace_id`` filtering.
+
+Design decisions:
+  - ``Project.owner_id`` is a plain UUID (not a FK to the auth service) to avoid
+    cross-service coupling — the auth service is a separate Django app.
+  - ``Task.position`` uses ``FloatField`` for O(1) insert-between operations
+    (see ``POSITION_MULTIPLIER`` / ``_rebalance_positions``).
+  - ``Task.parent_task`` is a self-referential FK supporting subtask hierarchies.
+  - Link models (``TaskLink``, ``TaskRepositoryLink``, ``TaskKnowledgeLink``) use
+    ``UniqueConstraint`` to prevent duplicate relationships.
+"""
 import uuid
 
 from django.db import models
@@ -16,6 +31,7 @@ from .constants import (
 
 
 class Project(TimestampedModel):
+    """A workspace-scoped project that groups related tasks together."""
     workspace = models.ForeignKey(
         "workspaces.Workspace",
         on_delete=models.CASCADE,
@@ -79,6 +95,7 @@ class Project(TimestampedModel):
 
 
 class Task(TimestampedModel):
+    """A unit of work scoped to a project; supports subtasks, position ordering, and soft-delete."""
 
     project = models.ForeignKey(
         Project,
@@ -140,6 +157,7 @@ class Task(TimestampedModel):
 
 
 class TaskLink(models.Model):
+    """Directed dependency relationship between two tasks (source → target)."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     source_task = models.ForeignKey(
@@ -176,6 +194,7 @@ class TaskLink(models.Model):
 
 
 class TaskRepositoryLink(models.Model):
+    """Links a task to a repository for cross-app traceability."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     task = models.ForeignKey(
@@ -203,6 +222,7 @@ class TaskRepositoryLink(models.Model):
 
 
 class TaskKnowledgeLink(models.Model):
+    """Links a task to a knowledge space for cross-app traceability."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     task = models.ForeignKey(

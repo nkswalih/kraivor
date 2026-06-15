@@ -1,3 +1,17 @@
+"""Kafka event publishing for project and task domain events.
+
+Architecture:
+  - Events use a standardised envelope (``_build_envelope``) with ``event_id``,
+    ``event_type``, ``source_service`` (always "core"), ``workspace_id``,
+    ``user_id``, ``timestamp``, ``version`` ("1.0"), and ``data``.
+  - Publication is wrapped in ``transaction.on_commit`` (except ``task.overdue``)
+    so events are only emitted after the database transaction commits.
+  - If Kafka is unavailable (``get_producer()`` returns ``None``), events are
+    silently logged at INFO level as a dev fallback.
+
+ADR: ``task.overdue`` bypasses ``transaction.on_commit`` because it is published
+from a Celery task that runs outside any active database transaction.
+"""
 import json
 import logging
 import uuid
@@ -64,6 +78,7 @@ def _publish(topic: str, payload: dict) -> None:
 
 
 class ProjectEventPublisher:
+    """Publishes project lifecycle events (created, updated, archived) to ``project.events`` topic."""
     TOPIC = "project.events"
 
     @staticmethod
@@ -112,6 +127,7 @@ class ProjectEventPublisher:
 
 
 class TaskEventPublisher:
+    """Publishes task domain events (created, assigned, completed, blocked, overdue) to ``task.events``."""
     TOPIC = "task.events"
 
     @staticmethod

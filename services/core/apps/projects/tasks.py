@@ -1,3 +1,15 @@
+"""Celery background task for detecting and publishing overdue task notifications.
+
+Architecture:
+  - Runs on a schedule (configured in Celery Beat) to query tasks whose
+    ``due_date < today`` and whose status is not terminal (DONE / CANCELLED).
+  - Publishes ``task.overdue`` events via ``TaskEventPublisher`` (bypassing
+    ``transaction.on_commit`` since this runs outside any DB transaction).
+  - Failed runs are automatically retried up to 3 times with a 60-second delay.
+
+ADR: Overdue checking is a background batch process rather than a real-time
+trigger to keep the task-create/update path fast and side-effect-free.
+"""
 import logging
 
 from celery import shared_task

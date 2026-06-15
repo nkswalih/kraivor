@@ -1,3 +1,14 @@
+"""Business logic services for projects and tasks.
+
+All services are stateless (static methods only). They encapsulate database
+queries, event publishing, and validation logic that does not belong in views
+or models.
+
+Design principles:
+  - Views handle HTTP concerns (request parsing, response serialization).
+  - Services handle business logic and database access.
+  - Events are published inside the service layer after successful mutations.
+"""
 import logging
 import uuid
 from collections import deque
@@ -29,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProjectService:
+    """Stateless service for project CRUD operations and event publishing."""
 
     @staticmethod
     def list_for_workspace(
@@ -138,6 +150,7 @@ class ProjectService:
 
 
 class TaskService:
+    """Stateless service for task CRUD, status transitions, dependency management, and ordering."""
 
     @staticmethod
     def list_for_project(
@@ -516,6 +529,11 @@ class TaskService:
 
 
 class AIRecommendationService:
+    """Stubbed AI recommendation service — placeholder for ML integration.
+
+    All methods currently return empty/default values. The ``phase: "stub"``
+    marker in the view response indicates this is not yet wired to a real model.
+    """
 
     @staticmethod
     def suggest_tasks_from_description(project_id: str, description: str) -> list:

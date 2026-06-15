@@ -133,7 +133,7 @@ class GitHubAppInstallCallbackView(APIView):
         setup_action = request.query_params.get("setup_action", "install")
         state = request.query_params.get("state")
 
-        frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+        frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost")
 
         def error_redirect(detail: str):
             return redirect(

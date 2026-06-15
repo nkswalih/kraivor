@@ -1,3 +1,14 @@
+"""DRF permission classes for workspace and project-level authorization.
+
+- ``IsWorkspaceMember`` — request-level permission checking workspace membership via
+  ``request.workspace_id`` header.
+- ``IsProjectOwnerOrWorkspaceAdmin`` — object-level permission allowing the project
+  owner or a workspace owner/admin to mutate the resource.
+
+ADR: The project views use ``_get_workspace_or_404`` (404 for non-members) instead
+of ``IsWorkspaceMember`` (403 for non-members) to avoid leaking workspace existence.
+These permission classes remain available for other call sites that need explicit 403.
+"""
 import logging
 
 from rest_framework.permissions import BasePermission

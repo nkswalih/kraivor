@@ -32,5 +32,7 @@ urlpatterns = [
     path("workspaces/<uuid:workspace_pk>/tasks/<uuid:task_id>/dependencies/", views.TaskDependencyView.as_view(), name="task-dependency-create"),
     path("workspaces/<uuid:workspace_pk>/tasks/<uuid:task_id>/dependencies/<uuid:dependency_id>/", views.TaskDependencyDestroyView.as_view(), name="task-dependency-destroy"),
     path("workspaces/<uuid:workspace_pk>/tasks/<uuid:task_id>/repositories/", views.TaskRepositoryLinkView.as_view(), name="task-repository-link"),
+    path("workspaces/<uuid:workspace_pk>/tasks/<uuid:task_id>/repositories/<uuid:link_id>/", views.TaskRepositoryLinkDestroyView.as_view(), name="task-repository-link-destroy"),
     path("workspaces/<uuid:workspace_pk>/tasks/<uuid:task_id>/knowledge/", views.TaskKnowledgeLinkView.as_view(), name="task-knowledge-link"),
+    path("workspaces/<uuid:workspace_pk>/tasks/<uuid:task_id>/knowledge/<uuid:link_id>/", views.TaskKnowledgeLinkDestroyView.as_view(), name="task-knowledge-link-destroy"),
 ]

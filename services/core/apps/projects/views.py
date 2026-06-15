@@ -350,6 +350,36 @@ class TaskDependencyDestroyView(WorkspaceContextMixin, APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class TaskRepositoryLinkDestroyView(WorkspaceContextMixin, APIView):
+    """DELETE /api/workspaces/<pk>/tasks/<id>/repositories/<link_id>/ — remove a repository link."""
+
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request: Request, workspace_pk, task_id: str, link_id: str) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
+        task = TaskService.get(
+            task_id=str(task_id),
+            workspace_id=str(workspace.id),
+        )
+        TaskService.remove_repository(task=task, link_id=str(link_id))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TaskKnowledgeLinkDestroyView(WorkspaceContextMixin, APIView):
+    """DELETE /api/workspaces/<pk>/tasks/<id>/knowledge/<link_id>/ — remove a knowledge link."""
+
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request: Request, workspace_pk, task_id: str, link_id: str) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
+        task = TaskService.get(
+            task_id=str(task_id),
+            workspace_id=str(workspace.id),
+        )
+        TaskService.remove_knowledge(task=task, link_id=str(link_id))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class TaskRepositoryLinkView(WorkspaceContextMixin, APIView):
     """POST /api/workspaces/<pk>/tasks/<id>/repositories/ — link a repository to the task.
 

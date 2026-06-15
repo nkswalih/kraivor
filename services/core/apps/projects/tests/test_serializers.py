@@ -21,6 +21,7 @@ class TestProjectSerializer:
         serializer = ProjectSerializer(project)
         assert serializer.data["name"] == project.name
         assert "task_count" in serializer.data
+        assert "done_task_count" in serializer.data
 
     def test_create_serializer_valid(self, workspace, user_id):
         data = {"name": "New Project"}

@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "apps.knowledge",
     "apps.chat",
     "apps.notifications",
+    "apps.projects",
 ]
 
 MIDDLEWARE = [
@@ -154,7 +155,7 @@ GITHUB_APP_WEBHOOK_SECRET = env("GITHUB_APP_WEBHOOK_SECRET", default="")
 # Frontend URL (for post-installation redirect)
 # =============================================================================
 
-FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost")
 
 # =============================================================================
 # Channels / Daphne — WebSocket & Real-Time
@@ -196,6 +197,11 @@ CELERY_BEAT_SCHEDULE = {
     "sweep_stale_presence": {
         "task": "notifications.tasks.sweep_stale_presence",
         "schedule": 300.0,
+        "options": {"queue": "default"},
+    },
+    "check-overdue-tasks": {
+        "task": "projects.check_overdue_tasks",
+        "schedule": 3600.0,
         "options": {"queue": "default"},
     },
 }

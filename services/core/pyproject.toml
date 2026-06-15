@@ -20,6 +20,7 @@ dependencies = [
     "confluent-kafka>=2.3",
     "boto3>=1.34",
     "firebase-admin>=6.5",
+    "factory-boy>=3.3.3",
 ]
 
 [project.optional-dependencies]

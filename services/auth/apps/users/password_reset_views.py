@@ -69,7 +69,7 @@ class ForgotPasswordView(APIView):
             )
 
         token = generate_verification_token(user)
-        frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+        frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost")
         reset_url = f"{frontend_url}/reset-password?token={token}"
 
         html = f"""<!DOCTYPE html>

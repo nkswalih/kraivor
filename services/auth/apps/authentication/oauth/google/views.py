@@ -222,7 +222,7 @@ class GoogleOAuthCallbackView(APIView):
 
         # ── 9. Return auth response ───────────────────────────────────────────
         frontend_url = (
-            f"http://localhost/oauth/success"
+            f"{settings.FRONTEND_URL}/oauth/success"
             f"?access_token={tokens.access_token}"
         )
 

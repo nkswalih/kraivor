@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from authentication.oauth.base import OAuthUserInfo
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -208,6 +209,7 @@ class TestGoogleOAuthInitiateView:
 
 class TestGoogleOAuthCallbackView:
     @pytest.mark.django_db
+    @override_settings(FRONTEND_URL="http://testfrontend")
     @patch("authentication.oauth.google.views.get_token_service")
     @patch("authentication.oauth.google.views.GoogleIdentityService")
     @patch("authentication.oauth.google.views.GoogleIDTokenVerifier")
@@ -258,7 +260,7 @@ class TestGoogleOAuthCallbackView:
         assert response.status_code == 302
 
         assert response.url.startswith(
-            "http://localhost/oauth/success"
+            "http://testfrontend/oauth/success"
         )
 
         assert "access_token=" in response.url

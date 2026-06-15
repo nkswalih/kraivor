@@ -134,7 +134,9 @@ services:
       # Explicitly set to prevent host environment variable leakage.
       # Docker Compose inherits host env vars, which can override .env values.
       # This ensures the correct frontend URL regardless of host environment state.
-      FRONTEND_URL: http://localhost:3000
+      # Uses http://localhost (through nginx) for OAuth redirects,
+      # since nginx proxies port 80 → host.docker.internal:3000.
+      FRONTEND_URL: http://localhost
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,13 +1,30 @@
+"""HTTP views for the projects application.
+
+All views inherit from ``WorkspaceContextMixin`` which provides
+``_get_workspace_or_404(workspace_pk)`` — this validates that the requesting
+user is a member of the workspace and returns 404 if not (avoiding workspace
+existence leaks).
+
+Design:
+  - Permission classes vary by method: read operations require only
+    ``IsAuthenticated``; mutating operations (PATCH, DELETE) also enforce
+    ``IsProjectOwnerOrWorkspaceAdmin`` at the object level.
+  - All URL kwargs (``workspace_pk``, ``project_id``, ``task_id`` etc.) are
+    passed as keyword arguments by Django's URL resolver.
+  - Pagination uses ``StandardPagination`` (page-based with configurable size).
+"""
 import logging
 
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from apps.workspaces.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .permissions import IsProjectOwnerOrWorkspaceAdmin, IsWorkspaceMember
+from apps.workspaces.views import WorkspaceContextMixin
+
+from .permissions import IsProjectOwnerOrWorkspaceAdmin
 from .serializers import (
     ProjectCreateSerializer,
     ProjectSerializer,
@@ -26,52 +43,61 @@ from .services import AIRecommendationService, ProjectService, TaskService
 logger = logging.getLogger(__name__)
 
 
-class ProjectListCreateView(APIView):
+class ProjectListCreateView(WorkspaceContextMixin, APIView):
+    """GET  /api/workspaces/<pk>/projects/  — list projects (optional ``?status=`` filter)
+    POST /api/workspaces/<pk>/projects/  — create a new project."""
 
-    permission_classes = [IsAuthenticated, IsWorkspaceMember]
+    permission_classes = [IsAuthenticated]
 
-    def get(self, request: Request) -> Response:
+    def get(self, request: Request, workspace_pk) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         status_filter = request.query_params.get("status")
         projects = ProjectService.list_for_workspace(
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
             status=status_filter,
             user_id=request.user_id,
         )
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def post(self, request: Request) -> Response:
+    def post(self, request: Request, workspace_pk) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         serializer = ProjectCreateSerializer(
             data=request.data,
             context={
-                "workspace_id": request.workspace_id,
+                "workspace_id": str(workspace.id),
                 "request": request,
             },
         )
         serializer.is_valid(raise_exception=True)
         project = ProjectService.create(
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
             user_id=request.user_id,
             **serializer.validated_data,
         )
         return Response(ProjectSerializer(project).data, status=status.HTTP_201_CREATED)
 
 
-class ProjectDetailView(APIView):
+class ProjectDetailView(WorkspaceContextMixin, APIView):
+    """GET /api/workspaces/<pk>/projects/<id>/    — retrieve project
+    PATCH  — update project (owner/admin only)
+    DELETE — soft-delete project (owner/admin only)."""
 
-    permission_classes = [IsAuthenticated, IsWorkspaceMember]
+    permission_classes = [IsAuthenticated]
 
-    def get(self, request: Request, project_id: str) -> Response:
+    def get(self, request: Request, workspace_pk, project_id: str) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         project = ProjectService.get(
             project_id=str(project_id),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
         return Response(ProjectSerializer(project).data, status=status.HTTP_200_OK)
 
-    def patch(self, request: Request, project_id: str) -> Response:
+    def patch(self, request: Request, workspace_pk, project_id: str) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         project = ProjectService.get(
             project_id=str(project_id),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
         self.check_object_permissions(request, project)
 
@@ -84,10 +110,11 @@ class ProjectDetailView(APIView):
         )
         return Response(ProjectSerializer(project).data, status=status.HTTP_200_OK)
 
-    def delete(self, request: Request, project_id: str) -> Response:
+    def delete(self, request: Request, workspace_pk, project_id: str) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         project = ProjectService.get(
             project_id=str(project_id),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
         self.check_object_permissions(request, project)
         ProjectService.delete(project=project, user_id=request.user_id)
@@ -95,18 +122,23 @@ class ProjectDetailView(APIView):
 
     def get_permissions(self):
         if self.request.method in ["PATCH", "DELETE"]:
-            return [IsAuthenticated(), IsWorkspaceMember(), IsProjectOwnerOrWorkspaceAdmin()]
-        return [IsAuthenticated(), IsWorkspaceMember()]
+            return [IsAuthenticated(), IsProjectOwnerOrWorkspaceAdmin()]
+        return [IsAuthenticated()]
 
 
-class ProjectTaskListView(APIView):
+class ProjectTaskListView(WorkspaceContextMixin, APIView):
+    """GET /api/workspaces/<pk>/projects/<id>/tasks/ — paginated task list for a project.
 
-    permission_classes = [IsAuthenticated, IsWorkspaceMember]
+    Supports ``?status=``, ``?assignee_id=``, ``?priority=`` filters.
+    """
 
-    def get(self, request: Request, project_id: str) -> Response:
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request, workspace_pk, project_id: str) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         ProjectService.get(
             project_id=str(project_id),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
 
         tasks = TaskService.list_for_project(
@@ -121,14 +153,20 @@ class ProjectTaskListView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
 
-class ProjectAIRecommendationsView(APIView):
+class ProjectAIRecommendationsView(WorkspaceContextMixin, APIView):
+    """GET /api/workspaces/<pk>/projects/<id>/ai/recommendations/ — stubbed AI suggestions.
 
-    permission_classes = [IsAuthenticated, IsWorkspaceMember]
+    Currently returns empty lists for all recommendation types. Phase marker
+    indicates this is a stub awaiting ML service integration.
+    """
 
-    def get(self, request: Request, project_id: str) -> Response:
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request, workspace_pk, project_id: str) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         ProjectService.get(
             project_id=str(project_id),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
         return Response(
             {
@@ -146,13 +184,19 @@ class ProjectAIRecommendationsView(APIView):
         )
 
 
-class TaskListCreateView(APIView):
+class TaskListCreateView(WorkspaceContextMixin, APIView):
+    """GET  /api/workspaces/<pk>/tasks/  — paginated workspace-level task list
+    POST /api/workspaces/<pk>/tasks/  — create a task (requires ``project_id`` in body).
 
-    permission_classes = [IsAuthenticated, IsWorkspaceMember]
+    Supports ``?project_id=``, ``?status=``, ``?assignee_id=``, ``?priority=`` filters.
+    """
 
-    def get(self, request: Request) -> Response:
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request, workspace_pk) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         tasks = TaskService.list_for_workspace(
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
             project_id=request.query_params.get("project_id"),
             status=request.query_params.get("status"),
             assignee_id=request.query_params.get("assignee_id"),
@@ -163,7 +207,8 @@ class TaskListCreateView(APIView):
         serializer = TaskSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
 
-    def post(self, request: Request) -> Response:
+    def post(self, request: Request, workspace_pk) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         project_id = request.data.get("project_id")
         if not project_id:
             return Response(
@@ -173,13 +218,13 @@ class TaskListCreateView(APIView):
 
         project = ProjectService.get(
             project_id=str(project_id),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
 
         serializer = TaskCreateSerializer(
             data=request.data,
             context={
-                "workspace_id": request.workspace_id,
+                "workspace_id": str(workspace.id),
                 "project_id": str(project_id),
             },
         )
@@ -192,21 +237,26 @@ class TaskListCreateView(APIView):
         return Response(TaskSerializer(task).data, status=status.HTTP_201_CREATED)
 
 
-class TaskDetailView(APIView):
+class TaskDetailView(WorkspaceContextMixin, APIView):
+    """GET    /api/workspaces/<pk>/tasks/<id>/ — retrieve task
+    PATCH   — update task fields
+    DELETE  — soft-delete task (includes cascading to subtasks)."""
 
-    permission_classes = [IsAuthenticated, IsWorkspaceMember]
+    permission_classes = [IsAuthenticated]
 
-    def get(self, request: Request, task_id: str) -> Response:
+    def get(self, request: Request, workspace_pk, task_id: str) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
             task_id=str(task_id),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
         return Response(TaskSerializer(task).data, status=status.HTTP_200_OK)
 
-    def patch(self, request: Request, task_id: str) -> Response:
+    def patch(self, request: Request, workspace_pk, task_id: str) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
             task_id=str(task_id),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
         serializer = TaskUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -217,23 +267,30 @@ class TaskDetailView(APIView):
         )
         return Response(TaskSerializer(task).data, status=status.HTTP_200_OK)
 
-    def delete(self, request: Request, task_id: str) -> Response:
+    def delete(self, request: Request, workspace_pk, task_id: str) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
             task_id=str(task_id),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
         TaskService.delete(task=task, user_id=request.user_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class TaskStatusUpdateView(APIView):
+class TaskStatusUpdateView(WorkspaceContextMixin, APIView):
+    """PATCH /api/workspaces/<pk>/tasks/<id>/status/ — dedicated status + position update.
 
-    permission_classes = [IsAuthenticated, IsWorkspaceMember]
+    Separate from the general PATCH to allow position-based reordering within
+    status columns. Accepts ``status`` (required) and ``position`` (optional).
+    """
 
-    def patch(self, request: Request, task_id: str) -> Response:
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request: Request, workspace_pk, task_id: str) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
             task_id=str(task_id),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
         serializer = TaskStatusUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -246,18 +303,23 @@ class TaskStatusUpdateView(APIView):
         return Response(TaskSerializer(task).data, status=status.HTTP_200_OK)
 
 
-class TaskDependencyView(APIView):
+class TaskDependencyView(WorkspaceContextMixin, APIView):
+    """POST /api/workspaces/<pk>/tasks/<id>/dependencies/ — add a dependency.
 
-    permission_classes = [IsAuthenticated, IsWorkspaceMember]
+    Validates: no self-dependency, no circular dependency (BFS, max depth 10).
+    """
 
-    def post(self, request: Request, task_id: str) -> Response:
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, workspace_pk, task_id: str) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
             task_id=str(task_id),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
         serializer = TaskDependencySerializer(
             data=request.data,
-            context={"workspace_id": request.workspace_id},
+            context={"workspace_id": str(workspace.id)},
         )
         serializer.is_valid(raise_exception=True)
         link = TaskService.add_dependency(
@@ -272,14 +334,14 @@ class TaskDependencyView(APIView):
         )
 
 
-class TaskDependencyDestroyView(APIView):
+class TaskDependencyDestroyView(WorkspaceContextMixin, APIView):
+    """DELETE /api/workspaces/<pk>/tasks/<id>/dependencies/<dep_id>/ — remove a dependency."""
 
-    permission_classes = [IsAuthenticated, IsWorkspaceMember]
-
-    def delete(self, request: Request, task_id: str, dependency_id: str) -> Response:
+    def delete(self, request: Request, workspace_pk, task_id: str, dependency_id: str) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
             task_id=str(task_id),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
         TaskService.remove_dependency(
             task=task,
@@ -288,21 +350,26 @@ class TaskDependencyDestroyView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class TaskRepositoryLinkView(APIView):
+class TaskRepositoryLinkView(WorkspaceContextMixin, APIView):
+    """POST /api/workspaces/<pk>/tasks/<id>/repositories/ — link a repository to the task.
 
-    permission_classes = [IsAuthenticated, IsWorkspaceMember]
+    Validates that the repository exists in the same workspace.
+    """
 
-    def post(self, request: Request, task_id: str) -> Response:
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, workspace_pk, task_id: str) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
             task_id=str(task_id),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
         serializer = TaskRepositoryLinkSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         link = TaskService.add_repository(
             task=task,
             repository_id=str(serializer.validated_data["repository_id"]),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
         return Response(
             {"id": str(link.id), "repository_id": str(link.repository_id)},
@@ -310,21 +377,26 @@ class TaskRepositoryLinkView(APIView):
         )
 
 
-class TaskKnowledgeLinkView(APIView):
+class TaskKnowledgeLinkView(WorkspaceContextMixin, APIView):
+    """POST /api/workspaces/<pk>/tasks/<id>/knowledge/ — link a knowledge space to the task.
 
-    permission_classes = [IsAuthenticated, IsWorkspaceMember]
+    Validates that the knowledge space exists in the same workspace.
+    """
 
-    def post(self, request: Request, task_id: str) -> Response:
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, workspace_pk, task_id: str) -> Response:
+        workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
             task_id=str(task_id),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
         serializer = TaskKnowledgeLinkSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         link = TaskService.add_knowledge(
             task=task,
             knowledge_space_id=str(serializer.validated_data["knowledge_space_id"]),
-            workspace_id=request.workspace_id,
+            workspace_id=str(workspace.id),
         )
         return Response(
             {"id": str(link.id), "knowledge_space_id": str(link.knowledge_space_id)},

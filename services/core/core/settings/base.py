@@ -155,7 +155,7 @@ GITHUB_APP_WEBHOOK_SECRET = env("GITHUB_APP_WEBHOOK_SECRET", default="")
 # Frontend URL (for post-installation redirect)
 # =============================================================================
 
-FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost")
 
 # =============================================================================
 # Channels / Daphne — WebSocket & Real-Time

@@ -60,6 +60,13 @@ class ProjectService:
                         tasks__status=TaskStatus.BLOCKED,
                     ),
                 ),
+                done_task_count=Count(
+                    "tasks",
+                    filter=Q(
+                        tasks__deleted_at__isnull=True,
+                        tasks__status=TaskStatus.DONE,
+                    ),
+                ),
             )
             .order_by("-updated_at")
         )
@@ -112,6 +119,13 @@ class ProjectService:
                         filter=Q(
                             tasks__deleted_at__isnull=True,
                             tasks__status=TaskStatus.BLOCKED,
+                        ),
+                    ),
+                    done_task_count=Count(
+                        "tasks",
+                        filter=Q(
+                            tasks__deleted_at__isnull=True,
+                            tasks__status=TaskStatus.DONE,
                         ),
                     ),
                 )
@@ -395,6 +409,18 @@ class TaskService:
         return link
 
     @staticmethod
+    def remove_repository(task: Task, link_id: str) -> None:
+        deleted_count, _ = TaskRepositoryLink.objects.filter(
+            id=link_id,
+            task=task,
+        ).delete()
+
+        if deleted_count == 0:
+            raise Http404(f"Repository link {link_id} not found.")
+
+        logger.info("Repository link removed: link=%s task=%s", link_id, task.id)
+
+    @staticmethod
     def add_knowledge(
         task: Task,
         knowledge_space_id: str,
@@ -419,6 +445,18 @@ class TaskService:
             raise ValidationError("This knowledge space is already linked to the task.")
 
         return link
+
+    @staticmethod
+    def remove_knowledge(task: Task, link_id: str) -> None:
+        deleted_count, _ = TaskKnowledgeLink.objects.filter(
+            id=link_id,
+            task=task,
+        ).delete()
+
+        if deleted_count == 0:
+            raise Http404(f"Knowledge link {link_id} not found.")
+
+        logger.info("Knowledge link removed: link=%s task=%s", link_id, task.id)
 
     @staticmethod
     def calculate_initial_position(project_id: str, status: str) -> float:

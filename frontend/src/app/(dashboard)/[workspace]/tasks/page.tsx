@@ -1,74 +1,197 @@
-import { CheckSquare, SignalHigh, SignalMedium, SignalLow, Plus, Filter, CircleDot, CheckCircle2 } from 'lucide-react';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { CheckSquare, Plus, Filter, Loader2, ChevronDown } from 'lucide-react';
+import { useTasks } from '@/lib/hooks/use-projects';
+import { useAuthStore } from '@/lib/stores/auth-store';
+import { useProjectsStore } from '@/lib/stores/projects-store';
+import { TaskRow } from '@/components/features/tasks/task-row';
+import { TaskDrawer } from '@/components/features/tasks/task-drawer';
+import { CreateTaskDialog } from '@/components/features/tasks/create-task-dialog';
+import { StatusIcon } from '@/components/features/tasks/status-icon';
+import {
+  KANBAN_COLUMNS, ACTIVE_TASK_STATUSES, type TaskStatus,
+} from '@/types/domain/projects';
+import { cn } from '@/lib/utils';
+
+const STATUS_LABELS: Record<TaskStatus, string> = {
+  backlog:     'Backlog',
+  todo:        'Todo',
+  in_progress: 'In Progress',
+  in_review:   'In Review',
+  blocked:     'Blocked',
+  done:        'Done',
+  cancelled:   'Cancelled',
+};
+
+type View = 'active' | 'backlog';
 
 export default function TasksPage() {
+  const { workspace } = useParams<{ workspace: string }>();
+  const workspaceId = useAuthStore(s => s.workspaceId) ?? workspace;
+  const [activeView, setActiveView] = useState<View>('active');
+  const [collapsedStatuses, setCollapsedStatuses] = useState<Set<TaskStatus>>(new Set());
+
+  const {
+    openCreateTask,
+    createTaskOpen,
+    createTaskDefaultProjectId,
+    closeCreateTask,
+  } = useProjectsStore();
+
+  const { data, isLoading } = useTasks(workspaceId);
+  const tasks = data?.results ?? [];
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'c' && !e.metaKey && !e.ctrlKey && !e.shiftKey &&
+          document.activeElement?.tagName !== 'INPUT' &&
+          document.activeElement?.tagName !== 'TEXTAREA') {
+        openCreateTask();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [openCreateTask]);
+
+  const statusesToShow: TaskStatus[] =
+    activeView === 'active'
+      ? KANBAN_COLUMNS.filter((s) => ACTIVE_TASK_STATUSES.includes(s) || s === 'done')
+      : ['backlog', 'cancelled'];
+
+  const grouped = statusesToShow.reduce<Record<TaskStatus, typeof tasks>>((acc, status) => {
+    acc[status] = tasks.filter((t) => t.status === status);
+    return acc;
+  }, {} as Record<TaskStatus, typeof tasks>);
+
+  const toggleCollapse = (status: TaskStatus) => {
+    setCollapsedStatuses((prev) => {
+      const next = new Set(prev);
+      next.has(status) ? next.delete(status) : next.add(status);
+      return next;
+    });
+  };
+
   return (
-    <div className="flex flex-col h-full animate-fade-up">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#27272A] shrink-0 bg-[#0A0A0B]">
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-6 py-3.5 border-b border-[var(--krait-border)] shrink-0 bg-[var(--krait-obsidian)]">
         <div className="flex items-center gap-4">
-          <h1 className="text-lg font-medium flex items-center gap-2 text-[#FAFAFA]">
-            <CheckSquare className="w-5 h-5 text-[#6366F1]" /> Issues
+          <h1 className="text-[15px] font-medium text-[var(--text-primary)] flex items-center gap-2">
+            <CheckSquare size={17} className="text-[var(--venom-yellow)]" />
+            Issues
           </h1>
-          <div className="h-5 w-px bg-[#27272A]" />
-          <div className="flex items-center gap-2">
-            <button className="text-[12px] font-medium text-[#FAFAFA] px-2 py-1 bg-[#18181B] rounded-[4px]">Active</button>
-            <button className="text-[12px] font-medium text-[#A1A1AA] px-2 py-1 hover:text-[#FAFAFA] transition-colors">Backlog</button>
+          <div className="h-4 w-px bg-[var(--krait-border)]" />
+          <div className="flex items-center gap-0.5">
+            {(['active', 'backlog'] as const).map((view) => (
+              <button
+                key={view}
+                onClick={() => setActiveView(view)}
+                className={cn(
+                  'text-[12px] font-medium px-2.5 py-1 rounded-[4px] capitalize transition-colors',
+                  activeView === view
+                    ? 'bg-[var(--krait-surface-3)] text-[var(--text-primary)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                )}
+              >
+                {view}
+              </button>
+            ))}
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
-          <button className="p-1.5 border border-[#27272A] bg-[#111113] rounded-[6px] text-[#A1A1AA] hover:text-[#FAFAFA] transition-colors">
-            <Filter className="w-4 h-4" />
+          <button className="p-2 border border-[var(--krait-border)] bg-[var(--krait-surface-1)] rounded-[6px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+            <Filter size={14} />
           </button>
-          <button className="bg-[#6366F1] hover:bg-[#4F46E5] text-white text-[12px] font-medium py-1.5 px-3 rounded-[6px] flex items-center gap-1.5 transition-colors">
-            <Plus className="w-3.5 h-3.5" /> New Issue
+
+          <span className="hidden lg:inline text-[11px] text-[var(--text-tertiary)] border border-[var(--krait-border)] px-1.5 py-0.5 rounded">
+            C
+          </span>
+
+          <button
+            onClick={() => openCreateTask()}
+            className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-[6px] text-black transition-opacity hover:opacity-90"
+            style={{ background: 'var(--venom-yellow)' }}
+          >
+            <Plus size={13} />
+            New Issue
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-[#0A0A0B] p-6">
-        
-        {/* Status Group: In Progress */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 text-[13px] font-medium text-[#FAFAFA] mb-3 px-2">
-            <CircleDot className="w-4 h-4 text-[#F59E0B]" /> In Progress <span className="text-[#A1A1AA] ml-1">2</span>
+      <div className="flex-1 overflow-y-auto bg-[var(--krait-void)]">
+        {isLoading && (
+          <div className="flex items-center justify-center h-40">
+            <Loader2 size={18} className="animate-spin text-[var(--venom-yellow)]" />
           </div>
-          <div className="border border-[#27272A] rounded-[8px] bg-[#111113] divide-y divide-[#27272A]">
-            {/* Task Row */}
-            <div className="flex items-center gap-4 p-2.5 hover:bg-[#18181B] transition-colors cursor-pointer text-[13px] group">
-              <span className="text-[#A1A1AA] font-mono text-[11px] w-14">KRV-42</span>
-              <SignalHigh className="w-3.5 h-3.5 text-[#EF4444]" />
-              <span className="flex-1 text-[#FAFAFA] group-hover:text-[#6366F1] transition-colors">Implement Multi-Agent Orchestrator</span>
-              <span className="text-[11px] text-[#A1A1AA] bg-[#18181B] px-1.5 py-0.5 rounded border border-[#27272A]">Oct 12</span>
-              <div className="w-5 h-5 rounded-full bg-[#6366F1] flex items-center justify-center text-[9px] text-white font-bold">AJ</div>
-            </div>
-            {/* Task Row */}
-            <div className="flex items-center gap-4 p-2.5 hover:bg-[#18181B] transition-colors cursor-pointer text-[13px] group">
-              <span className="text-[#A1A1AA] font-mono text-[11px] w-14">KRV-45</span>
-              <SignalMedium className="w-3.5 h-3.5 text-[#F59E0B]" />
-              <span className="flex-1 text-[#FAFAFA] group-hover:text-[#6366F1] transition-colors">Setup PostgreSQL Database Schema</span>
-              <span className="text-[11px] text-[#A1A1AA] bg-[#18181B] px-1.5 py-0.5 rounded border border-[#27272A]">Oct 14</span>
-              <div className="w-5 h-5 rounded-full bg-[#22C55E] flex items-center justify-center text-[9px] text-white font-bold">SD</div>
-            </div>
-          </div>
-        </div>
+        )}
 
-        {/* Status Group: Todo */}
-        <div>
-          <div className="flex items-center gap-2 text-[13px] font-medium text-[#FAFAFA] mb-3 px-2">
-            <CircleDot className="w-4 h-4 text-[#A1A1AA]" /> Todo <span className="text-[#A1A1AA] ml-1">1</span>
-          </div>
-          <div className="border border-[#27272A] rounded-[8px] bg-[#111113] divide-y divide-[#27272A]">
-             <div className="flex items-center gap-4 p-2.5 hover:bg-[#18181B] transition-colors cursor-pointer text-[13px] group">
-              <span className="text-[#A1A1AA] font-mono text-[11px] w-14">KRV-48</span>
-              <SignalLow className="w-3.5 h-3.5 text-[#A1A1AA]" />
-              <span className="flex-1 text-[#FAFAFA] group-hover:text-[#6366F1] transition-colors">Design Landing Page for Marketing</span>
-              <span className="text-[11px] text-[#A1A1AA] bg-[#18181B] px-1.5 py-0.5 rounded border border-[#27272A]">Oct 18</span>
-              <div className="w-5 h-5 rounded-full border border-[#27272A] border-dashed flex items-center justify-center text-[10px] text-[#A1A1AA]">+</div>
-            </div>
-          </div>
-        </div>
+        {!isLoading && (
+          <div className="py-2">
+            {statusesToShow.map((status) => {
+              const statusTasks = grouped[status] ?? [];
+              const isCollapsed = collapsedStatuses.has(status);
 
+              return (
+                <div key={status} className="mb-2">
+                  <button
+                    onClick={() => toggleCollapse(status)}
+                    className="flex items-center gap-2 w-full px-6 py-2 text-[12px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors group"
+                  >
+                    <StatusIcon status={status} size={13} />
+                    <span>{STATUS_LABELS[status]}</span>
+                    <span className="text-[var(--text-tertiary)]">{statusTasks.length}</span>
+                    <ChevronDown
+                      size={13}
+                      className={cn(
+                        'ml-auto transition-transform duration-150 text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]',
+                        isCollapsed && '-rotate-90',
+                      )}
+                    />
+                  </button>
+
+                  {!isCollapsed && (
+                    <div className="border-t border-b border-[var(--krait-border)] bg-[var(--krait-surface-1)] divide-y divide-[var(--krait-border)]/50">
+                      {statusTasks.length === 0 ? (
+                        <div className="px-6 py-3 text-[12px] text-[var(--text-tertiary)]">
+                          No issues
+                        </div>
+                      ) : (
+                        statusTasks.map((task, i) => (
+                          <TaskRow
+                            key={task.id}
+                            task={task}
+                            identifier={`KRV-${String(i + 1).padStart(2, '0')}`}
+                          />
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {tasks.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-60 text-center">
+                <CheckSquare size={32} className="text-[var(--text-tertiary)] mb-3" />
+                <p className="text-[14px] text-[var(--text-secondary)]">No issues yet</p>
+                <p className="text-[12px] text-[var(--text-tertiary)] mt-1">
+                  Press <kbd className="border border-[var(--krait-border)] px-1 rounded">C</kbd> to create your first issue.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      <TaskDrawer workspaceId={workspaceId} />
+      <CreateTaskDialog
+        open={createTaskOpen}
+        onClose={closeCreateTask}
+        workspaceId={workspaceId}
+        defaultProjectId={createTaskDefaultProjectId}
+      />
     </div>
   );
 }

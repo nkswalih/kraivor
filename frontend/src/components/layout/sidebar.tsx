@@ -64,7 +64,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
               {item.name}
               
               {item.name === 'Chat' && (
-                <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-[#6366F1] text-[10px] text-white px-1">
+                <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-[#EF4444] text-[10px] font-extrabold text-white px-1">
                   {roomCount}
                 </span>
               )}

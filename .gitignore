@@ -71,6 +71,7 @@ system.md
 tickets.md
 tools.md
 docs/github-app-migration.md
+frontend-projects.md
 
 .opencode
 .keys
@@ -78,7 +79,7 @@ docs/github-app-migration.md
 .keys/jwt-public.pem
 .keys/oauth-encryption.key
 oauth-encryption.key
-.keys/
+.keys/*
 *.pem
 *.key
 

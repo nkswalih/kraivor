@@ -1,37 +1,3 @@
-"""
-Knowledge Space views — KRV-022 (Knowledge Workspace / Infinite Canvas).
-
-View contract:
-  - Extract and validate input via serializers
-  - Delegate all business logic to the service layer
-  - Translate service exceptions to HTTP responses
-  - Return clean, typed responses
-
-Two view classes follow two distinct URL shapes:
-
-  KnowledgeSpaceListCreateView  — workspace-scoped (uses WorkspaceContextMixin)
-    GET  /workspace/workspaces/{workspace_pk}/knowledge/?search=
-    POST /workspace/workspaces/{workspace_pk}/knowledge/
-
-  KnowledgeSpaceDetailView      — resource-scoped (owns its own membership guard)
-    GET    /workspace/knowledge/{pk}/
-    PUT    /workspace/knowledge/{pk}/
-    DELETE /workspace/knowledge/{pk}/
-
-Authorization:
-  Membership check for list/create uses _get_workspace_or_404() from
-  WorkspaceContextMixin (identical to repositories).
-
-  For detail, _get_knowledge_space_or_404() fetches the knowledge space
-  with select_related("workspace") then verifies workspace membership via
-  workspace.is_member(). Non-members receive 404, not 403, to avoid
-  leaking existence information — the same security model used by
-  _get_workspace_or_404().
-
-  Role enforcement (can_write / can_admin) happens inside the service;
-  the service raises KnowledgePermissionError which the view maps to 403.
-"""
-
 import logging
 import uuid
 
@@ -43,42 +9,49 @@ from rest_framework.views import APIView
 from apps.workspaces.permissions import IsAuthenticated
 from apps.workspaces.views import WorkspaceContextMixin
 
-from .models import KnowledgeSpace
+from .models import KnowledgeAsset, KnowledgeSpace
 from .serializers import (
+    KnowledgeAssetInputSerializer,
+    KnowledgeAssetSerializer,
     KnowledgeSpaceCreateSerializer,
     KnowledgeSpaceListSerializer,
     KnowledgeSpaceSerializer,
     KnowledgeSpaceUpdateSerializer,
 )
-from .services import KnowledgePermissionError, KnowledgeSpaceService
+from .services import (
+    KnowledgeAssetService,
+    KnowledgePermissionError,
+    KnowledgeSpaceService,
+)
 
 logger = logging.getLogger(__name__)
 
 
-# ─── List + Create ────────────────────────────────────────────────────────────
+def _get_knowledge_space_or_404(pk, user_id) -> KnowledgeSpace:
+    """
+    Shared helper: fetch a knowledge space by UUID and verify workspace membership.
+
+    Returns 404 for both "doesn't exist" and "requesting user is not a
+    workspace member" to avoid leaking information about workspace contents
+    to outsiders.
+    """
+    try:
+        ks_id = pk if isinstance(pk, uuid.UUID) else uuid.UUID(str(pk))
+    except (ValueError, AttributeError) as exc:
+        raise NotFound("Knowledge space not found.") from exc
+
+    ks = KnowledgeSpace.objects.select_related("workspace").filter(id=ks_id).first()
+
+    if not ks or not ks.workspace.is_member(user_id):
+        raise NotFound("Knowledge space not found.")
+
+    return ks
 
 
 class KnowledgeSpaceListCreateView(WorkspaceContextMixin, APIView):
-    """
-    GET  /workspace/workspaces/{workspace_pk}/knowledge/
-    POST /workspace/workspaces/{workspace_pk}/knowledge/
-
-    GET  — list all active knowledge spaces in the workspace.
-           Accepts optional ?search= query parameter that filters by name
-           and description (case-insensitive OR).
-           Available to all active workspace members (all roles).
-
-    POST — create a new knowledge space (infinite canvas).
-           Requires can_write role (owner, admin, or member).
-    """
-
     permission_classes = [IsAuthenticated]
 
     def get(self, request, workspace_pk=None):
-        """
-        List knowledge spaces, with optional name/description search.
-        Any active workspace member (including viewers) may call this.
-        """
         workspace = self._get_workspace_or_404(workspace_pk)
         search = request.query_params.get("search", "").strip() or None
 
@@ -88,10 +61,6 @@ class KnowledgeSpaceListCreateView(WorkspaceContextMixin, APIView):
         return Response(KnowledgeSpaceListSerializer(knowledge_spaces, many=True).data)
 
     def post(self, request, workspace_pk=None):
-        """
-        Create a knowledge space. Requires can_write (member, admin, or owner).
-        Returns HTTP 201 with the full representation (including canvas_data).
-        """
         workspace = self._get_workspace_or_404(workspace_pk)
 
         serializer = KnowledgeSpaceCreateSerializer(data=request.data)
@@ -115,66 +84,15 @@ class KnowledgeSpaceListCreateView(WorkspaceContextMixin, APIView):
         )
 
 
-# ─── Detail (Retrieve / Update / Delete) ─────────────────────────────────────
-
-
 class KnowledgeSpaceDetailView(APIView):
-    """
-    GET    /workspace/knowledge/{pk}/
-    PUT    /workspace/knowledge/{pk}/
-    DELETE /workspace/knowledge/{pk}/
-
-    These endpoints are not nested under /workspaces/ because the client
-    already holds the knowledge space UUID after the list/create call.
-    The workspace membership check is performed inside
-    _get_knowledge_space_or_404() before any operation.
-    """
-
     permission_classes = [IsAuthenticated]
 
-    def _get_knowledge_space_or_404(self, pk) -> KnowledgeSpace:
-        """
-        F
-        Returns 404 for both "doesn't exist" and "requesting user is not a
-        workspace member" to avoid leaking information about workspace contents
-        to outsiders — same security model as WorkspaceContextMixin.
-
-        select_related("workspace") avoids a separate workspace query while
-        still allowing workspace.is_member() to run its own membership check.
-        """
-        try:
-            ks_id = pk if isinstance(pk, uuid.UUID) else uuid.UUID(str(pk))
-        except (ValueError, AttributeError) as exc:
-            raise NotFound("Knowledge space not found.") from exc
-
-        user_id = self.request.user_id
-
-        ks = KnowledgeSpace.objects.select_related("workspace").filter(id=ks_id).first()
-
-        if not ks or not ks.workspace.is_member(user_id):
-            raise NotFound("Knowledge space not found.")
-
-        return ks
-
     def get(self, request, pk=None):
-        """
-        Retrieve a knowledge space including its full canvas_data.
-        Any active workspace member (including viewers) may call this.
-        """
-        knowledge_space = self._get_knowledge_space_or_404(pk)
+        knowledge_space = _get_knowledge_space_or_404(pk, request.user_id)
         return Response(KnowledgeSpaceSerializer(knowledge_space).data)
 
     def put(self, request, pk=None):
-        """
-        Full update of a knowledge space.
-
-        name is required. description and canvas_data are optional — absent
-        fields are preserved (practical concession for large canvas payloads).
-
-        Requires can_write role (member, admin, or owner).
-        Returns HTTP 200 with the updated full representation.
-        """
-        knowledge_space = self._get_knowledge_space_or_404(pk)
+        knowledge_space = _get_knowledge_space_or_404(pk, request.user_id)
 
         serializer = KnowledgeSpaceUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -182,7 +100,7 @@ class KnowledgeSpaceDetailView(APIView):
         try:
             updated = KnowledgeSpaceService().update_knowledge_space(
                 knowledge_space=knowledge_space,
-                actor_id=self.request.user_id,
+                actor_id=request.user_id,
                 updates=serializer.validated_data,
             )
         except KnowledgePermissionError as exc:
@@ -191,16 +109,88 @@ class KnowledgeSpaceDetailView(APIView):
         return Response(KnowledgeSpaceSerializer(updated).data)
 
     def delete(self, request, pk=None):
-        """
-        Soft-delete a knowledge space.
-        Requires can_admin role (admin or owner).
-        Returns HTTP 204 No Content on success.
-        """
-        knowledge_space = self._get_knowledge_space_or_404(pk)
+        knowledge_space = _get_knowledge_space_or_404(pk, request.user_id)
 
         try:
             KnowledgeSpaceService().delete_knowledge_space(
-                knowledge_space=knowledge_space, actor_id=self.request.user_id
+                knowledge_space=knowledge_space, actor_id=request.user_id
+            )
+        except KnowledgePermissionError as exc:
+            raise PermissionDenied(str(exc)) from exc
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class KnowledgeAssetListCreateView(APIView):
+    """
+    GET    /knowledge/<uuid:knowledge_pk>/assets/   — list assets
+    POST   /knowledge/<uuid:knowledge_pk>/assets/   — upload an asset
+
+    For upload, the request must be multipart/form-data with a `file` field.
+    """
+
+    permission_classes = [IsAuthenticated]
+    http_method_names = ["get", "post"]
+
+    def _get_space(self, request, knowledge_pk) -> KnowledgeSpace:
+        return _get_knowledge_space_or_404(knowledge_pk, request.user_id)
+
+    def get(self, request, knowledge_pk=None):
+        knowledge_space = self._get_space(request, knowledge_pk)
+        assets = KnowledgeAssetService().list_assets(knowledge_space=knowledge_space)
+        return Response(KnowledgeAssetSerializer(assets, many=True).data)
+
+    def post(self, request, knowledge_pk=None):
+        knowledge_space = self._get_space(request, knowledge_pk)
+
+        serializer = KnowledgeAssetInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        file_field = serializer.validated_data["file"]
+
+        try:
+            asset = KnowledgeAssetService().upload_asset(
+                knowledge_space=knowledge_space,
+                actor_id=request.user_id,
+                file_field=file_field,
+            )
+        except KnowledgePermissionError as exc:
+            raise PermissionDenied(str(exc)) from exc
+
+        return Response(
+            KnowledgeAssetSerializer(asset).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class KnowledgeAssetDetailView(APIView):
+    """
+    DELETE /knowledge/<uuid:knowledge_pk>/assets/<uuid:pk>/  — delete an asset
+    """
+
+    permission_classes = [IsAuthenticated]
+    http_method_names = ["delete"]
+
+    def delete(self, request, knowledge_pk=None, pk=None):
+        knowledge_space = _get_knowledge_space_or_404(knowledge_pk, request.user_id)
+
+        try:
+            asset_pk = pk if isinstance(pk, uuid.UUID) else uuid.UUID(str(pk))
+        except (ValueError, AttributeError) as exc:
+            raise NotFound("Asset not found.") from exc
+
+        asset = KnowledgeAsset.objects.filter(
+            id=asset_pk, knowledge_space=knowledge_space
+        ).first()
+
+        if not asset:
+            raise NotFound("Asset not found.")
+
+        try:
+            KnowledgeAssetService().delete_asset(
+                knowledge_space=knowledge_space,
+                asset=asset,
+                actor_id=request.user_id,
             )
         except KnowledgePermissionError as exc:
             raise PermissionDenied(str(exc)) from exc

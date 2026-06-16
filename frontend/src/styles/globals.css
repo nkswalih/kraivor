@@ -276,3 +276,114 @@
   0%   { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+/* ─── MODERN GLASSY BUTTON (Ultra-Smooth 3D & Shifting Gradient) ─── */
+
+.btn-glassy-krait {
+  display: inline-flex;
+  align-items: stretch;
+  position: relative;
+  overflow: hidden;
+  
+  /* Shifting liquid gold gradient */
+  background: linear-gradient(135deg, 
+    hsl(var(--primary-dark)) 0%, 
+    hsl(var(--primary)) 50%, 
+    hsl(var(--primary-light)) 100%
+  );
+  background-size: 200% 200%;
+  background-position: left top;
+  
+  /* Custom illuminated border matching primary-light */
+  border: 1px solid hsla(var(--primary-light), 0.35);
+  border-radius: 14px;
+  color: #ffffff;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  
+  /* Stacked volumetric lighting and expanded glow */
+  box-shadow: 
+    inset 0px 1px 0px rgba(255, 255, 255, 0.45),  /* Specular top rim */
+    inset 0px 2px 4px rgba(255, 255, 255, 0.15),  /* Soft top light bleed */
+    inset 0px -3px 6px rgba(0, 0, 0, 0.25),       /* Bottom depth shadow */
+    inset 0px -1px 0px rgba(0, 0, 0, 0.2),        /* Dark bottom edge line */
+    0px 10px 30px -6px hsla(var(--primary), 0.55), /* Rich, wide ambient glow */
+    0px 2px 6px rgba(0, 0, 0, 0.35);              /* Fine grounding shadow */
+    
+  /* Premium long cubic-bezier for smooth transitions */
+  transition: 
+    background-position 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+    border-color 0.4s ease,
+    box-shadow 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+    transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* Dynamic Hover Effects */
+.btn-glassy-krait:hover {
+  background-position: right bottom; /* Seamlessly flows the internal gradient colors */
+  border-color: hsla(var(--primary-light), 0.8); /* Border lights up with primary-light */
+  transform: translateY(-1.5px) scale(1.02); /* Slight lift and micro scale */
+  
+  box-shadow: 
+    inset 0px 1px 0px rgba(255, 255, 255, 0.55), 
+    inset 0px 3px 6px rgba(255, 255, 255, 0.25), 
+    inset 0px -3px 6px rgba(0, 0, 0, 0.25), 
+    inset 0px -1px 0px rgba(0, 0, 0, 0.2), 
+    0px 14px 38px -4px hsla(var(--primary), 0.75), /* Glow blooms and intensifies */
+    0px 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+.btn-glassy-krait:active {
+  transform: translateY(1px) scale(0.98);
+  background-position: left top;
+  transition: all 0.1s ease;
+  box-shadow: 
+    inset 0px 2px 5px rgba(0, 0, 0, 0.35),
+    0px 4px 12px -4px hsla(var(--primary), 0.45);
+}
+
+/* ── Frosted Inner Icon Box ── */
+.btn-glassy-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.05) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  box-shadow: 
+    inset 0px 1px 1px rgba(255, 255, 255, 0.45),
+    0px 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* ── Subtle Vertical Divider Line ── */
+.btn-glassy-divider {
+  width: 1px;
+  background: linear-gradient(
+    to bottom, 
+    rgba(255,255,255,0) 0%, 
+    rgba(255,255,255,0.2) 20%, 
+    rgba(255,255,255,0.2) 80%, 
+    rgba(255,255,255,0) 100%
+  );
+  margin: 6px 0;
+}
+
+/* ── Arrow Zone ── */
+.btn-glassy-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border-top-right-radius: 14px;
+  border-bottom-right-radius: 14px;
+  transition: background 0.2s ease;
+}
+
+.btn-glassy-arrow:hover {
+  background: rgba(0, 0, 0, 0.08); /* Minimal overlay on hover */
+}

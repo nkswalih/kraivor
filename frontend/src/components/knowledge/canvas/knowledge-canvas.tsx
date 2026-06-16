@@ -48,8 +48,9 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     offsetX: number;
     offsetY: number;
     startPositions: Record<string, Position>;
-    startArrowData: Record<string, [number, number][]>;
-  }>({ elementId: '', offsetX: 0, offsetY: 0, startPositions: {}, startArrowData: {} });
+    startArrowPts: Record<string, [number, number][]>;
+    startArrowCp: Record<string, Position>;
+  }>({ elementId: '', offsetX: 0, offsetY: 0, startPositions: {}, startArrowPts: {}, startArrowCp: {} });
   const selectionRef = useRef({ started: false, active: false, justSelected: false, startX: 0, startY: 0, endX: 0, endY: 0 });
   const selectionRectRef = useRef<HTMLDivElement | null>(null);
   const resizeRef = useRef({
@@ -197,11 +198,13 @@ export function KnowledgeCanvas({ spaceId }: Props) {
           const arrowData: ArrowElementData = JSON.parse(JSON.stringify(el.data)) as ArrowElementData;
           const { pointType, pointIndex, points, controlPoint } = arrowPointRef.current;
           if (pointType === 'control') {
-            arrowData.controlPoint = {
-              x: controlPoint!.x + dx,
-              y: controlPoint!.y + dy,
-            };
+            const newCp = { x: controlPoint!.x + dx, y: controlPoint!.y + dy };
+            arrowData.controlPoint = newCp;
             arrowData.arrowStyle = 'curved';
+            const midIdx = Math.floor((arrowData.points?.length ?? 0) / 2);
+            if (arrowData.points && midIdx > 0 && midIdx < arrowData.points.length - 1) {
+              arrowData.points[midIdx] = [newCp.x, newCp.y];
+            }
           } else {
             arrowData.points = points.map((p, i) =>
               i === pointIndex ? [p[0] + dx, p[1] + dy] as [number, number] : [p[0], p[1]] as [number, number]
@@ -261,13 +264,13 @@ export function KnowledgeCanvas({ spaceId }: Props) {
           const other = c.elements.find(ee => ee.id === id);
           if (!other) continue;
           if (other.type === 'arrow') {
-            const srcPts = dragRef.current.startArrowData[id];
+            const srcPts = dragRef.current.startArrowPts[id];
             if (!srcPts) continue;
             const otherData = other.data as Record<string, unknown>;
             const nd: Record<string, unknown> = { ...otherData, points: srcPts.map(([px, py]) => [px + totalDx, py + totalDy] as [number, number]) };
-            if (otherData.controlPoint) {
-              const cp = otherData.controlPoint as Position;
-              nd.controlPoint = { x: cp.x + totalDx, y: cp.y + totalDy };
+            const srcCp = dragRef.current.startArrowCp[id];
+            if (srcCp) {
+              nd.controlPoint = { x: srcCp.x + totalDx, y: srcCp.y + totalDy };
             }
             state.updateElement(spaceId, id, {
               position: { x: sp.x + totalDx, y: sp.y + totalDy },
@@ -640,14 +643,18 @@ export function KnowledgeCanvas({ spaceId }: Props) {
 
     const selectedIds = c.selectedElementIds.length > 0 ? c.selectedElementIds : [elementId];
     const startPositions: Record<string, Position> = {};
-    const startArrowData: Record<string, [number, number][]> = {};
+    const startArrowPts: Record<string, [number, number][]> = {};
+    const startArrowCp: Record<string, Position> = {};
     for (const id of selectedIds) {
       const selEl = c.elements.find(ee => ee.id === id);
       if (!selEl) continue;
       startPositions[id] = { x: selEl.position.x, y: selEl.position.y };
       if (selEl.type === 'arrow') {
-        const pts = (selEl.data as Record<string, unknown>).points as [number, number][] | undefined;
-        if (pts) startArrowData[id] = pts.map(p => [p[0], p[1]]);
+        const d = selEl.data as Record<string, unknown>;
+        const pts = d.points as [number, number][] | undefined;
+        if (pts) startArrowPts[id] = pts.map(p => [p[0], p[1]]);
+        const cp = d.controlPoint as Position | undefined;
+        if (cp) startArrowCp[id] = { x: cp.x, y: cp.y };
       }
     }
     dragRef.current = {
@@ -655,7 +662,8 @@ export function KnowledgeCanvas({ spaceId }: Props) {
       offsetX: worldX - el.position.x,
       offsetY: worldY - el.position.y,
       startPositions,
-      startArrowData,
+      startArrowPts,
+      startArrowCp,
     };
   };
 

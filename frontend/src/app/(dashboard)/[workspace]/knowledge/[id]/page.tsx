@@ -1,58 +1,96 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Edit3, Trash2, Loader2, ArrowLeft, Save, X } from 'lucide-react';
-import { knowledgeEndpoints } from '@/lib/api/endpoints';
-import { formatRelativeTime } from '@/lib/utils';
-import { SkeletonBlock, SkeletonLine } from '@/components/ui/skeletons';
+import { useKnowledgeDetail } from '@/lib/hooks/use-knowledge';
+import { useCanvasAutosave } from '@/lib/hooks/use-canvas';
+import { useKnowledgeStore } from '@/lib/stores/knowledge-store';
+import { KnowledgeCanvas } from '@/components/knowledge/canvas/knowledge-canvas';
+import { CanvasSidebar } from '@/components/knowledge/canvas/canvas-sidebar';
+import { BookOpen, Loader2, Save, ArrowLeft } from 'lucide-react';
+import type { CanvasState } from '@/types/knowledge';
+
+const CANVAS_ID_PREFIX = 'knowledge-';
 
 export default function KnowledgeDetailPage() {
   const params = useParams<{ id: string; workspace: string }>();
   const id = params?.id ?? '';
   const workspaceSlug = params?.workspace ?? '';
-  const queryClient = useQueryClient();
+  const spaceId = `${CANVAS_ID_PREFIX}${id}`;
 
-  const [editing, setEditing] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editDesc, setEditDesc] = useState('');
+  const initCanvas = useKnowledgeStore(s => s.initCanvas);
+  const setActiveSpace = useKnowledgeStore(s => s.setActiveSpace);
+  const isSaving = useKnowledgeStore(s => s.isSaving);
+  const lastSavedAt = useKnowledgeStore(s => s.lastSavedAt);
+  const dirtySpaceIds = useKnowledgeStore(s => s.dirtySpaceIds);
 
-  const { data: space, isLoading } = useQuery({
-    queryKey: ['knowledge', id],
-    queryFn: () => knowledgeEndpoints.get(id),
-    enabled: !!id,
-  });
+  const { data: space, isLoading } = useKnowledgeDetail(id || undefined);
 
-  const updateMut = useMutation({
-    mutationFn: (data: { name: string; description?: string }) =>
-      knowledgeEndpoints.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['knowledge', id] });
-      setEditing(false);
-    },
-  });
+  const workspaceId = space?.workspace_id ?? '';
 
-  const deleteMut = useMutation({
-    mutationFn: () => knowledgeEndpoints.delete(id),
-    onSuccess: () => {
-      window.location.href = `/${workspaceSlug}/knowledge`;
-    },
-  });
+  useCanvasAutosave(spaceId, id, workspaceId, space?.name, space?.description ?? null);
+
+  const canvasInitialized = useRef(false);
+  useEffect(() => {
+    if (!space || !id) return;
+    if (canvasInitialized.current) return;
+    canvasInitialized.current = true;
+    setActiveSpace(spaceId);
+    const existingCanvas = space.canvas_data as Partial<CanvasState> | undefined;
+    initCanvas(spaceId, {
+      elements: (existingCanvas?.elements as CanvasState['elements']) ?? [],
+      viewport: (existingCanvas?.viewport as CanvasState['viewport']) ?? { x: 0, y: 0, zoom: 1 },
+      gridEnabled: (existingCanvas as Record<string, unknown>)?.gridEnabled as boolean ?? true,
+      snapEnabled: (existingCanvas as Record<string, unknown>)?.snapEnabled as boolean ?? true,
+      gridSize: (existingCanvas as Record<string, unknown>)?.gridSize as number ?? 20,
+    });
+  }, [space, id, spaceId, setActiveSpace, initCanvas]);
+
+  useEffect(() => {
+    return () => {
+      canvasInitialized.current = false;
+      useKnowledgeStore.getState().destroyCanvas(spaceId);
+    };
+  }, [spaceId]);
+
+  const isDirty = dirtySpaceIds[spaceId] ?? false;
+
+  const saveIndicator = () => {
+    if (isSaving) {
+      return (
+        <span className="flex items-center gap-1.5 text-[11px] text-venom-yellow">
+          <Loader2 className="w-3 h-3 animate-spin" /> Saving...
+        </span>
+      );
+    }
+    if (isDirty) {
+      return (
+        <span className="flex items-center gap-1.5 text-[11px] text-text-tertiary">
+          Unsaved changes
+        </span>
+      );
+    }
+    if (lastSavedAt) {
+      return (
+        <span className="flex items-center gap-1.5 text-[11px] text-green-400">
+          <Save className="w-3 h-3" /> Saved
+        </span>
+      );
+    }
+    return null;
+  };
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-full animate-fade-up">
+      <div className="flex flex-col h-full">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div className="flex items-center gap-3">
-            <SkeletonBlock className="w-8 h-8 rounded" />
-            <SkeletonLine className="w-40 h-5" />
+            <div className="w-8 h-8 rounded bg-krait-surface3 animate-pulse" />
+            <div className="w-40 h-5 rounded bg-krait-surface3 animate-pulse" />
           </div>
         </div>
-        <div className="flex-1 p-6 space-y-4">
-          <SkeletonBlock className="w-full h-24 rounded-lg" />
-          <SkeletonBlock className="w-full h-32 rounded-lg" />
-          <SkeletonBlock className="w-full h-40 rounded-lg" />
+        <div className="flex-1 flex items-center justify-center bg-krait-void">
+          <Loader2 className="w-6 h-6 text-venom-yellow animate-spin" />
         </div>
       </div>
     );
@@ -71,9 +109,8 @@ export default function KnowledgeDetailPage() {
   }
 
   return (
-    <div className="flex flex-col h-full animate-fade-up">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-krait-surface1 shrink-0">
         <div className="flex items-center gap-3">
           <a
             href={`/${workspaceSlug}/knowledge`}
@@ -81,103 +118,24 @@ export default function KnowledgeDetailPage() {
           >
             <ArrowLeft className="w-4 h-4" />
           </a>
-          {editing ? (
-            <div className="flex items-center gap-2">
-              <input
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="px-2 py-1 bg-krait-surface3 border border-border rounded text-[15px] font-medium text-foreground focus:outline-none focus:border-venom-yellow/50"
-                autoFocus
-              />
-            </div>
-          ) : (
-            <h1 className="text-lg font-medium text-foreground">{space.name}</h1>
-          )}
+          <div className="w-7 h-7 rounded-lg bg-venom-yellow/10 flex items-center justify-center">
+            <BookOpen className="w-3.5 h-3.5 text-venom-yellow" />
+          </div>
+          <div>
+            <h1 className="text-[14px] font-medium text-foreground leading-tight">{space.name}</h1>
+            {space.description && (
+              <p className="text-[11px] text-text-tertiary leading-tight">{space.description}</p>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          {editing ? (
-            <>
-              <button
-                onClick={() => updateMut.mutate({ name: editName, description: editDesc || undefined })}
-                disabled={updateMut.isPending || !editName.trim()}
-                className="px-3 py-1.5 bg-venom-yellow text-black text-[12px] font-medium rounded-lg hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-1"
-              >
-                {updateMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                Save
-              </button>
-              <button
-                onClick={() => setEditing(false)}
-                className="p-1.5 text-text-tertiary hover:text-foreground transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => { setEditName(space.name); setEditDesc(space.description ?? ''); setEditing(true); }}
-                className="p-1.5 text-text-tertiary hover:text-foreground transition-colors"
-                title="Edit"
-              >
-                <Edit3 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => { if (confirm('Delete this knowledge space?')) deleteMut.mutate(); }}
-                disabled={deleteMut.isPending}
-                className="p-1.5 text-text-tertiary hover:text-red-400 transition-colors"
-                title="Delete"
-              >
-                {deleteMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              </button>
-            </>
-          )}
+          {saveIndicator()}
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* Description */}
-        <div className="rounded-lg border border-border bg-krait-surface1 p-4">
-          <h4 className="text-[12px] font-semibold tracking-wider text-text-tertiary uppercase mb-2">Description</h4>
-          {editing ? (
-            <textarea
-              value={editDesc}
-              onChange={(e) => setEditDesc(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 bg-krait-surface3 border border-border rounded-lg text-[13px] text-foreground placeholder:text-text-tertiary focus:outline-none focus:border-venom-yellow/50 resize-none"
-              placeholder="Add a description..."
-            />
-          ) : (
-            <p className="text-[13px] text-text-secondary whitespace-pre-wrap">
-              {space.description || 'No description added yet.'}
-            </p>
-          )}
-        </div>
-
-        {/* Metadata */}
-        <div className="rounded-lg border border-border bg-krait-surface1 p-4">
-          <h4 className="text-[12px] font-semibold tracking-wider text-text-tertiary uppercase mb-3">Details</h4>
-          <div className="space-y-2 text-[13px]">
-            <div className="flex justify-between">
-              <span className="text-text-tertiary">Created</span>
-              <span className="text-foreground">{formatRelativeTime(space.created_at)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-text-tertiary">Last updated</span>
-              <span className="text-foreground">{formatRelativeTime(space.updated_at)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Canvas area (placeholder for future) */}
-        <div className="rounded-lg border border-border bg-krait-surface1 p-4">
-          <h4 className="text-[12px] font-semibold tracking-wider text-text-tertiary uppercase mb-2">Canvas</h4>
-          {space.canvas_data ? (
-            <pre className="text-[12px] text-text-secondary">{JSON.stringify(space.canvas_data, null, 2)}</pre>
-          ) : (
-            <p className="text-[13px] text-text-tertiary">No canvas data yet.</p>
-          )}
-        </div>
+      <div className="flex flex-1 overflow-hidden">
+        <KnowledgeCanvas spaceId={spaceId} />
+        <CanvasSidebar spaceId={spaceId} />
       </div>
     </div>
   );

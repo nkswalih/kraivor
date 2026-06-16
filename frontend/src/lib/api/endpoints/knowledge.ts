@@ -13,9 +13,17 @@ export const knowledgeEndpoints = {
   get: (knowledgePk: string) =>
     coreApi.get<KnowledgeSpace>(`/knowledge/${knowledgePk}/`),
 
-  update: (knowledgePk: string, payload: CreateKnowledgePayload) =>
+  update: (knowledgePk: string, payload: Partial<CreateKnowledgePayload>) =>
     coreApi.put<KnowledgeSpace>(`/knowledge/${knowledgePk}/`, payload),
 
   delete: (knowledgePk: string) =>
     coreApi.delete<void>(`/knowledge/${knowledgePk}/`),
+
+  getVersions: (knowledgePk: string) =>
+    coreApi.get<Array<{ id: string; version_number: number; created_at: string; created_by: string; description: string | null }>>(
+      `/knowledge/${knowledgePk}/versions/`
+    ),
+
+  restoreVersion: (knowledgePk: string, versionPk: string) =>
+    coreApi.post<KnowledgeSpace>(`/knowledge/${knowledgePk}/versions/${versionPk}/restore/`),
 };

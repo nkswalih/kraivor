@@ -32,17 +32,24 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
   workspaceId: null,
   workspaces: [],
 
-  setAuth: (user: User, accessToken: string) =>
+  setAuth: (user: User, accessToken: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('kraivor_access_token', accessToken);
+    }
     set({
       user,
       accessToken,
       isAuthenticated: true,
       isLoading: false,
       mfaToken: null,
-    }),
+    });
+  },
 
   clearAuth: () => {
     clearAuthCookie();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('kraivor_access_token');
+    }
     set({
       user: null,
       accessToken: null,

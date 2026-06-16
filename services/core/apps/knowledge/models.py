@@ -92,3 +92,139 @@ class KnowledgeSpace(TimestampedModel):
 
     def __str__(self):
         return f"KnowledgeSpace({self.name!r}@{self.workspace.slug})"
+
+
+class KnowledgeAsset(TimestampedModel):
+    """
+    File reference scoped to a knowledge space.
+
+    Stores references to files uploaded by users — images, PDFs, and other
+    binary assets placed on the canvas. Actual bytes live in S3/MinIO;
+    this model tracks the metadata and access URL.
+
+    file_type: Maps to MIME category — 'image', 'pdf', 'file', 'code'.
+               The frontend uses this to decide how to render the asset.
+    """
+
+    knowledge_space = models.ForeignKey(
+        KnowledgeSpace,
+        on_delete=models.CASCADE,
+        related_name="assets",
+        db_index=True,
+    )
+    file_name = models.CharField(
+        max_length=512,
+        help_text="Original file name including extension.",
+    )
+    file_size = models.BigIntegerField(
+        help_text="File size in bytes.",
+    )
+    file_type = models.CharField(
+        max_length=32,
+        choices=[
+            ("image", "Image"),
+            ("pdf", "PDF"),
+            ("file", "File"),
+            ("code", "Code"),
+        ],
+        default="file",
+    )
+    mime_type = models.CharField(
+        max_length=127,
+        help_text="MIME type (e.g. image/png, application/pdf).",
+    )
+    storage_key = models.CharField(
+        max_length=1024,
+        unique=True,
+        help_text="S3/MinIO object key used to retrieve the file.",
+    )
+    url = models.URLField(
+        max_length=2048,
+        null=True,
+        blank=True,
+        help_text="Pre-signed or public URL for direct access.",
+    )
+    uploaded_by = models.UUIDField(
+        help_text="identity.users.id of the user who uploaded this file.",
+    )
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Arbitrary metadata (e.g. image dimensions, page count).",
+    )
+
+    class Meta:
+        db_table = "knowledge_assets"
+        indexes = [
+            models.Index(
+                fields=["knowledge_space", "file_type"],
+                name="idx_ka_space_type",
+            ),
+            models.Index(
+                fields=["uploaded_by"],
+                name="idx_ka_uploaded_by",
+            ),
+        ]
+        verbose_name = "Knowledge Asset"
+        verbose_name_plural = "Knowledge Assets"
+
+    def __str__(self):
+        return f"KnowledgeAsset({self.file_name!r})"
+
+
+class KnowledgeSpaceVersion(TimestampedModel):
+    """
+    Immutable canvas snapshot for undo/redo history.
+
+    Each time the frontend autosaves the canvas, the service layer MAY
+    create a new version if the canvas_data has changed since the last
+    version. The frontend can request a specific version by number to
+    restore canvas state.
+
+    version_number: Monotonically increasing within a knowledge space.
+    canvas_snapshot: Deep copy of canvas_data at the point of save.
+    created_by: User who triggered the save.
+    """
+
+    knowledge_space = models.ForeignKey(
+        KnowledgeSpace,
+        on_delete=models.CASCADE,
+        related_name="versions",
+        db_index=True,
+    )
+    version_number = models.PositiveIntegerField(
+        help_text="Incremental version number within this knowledge space.",
+    )
+    canvas_snapshot = models.JSONField(
+        help_text="Deep copy of canvas_data at this version.",
+    )
+    created_by = models.UUIDField(
+        help_text="identity.users.id of the user who triggered this save.",
+    )
+    description = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="Optional human-readable label (e.g. 'Added architecture diagram').",
+    )
+
+    class Meta:
+        db_table = "knowledge_space_versions"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["knowledge_space", "version_number"],
+                name="uq_ksv_version",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["knowledge_space", "-version_number"],
+                name="idx_ksv_version_desc",
+            ),
+        ]
+        ordering = ["-version_number"]
+        verbose_name = "Knowledge Space Version"
+        verbose_name_plural = "Knowledge Space Versions"
+
+    def __str__(self):
+        return f"KnowledgeSpaceVersion({self.knowledge_space.name!r} v{self.version_number})"

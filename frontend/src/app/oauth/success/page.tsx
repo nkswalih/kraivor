@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { setAuthCookie } from '@/lib/auth-utils';
 import { config } from '@/config';
+import { workspaceEndpoints } from '@/lib/api/endpoints';
 import type { User } from '@/types/auth';
 
 type Stage = 'processing' | 'redirecting' | 'error';
@@ -14,7 +15,6 @@ export default function OAuthSuccessPage() {
   const searchParams = useSearchParams();
   const setAuth = useAuthStore(s => s.setAuth);
   const setLoading = useAuthStore(s => s.setLoading);
-  const initWorkspace = useAuthStore(s => s.initWorkspace);
   const [stage, setStage] = useState<Stage>('processing');
   const [error, setError] = useState('');
   const handled = useRef(false);
@@ -82,8 +82,23 @@ export default function OAuthSuccessPage() {
         setAuth(user, accessToken);
         setAuthCookie();
 
-        await initWorkspace();
-        const slug = useAuthStore.getState().workspaceSlug;
+        // Fetch workspaces directly — avoids toggling global isLoading
+        // which would cause AuthProvider to show its loading screen over this page
+        let slug: string | null = null;
+        try {
+          const page = await workspaceEndpoints.list(20);
+          const ws = page.results?.[0];
+          if (ws) {
+            slug = ws.slug;
+            useAuthStore.setState({
+              workspaceSlug: ws.slug,
+              workspaceId: ws.id,
+              workspaces: page.results,
+            });
+          }
+        } catch (wsErr) {
+          console.error('Failed to fetch workspaces after OAuth:', wsErr);
+        }
 
         setStage('redirecting');
 
@@ -102,7 +117,7 @@ export default function OAuthSuccessPage() {
     };
 
     completeLogin();
-  }, []);
+  }, [searchParams]);
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-krait-void">

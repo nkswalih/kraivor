@@ -85,6 +85,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     knowledge_space = KnowledgeSpaceMinimalSerializer(read_only=True)
     task_count = serializers.IntegerField(read_only=True, default=0)
     blocked_task_count = serializers.IntegerField(read_only=True, default=0)
+    done_task_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = Project
@@ -92,7 +93,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "id", "name", "description", "icon", "color",
             "status", "visibility", "owner_id", "created_by",
             "repository", "knowledge_space",
-            "task_count", "blocked_task_count",
+            "task_count", "blocked_task_count", "done_task_count",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_by", "created_at", "updated_at"]

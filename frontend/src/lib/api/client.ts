@@ -212,10 +212,11 @@ async function coreRequest<T>(path: string, init: RequestInit = {}): Promise<T> 
   const base = process.env.NEXT_PUBLIC_API_URL ?? '/api';
   const token = getJwt();
 
+  const isFormData = init.body instanceof FormData;
   let res = await fetch(`${base}${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
     },
@@ -228,7 +229,7 @@ async function coreRequest<T>(path: string, init: RequestInit = {}): Promise<T> 
       res = await fetch(`${base}${path}`, {
         ...init,
         headers: {
-          'Content-Type': 'application/json',
+          ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
           Authorization: `Bearer ${newToken}`,
           ...init.headers,
         },
@@ -255,6 +256,8 @@ async function coreRequest<T>(path: string, init: RequestInit = {}): Promise<T> 
 
   return body as T;
 }
+
+export { coreRequest };
 
 export const coreApi = {
   get:    <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'GET', ...init }),

@@ -140,6 +140,20 @@ class AuthApi {
       const user = await this.getCurrentUser();
       useAuthStore.getState().setAuth(user, token);
     } catch {
+      // If refresh fails (e.g. no session cookie), try recovering token from localStorage
+      // so OAuth-logged-in users don't get logged out on page refresh
+      const storedToken =
+        typeof window !== 'undefined' ? localStorage.getItem('kraivor_access_token') : null;
+      if (storedToken) {
+        try {
+          useAuthStore.setState({ accessToken: storedToken, isLoading: false });
+          const user = await this.getCurrentUser();
+          useAuthStore.getState().setAuth(user, storedToken);
+          return;
+        } catch {
+          // stored token is invalid/expired — fall through to clearAuth
+        }
+      }
       useAuthStore.getState().clearAuth();
     }
   }

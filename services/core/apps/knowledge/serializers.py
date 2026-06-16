@@ -1,37 +1,9 @@
-"""
-Knowledge Space serializers — KRV-022 (Knowledge Workspace / Infinite Canvas).
-
-Serializer contract:
-  - Validate and coerce input
-  - Never enforce authorization (that's permissions + service layer)
-  - Never call external services (that's the service layer)
-  - Output shape is the API contract — change carefully
-
-KnowledgeSpaceListSerializer   — list responses (no canvas_data; can be large)
-KnowledgeSpaceSerializer       — detail / create responses (full, with canvas_data)
-KnowledgeSpaceCreateSerializer — POST input
-KnowledgeSpaceUpdateSerializer — PUT input
-"""
-
 from rest_framework import serializers
 
-from .models import KnowledgeSpace
-
-# ─── Output Serializers ───────────────────────────────────────────────────────
+from .models import KnowledgeAsset, KnowledgeSpace
 
 
 class KnowledgeSpaceListSerializer(serializers.ModelSerializer):
-    """
-    Lightweight serializer for list views.
-
-    canvas_data is intentionally excluded: the canvas state can be arbitrarily
-    large (entire infinite canvas) and is only needed when the user opens a
-    specific space. Clients fetch the full representation via GET /knowledge/{id}/.
-
-    Mirrors the WorkspaceListSerializer pattern (no members list) vs
-    WorkspaceDetailSerializer (full members list).
-    """
-
     workspace_id = serializers.UUIDField()
 
     class Meta:
@@ -50,15 +22,6 @@ class KnowledgeSpaceListSerializer(serializers.ModelSerializer):
 
 
 class KnowledgeSpaceSerializer(serializers.ModelSerializer):
-    """
-    Full knowledge space representation including canvas_data.
-
-    Returned by:
-      - POST /workspaces/{id}/knowledge/    (create response)
-      - GET  /knowledge/{id}/               (retrieve)
-      - PUT  /knowledge/{id}/               (update response)
-    """
-
     workspace_id = serializers.UUIDField()
 
     class Meta:
@@ -77,18 +40,7 @@ class KnowledgeSpaceSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-# ─── Input Serializers ────────────────────────────────────────────────────────
-
-
 class KnowledgeSpaceCreateSerializer(serializers.Serializer):
-    """
-    POST /workspaces/{id}/knowledge/
-
-    name is required — a knowledge space must have a human-readable label.
-    description and canvas_data are optional at creation time; the canvas
-    starts empty and fills as the team adds items.
-    """
-
     name = serializers.CharField(
         max_length=255, help_text="Name for this canvas (e.g. 'Authentication System')."
     )
@@ -121,16 +73,6 @@ class KnowledgeSpaceCreateSerializer(serializers.Serializer):
 
 
 class KnowledgeSpaceUpdateSerializer(serializers.Serializer):
-    """
-    PUT /knowledge/{id}/
-
-    PUT semantics: name is always required.
-    description and canvas_data are optional — if absent from the request,
-    the existing values are preserved. This is a practical concession for
-    canvas_data which can be arbitrarily large; clients should not be
-    forced to round-trip the full canvas state when only renaming a space.
-    """
-
     name = serializers.CharField(
         max_length=255, help_text="Updated name for this canvas."
     )
@@ -161,3 +103,31 @@ class KnowledgeSpaceUpdateSerializer(serializers.Serializer):
                 "canvas_data must be a JSON object, not an array or scalar."
             )
         return value
+
+
+class KnowledgeAssetInputSerializer(serializers.Serializer):
+    file = serializers.FileField(
+        help_text="The file to upload (image, PDF, or document).",
+    )
+
+
+class KnowledgeAssetSerializer(serializers.ModelSerializer):
+    knowledge_space_id = serializers.UUIDField(source="knowledge_space_id")
+
+    class Meta:
+        model = KnowledgeAsset
+        fields = [
+            "id",
+            "knowledge_space_id",
+            "file_name",
+            "file_size",
+            "file_type",
+            "mime_type",
+            "storage_key",
+            "url",
+            "uploaded_by",
+            "metadata",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = fields

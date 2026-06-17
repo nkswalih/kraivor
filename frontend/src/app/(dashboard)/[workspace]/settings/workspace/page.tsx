@@ -45,7 +45,7 @@ export default function WorkspaceSettingsPage() {
                 onClick={() => { setSelectedId(ws.id); setTab('settings'); }}
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                   active
-                    ? 'bg-[#6366F1] text-white shadow-lg shadow-[#6366F1]/20'
+                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
                     : 'bg-[#111113] border border-[#27272A] text-[#A1A1AA] hover:border-[#6366F1]/40 hover:text-[#FAFAFA]'
                 }`}
               >
@@ -189,7 +189,7 @@ function WorkspaceDetail({
             <button
               onClick={() => updateMut.mutate({ name, description })}
               disabled={updateMut.isPending || !name.trim() || !hasChanges}
-              className="bg-[#6366F1] hover:bg-[#4F46E5] text-white font-medium py-2.5 px-6 rounded-xl transition-colors text-sm disabled:opacity-50 flex items-center gap-2"
+              className="bg-primary hover:bg-primary-light text-white font-medium py-2.5 px-6 rounded-xl transition-colors text-sm disabled:opacity-50 flex items-center gap-2"
             >
               {updateMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               {updateMut.isPending ? 'Saving...' : 'Save Changes'}
@@ -312,7 +312,7 @@ function TeamSection({
             <button
               onClick={() => inviteMut.mutate()}
               disabled={!inviteEmail || inviteMut.isPending}
-              className="bg-[#6366F1] hover:bg-[#4F46E5] text-white font-medium py-2.5 px-5 rounded-xl transition-colors text-sm disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+              className="bg-primary hover:bg-primary-light text-white font-medium py-2.5 px-5 rounded-xl transition-colors text-sm disabled:opacity-50 flex items-center gap-1.5 shrink-0"
             >
               {inviteMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
               Invite
@@ -386,7 +386,7 @@ function TeamSection({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-[14px] font-medium text-[#FAFAFA] truncate">{name}</p>
-                    {isMe && <span className="text-[9px] text-[#6366F1] bg-[#6366F1]/10 px-1.5 py-0.5 rounded font-medium">You</span>}
+                    {isMe && <span className="text-[9px] text-primary-light bg-[#6366F1]/10 px-1.5 py-0.5 rounded font-medium">You</span>}
                   </div>
                 </div>
                 <select

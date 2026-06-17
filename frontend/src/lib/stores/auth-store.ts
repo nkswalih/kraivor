@@ -3,6 +3,8 @@ import type { User, AuthState } from '@/types/auth';
 import { clearAuthCookie } from '@/lib/auth-utils';
 import { workspaceEndpoints } from '@/lib/api/endpoints';
 
+const WORKSPACE_SLUG_KEY = 'kraivor_workspace_slug';
+
 interface AuthActions {
   setAuth: (user: User, accessToken: string) => void;
   clearAuth: () => void;
@@ -49,6 +51,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
     clearAuthCookie();
     if (typeof window !== 'undefined') {
       localStorage.removeItem('kraivor_access_token');
+      localStorage.removeItem(WORKSPACE_SLUG_KEY);
     }
     set({
       user: null,
@@ -66,7 +69,9 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
     set({ isLoading: true });
     try {
       const page = await workspaceEndpoints.list(20);
-      const ws = page.results?.[0];
+      const savedSlug = typeof window !== 'undefined' ? localStorage.getItem(WORKSPACE_SLUG_KEY) : null;
+      const target = savedSlug ? page.results?.find((w: any) => w.slug === savedSlug) : null;
+      const ws = target ?? page.results?.[0];
       if (ws) {
         set({
           workspaceSlug: ws.slug,
@@ -74,6 +79,9 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
           workspaces: page.results,
           isLoading: false,
         });
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(WORKSPACE_SLUG_KEY, ws.slug);
+        }
         return ws.slug;
       }
       set({ workspaceSlug: null, workspaceId: null, workspaces: [], isLoading: false });
@@ -83,7 +91,12 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
     return null;
   },
 
-  setWorkspace: (id: string, slug: string) => set({ workspaceId: id, workspaceSlug: slug }),
+  setWorkspace: (id: string, slug: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(WORKSPACE_SLUG_KEY, slug);
+    }
+    set({ workspaceId: id, workspaceSlug: slug });
+  },
 
   updateWorkspaceInStore: (id: string, updates) =>
     set(state => ({

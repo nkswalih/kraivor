@@ -387,3 +387,8 @@
 .btn-glassy-arrow:hover {
   background: rgba(0, 0, 0, 0.08); /* Minimal overlay on hover */
 }
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}

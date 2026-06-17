@@ -1,10 +1,11 @@
 'use client';
 
+import React, { useRef, useState, useEffect } from 'react';
 import { useKnowledgeStore } from '@/lib/stores/knowledge-store';
 import { PropertiesPanel } from '../panels/properties-panel';
 import { LayersPanel } from '../panels/layers-panel';
 import { AssetsPanel } from '../panels/assets-panel';
-import { Settings2, Layers, Paperclip, Sparkles } from 'lucide-react';
+import { Settings2, Layers, Paperclip, Sparkles, ChevronRight } from 'lucide-react';
 
 interface Props {
   spaceId: string;
@@ -23,6 +24,52 @@ export function CanvasSidebar({ spaceId }: Props) {
   const sidebarWidth = useKnowledgeStore(s => s.sidebarWidth);
   const showSidebar = useKnowledgeStore(s => s.showSidebar);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showArrow, setShowArrow] = useState(false);
+
+  // Check if tabs overflow and if we can scroll right
+  const checkScroll = () => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    const canScrollRight = 
+      el.scrollWidth > el.clientWidth && 
+      el.scrollLeft + el.clientWidth < el.scrollWidth - 8;
+      
+    setShowArrow(canScrollRight);
+  };
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    checkScroll();
+    el.addEventListener('scroll', checkScroll);
+    window.addEventListener('resize', checkScroll);
+
+    return () => {
+      el.removeEventListener('scroll', checkScroll);
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, [sidebarWidth, showSidebar, activePanel]);
+
+  // Fallback observer in case sidebar dynamically changes width without window resize
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(() => checkScroll());
+    observer.observe(el);
+
+    return () => observer.disconnect();
+  }, []);
+
+  const scrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: 80, behavior: 'smooth' });
+    }
+  };
+
   if (!showSidebar) return null;
 
   return (
@@ -30,23 +77,43 @@ export function CanvasSidebar({ spaceId }: Props) {
       className="border-l border-border bg-krait-surface1 flex flex-col shrink-0"
       style={{ width: sidebarWidth }}
     >
+
       {/* Tab bar */}
-      <div className="flex border-b border-border">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActivePanel(tab.id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-medium transition-colors ${
-              activePanel === tab.id
-                ? 'text-venom-yellow border-b-2 border-venom-yellow bg-venom-yellow/5'
-                : 'text-text-tertiary hover:text-foreground hover:bg-krait-surface2'
-            }`}
-          >
-            <tab.icon className="w-3.5 h-3.5" />
-            {tab.label}
-          </button>
-        ))}
+      <div className="relative flex items-center border-b border-border h-10 w-full bg-krait-surface1">
+        {/* Scrollable track without a scrollbar */}
+        <div 
+          ref={scrollContainerRef}
+          className="flex items-center h-full w-full overflow-x-auto no-scrollbar scroll-smooth px-2 gap-1"
+        >
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActivePanel(tab.id)}
+              className={`flex-none flex items-center justify-center gap-1.5 px-3 h-full text-[11px] font-medium border-b-2 transition-colors ${
+                activePanel === tab.id
+                  ? 'text-venom-yellow border-venom-yellow bg-venom-yellow/5'
+                  : 'text-text-tertiary border-transparent hover:text-foreground hover:bg-krait-surface2'
+              }`}
+            >
+              <tab.icon className="w-3.5 h-3.5" />
+              <span className="whitespace-nowrap">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Dynamic Arrow Action Element with Gradient Fade Background */}
+        <button
+          onClick={scrollRight}
+          className={`absolute right-0 top-0 bottom-0 pl-6 pr-2 flex items-center justify-center bg-gradient-to-l from-krait-surface1 via-krait-surface1/90 to-transparent text-text-tertiary hover:text-foreground transition-all duration-300 ${
+            showArrow ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+        >
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
       </div>
+
+
+
 
       {/* Panel content */}
       <div className="flex-1 overflow-y-auto">

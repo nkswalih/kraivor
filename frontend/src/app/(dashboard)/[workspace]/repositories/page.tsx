@@ -40,7 +40,7 @@ export default function RepositoriesPage() {
         </h1>
         <button
           onClick={() => setShowConnect(true)}
-          className="btn-shimmer text-text-inverse text-[12px] font-medium py-1.5 px-3 rounded flex items-center gap-1.5"
+          className="bg-venom-yellow hover:bg-primary-light text-black text-[12px] font-medium py-1.5 px-3 rounded flex items-center gap-1.5"
         >
           <Plus className="w-3.5 h-3.5" /> Connect Repo
         </button>

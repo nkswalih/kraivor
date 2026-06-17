@@ -107,7 +107,7 @@ export const useKnowledgeStore = create<KnowledgeStore>((set, get) => ({
   selectedTool: 'select',
   subTool: 'rectangle',
   activePanel: 'properties',
-  sidebarWidth: 280,
+  sidebarWidth: 300,
   showSidebar: true,
   showMinimap: true,
   editingElementId: null,

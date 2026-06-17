@@ -90,11 +90,8 @@ export default function OAuthSuccessPage() {
           const ws = page.results?.[0];
           if (ws) {
             slug = ws.slug;
-            useAuthStore.setState({
-              workspaceSlug: ws.slug,
-              workspaceId: ws.id,
-              workspaces: page.results,
-            });
+        useAuthStore.setState({ workspaces: page.results });
+        useAuthStore.getState().setWorkspace(ws.id, ws.slug);
           }
         } catch (wsErr) {
           console.error('Failed to fetch workspaces after OAuth:', wsErr);

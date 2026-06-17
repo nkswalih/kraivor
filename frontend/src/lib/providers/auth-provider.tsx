@@ -53,11 +53,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (initialized.current) return;
     initialized.current = true;
     authApi.refreshSession().then(() => {
-      initWorkspace();
+      initWorkspace().then(() => {
+        const pathSegments = pathname.split('/').filter(Boolean);
+        const slugFromUrl = pathSegments[0];
+        if (slugFromUrl && !isPublicRoute(pathname) && !isAuthRedirectRoute(pathname)) {
+          const state = useAuthStore.getState();
+          if (state.workspaceSlug !== slugFromUrl && state.workspaces.length > 0) {
+            const ws = state.workspaces.find((w: any) => w.slug === slugFromUrl);
+            if (ws) {
+              state.setWorkspace(ws.id, ws.slug);
+            }
+          }
+        }
+      });
     }).finally(() => {
       sessionReady.current = true;
     });
-  }, [initWorkspace]);
+  }, [initWorkspace, pathname]);
 
   useEffect(() => {
     if (isLoading) return;

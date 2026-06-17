@@ -67,7 +67,7 @@ export default function SettingsPage() {
                   className={cn(
                     "flex items-center gap-2 px-3 py-2 rounded-[6px] border transition-colors text-sm font-medium",
                     isActive
-                      ? "border-[#6366F1] bg-[#6366F1]/10 text-[#FAFAFA]"
+                      ? "border-primary-light bg-primary-dark/10 text-[#FAFAFA]"
                       : "border-[#27272A] text-[#A1A1AA] hover:border-[#A1A1AA]/50"
                   )}
                 >
@@ -105,7 +105,7 @@ export default function SettingsPage() {
               <button
                 onClick={handlePasswordChange}
                 disabled={!currentPassword || !newPassword || newPassword !== confirmPassword}
-                className="bg-[#6366F1] hover:bg-[#4F46E5] text-white font-medium py-2 px-4 rounded-[6px] transition-colors text-sm disabled:opacity-50"
+                className="bg-primary hover:bg-primary-light text-white font-medium py-2 px-4 rounded-[6px] transition-colors text-sm disabled:opacity-50"
               >
                 Update Password
               </button>

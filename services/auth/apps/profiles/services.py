@@ -1,7 +1,6 @@
 import logging
 
-from django.db.models import F, Q
-
+from django.db.models import Q
 from profiles.models import Profile, UserFollow
 
 logger = logging.getLogger(__name__)

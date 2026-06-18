@@ -1,12 +1,8 @@
-import uuid
 
 import pytest
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient
-
 from profiles.models import UserFollow
-from profiles.tests.factories import ProfileFactory, UserFactory
+from rest_framework import status
 
 
 @pytest.mark.django_db

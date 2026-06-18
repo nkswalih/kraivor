@@ -4,22 +4,13 @@ import uuid
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.utils import timezone
-
-from rest_framework import status
-from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
 from profiles.constants import (
     ALLOWED_IMAGE_TYPES,
-    AVATAR_KEY_PATTERN,
     AVATAR_MAX_BYTES,
-    BANNER_KEY_PATTERN,
     BANNER_MAX_BYTES,
-    CDN_BASE_URL,
 )
 from profiles.events import publish_profile_updated
+from profiles.models import Profile
 from profiles.permissions import IsAuthenticatedOrReadOnly
 from profiles.serializers import (
     FollowerSerializer,
@@ -27,8 +18,12 @@ from profiles.serializers import (
     ProfileSerializer,
     UpdateProfileSerializer,
 )
-from profiles.models import Profile
 from profiles.services import ProfileService, ReputationService
+from rest_framework import status
+from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 logger = logging.getLogger(__name__)
 

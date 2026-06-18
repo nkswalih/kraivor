@@ -1,7 +1,4 @@
 import pytest
-from django.db.models import F
-
-from profiles.models import Profile
 from profiles.tasks import apply_reputation_event
 from profiles.tests.factories import ProfileFactory
 

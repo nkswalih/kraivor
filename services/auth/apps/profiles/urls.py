@@ -1,10 +1,10 @@
 from django.urls import path
 
 from .views import (
-    FollowStatusView,
-    FollowView,
     FollowerListView,
     FollowingListView,
+    FollowStatusView,
+    FollowView,
     LeaderboardView,
     MyProfileView,
     ProfileDetailView,

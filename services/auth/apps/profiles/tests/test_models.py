@@ -1,0 +1,61 @@
+import pytest
+from django.db import IntegrityError
+from profiles.models import Profile, UserFollow
+from profiles.tests.factories import FollowFactory, ProfileFactory
+
+
+@pytest.mark.django_db
+class TestProfileModel:
+    def test_create_profile(self):
+        profile = ProfileFactory()
+        assert profile.username
+        assert profile.display_name
+        assert profile.reputation_score == 0
+        assert profile.followers_count == 0
+        assert profile.following_count == 0
+
+    def test_unique_username(self):
+        ProfileFactory(username="unique")
+        with pytest.raises(IntegrityError):
+            ProfileFactory(username="unique")
+
+    def test_one_to_one_user(self, user):
+        with pytest.raises(IntegrityError):
+            Profile.objects.create(user=user, username="test")
+
+    def test_soft_delete(self, profile):
+        profile.soft_delete()
+        profile.refresh_from_db()
+        assert profile.is_deleted
+        assert profile.deleted_at is not None
+
+    def test_active_manager_excludes_deleted(self, profile):
+        username = profile.username
+        profile.soft_delete()
+        assert Profile.objects.filter(username=username).count() == 0
+
+    def test_str(self):
+        profile = ProfileFactory(username="testuser")
+        assert str(profile) == "Profile(testuser)"
+
+
+@pytest.mark.django_db
+class TestUserFollowModel:
+    def test_create_follow(self):
+        follow = FollowFactory()
+        assert follow.follower is not None
+        assert follow.following is not None
+
+    def test_unique_follow(self):
+        follow = FollowFactory()
+        with pytest.raises(IntegrityError):
+            UserFollow.objects.create(
+                follower=follow.follower, following=follow.following
+            )
+
+    def test_self_follow_allowed_by_model(self, user):
+        UserFollow.objects.create(follower=user, following=user)
+
+    def test_str(self):
+        follow = FollowFactory()
+        assert str(follow).startswith("UserFollow(")

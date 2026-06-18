@@ -193,3 +193,8 @@ REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = [
 # =============================================================================
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
+
+# =============================================================================
+# STORAGE - Development (local filesystem)
+# =============================================================================
+DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"

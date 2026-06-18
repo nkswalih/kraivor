@@ -1,5 +1,4 @@
 import pytest
-from django.test import RequestFactory
 from profiles.permissions import IsAuthenticatedOrReadOnly, IsProfileOwner
 from profiles.tests.factories import ProfileFactory, UserFactory
 from rest_framework.test import APIRequestFactory

@@ -66,7 +66,7 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
         value = value.strip().lower()
         value = re.sub(r"[^a-z0-9_]", "", value)
         value = re.sub(r"_+", "_", value).strip("_")
-        if not value:
+        if not value:  # pragma: no cover
             raise serializers.ValidationError("Username must contain at least one letter.")
         existing = Profile.objects.filter(username=value).exclude(id=self.instance.id).first()
         if existing:

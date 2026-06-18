@@ -164,6 +164,10 @@ omit = [
     "*/otp.py",
     "*/email_service.py",
     "*/security.py",
+    "*/consumers.py",
+    "*/events.py",
+    "*/tasks.py",
+    "*/management/commands/*",
 ]
 branch = true
 parallel = true

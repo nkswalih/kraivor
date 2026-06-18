@@ -2,7 +2,6 @@ import logging
 
 from celery import shared_task
 from django.db.models import F
-
 from profiles.models import Profile
 
 logger = logging.getLogger(__name__)
@@ -23,4 +22,4 @@ def apply_reputation_event(self, user_id: str, event_type: str, delta: int):
         )
     except Exception as exc:
         logger.exception("reputation.apply_failed", extra={"user_id": user_id, "event_type": event_type})
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc

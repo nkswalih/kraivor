@@ -1,8 +1,7 @@
 import pytest
 from django.db import IntegrityError
-
 from profiles.models import Profile, UserFollow
-from profiles.tests.factories import FollowFactory, ProfileFactory, UserFactory
+from profiles.tests.factories import FollowFactory, ProfileFactory
 
 
 @pytest.mark.django_db
@@ -16,12 +15,12 @@ class TestProfileModel:
         assert profile.following_count == 0
 
     def test_unique_username(self):
-        p1 = ProfileFactory(username="unique")
+        ProfileFactory(username="unique")
         with pytest.raises(IntegrityError):
             ProfileFactory(username="unique")
 
     def test_one_to_one_user(self, user):
-        profile = ProfileFactory(user=user)
+        ProfileFactory(user=user)
         with pytest.raises(IntegrityError):
             ProfileFactory(user=user)
 

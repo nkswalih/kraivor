@@ -1,8 +1,7 @@
 import re
 
-from rest_framework import serializers
-
 from profiles.models import Profile, UserFollow
+from rest_framework import serializers
 
 
 class ProfileSerializer(serializers.ModelSerializer):

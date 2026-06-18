@@ -1,6 +1,5 @@
 import factory
 from django.conf import settings
-
 from profiles.models import Profile, UserFollow
 
 

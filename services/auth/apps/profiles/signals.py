@@ -4,7 +4,6 @@ import secrets
 from django.db.models import F
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
-
 from profiles.models import Profile, UserFollow
 
 USER_MODEL = "users.User"

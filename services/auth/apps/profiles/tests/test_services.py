@@ -1,8 +1,7 @@
 import pytest
-
 from profiles.models import UserFollow
 from profiles.services import ProfileService, ReputationService
-from profiles.tests.factories import FollowFactory, ProfileFactory, UserFactory
+from profiles.tests.factories import ProfileFactory
 
 
 @pytest.mark.django_db

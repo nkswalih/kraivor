@@ -1,5 +1,4 @@
 import pytest
-from profiles.models import Profile
 from profiles.serializers import (
     FollowerSerializer,
     FollowingSerializer,

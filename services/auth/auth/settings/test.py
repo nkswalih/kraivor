@@ -12,6 +12,34 @@ Usage:
 """
 
 import os
+from pathlib import Path
+
+_keys_dir = Path(__file__).resolve().parent.parent.parent / ".keys"
+_keys_dir.mkdir(parents=True, exist_ok=True)
+
+for _key_name in ("jwt-private.pem", "jwt-public.pem"):
+    if not (_keys_dir / _key_name).exists():
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+
+        _key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        (_keys_dir / "jwt-private.pem").write_bytes(
+            _key.private_bytes(
+                serialization.Encoding.PEM,
+                serialization.PrivateFormat.TraditionalOpenSSL,
+                serialization.NoEncryption(),
+            )
+        )
+        (_keys_dir / "jwt-public.pem").write_bytes(
+            _key.public_key().public_bytes(
+                serialization.Encoding.PEM,
+                serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+        )
+        break
+
+os.environ.setdefault("JWT_PRIVATE_KEY_PATH", str(_keys_dir / "jwt-private.pem"))
+os.environ.setdefault("JWT_PUBLIC_KEY_PATH", str(_keys_dir / "jwt-public.pem"))
 
 from .base import *
 

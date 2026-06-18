@@ -13,6 +13,8 @@ USER_MODEL = "users.User"
 def create_profile_on_registration(sender, instance, created, **kwargs):
     if not created:
         return
+    if Profile.objects.filter(user=instance).exists():
+        return
     username = _generate_unique_username(instance)
     Profile.objects.create(
         user=instance,

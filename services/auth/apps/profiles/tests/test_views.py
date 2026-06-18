@@ -62,7 +62,7 @@ class TestMyProfileView:
     def test_get_my_profile_no_auth(self, client):
         url = reverse("my-profile")
         resp = client.get(url)
-        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.django_db
@@ -105,7 +105,7 @@ class TestFollowView:
     def test_follow_no_auth(self, client, other_profile):
         url = reverse("profile-follow", kwargs={"username": other_profile.username})
         resp = client.post(url)
-        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.django_db

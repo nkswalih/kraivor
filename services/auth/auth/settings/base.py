@@ -139,6 +139,8 @@ INSTALLED_APPS = [
     "users",
     "authentication",
     "api_keys",
+    "profiles",
+    "storages",
 ]
 
 # MIDDLEWARE: Request/response processing pipeline
@@ -254,6 +256,8 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PARSER_CLASSES": [
         "rest_framework.parsers.JSONParser",
+        "rest_framework.parsers.MultiPartParser",
+        "rest_framework.parsers.FormParser",
     ],
     "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
 }
@@ -362,6 +366,26 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # WhiteNoise for serving static files in production (no external web server needed)
 # STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# =============================================================================
+# STORAGE BACKEND - S3 (Production) / Local (Development)
+# =============================================================================
+
+DEFAULT_FILE_STORAGE = env(
+    "DEFAULT_FILE_STORAGE",
+    default="django.core.files.storage.FileSystemStorage",
+)
+
+AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
+AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
+AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
+AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="us-east-1")
+AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN", default="")
+AWS_S3_OBJECT_PARAMETERS = {
+    "CacheControl": "max-age=86400",
+}
+AWS_DEFAULT_ACL = None
+AWS_QUERYSTRING_AUTH = False
 
 # =============================================================================
 # LOGGING CONFIGURATION
@@ -497,6 +521,8 @@ OAUTH_TOKEN_ENCRYPTION_KEY = os.environ.get(
     "OAUTH_TOKEN_ENCRYPTION_KEY", os.path.join(BASE_DIR, ".keys", "oauth-encryption.key")
 )
 OAUTH_STATE_EXPIRE_SECONDS = int(os.environ.get("OAUTH_STATE_EXPIRE_SECONDS", "600"))
+
+KAFKA_BOOTSTRAP_SERVERS = env("KAFKA_BOOTSTRAP_SERVERS", default="localhost:9092")
 
 # =============================================================================
 # GOOGLE OAUTH CONFIGURATION  (KRV-016)

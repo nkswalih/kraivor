@@ -14,6 +14,7 @@ urlpatterns = [
     path("api/auth/", include("users.urls")),
     path("api/auth/", include("authentication.urls")),
     path("api/auth/", include("api_keys.urls")),
+    path("api/profiles/", include("profiles.urls")),
     # Internal service-to-service: retrieve a user's stored GitHub OAuth token
     path("api/oauth/github/token/", GitHubOAuthTokenView.as_view(), name="github-oauth-token"),
     path(".well-known/jwks.json", JWKSView.as_view(), name="jwks"),

@@ -81,7 +81,6 @@ jobs:
             --cov-report=xml \
             --cov-report=html \
             --maxfail=3 \
-            -m "not slow" \
             -q
 
       - name: Upload coverage

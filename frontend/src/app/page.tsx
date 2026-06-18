@@ -66,7 +66,7 @@ function RevealSection({ children, delay = '' }: { children: React.ReactNode, de
 
 /* ─── Main Page ──────────────────────────────────────────────── */
 export default function RootPage() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, workspaceSlug } = useAuthStore();
   const [scrolled, setScrolled] = useState(false);
 
   // Handle header blur on scroll
@@ -113,21 +113,66 @@ export default function RootPage() {
           </nav>
           
           <div className="flex items-center gap-4">
-            {isAuthenticated ? (
-              <Link href="/dashboard" className="btn-shimmer rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-lg">
-                Dashboard →
+          {isAuthenticated ? (
+            <Link href={`/${workspaceSlug || 'dashboard'}`} className="btn-glassy-krait">
+              {/* Left Area (Icon + Text) */}
+              <div className="flex items-center gap-2.5 px-4 py-2">
+                <div className="btn-glassy-icon">
+                  {/* Dashboard Grid Icon */}
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                    <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+                    <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+                    <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                  </svg>
+                </div>
+                <span className="text-sm tracking-wide">Dashboard</span>
+              </div>
+
+              {/* Center Faded Divider */}
+              <div className="btn-glassy-divider"></div>
+
+              {/* Right Area (Arrow) */}
+              <div className="btn-glassy-arrow">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14"></path>
+                  <path d="m12 5 7 7-7 7"></path>
+                </svg>
+              </div>
+            </Link>
+          ) : (
+            <>
+              <Link href={ROUTES.LOGIN} className="hidden text-sm font-medium text-slate-300 transition-colors hover:text-white sm:block">
+                Sign in
               </Link>
-            ) : (
-              <>
-                <Link href={ROUTES.LOGIN} className="hidden text-sm font-medium text-slate-300 transition-colors hover:text-white sm:block">
-                  Sign in
-                </Link>
-                <Link href={ROUTES.REGISTER} className="btn-shimmer rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-lg">
-                  Get Started
-                </Link>
-              </>
-            )}
-          </div>
+              
+              <Link href={ROUTES.REGISTER} className="btn-glassy-krait">
+                {/* Left Area (Icon + Text) */}
+                <div className="flex items-center gap-2.5 px-4 py-2">
+                  <div className="btn-glassy-icon">
+                    {/* Plus Icon */}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                  </div>
+                  <span className="text-sm tracking-wide">Get Started</span>
+                </div>
+
+                {/* Center Faded Divider */}
+                <div className="btn-glassy-divider"></div>
+
+                {/* Right Area (Arrow) */}
+                <div className="btn-glassy-arrow">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14"></path>
+                    <path d="m12 5 7 7-7 7"></path>
+                  </svg>
+                </div>
+              </Link>
+            </>
+          )}
+        </div>
         </div>
       </header>
 

@@ -1,6 +1,5 @@
 import logging
 import time
-from typing import Optional
 
 import httpx
 import jwt
@@ -19,7 +18,7 @@ class JWTPayload(BaseModel):
     roles: dict = {}
 
 
-_jwks_cache: Optional[dict] = None
+_jwks_cache: dict | None = None
 _jwks_cache_time: float = 0
 
 
@@ -41,7 +40,7 @@ def _get_jwks() -> dict:
         logger.error(f"Failed to fetch JWKS: {e}")
         if _jwks_cache:
             return _jwks_cache
-        raise HTTPException(status_code=503, detail="JWKS unavailable")
+        raise HTTPException(status_code=503, detail="JWKS unavailable") from e
 
 
 def _verify_token(token: str) -> dict:
@@ -96,19 +95,19 @@ def get_current_user(request: Request) -> JWTPayload:
         raise HTTPException(
             status_code=401,
             detail={"error": "token_expired", "message": "Token has expired"}
-        )
+        ) from None
     except jwt.InvalidTokenError as e:
         logger.warning(f"JWT validation failed: {e}")
         raise HTTPException(
             status_code=401,
             detail={"error": "invalid_token", "message": "Invalid or malformed token"}
-        )
+        ) from e
     except Exception as e:
         logger.error(f"JWT verification error: {e}")
         raise HTTPException(
             status_code=401,
             detail={"error": "verification_failed", "message": "Token verification failed"}
-        )
+        ) from e
 
 
 def invalidate_jwks_cache():

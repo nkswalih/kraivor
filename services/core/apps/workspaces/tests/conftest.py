@@ -22,10 +22,9 @@ django.setup()
 @pytest.fixture
 def workspace(db):
     from apps.workspaces.models import Workspace
+
     return Workspace.objects.create(
-        owner_id=uuid.uuid4(),
-        name="Test Workspace",
-        slug="test-workspace",
+        owner_id=uuid.uuid4(), name="Test Workspace", slug="test-workspace"
     )
 
 
@@ -33,6 +32,7 @@ def workspace(db):
 def owner_member(workspace, db):
     from apps.workspaces.constants import WorkspaceRole
     from apps.workspaces.models import WorkspaceMember
+
     return WorkspaceMember.objects.create(
         workspace=workspace,
         user_id=workspace.owner_id,
@@ -45,6 +45,7 @@ def owner_member(workspace, db):
 def admin_member(workspace, db):
     from apps.workspaces.constants import WorkspaceRole
     from apps.workspaces.models import WorkspaceMember
+
     return WorkspaceMember.objects.create(
         workspace=workspace,
         user_id=uuid.uuid4(),
@@ -57,6 +58,7 @@ def admin_member(workspace, db):
 def regular_member(workspace, db):
     from apps.workspaces.constants import WorkspaceRole
     from apps.workspaces.models import WorkspaceMember
+
     return WorkspaceMember.objects.create(
         workspace=workspace,
         user_id=uuid.uuid4(),

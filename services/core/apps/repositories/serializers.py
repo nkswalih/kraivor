@@ -17,8 +17,8 @@ from rest_framework import serializers
 
 from .models import Repository
 
-
 # ─── Output Serializer ────────────────────────────────────────────────────────
+
 
 class RepositorySerializer(serializers.ModelSerializer):
     """
@@ -59,6 +59,7 @@ class RepositorySerializer(serializers.ModelSerializer):
 
 
 # ─── Input Serializer ─────────────────────────────────────────────────────────
+
 
 class RepositoryConnectSerializer(serializers.Serializer):
     """

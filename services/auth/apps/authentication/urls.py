@@ -1,7 +1,14 @@
-from authentication.oauth.google.views import GoogleOAuthCallbackView, GoogleOAuthInitiateView
+from authentication.oauth.google.views import (
+    GoogleOAuthCallbackView,
+    GoogleOAuthInitiateView,
+)
 from django.urls import path
 
-from .oauth.views import GitHubOAuthCallbackView, GitHubOAuthInitiateView
+from .oauth.views import (
+    GitHubConnectView,
+    GitHubOAuthCallbackView,
+    GitHubOAuthInitiateView,
+)
 from .views import (
     LogoutAllView,
     LogoutView,
@@ -35,6 +42,7 @@ urlpatterns = [
     # KRV-015: GitHub OAuth
     path("oauth/github/", GitHubOAuthInitiateView.as_view(), name="github-oauth-initiate"),
     path("oauth/github/callback/", GitHubOAuthCallbackView.as_view(), name="github-oauth-callback"),
+    path("oauth/github/connect/", GitHubConnectView.as_view(), name="github-connect"),
     # KRV-016 — Google OAuth
     path("oauth/google/", GoogleOAuthInitiateView.as_view(), name="google-oauth-initiate"),
     path("oauth/google/callback/", GoogleOAuthCallbackView.as_view(), name="google-oauth-callback"),

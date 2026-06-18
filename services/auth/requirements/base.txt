@@ -1,0 +1,17 @@
+# Core dependencies — generated from pyproject.toml
+# Install via: uv sync  or  pip install -r base.txt
+django>=4.2
+djangorestframework>=3.14
+django-cors-headers>=4.0
+psycopg2-binary>=2.9
+redis>=5.0
+celery>=5.3
+djangorestframework-simplejwt>=5.3
+social-auth-app-django>=5.0
+argon2-cffi>=25.1.0
+django-environ>=0.13.0
+pyjwt>=2.8
+cryptography>=42.0.0
+dj-database-url>=3.1.2
+google-auth>=2.28.0
+gunicorn>=21.2.0

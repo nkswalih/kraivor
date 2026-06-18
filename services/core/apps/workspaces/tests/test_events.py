@@ -37,8 +37,9 @@ class TestEnvelope:
 
 class TestWorkspaceEventPublisher:
     def test_get_producer_returns_none_when_kafka_unavailable(self):
-        publisher = WorkspaceEventPublisher()
-        assert publisher._producer is None
+        with patch("core.infrastructure.kafka.get_producer", return_value=None):
+            publisher = WorkspaceEventPublisher()
+            assert publisher._producer is None
 
     def test_workspace_created_publishes_event(self):
         mock_producer = MagicMock()
@@ -97,11 +98,7 @@ class TestWorkspaceEventPublisher:
     def test_publish_logs_locally_when_no_producer(self):
         publisher = WorkspaceEventPublisher()
         publisher._producer = None
-        event = {
-            "event_type": "test",
-            "workspace_id": "ws-1",
-            "data": {},
-        }
+        event = {"event_type": "test", "workspace_id": "ws-1", "data": {}}
         with patch.object(publisher, "_publish", wraps=publisher._publish) as spy:
             publisher._publish("test.topic", event)
             spy.assert_called_once_with("test.topic", event)

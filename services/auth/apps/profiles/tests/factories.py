@@ -20,6 +20,21 @@ class ProfileFactory(factory.django.DjangoModelFactory):
     display_name = factory.Sequence(lambda n: f"User {n}")
     bio = factory.Faker("sentence")
 
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        if user is None:
+            user = UserFactory()
+        profile, created = Profile.objects.get_or_create(
+            user=user,
+            defaults=kwargs,
+        )
+        if not created and kwargs:
+            for key, value in kwargs.items():
+                setattr(profile, key, value)
+            profile.save()
+        return profile
+
 
 class FollowFactory(factory.django.DjangoModelFactory):
     class Meta:

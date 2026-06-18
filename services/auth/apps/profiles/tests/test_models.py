@@ -6,8 +6,8 @@ from profiles.tests.factories import FollowFactory, ProfileFactory
 
 @pytest.mark.django_db
 class TestProfileModel:
-    def test_create_profile(self, user):
-        profile = ProfileFactory(user=user)
+    def test_create_profile(self):
+        profile = ProfileFactory()
         assert profile.username
         assert profile.display_name
         assert profile.reputation_score == 0
@@ -20,25 +20,22 @@ class TestProfileModel:
             ProfileFactory(username="unique")
 
     def test_one_to_one_user(self, user):
-        ProfileFactory(user=user)
         with pytest.raises(IntegrityError):
-            ProfileFactory(user=user)
+            Profile.objects.create(user=user, username="test")
 
-    def test_soft_delete(self, user):
-        profile = ProfileFactory(user=user)
-        assert not profile.is_deleted
+    def test_soft_delete(self, profile):
         profile.soft_delete()
         profile.refresh_from_db()
         assert profile.is_deleted
         assert profile.deleted_at is not None
 
-    def test_active_manager_excludes_deleted(self, user):
-        profile = ProfileFactory(user=user)
+    def test_active_manager_excludes_deleted(self, profile):
+        username = profile.username
         profile.soft_delete()
-        assert Profile.objects.filter(username=profile.username).count() == 0
+        assert Profile.objects.filter(username=username).count() == 0
 
-    def test_str(self, user):
-        profile = ProfileFactory(user=user, username="testuser")
+    def test_str(self):
+        profile = ProfileFactory(username="testuser")
         assert str(profile) == "Profile(testuser)"
 
 

@@ -1,4 +1,5 @@
 import pytest
+from profiles.models import Profile
 from profiles.tests.factories import ProfileFactory, UserFactory
 from rest_framework.test import APIClient
 
@@ -15,7 +16,7 @@ def user():
 
 @pytest.fixture
 def profile(user):
-    return ProfileFactory(user=user)
+    return Profile.objects.get(user=user)
 
 
 @pytest.fixture

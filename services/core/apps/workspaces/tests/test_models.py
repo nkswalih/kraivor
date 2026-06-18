@@ -91,10 +91,14 @@ class TestWorkspaceModel:
     def test_is_member_false_for_non_member(self, workspace, db):
         assert not workspace.is_member(uuid.uuid4())
 
-    def test_member_count(self, workspace, owner_member, admin_member, regular_member, db):
+    def test_member_count(
+        self, workspace, owner_member, admin_member, regular_member, db
+    ):
         assert workspace.member_count == 3
 
-    def test_member_count_excludes_deleted(self, workspace, owner_member, admin_member, db):
+    def test_member_count_excludes_deleted(
+        self, workspace, owner_member, admin_member, db
+    ):
         admin_member.delete()
         assert workspace.member_count == 1
 
@@ -104,7 +108,9 @@ class TestWorkspaceModel:
 
 class TestWorkspaceMemberModel:
     def test_str_representation(self, workspace, owner_member, db):
-        expected = f"Member({owner_member.user_id}@{workspace.slug}:{owner_member.role})"
+        expected = (
+            f"Member({owner_member.user_id}@{workspace.slug}:{owner_member.role})"
+        )
         assert str(owner_member) == expected
 
     def test_can_admin_true_for_owner(self, owner_member, db):

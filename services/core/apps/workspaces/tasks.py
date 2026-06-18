@@ -34,15 +34,12 @@ logger = logging.getLogger(__name__)
     bind=True,
     queue="notifications",
     max_retries=3,
-    default_retry_delay=30,         # 30s → 60s → 120s (exponential via retry countdown)
-    acks_late=True,                  # ack after task completes, not when received
-    reject_on_worker_lost=True,      # re-queue if worker crashes mid-task
+    default_retry_delay=30,  # 30s → 60s → 120s (exponential via retry countdown)
+    acks_late=True,  # ack after task completes, not when received
+    reject_on_worker_lost=True,  # re-queue if worker crashes mid-task
     name="workspaces.send_workspace_invitation_email",
 )
-def send_workspace_invitation_email(
-    self,
-    invitation_id: str,
-) -> dict:
+def send_workspace_invitation_email(self, invitation_id: str) -> dict:
     """
     Send an invitation email to the invitee.
 
@@ -69,16 +66,13 @@ def send_workspace_invitation_email(
 
     try:
         # Fresh DB fetch — task may have been queued seconds/minutes ago
-        invitation = (
-            WorkspaceInvitation.objects
-            .select_related("workspace")
-            .get(id=invitation_id)
+        invitation = WorkspaceInvitation.objects.select_related("workspace").get(
+            id=invitation_id
         )
     except WorkspaceInvitation.DoesNotExist:
         # Invitation deleted between task dispatch and execution — skip silently
         logger.warning(
-            "task.invitation_email.not_found",
-            extra={"invitation_id": invitation_id},
+            "task.invitation_email.not_found", extra={"invitation_id": invitation_id}
         )
         return {"status": "skipped", "reason": "invitation_not_found"}
 
@@ -92,8 +86,7 @@ def send_workspace_invitation_email(
 
     if invitation.is_expired:
         logger.info(
-            "task.invitation_email.expired",
-            extra={"invitation_id": invitation_id},
+            "task.invitation_email.expired", extra={"invitation_id": invitation_id}
         )
         return {"status": "skipped", "reason": "expired"}
 
@@ -101,7 +94,10 @@ def send_workspace_invitation_email(
         # Email was already sent — don't send twice (handles duplicate task dispatch)
         logger.info(
             "task.invitation_email.already_sent",
-            extra={"invitation_id": invitation_id, "sent_at": str(invitation.email_sent_at)},
+            extra={
+                "invitation_id": invitation_id,
+                "sent_at": str(invitation.email_sent_at),
+            },
         )
         return {"status": "skipped", "reason": "already_sent"}
 
@@ -153,7 +149,7 @@ def send_workspace_invitation_email(
             },
         )
         # Exponential backoff: 30s, 60s, 120s
-        raise self.retry(exc=exc, countdown=30 * (2 ** self.request.retries)) from exc
+        raise self.retry(exc=exc, countdown=30 * (2**self.request.retries)) from exc
 
     # Mark email sent
     invitation.mark_email_sent()
@@ -183,12 +179,7 @@ def send_workspace_invitation_email(
     acks_late=True,
     name="workspaces.notify_member_joined",
 )
-def notify_member_joined(
-    self,
-    workspace_id: str,
-    user_id: str,
-    role: str,
-) -> dict:
+def notify_member_joined(self, workspace_id: str, user_id: str, role: str) -> dict:
     """
     Notify existing workspace members when a new member joins.
 
@@ -201,6 +192,8 @@ def notify_member_joined(
         user_id:      UUID string of the new member
         role:         Role the new member received
     """
+    from apps.notifications.tasks import dispatch_notification
+
     from .models import Workspace
 
     logger.info(
@@ -219,23 +212,19 @@ def notify_member_joined(
 
     # Get all admin/owner members to notify (they care about new joins)
     admin_members = workspace.members.filter(
-        role__in=["owner", "admin"],
-        deleted_at__isnull=True,
-    ).exclude(user_id=uuid.UUID(user_id))  # don't notify the joiner about themselves
+        role__in=["owner", "admin"], deleted_at__isnull=True
+    ).exclude(user_id=uuid.UUID(user_id))
 
     notified = 0
     for member in admin_members:
         try:
-            # In production: call notification service or dispatch per-user task
-            # For now: structured log that notification service consumes
-            logger.info(
-                "task.notify_member_joined.notify_admin",
-                extra={
-                    "workspace_id": workspace_id,
-                    "new_member_id": user_id,
-                    "admin_user_id": str(member.user_id),
-                    "role": role,
-                },
+            dispatch_notification.delay(
+                user_id=str(member.user_id),
+                notification_type="workspace.member.joined",
+                title=f"New member joined {workspace.name}",
+                body=f"A new member has joined {workspace.name} as {role}.",
+                workspace_id=workspace_id,
+                actor_id=user_id,
             )
             notified += 1
         except Exception as exc:
@@ -271,6 +260,8 @@ def notify_member_removed(
         actor_id:         UUID string of who removed them
         reason:           'removed_by_admin' | 'left'
     """
+    from apps.notifications.tasks import dispatch_notification
+
     from .models import Workspace
 
     try:
@@ -278,8 +269,33 @@ def notify_member_removed(
     except Workspace.DoesNotExist:
         return {"status": "skipped", "reason": "workspace_not_found"}
 
-    # In production: call notification service with the removed user's email
-    # Email address comes from identity service (separate API call)
+    title = f"Removed from {workspace.name}"
+    body = (
+        f"You have been removed from {workspace.name}."
+        if reason == "removed_by_admin"
+        else f"You left {workspace.name}."
+    )
+
+    try:
+        dispatch_notification.delay(
+            user_id=removed_user_id,
+            notification_type="workspace.member.removed",
+            title=title,
+            body=body,
+            workspace_id=workspace_id,
+            actor_id=actor_id,
+        )
+    except Exception as exc:
+        logger.error(
+            "task.notify_member_removed.failed",
+            extra={
+                "workspace_id": workspace_id,
+                "removed_user_id": removed_user_id,
+                "error": str(exc),
+            },
+        )
+        return {"status": "failed", "error": str(exc)}
+
     logger.info(
         "task.notify_member_removed.dispatched",
         extra={
@@ -295,6 +311,7 @@ def notify_member_removed(
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
+
 
 def _fallback_invitation_text(context: dict) -> str:
     """Plain-text invitation email when templates fail to render."""

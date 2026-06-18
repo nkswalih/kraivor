@@ -105,11 +105,11 @@ class TestAPIKeyRevoke:
         resp = auth_client.delete(revoke_url(result.api_key.id))
         assert resp.status_code == status.HTTP_200_OK
 
-    def test_revoke_sets_deleted_at(self, auth_client, user, revoke_url):
+    def test_revoke_sets_revoked(self, auth_client, user, revoke_url):
         result = create_api_key(user, "Key", ["analysis:read"])
         auth_client.delete(revoke_url(result.api_key.id))
         result.api_key.refresh_from_db()
-        assert result.api_key.deleted_at is not None
+        assert result.api_key.revoked is True
 
     def test_revoke_wrong_user_returns_404(self, user, revoke_url, django_user_model):
         """IDOR protection: cannot revoke other users' keys."""
@@ -149,7 +149,7 @@ class TestAPIKeyAuthentication:
     def test_invalid_api_key_returns_401(self, list_create_url):
         from api_keys.services.generator import generate_api_key
         client = APIClient()
-        client.credentials(HTTP_AUTHORIZATION=f"Bearer {generate_api_key()}")
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {generate_api_key()[0]}")
         resp = client.get(list_create_url)
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 

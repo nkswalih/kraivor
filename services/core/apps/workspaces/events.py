@@ -36,10 +36,7 @@ def _now_iso() -> str:
 
 
 def _envelope(
-    event_type: str,
-    workspace_id: uuid.UUID,
-    actor_id: uuid.UUID,
-    data: dict,
+    event_type: str, workspace_id: uuid.UUID, actor_id: uuid.UUID, data: dict
 ) -> dict:
     """
     Standard platform event envelope (system design §14).
@@ -75,6 +72,7 @@ class WorkspaceEventPublisher:
     def _get_producer(self):
         try:
             from core.infrastructure.kafka import get_producer
+
             return get_producer()
         except (ImportError, Exception) as exc:
             logger.warning("kafka.producer.unavailable", extra={"reason": str(exc)})
@@ -105,7 +103,11 @@ class WorkspaceEventPublisher:
 
             logger.debug(
                 "event.published",
-                extra={"topic": topic, "event_type": event_type, "workspace_id": workspace_id},
+                extra={
+                    "topic": topic,
+                    "event_type": event_type,
+                    "workspace_id": workspace_id,
+                },
             )
         except Exception as exc:
             # IMPORTANT: log and continue — never let event failure crash a request
@@ -143,10 +145,7 @@ class WorkspaceEventPublisher:
             event_type="workspace.deleted",
             workspace_id=workspace.id,
             actor_id=actor_id,
-            data={
-                "workspace_id": str(workspace.id),
-                "slug": workspace.slug,
-            },
+            data={"workspace_id": str(workspace.id), "slug": workspace.slug},
         )
         self._publish(TOPIC_WORKSPACE, event)
 
@@ -183,11 +182,7 @@ class WorkspaceEventPublisher:
         self._publish(TOPIC_WORKSPACE, event)
 
     def member_joined(
-        self,
-        *,
-        workspace: "Workspace",
-        member: "WorkspaceMember",
-        actor_id: uuid.UUID,
+        self, *, workspace: "Workspace", member: "WorkspaceMember", actor_id: uuid.UUID
     ) -> None:
         """
         Published when an invitation is accepted and the member is created.
@@ -267,11 +262,7 @@ class WorkspaceEventPublisher:
     # ── Backward compat alias (used in KRV-019 service) ──────────────────────
 
     def member_added(
-        self,
-        *,
-        workspace: "Workspace",
-        member: "WorkspaceMember",
-        actor_id: uuid.UUID,
+        self, *, workspace: "Workspace", member: "WorkspaceMember", actor_id: uuid.UUID
     ) -> None:
         """Alias used by WorkspaceService.add_member() from KRV-019."""
         self.member_joined(workspace=workspace, member=member, actor_id=actor_id)

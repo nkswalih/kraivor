@@ -25,10 +25,9 @@ from unittest.mock import patch
 import pytest
 from rest_framework.test import APIRequestFactory
 
+from apps.repositories.models import Repository
 from apps.workspaces.constants import WorkspacePlan, WorkspaceRole
 from apps.workspaces.models import Workspace, WorkspaceMember
-
-from apps.repositories.models import Repository
 
 # ─── API request factory ──────────────────────────────────────────────────────
 
@@ -54,6 +53,7 @@ def make_request(method: str, path: str, user_id: uuid.UUID, data=None):
 
 
 # ─── User IDs (no DB rows — identity is a separate service) ──────────────────
+
 
 @pytest.fixture
 def owner_id() -> uuid.UUID:
@@ -83,6 +83,7 @@ def outsider_id() -> uuid.UUID:
 
 # ─── Workspace + members ──────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def workspace(owner_id) -> Workspace:
     return Workspace.objects.create(
@@ -96,40 +97,33 @@ def workspace(owner_id) -> Workspace:
 @pytest.fixture
 def owner_member(workspace, owner_id) -> WorkspaceMember:
     return WorkspaceMember.objects.create(
-        workspace=workspace,
-        user_id=owner_id,
-        role=WorkspaceRole.OWNER,
+        workspace=workspace, user_id=owner_id, role=WorkspaceRole.OWNER
     )
 
 
 @pytest.fixture
 def admin_member(workspace, admin_id) -> WorkspaceMember:
     return WorkspaceMember.objects.create(
-        workspace=workspace,
-        user_id=admin_id,
-        role=WorkspaceRole.ADMIN,
+        workspace=workspace, user_id=admin_id, role=WorkspaceRole.ADMIN
     )
 
 
 @pytest.fixture
 def regular_member(workspace, member_id) -> WorkspaceMember:
     return WorkspaceMember.objects.create(
-        workspace=workspace,
-        user_id=member_id,
-        role=WorkspaceRole.MEMBER,
+        workspace=workspace, user_id=member_id, role=WorkspaceRole.MEMBER
     )
 
 
 @pytest.fixture
 def viewer_member(workspace, viewer_id) -> WorkspaceMember:
     return WorkspaceMember.objects.create(
-        workspace=workspace,
-        user_id=viewer_id,
-        role=WorkspaceRole.VIEWER,
+        workspace=workspace, user_id=viewer_id, role=WorkspaceRole.VIEWER
     )
 
 
 # ─── Repository ───────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def repository(workspace, owner_id) -> Repository:
@@ -147,6 +141,7 @@ def repository(workspace, owner_id) -> Repository:
 
 
 # ─── GitHub API mock helpers ──────────────────────────────────────────────────
+
 
 @pytest.fixture
 def github_repo_payload() -> dict:
@@ -185,6 +180,51 @@ def mock_github_api(github_repo_payload):
     """
     with patch(
         "apps.repositories.services.GitHubAPIClient.get_repository",
+        return_value=github_repo_payload,
+    ) as mock:
+        yield mock
+
+
+# ─── GitHub App installation fixtures ──────────────────────────────────────────
+
+
+@pytest.fixture
+def github_app_installation(workspace, owner_id):
+    """Create a GitHubAppInstallation row in the test workspace."""
+    from apps.repositories.github_app.models import GitHubAppInstallation
+
+    return GitHubAppInstallation.objects.create(
+        workspace=workspace,
+        installation_id=12345678,
+        github_account_id=87654321,
+        github_account_login="test-org",
+        github_account_type="Organization",
+        installed_by_id=owner_id,
+    )
+
+
+@pytest.fixture
+def github_app_installation_repo(github_app_installation, github_repo_payload):
+    """Create a GitHubAppInstallationRepo row linking the installation to the test repo."""
+    from apps.repositories.github_app.models import GitHubAppInstallationRepo
+
+    return GitHubAppInstallationRepo.objects.create(
+        installation=github_app_installation,
+        github_id=github_repo_payload["id"],
+        github_repo=github_repo_payload["full_name"],
+        default_branch=github_repo_payload.get("default_branch", "main"),
+        is_private=github_repo_payload.get("private", False),
+    )
+
+
+@pytest.fixture
+def mock_github_app_client(github_repo_payload):
+    """
+    Patch GitHubAppClient.get_repository to return the github_repo_payload
+    fixture without making any HTTP call to api.github.com.
+    """
+    with patch(
+        "apps.repositories.services.GitHubAppClient.get_repository",
         return_value=github_repo_payload,
     ) as mock:
         yield mock

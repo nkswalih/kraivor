@@ -129,6 +129,10 @@ class AuthApi {
       const response = await apiClient.post<{ access_token?: string; accessToken?: string; user?: User }>(API_ENDPOINTS.AUTH.REFRESH);
       const token = response.access_token || response.accessToken || '';
       if (!token) throw new Error('No access token returned from refresh');
+
+      // Store token immediately so subsequent API calls (getCurrentUser) include the Bearer header
+      useAuthStore.setState({ accessToken: token, isLoading: false });
+
       if (response.user) {
         useAuthStore.getState().setAuth(response.user, token);
         return;
@@ -136,6 +140,20 @@ class AuthApi {
       const user = await this.getCurrentUser();
       useAuthStore.getState().setAuth(user, token);
     } catch {
+      // If refresh fails (e.g. no session cookie), try recovering token from localStorage
+      // so OAuth-logged-in users don't get logged out on page refresh
+      const storedToken =
+        typeof window !== 'undefined' ? localStorage.getItem('kraivor_access_token') : null;
+      if (storedToken) {
+        try {
+          useAuthStore.setState({ accessToken: storedToken, isLoading: false });
+          const user = await this.getCurrentUser();
+          useAuthStore.getState().setAuth(user, storedToken);
+          return;
+        } catch {
+          // stored token is invalid/expired — fall through to clearAuth
+        }
+      }
       useAuthStore.getState().clearAuth();
     }
   }

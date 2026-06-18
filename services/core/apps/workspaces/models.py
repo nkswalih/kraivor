@@ -22,6 +22,7 @@ from .constants import WorkspacePlan, WorkspaceRole
 
 # ─── Soft Delete Infrastructure ───────────────────────────────────────────────
 
+
 class SoftDeleteQuerySet(models.QuerySet):
     """Base queryset that excludes soft-deleted rows by default."""
 
@@ -83,6 +84,7 @@ class TimestampedModel(models.Model):
 
 # ─── Workspace ─────────────────────────────────────────────────────────────────
 
+
 class Workspace(TimestampedModel):
     """
     Multi-tenancy boundary. Every resource in Kraivor belongs to a workspace.
@@ -120,8 +122,12 @@ class Workspace(TimestampedModel):
     class Meta:
         db_table = "workspaces"
         indexes = [
-            models.Index(fields=["owner_id", "deleted_at"], name="idx_workspaces_owner_active"),
-            models.Index(fields=["plan", "deleted_at"], name="idx_workspaces_plan_active"),
+            models.Index(
+                fields=["owner_id", "deleted_at"], name="idx_workspaces_owner_active"
+            ),
+            models.Index(
+                fields=["plan", "deleted_at"], name="idx_workspaces_plan_active"
+            ),
         ]
 
     def __str__(self):
@@ -143,13 +149,14 @@ class Workspace(TimestampedModel):
 
     def is_member(self, user_id: uuid.UUID) -> bool:
         return self.members.filter(user_id=user_id).exists()
-    
+
     @property
     def member_count(self):
         return self.members.count()
 
 
 # ─── Workspace Member ──────────────────────────────────────────────────────────
+
 
 class WorkspaceMember(TimestampedModel):
     """
@@ -164,13 +171,10 @@ class WorkspaceMember(TimestampedModel):
     """
 
     workspace = models.ForeignKey(
-        Workspace,
-        on_delete=models.CASCADE,
-        related_name="members",
+        Workspace, on_delete=models.CASCADE, related_name="members"
     )
     user_id = models.UUIDField(
-        db_index=True,
-        help_text="identity.users.id — cross-service ref, no DB FK.",
+        db_index=True, help_text="identity.users.id — cross-service ref, no DB FK."
     )
     role = models.CharField(
         max_length=20,
@@ -198,8 +202,12 @@ class WorkspaceMember(TimestampedModel):
         # that has no .alive() method.
         default_manager_name = "objects"
         indexes = [
-            models.Index(fields=["user_id", "deleted_at"], name="idx_members_user_active"),
-            models.Index(fields=["workspace", "role"], name="idx_members_workspace_role"),
+            models.Index(
+                fields=["user_id", "deleted_at"], name="idx_members_user_active"
+            ),
+            models.Index(
+                fields=["workspace", "role"], name="idx_members_workspace_role"
+            ),
         ]
 
     def __str__(self):
@@ -211,7 +219,11 @@ class WorkspaceMember(TimestampedModel):
 
     @property
     def can_write(self) -> bool:
-        return self.role in (WorkspaceRole.OWNER, WorkspaceRole.ADMIN, WorkspaceRole.MEMBER)
+        return self.role in (
+            WorkspaceRole.OWNER,
+            WorkspaceRole.ADMIN,
+            WorkspaceRole.MEMBER,
+        )
 
     @property
     def is_owner(self) -> bool:
@@ -260,9 +272,7 @@ class WorkspaceInvitation(TimestampedModel):
     """
 
     workspace = models.ForeignKey(
-        Workspace,
-        on_delete=models.CASCADE,
-        related_name="invitations",
+        Workspace, on_delete=models.CASCADE, related_name="invitations"
     )
     email = models.EmailField(
         db_index=True,
@@ -319,14 +329,10 @@ class WorkspaceInvitation(TimestampedModel):
         indexes = [
             # Hot path: check for duplicate pending invites for an email in a workspace
             models.Index(
-                fields=["workspace", "email", "accepted_at"],
-                name="idx_inv_ws_email",
+                fields=["workspace", "email", "accepted_at"], name="idx_inv_ws_email"
             ),
             # Hot path: look up by token on acceptance
-            models.Index(
-                fields=["token", "accepted_at"],
-                name="idx_inv_token_acc",
-            ),
+            models.Index(fields=["token", "accepted_at"], name="idx_inv_token_acc"),
             # Admin view: list pending invitations for a workspace
             models.Index(
                 fields=["workspace", "expires_at", "accepted_at"],
@@ -335,7 +341,11 @@ class WorkspaceInvitation(TimestampedModel):
         ]
 
     def __str__(self):
-        status = "accepted" if self.accepted_at else ("expired" if self.is_expired else "pending")
+        status = (
+            "accepted"
+            if self.accepted_at
+            else ("expired" if self.is_expired else "pending")
+        )
         return f"Invitation({self.email}→{self.workspace.slug}:{self.role}:{status})"
 
     # ── State properties ──────────────────────────────────────────────────────
@@ -380,5 +390,6 @@ class WorkspaceInvitation(TimestampedModel):
     def accept_url(self) -> str:
         """Frontend URL the invitee clicks to accept the invitation."""
         from django.conf import settings
+
         base = getattr(settings, "FRONTEND_BASE_URL", "https://localhost")
         return f"{base}/invitations/{self.token}"

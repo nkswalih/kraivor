@@ -12,28 +12,29 @@ SECRET_KEY = "test-secret-key"
 ALLOWED_HOSTS = ["*"]
 
 MIDDLEWARE = [
-    m for m in base_settings.MIDDLEWARE
+    m
+    for m in base_settings.MIDDLEWARE
     if m != "core.middleware.jwt_auth.JWTAuthenticationMiddleware"
 ]
+
+REST_FRAMEWORK = {
+    **base_settings.REST_FRAMEWORK,
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "core.middleware.test_auth.TestAuthentication",
+    ],
+}
 
 # =============================================================================
 # DATABASE
 # =============================================================================
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
-    }
-}
+DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
 
 # =============================================================================
 # PASSWORDS
 # =============================================================================
 
-PASSWORD_HASHERS = [
-    "django.contrib.auth.hashers.MD5PasswordHasher",
-]
+PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 # =============================================================================
 # EMAIL
@@ -45,11 +46,7 @@ EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 # CACHE
 # =============================================================================
 
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-    }
-}
+CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 
 # =============================================================================
 # CELERY
@@ -76,10 +73,7 @@ INTERNAL_REQUEST_HEADER = "X-Internal-Request"
 # TEST OPTIMIZATIONS
 # =============================================================================
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": True,
-}
+LOGGING = {"version": 1, "disable_existing_loggers": True}
 
 # Faster tests
 MIGRATION_MODULES = {}
@@ -87,3 +81,21 @@ MIGRATION_MODULES = {}
 # Force Celery to run tasks synchronously during tests
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_STORE_EAGER_RESULT = True
+
+# =============================================================================
+# CHANNELS — In-memory channel layer for tests
+# =============================================================================
+
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+
+# =============================================================================
+# REDIS — Disabled in tests (not needed with eager Celery + in-memory channels)
+# =============================================================================
+
+REDIS_URL = None
+
+# =============================================================================
+# DYNAMODB — Disabled in tests (use mocks)
+# =============================================================================
+
+DYNAMODB_LOCAL = False

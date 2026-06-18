@@ -13,7 +13,6 @@ import uuid
 
 import pytest
 from django.db import IntegrityError
-from django.utils import timezone
 
 from apps.repositories.models import Repository
 from apps.workspaces.models import Workspace
@@ -21,7 +20,6 @@ from apps.workspaces.models import Workspace
 
 @pytest.mark.django_db
 class TestRepositoryModel:
-
     # ── Creation defaults ─────────────────────────────────────────────────────
 
     def test_creates_with_uuid_pk(self, repository):
@@ -88,16 +86,14 @@ class TestRepositoryModel:
         with pytest.raises(IntegrityError):
             Repository.objects.create(
                 workspace=workspace,
-                github_repo="acme/api-fork",   # different name, same github_id
+                github_repo="acme/api-fork",  # different name, same github_id
                 github_id=repository.github_id,
                 connected_by_id=owner_id,
             )
 
     def test_same_github_id_allowed_in_different_workspaces(self, workspace, owner_id):
         other_workspace = Workspace.objects.create(
-            owner_id=owner_id,
-            name="Other Workspace",
-            slug="other-workspace",
+            owner_id=owner_id, name="Other Workspace", slug="other-workspace"
         )
         repo1 = Repository.objects.create(
             workspace=workspace,

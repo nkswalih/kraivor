@@ -15,7 +15,9 @@ import pytest
 from django.test import RequestFactory
 
 
-def generate_test_jwt(private_key_pem: bytes, payload: dict, algorithm: str = "RS256") -> str:
+def generate_test_jwt(
+    private_key_pem: bytes, payload: dict, algorithm: str = "RS256"
+) -> str:
     return jwt.encode(payload, private_key_pem, algorithm=algorithm)
 
 
@@ -29,11 +31,11 @@ def generate_test_rsa_keypair():
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
     public_pem = public_key.public_bytes(
         encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
     return private_pem, public_pem
 
@@ -64,17 +66,20 @@ def mock_jwks(public_key):
 
     def b64url_encode(data: bytes) -> str:
         import base64
+
         return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
     return {
-        "keys": [{
-            "kty": "RSA",
-            "use": "sig",
-            "alg": "RS256",
-            "kid": "kraivor-key-1",
-            "n": b64url_encode(n_bytes),
-            "e": b64url_encode(e_bytes),
-        }]
+        "keys": [
+            {
+                "kty": "RSA",
+                "use": "sig",
+                "alg": "RS256",
+                "kid": "kraivor-key-1",
+                "n": b64url_encode(n_bytes),
+                "e": b64url_encode(e_bytes),
+            }
+        ]
     }
 
 
@@ -115,7 +120,7 @@ class TestJWTAuthenticationMiddleware:
         }
 
         token = generate_test_jwt(private_key, payload)
-        request = factory.get('/api/test/', HTTP_AUTHORIZATION=f'Bearer {token}')
+        request = factory.get("/api/test/", HTTP_AUTHORIZATION=f"Bearer {token}")
 
         middleware(request)
 
@@ -126,7 +131,7 @@ class TestJWTAuthenticationMiddleware:
     def test_missing_token_returns_401(self, middleware):
         factory = RequestFactory()
 
-        request = factory.get('/api/test/')
+        request = factory.get("/api/test/")
         response = middleware(request)
 
         assert response.status_code == 401
@@ -135,7 +140,9 @@ class TestJWTAuthenticationMiddleware:
     def test_invalid_token_returns_401(self, middleware):
         factory = RequestFactory()
 
-        request = factory.get('/api/test/', HTTP_AUTHORIZATION='Bearer invalid.token.here')
+        request = factory.get(
+            "/api/test/", HTTP_AUTHORIZATION="Bearer invalid.token.here"
+        )
         response = middleware(request)
 
         assert response.status_code == 401
@@ -155,7 +162,7 @@ class TestJWTAuthenticationMiddleware:
         }
 
         token = generate_test_jwt(private_key, payload)
-        request = factory.get('/api/test/', HTTP_AUTHORIZATION=f'Bearer {token}')
+        request = factory.get("/api/test/", HTTP_AUTHORIZATION=f"Bearer {token}")
         response = middleware(request)
 
         assert response.status_code == 401
@@ -164,7 +171,7 @@ class TestJWTAuthenticationMiddleware:
     def test_internal_request_bypasses_verification(self, middleware):
         factory = RequestFactory()
 
-        request = factory.get('/api/test/', HTTP_X_INTERNAL_REQUEST='true')
+        request = factory.get("/api/test/", HTTP_X_INTERNAL_REQUEST="true")
         response = middleware(request)
 
         assert response is not None
@@ -172,7 +179,7 @@ class TestJWTAuthenticationMiddleware:
     def test_admin_path_bypasses_verification(self, middleware):
         factory = RequestFactory()
 
-        request = factory.get('/admin/')
+        request = factory.get("/admin/")
         response = middleware(request)
 
         assert response is not None

@@ -20,7 +20,7 @@ from django.conf import settings
 from django.test import TestCase
 from rest_framework.test import APIClient
 from users.models import User
-from users.rate_limiter import RateLimitExceeded, RedisRateLimiter
+from users.rate_limiter import RateLimitExceededError, RedisRateLimiter
 from users.verification import (
     _ALGORITHM,
     _TOKEN_TYPE,
@@ -201,7 +201,7 @@ class TestRedisRateLimiter(TestCase):
 
     def test_is_allowed_raises_on_exceeded(self):
         limiter = self._make_limiter([(4, 2700)])
-        with self.assertRaises(RateLimitExceeded) as ctx:
+        with self.assertRaises(RateLimitExceededError) as ctx:
             limiter.is_allowed("key", limit=3, window_seconds=3600)
         self.assertEqual(ctx.exception.retry_after, 2700)
 
@@ -305,7 +305,7 @@ class TestResendVerificationView(TestCase):
 
     @patch("users.views.rate_limiter")
     def test_rate_limit_exceeded_returns_429(self, mock_limiter):
-        mock_limiter.is_allowed.side_effect = RateLimitExceeded(retry_after=2700)
+        mock_limiter.is_allowed.side_effect = RateLimitExceededError(retry_after=2700)
         make_user(email="ratelimited@example.com", verified=False)
         response = self.client.post(self.url, {"email": "ratelimited@example.com"}, format="json")
         self.assertEqual(response.status_code, 429)

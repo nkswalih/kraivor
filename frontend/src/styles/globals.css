@@ -188,3 +188,207 @@
 .oauth-btn:active {
   transform: translateY(0);
 }
+
+/* ─── KRAIT DESIGN TOKENS ──────────────────────────────────────────── */
+
+:root {
+  /* === KRAIT PALETTE === */
+  --krait-void:        #080809;
+  --krait-obsidian:    #0d0d0f;
+  --krait-surface-1:   #111114;
+  --krait-surface-2:   #18181c;
+  --krait-surface-3:   #1f1f24;
+  --krait-surface-4:   #27272d;
+  --krait-border:      #2c2c33;
+  --krait-border-hi:   #3d3d47;
+
+  /* === VENOM ACCENTS === */
+  --venom-yellow:      #e8c547;
+  --venom-gold:        #c9a227;
+  --venom-orange:      #d97316;
+  --venom-amber:       #f59e0b;
+  --venom-glow:        rgba(232, 197, 71, 0.08);
+  --venom-glow-md:     rgba(232, 197, 71, 0.15);
+
+  /* === TEXT === */
+  --text-primary:      #f2f2f3;
+  --text-secondary:    #9898a6;
+  --text-tertiary:     #5e5e72;
+  --text-accent:       #e8c547;
+  --text-inverse:      #0d0d0f;
+
+  /* === SEMANTIC === */
+  --color-success:     #22c55e;
+  --color-error:       #ef4444;
+  --color-warning:     #f59e0b;
+  --color-info:        #3b82f6;
+
+  /* === SHADOWS === */
+  --shadow-venom: 0 0 20px rgba(232,197,71,0.12);
+
+  /* === TRANSITIONS === */
+  --ease-strike:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth:  cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast:   120ms;
+  --duration-normal: 200ms;
+}
+
+/* ─── KRAIT UTILITY CLASSES ────────────────────────────────────────── */
+
+.krait-loader {
+  width: 32px;
+  height: 8px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--venom-yellow) 30%,
+    var(--venom-orange) 50%,
+    var(--venom-yellow) 70%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+  border-radius: 4px;
+}
+
+.krait-texture {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M10 0L20 10L10 20L0 10Z' fill='none' stroke='%23e8c547' stroke-width='0.3' opacity='0.06'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+:focus-visible {
+  outline: 2px solid var(--venom-yellow);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar          { width: 6px; height: 6px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: var(--krait-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--krait-border-hi); }
+
+::selection {
+  background: rgba(232, 197, 71, 0.25);
+  color: var(--text-primary);
+}
+
+/* ─── MAINTAIN EXISTING SHIMMER KEYFRAME ───────────────────────────── */
+@keyframes shimmer-bg {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ─── MODERN GLASSY BUTTON (Ultra-Smooth 3D & Shifting Gradient) ─── */
+
+.btn-glassy-krait {
+  display: inline-flex;
+  align-items: stretch;
+  position: relative;
+  overflow: hidden;
+  
+  /* Shifting liquid gold gradient */
+  background: linear-gradient(135deg, 
+    hsl(var(--primary-dark)) 0%, 
+    hsl(var(--primary)) 50%, 
+    hsl(var(--primary-light)) 100%
+  );
+  background-size: 200% 200%;
+  background-position: left top;
+  
+  /* Custom illuminated border matching primary-light */
+  border: 1px solid hsla(var(--primary-light), 0.35);
+  border-radius: 14px;
+  color: #ffffff;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  
+  /* Stacked volumetric lighting and expanded glow */
+  box-shadow: 
+    inset 0px 1px 0px rgba(255, 255, 255, 0.45),  /* Specular top rim */
+    inset 0px 2px 4px rgba(255, 255, 255, 0.15),  /* Soft top light bleed */
+    inset 0px -3px 6px rgba(0, 0, 0, 0.25),       /* Bottom depth shadow */
+    inset 0px -1px 0px rgba(0, 0, 0, 0.2),        /* Dark bottom edge line */
+    0px 10px 30px -6px hsla(var(--primary), 0.55), /* Rich, wide ambient glow */
+    0px 2px 6px rgba(0, 0, 0, 0.35);              /* Fine grounding shadow */
+    
+  /* Premium long cubic-bezier for smooth transitions */
+  transition: 
+    background-position 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+    border-color 0.4s ease,
+    box-shadow 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+    transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* Dynamic Hover Effects */
+.btn-glassy-krait:hover {
+  background-position: right bottom; /* Seamlessly flows the internal gradient colors */
+  border-color: hsla(var(--primary-light), 0.8); /* Border lights up with primary-light */
+  transform: translateY(-1.5px) scale(1.02); /* Slight lift and micro scale */
+  
+  box-shadow: 
+    inset 0px 1px 0px rgba(255, 255, 255, 0.55), 
+    inset 0px 3px 6px rgba(255, 255, 255, 0.25), 
+    inset 0px -3px 6px rgba(0, 0, 0, 0.25), 
+    inset 0px -1px 0px rgba(0, 0, 0, 0.2), 
+    0px 14px 38px -4px hsla(var(--primary), 0.75), /* Glow blooms and intensifies */
+    0px 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+.btn-glassy-krait:active {
+  transform: translateY(1px) scale(0.98);
+  background-position: left top;
+  transition: all 0.1s ease;
+  box-shadow: 
+    inset 0px 2px 5px rgba(0, 0, 0, 0.35),
+    0px 4px 12px -4px hsla(var(--primary), 0.45);
+}
+
+/* ── Frosted Inner Icon Box ── */
+.btn-glassy-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.05) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  box-shadow: 
+    inset 0px 1px 1px rgba(255, 255, 255, 0.45),
+    0px 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* ── Subtle Vertical Divider Line ── */
+.btn-glassy-divider {
+  width: 1px;
+  background: linear-gradient(
+    to bottom, 
+    rgba(255,255,255,0) 0%, 
+    rgba(255,255,255,0.2) 20%, 
+    rgba(255,255,255,0.2) 80%, 
+    rgba(255,255,255,0) 100%
+  );
+  margin: 6px 0;
+}
+
+/* ── Arrow Zone ── */
+.btn-glassy-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border-top-right-radius: 14px;
+  border-bottom-right-radius: 14px;
+  transition: background 0.2s ease;
+}
+
+.btn-glassy-arrow:hover {
+  background: rgba(0, 0, 0, 0.08); /* Minimal overlay on hover */
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}

@@ -29,10 +29,11 @@ class TestWorkspaceMemberSerializer:
         }
 
     def test_read_only_fields(self, owner_member, db):
-        serializer = WorkspaceMemberSerializer(owner_member, data={
-            "user_id": uuid.uuid4(),
-            "role": WorkspaceRole.ADMIN,
-        }, partial=True)
+        serializer = WorkspaceMemberSerializer(
+            owner_member,
+            data={"user_id": uuid.uuid4(), "role": WorkspaceRole.ADMIN},
+            partial=True,
+        )
         serializer.is_valid()
         assert "user_id" not in serializer.validated_data
 
@@ -41,14 +42,22 @@ class TestWorkspaceListSerializer:
     def test_serializes_correct_fields(self, workspace, owner_member, db):
         request = RequestFactory().get("/")
         request.user_id = workspace.owner_id
-        
+
         # ADD THIS LINE: (Patches the raw fixture so the serializer detects the field)
-        workspace.active_member_count = 1 
-        
+        workspace.active_member_count = 1
+
         serializer = WorkspaceListSerializer(workspace, context={"request": request})
         assert set(serializer.data.keys()) == {
-            "id", "name", "slug", "plan", "avatar_url", "description",
-            "active_member_count", "current_user_role", "created_at", "updated_at",
+            "id",
+            "name",
+            "slug",
+            "plan",
+            "avatar_url",
+            "description",
+            "active_member_count",
+            "current_user_role",
+            "created_at",
+            "updated_at",
         }
 
     def test_current_user_role_returns_role(self, workspace, owner_member, db):
@@ -73,10 +82,12 @@ class TestWorkspaceListSerializer:
     def test_member_count_is_read_only(self, workspace, owner_member, db):
         request = RequestFactory().get("/")
         request.user_id = workspace.owner_id
-        
+
         # FIX: Updated key name to match 'active_member_count'
         data = {"active_member_count": 99}
-        serializer = WorkspaceListSerializer(workspace, data=data, partial=True, context={"request": request})
+        serializer = WorkspaceListSerializer(
+            workspace, data=data, partial=True, context={"request": request}
+        )
         serializer.is_valid()
         assert "active_member_count" not in serializer.validated_data
 
@@ -152,10 +163,7 @@ class TestWorkspaceCreateSerializer:
     def test_settings_whitelist_strips_unknown_keys(self, db):
         data = {
             "name": "Test",
-            "settings": {
-                "theme": "dark",
-                "unknown_key": "should be stripped",
-            },
+            "settings": {"theme": "dark", "unknown_key": "should be stripped"},
         }
         serializer = WorkspaceCreateSerializer(data=data)
         assert serializer.is_valid()
@@ -165,7 +173,9 @@ class TestWorkspaceCreateSerializer:
         data = {"name": "Test", "slug": "test-slug"}
         serializer = WorkspaceCreateSerializer(data=data)
         serializer.is_valid()
-        with pytest.raises(NotImplementedError, match="Use WorkspaceService.create_workspace"):
+        with pytest.raises(
+            NotImplementedError, match="Use WorkspaceService.create_workspace"
+        ):
             serializer.save()
 
     def test_unique_slug_appends_counter(self, workspace, db):

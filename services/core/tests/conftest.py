@@ -51,10 +51,12 @@ def ws_url(ws_prefix):
             resp = client.get(ws_url("workspaces/"))
             resp = client.get(ws_url(f"workspaces/{ws_id}/members/"))
     """
+
     def _build(path: str) -> str:
         # Normalize: strip leading slash from path, add trailing slash if missing
         path = path.strip("/") + "/"
         return f"{ws_prefix}/{path}"
+
     return _build
 
 
@@ -71,6 +73,8 @@ def celery_task_always_eager(settings):
     No test should ever need a running broker.
     """
     settings.CELERY_TASK_ALWAYS_EAGER = True
-    settings.CELERY_TASK_EAGER_PROPAGATES = False  # don't let task errors break non-task tests
-    settings.CELERY_BROKER_URL = "memory://"        # in-memory broker, no network
+    settings.CELERY_TASK_EAGER_PROPAGATES = (
+        False  # don't let task errors break non-task tests
+    )
+    settings.CELERY_BROKER_URL = "memory://"  # in-memory broker, no network
     settings.CELERY_RESULT_BACKEND = "cache+memory://"

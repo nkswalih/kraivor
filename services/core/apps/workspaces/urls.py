@@ -42,31 +42,21 @@ from .views import (
 
 # ─── Workspace CRUD ────────────────────────────────────────────────────────────
 
-workspace_list = WorkspaceViewSet.as_view({
-    "get": "list",
-    "post": "create",
-})
+workspace_list = WorkspaceViewSet.as_view({"get": "list", "post": "create"})
 
-workspace_detail = WorkspaceViewSet.as_view({
-    "get": "retrieve",
-    "patch": "partial_update",
-    "delete": "destroy",
-})
+workspace_detail = WorkspaceViewSet.as_view(
+    {"get": "retrieve", "patch": "partial_update", "delete": "destroy"}
+)
 
 # ─── Member management ─────────────────────────────────────────────────────────
 
-member_list_invite = WorkspaceMemberViewSet.as_view({
-    "get": "list",
-})
+member_list_invite = WorkspaceMemberViewSet.as_view({"get": "list"})
 
-member_invite = WorkspaceMemberViewSet.as_view({
-    "post": "invite",
-})
+member_invite = WorkspaceMemberViewSet.as_view({"post": "invite"})
 
-member_detail = WorkspaceMemberViewSet.as_view({
-    "patch": "partial_update",
-    "delete": "destroy",
-})
+member_detail = WorkspaceMemberViewSet.as_view(
+    {"patch": "partial_update", "delete": "destroy"}
+)
 
 # ─── URL patterns ──────────────────────────────────────────────────────────────
 
@@ -74,7 +64,6 @@ urlpatterns = [
     # Workspace CRUD
     path("workspaces/", workspace_list, name="workspace-list"),
     path("workspaces/<uuid:pk>/", workspace_detail, name="workspace-detail"),
-
     # Members — list + role update + remove
     path(
         "workspaces/<uuid:workspace_pk>/members/",
@@ -91,7 +80,6 @@ urlpatterns = [
         member_detail,
         name="workspace-member-detail",
     ),
-
     # Invitations — admin list + revoke
     path(
         "workspaces/<uuid:workspace_pk>/invitations/",
@@ -103,7 +91,6 @@ urlpatterns = [
         InvitationRevokeView.as_view(),
         name="workspace-invitation-revoke",
     ),
-
     # Invitation accept — NOT nested under workspace (token is the credential)
     path(
         "invitations/<str:token>/accept/",

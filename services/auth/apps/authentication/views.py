@@ -30,6 +30,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 from users.models import User
 
 from .cookie_utils import create_refresh_cookie
@@ -188,6 +189,13 @@ class SignInIdentifyView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Sign-in step 1: Identify",
+        description="Email lookup - determines next authentication method (password/OTP/signup).",
+        tags=["Authentication"],
+        request=SignInIdentifySerializer,
+        responses={200: OpenApiResponse(description="Next step determined")},
+    )
     def post(self, request):
         serializer = SignInIdentifySerializer(data=request.data)
         if not serializer.is_valid():
@@ -251,6 +259,13 @@ class SignInPasswordView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Sign-in step 2a: Password",
+        description="Password verification - issues access + refresh token pair.",
+        tags=["Authentication"],
+        request=SignInPasswordSerializer,
+        responses={200: OpenApiResponse(description="Token pair issued")},
+    )
     def post(self, request):
         serializer = SignInPasswordSerializer(data=request.data)
         if not serializer.is_valid():
@@ -337,6 +352,13 @@ class OTPSendView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Send OTP",
+        description="Send a one-time passcode to the user's email for sign-in.",
+        tags=["Authentication"],
+        request=OTPSendSerializer,
+        responses={200: OpenApiResponse(description="OTP sent to email")},
+    )
     def post(self, request):
         serializer = OTPSendSerializer(data=request.data)
         if not serializer.is_valid():
@@ -410,6 +432,13 @@ class OTPVerifyView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Verify OTP",
+        description="Verify a one-time passcode and issue a token pair.",
+        tags=["Authentication"],
+        request=OTPVerifySerializer,
+        responses={200: OpenApiResponse(description="Token pair issued")},
+    )
     def post(self, request):
         serializer = OTPVerifySerializer(data=request.data)
         if not serializer.is_valid():
@@ -512,6 +541,12 @@ class RefreshTokenView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Refresh token",
+        description="Rotate refresh token: validates the HttpOnly cookie and issues a new access + refresh token pair.",
+        tags=["Authentication"],
+        responses={200: OpenApiResponse(description="New token pair issued")},
+    )
     def post(self, request):
         refresh_token = request.COOKIES.get("refresh_token")
 
@@ -609,6 +644,12 @@ class LogoutView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Logout (legacy)",
+        description="Legacy single-device logout. Revokes the refresh token and clears the cookie.",
+        tags=["Authentication"],
+        responses={200: OpenApiResponse(description="Logged out successfully")},
+    )
     def post(self, request):
         refresh_token = request.COOKIES.get("refresh_token")
         ip = get_client_ip(request)
@@ -631,6 +672,12 @@ class LogoutAllView(APIView):
     Kept for backwards compat. New clients should use DELETE /sessions/all/ (KRV-014).
     """
 
+    @extend_schema(
+        summary="Logout all devices (legacy)",
+        description="Legacy all-devices logout. Revokes all user sessions. Kept for backwards compat.",
+        tags=["Authentication"],
+        responses={200: OpenApiResponse(description="Logged out from all devices")},
+    )
     def post(self, request):
         if not request.user.is_authenticated:
             return ErrorResponse(
@@ -676,6 +723,12 @@ class SignOutView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Sign out",
+        description="Revoke the refresh token from the HttpOnly cookie and clear the cookie. Idempotent.",
+        tags=["Authentication"],
+        responses={200: OpenApiResponse(description="Signed out successfully")},
+    )
     def post(self, request):
         raw_token = request.COOKIES.get("refresh_token")
         ip = get_client_ip(request)
@@ -724,6 +777,12 @@ class SessionListView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="List sessions",
+        description="Returns all active (non-revoked, non-expired) sessions for the authenticated user.",
+        tags=["Authentication"],
+        responses={200: SessionSerializer(many=True)},
+    )
     def get(self, request):
         sessions = _active_sessions_qs(request.user.id).order_by("-last_used_at")
 
@@ -751,6 +810,12 @@ class SessionRevokeView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Revoke session",
+        description="Revoke a single session by UUID. Users can only revoke their own sessions.",
+        tags=["Authentication"],
+        responses={200: OpenApiResponse(description="Session revoked")},
+    )
     def delete(self, request, session_id):
         try:
             session = RefreshToken.objects.get(
@@ -799,6 +864,12 @@ class SessionRevokeAllView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Revoke all sessions",
+        description="Revoke every active session for the current user. Clears the refresh cookie.",
+        tags=["Authentication"],
+        responses={200: OpenApiResponse(description="All sessions revoked")},
+    )
     def delete(self, request):
         revoked_count = _active_sessions_qs(request.user.id).update(revoked=True)
 

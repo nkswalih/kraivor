@@ -29,6 +29,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 logger = logging.getLogger(__name__)
@@ -41,11 +42,24 @@ class APIKeyListCreateView(APIView):
     ]
     permission_classes = [IsAuthenticated]
  
+    @extend_schema(
+        summary="List API keys",
+        description="List the current user's API keys.",
+        tags=["API Keys"],
+        responses={200: APIKeyListSerializer(many=True)},
+    )
     def get(self, request):
         keys = get_user_api_keys(user_id=str(request.user.id))
         serializer = APIKeyListSerializer(keys, many=True)
         return Response({"api_keys": serializer.data}, status=status.HTTP_200_OK)
  
+    @extend_schema(
+        summary="Create API key",
+        description="Create a new API key for the authenticated user. The raw key is returned once in the response.",
+        tags=["API Keys"],
+        request=APIKeyCreateSerializer,
+        responses={201: APIKeyCreateResponseSerializer},
+    )
     def post(self, request):
         serializer = APIKeyCreateSerializer(data=request.data)
         if not serializer.is_valid():
@@ -86,6 +100,12 @@ class APIKeyRevokeView(APIView):
     ]
     permission_classes = [IsAuthenticated]
  
+    @extend_schema(
+        summary="Revoke API key",
+        description="Revoke (delete) an API key by its ID.",
+        tags=["API Keys"],
+        responses={200: OpenApiResponse(description="API key revoked successfully")},
+    )
     def delete(self, request, key_id: str):
         try:
             revoke_api_key(user=request.user, key_id=key_id)

@@ -269,3 +269,17 @@ export const coreApi = {
     coreRequest<T>(path, { method: 'PUT', body: body != null ? JSON.stringify(body) : undefined, ...init }),
   delete: <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'DELETE', ...init }),
 };
+
+/* ─── IDENTITY SERVICE API (same gateway, separate export) ─────── */
+export const identityRequest = coreRequest;
+
+export const identityApi = {
+  get:    <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'GET', ...init }),
+  post:   <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, { method: 'POST', body: body != null ? JSON.stringify(body) : undefined, ...init }),
+  patch:  <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, { method: 'PATCH', body: body != null ? JSON.stringify(body) : undefined, ...init }),
+  put:    <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, { method: 'PUT', body: body != null ? JSON.stringify(body) : undefined, ...init }),
+  delete: <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'DELETE', ...init }),
+};

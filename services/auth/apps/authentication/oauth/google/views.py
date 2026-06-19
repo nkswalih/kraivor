@@ -33,6 +33,10 @@ from authentication.security import get_client_ip
 from authentication.tokens import get_token_service
 from django.conf import settings
 from django.http import HttpResponseRedirect
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -76,6 +80,12 @@ class GoogleOAuthInitiateView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Initiate Google OAuth",
+        description="Initiates the Google OAuth 2.0 / OIDC flow. Generates CSRF state and redirects to Google consent screen.",
+        tags=["Authentication"],
+        responses={302: OpenApiResponse(description="Redirect to Google consent screen")},
+    )
     def get(self, request: Request) -> HttpResponseRedirect:
         state_service = GoogleStateService()
 
@@ -122,6 +132,12 @@ class GoogleOAuthCallbackView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Google OAuth callback",
+        description="Completes the Google OAuth flow: validates state, exchanges code, verifies ID token, creates/finds user, and issues JWT pair.",
+        tags=["Authentication"],
+        responses={302: OpenApiResponse(description="Redirect with JWT tokens")},
+    )
     def get(self, request: Request) -> Response:
         ip = get_client_ip(request)
 

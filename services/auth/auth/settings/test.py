@@ -38,8 +38,14 @@ for _key_name in ("jwt-private.pem", "jwt-public.pem"):
         )
         break
 
+_oauth_key_path = _keys_dir / "oauth-encryption.key"
+if not _oauth_key_path.exists():
+    import secrets
+    _oauth_key_path.write_text(secrets.token_hex(32))
+
 os.environ.setdefault("JWT_PRIVATE_KEY_PATH", str(_keys_dir / "jwt-private.pem"))
 os.environ.setdefault("JWT_PUBLIC_KEY_PATH", str(_keys_dir / "jwt-public.pem"))
+os.environ.setdefault("OAUTH_TOKEN_ENCRYPTION_KEY", str(_oauth_key_path))
 
 from .base import *
 

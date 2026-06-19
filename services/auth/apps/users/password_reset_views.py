@@ -10,6 +10,10 @@ POST /api/auth/reset-password/   — Reset password with token
 import logging
 
 from django.conf import settings
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -35,6 +39,15 @@ class ForgotPasswordView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Request password reset",
+        description="Sends a password reset email with a signed JWT token. Rate limited to prevent abuse.",
+        tags=["Users"],
+        responses={
+            200: OpenApiResponse(description="Password reset email sent"),
+            429: OpenApiResponse(description="Rate limit exceeded"),
+        },
+    )
     def post(self, request):
         email = request.data.get("email", "").strip().lower()
         if not email:
@@ -157,6 +170,15 @@ class ResetPasswordView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Reset password",
+        description="Accepts a signed JWT token and a new password. Validates the token and updates the user's password.",
+        tags=["Users"],
+        responses={
+            200: OpenApiResponse(description="Password reset successfully"),
+            400: OpenApiResponse(description="Invalid or expired token"),
+        },
+    )
     def post(self, request):
         token = request.data.get("token", "").strip()
         new_password = request.data.get("password", "").strip()

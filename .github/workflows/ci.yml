@@ -23,6 +23,7 @@ env:
   EMAIL_FROM: 'noreply@kraivor.test'
   JWT_PRIVATE_KEY_PATH: '.keys/jwt-private.pem'
   JWT_PUBLIC_KEY_PATH: '.keys/jwt-public.pem'
+  OAUTH_TOKEN_ENCRYPTION_KEY: '.keys/oauth-encryption.key'
   JWT_ALGORITHM: 'RS256'
   JWT_ACCESS_TOKEN_EXPIRE_MINUTES: '15'
   JWT_REFRESH_TOKEN_EXPIRE_DAYS: '30'
@@ -67,6 +68,7 @@ jobs:
           mkdir -p .keys
           openssl genrsa -out .keys/jwt-private.pem 2048
           openssl rsa -in .keys/jwt-private.pem -pubout -out .keys/jwt-public.pem
+          openssl rand -base64 32 > .keys/oauth-encryption.key
 
       - name: Run migrations
         run: uv run python manage.py migrate
@@ -207,6 +209,7 @@ jobs:
           mkdir -p .keys
           openssl genrsa -out .keys/jwt-private.pem 2048
           openssl rsa -in .keys/jwt-private.pem -pubout -out .keys/jwt-public.pem
+          openssl rand -base64 32 > .keys/oauth-encryption.key
 
       - name: Run security tests
         run: |

@@ -2,6 +2,10 @@ import logging
 import uuid
 
 from django.conf import settings
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -31,6 +35,13 @@ class SignUpView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Register a new user",
+        description="Registers a new user account and sends a verification email.",
+        tags=["Users"],
+        request=SignUpSerializer,
+        responses={201: OpenApiResponse(description="Registration successful. Verification email sent.")},
+    )
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         if not serializer.is_valid():
@@ -75,6 +86,15 @@ class VerifyEmailView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Verify email",
+        description="Accepts a signed JWT, validates it, and marks the user's email as verified.",
+        tags=["Users"],
+        responses={
+            200: OpenApiResponse(description="Email verified successfully"),
+            400: OpenApiResponse(description="Invalid or expired token"),
+        },
+    )
     def post(self, request):
         token = request.data.get("token", "").strip()
         if not token:
@@ -149,6 +169,15 @@ class ResendVerificationView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Resend verification email",
+        description="Rate limited: maximum 3 requests per hour per email (Redis-backed).",
+        tags=["Users"],
+        responses={
+            200: OpenApiResponse(description="Verification email resent or rate-limited"),
+            429: OpenApiResponse(description="Rate limit exceeded"),
+        },
+    )
     def post(self, request):
         email = request.data.get("email", "").strip().lower()
         if not email:
@@ -215,6 +244,12 @@ class ResendVerificationView(APIView):
 
 
 class UserProfileView(APIView):
+    @extend_schema(
+        summary="Get current user profile",
+        description="Returns the profile of the authenticated user.",
+        tags=["Users"],
+        responses={200: UserSerializer},
+    )
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
@@ -241,6 +276,12 @@ class ResolveUsersView(APIView):
 
     permission_classes = []
 
+    @extend_schema(
+        summary="Resolve users by email (internal)",
+        description="Internal endpoint. Resolves email addresses to user IDs. Used by Core service.",
+        tags=["Users"],
+        responses={200: OpenApiResponse(description="User resolution result")},
+    )
     def post(self, request):
         internal_header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
         if request.headers.get(internal_header) != "1":
@@ -285,6 +326,12 @@ class ResolveUsersByIdView(APIView):
 
     permission_classes = []
 
+    @extend_schema(
+        summary="Resolve users by ID (internal)",
+        description="Internal endpoint. Resolves user IDs to user info (name, email, avatar_url). Used by Core service.",
+        tags=["Users"],
+        responses={200: OpenApiResponse(description="User resolution result")},
+    )
     def post(self, request):
         internal_header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
         if request.headers.get(internal_header) != "1":

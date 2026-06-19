@@ -7,11 +7,6 @@ import type {
 } from '@/types/domain/profiles';
 
 export const profileEndpoints = {
-  getProfilesByIds: (userIds: string[]) =>
-    identityApi.post<{ profiles: Record<string, { display_name: string; avatar_url: string; username: string }> }>(
-      '/profiles/by-ids/', { user_ids: userIds }
-    ),
-
   getMyProfile: () => identityApi.get<Profile>('/profiles/me/'),
 
   getProfile: (username: string) =>

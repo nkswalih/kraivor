@@ -135,6 +135,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
     "corsheaders",
     "users",
     "authentication",
@@ -260,6 +262,35 @@ REST_FRAMEWORK = {
         "rest_framework.parsers.FormParser",
     ],
     "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# =============================================================================
+# SPECTACULAR / OPENAPI CONFIGURATION
+# =============================================================================
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Kraivor Identity API",
+    "DESCRIPTION": (
+        "Authentication, user management, profiles, and API keys for Kraivor. "
+        "This API supports JWT-based authentication, OAuth 2.0 (GitHub, Google), "
+        "API key management, user profiles, and session management."
+    ),
+    "VERSION": "0.1.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SCHEMA_PATH_PREFIX": r"/api/",
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
+    "COMPONENT_SPLIT_REQUEST": True,
+    "TAGS": [
+        {"name": "Authentication", "description": "Sign-in, sign-out, sessions, OTP, OAuth"},
+        {"name": "Users", "description": "Sign-up, email verification, password management"},
+        {"name": "Profiles", "description": "User profiles, avatars, leaderboard, following"},
+        {"name": "API Keys", "description": "Manage API keys for programmatic access"},
+        {"name": "OAuth", "description": "GitHub and Google OAuth flows"},
+        {"name": "JWKS", "description": "JSON Web Key Set for JWT verification"},
+    ],
 }
 
 # Simple JWT (DJANGO REST FRAMEWORK SIMPLEJWT)

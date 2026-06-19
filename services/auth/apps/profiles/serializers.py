@@ -5,12 +5,14 @@ from rest_framework import serializers
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    user_id = serializers.UUIDField(source="user.id", read_only=True)
     user_avatar_url = serializers.URLField(source="user.avatar_url", read_only=True, allow_null=True)
 
     class Meta:
         model = Profile
         fields = [
             "id",
+            "user_id",
             "username",
             "display_name",
             "bio",

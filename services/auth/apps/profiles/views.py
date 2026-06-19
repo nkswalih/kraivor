@@ -24,6 +24,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,13 @@ def _user_id(request) -> str | None:
 class ProfileDetailView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Get profile",
+        description="Returns profile details by username.",
+        tags=["Profiles"],
+        parameters=[OpenApiParameter("username", str, description="Profile username", location=OpenApiParameter.PATH)],
+        responses={200: ProfileSerializer},
+    )
     def get(self, request, username):
         uid = _user_id(request)
         profile = ProfileService.get_by_username(username)
@@ -57,6 +65,13 @@ class ProfileDetailView(APIView):
         data["is_owner"] = uid is not None and uid == str(profile.user_id)
         return Response(data)
 
+    @extend_schema(
+        summary="Update profile",
+        description="Update profile details. Only the profile owner can update.",
+        tags=["Profiles"],
+        request=UpdateProfileSerializer,
+        responses={200: ProfileSerializer},
+    )
     def patch(self, request, username):
         uid = _user_id(request)
         if not uid:  # pragma: no cover
@@ -83,6 +98,12 @@ class ProfileDetailView(APIView):
 class MyProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get my profile",
+        description="Returns the authenticated users own profile.",
+        tags=["Profiles"],
+        responses={200: ProfileSerializer},
+    )
     def get(self, request):
         uid = str(request.user.id)
         profile = ProfileService.get_by_user_id(uid)
@@ -99,6 +120,16 @@ class MyProfileView(APIView):
 class ProfileSearchView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Search profiles",
+        description="Search profiles by query string. Supports pagination.",
+        tags=["Profiles"],
+        parameters=[
+            OpenApiParameter("q", str, description="Search query"),
+            OpenApiParameter("page", int, description="Page number (1-indexed)"),
+        ],
+        responses={200: OpenApiResponse(description="Paginated search results")},
+    )
     def get(self, request):
         query = request.query_params.get("q", "").strip()
         if not query:
@@ -118,6 +149,12 @@ class ProfileSearchView(APIView):
 class FollowerListView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="List followers",
+        description="Returns followers for a given profile.",
+        tags=["Profiles"],
+        responses={200: FollowerSerializer(many=True)},
+    )
     def get(self, request, username):
         profile = ProfileService.get_by_username(username)
         if not profile:  # pragma: no cover
@@ -137,6 +174,12 @@ class FollowerListView(APIView):
 class FollowingListView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="List following",
+        description="Returns profiles that a given user follows.",
+        tags=["Profiles"],
+        responses={200: FollowingSerializer(many=True)},
+    )
     def get(self, request, username):
         profile = ProfileService.get_by_username(username)
         if not profile:  # pragma: no cover
@@ -156,6 +199,12 @@ class FollowingListView(APIView):
 class FollowView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Follow user",
+        description="Follow a profile. Returns 409 if already following or self-follow.",
+        tags=["Profiles"],
+        responses={204: OpenApiResponse(description="Followed successfully")},
+    )
     def post(self, request, username):
         target = ProfileService.get_by_username(username)
         if not target:  # pragma: no cover
@@ -165,6 +214,12 @@ class FollowView(APIView):
             return Response({"detail": "Already following or self-follow."}, status=status.HTTP_409_CONFLICT)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @extend_schema(
+        summary="Unfollow user",
+        description="Unfollow a profile.",
+        tags=["Profiles"],
+        responses={204: OpenApiResponse(description="Unfollowed successfully")},
+    )
     def delete(self, request, username):
         target = ProfileService.get_by_username(username)
         if not target:  # pragma: no cover
@@ -176,6 +231,12 @@ class FollowView(APIView):
 class FollowStatusView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Follow status",
+        description="Check if the current user is following a given profile.",
+        tags=["Profiles"],
+        responses={200: OpenApiResponse(description="Follow status")},
+    )
     def get(self, request, username):
         uid = _user_id(request)
         target = ProfileService.get_by_username(username)
@@ -188,6 +249,13 @@ class FollowStatusView(APIView):
 class LeaderboardView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Leaderboard",
+        description="Returns leaderboard of profiles ranked by reputation score.",
+        tags=["Profiles"],
+        parameters=[OpenApiParameter("page", int, description="Page number (1-indexed)")],
+        responses={200: OpenApiResponse(description="Paginated leaderboard")},
+    )
     def get(self, request):
         page = int(request.query_params.get("page", 1))
         items, total = ProfileService.get_leaderboard(page=page, page_size=50)
@@ -204,6 +272,13 @@ class LeaderboardView(APIView):
 class TopContributorsView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Top contributors",
+        description="Returns top contributors ranked by reputation.",
+        tags=["Profiles"],
+        parameters=[OpenApiParameter("limit", int, description="Number of contributors to return (default 10)")],
+        responses={200: OpenApiResponse(description="Top contributors")},
+    )
     def get(self, request):
         limit = int(request.query_params.get("limit", 10))
         contributors = ReputationService.get_top_contributors(limit=limit)
@@ -213,6 +288,13 @@ class TopContributorsView(APIView):
 class UsernameCheckView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Check username availability",
+        description="Check if a username is available for registration.",
+        tags=["Profiles"],
+        parameters=[OpenApiParameter("username", str, description="Username to check availability")],
+        responses={200: OpenApiResponse(description="Username availability status")},
+    )
     def get(self, request):
         username = request.query_params.get("username", "").strip()
         if not username:  # pragma: no cover
@@ -240,6 +322,12 @@ class ResolveProfilesByIdView(APIView):
 
     permission_classes = []
 
+    @extend_schema(
+        summary="Resolve profiles by ID (internal)",
+        description="Internal endpoint. Resolves user IDs to profile data. Requires X-Internal-Request header.",
+        tags=["Profiles"],
+        responses={200: OpenApiResponse(description="Profile resolution result")},
+    )
     def post(self, request):  # pragma: no cover
         internal_header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
         if request.headers.get(internal_header) != "1":
@@ -270,6 +358,12 @@ class ProfileUploadView(APIView):  # pragma: no cover
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
+    @extend_schema(
+        summary="Upload profile image",
+        description="Upload an avatar or banner image for the current user's profile.",
+        tags=["Profiles"],
+        responses={200: OpenApiResponse(description="Upload successful - returns URL")},
+    )
     def post(self, request):
         uid = str(request.user.id)
         field = request.data.get("field")
@@ -326,3 +420,26 @@ class ProfileUploadView(APIView):  # pragma: no cover
                 {"detail": f"Upload failed: {e}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class ProfilesByIdsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Get profiles by IDs",
+        description="""
+        Accepts a list of user UUIDs and returns profile data for all matching users.
+        Used by other services (e.g. chat) to resolve user IDs to display names and avatars.
+        """,
+        tags=["Profiles"],
+        request=ProfileSerializer,
+        responses={200: ProfileSerializer(many=True)},
+    )
+    def post(self, request):
+        user_ids = request.data.get("user_ids", [])
+        if not user_ids:
+            return Response({"profiles": []}, status=status.HTTP_200_OK)
+
+        profiles = Profile.objects.filter(user_id__in=user_ids)
+        serializer = ProfileSerializer(profiles, many=True)
+        return Response({"profiles": serializer.data}, status=status.HTTP_200_OK)

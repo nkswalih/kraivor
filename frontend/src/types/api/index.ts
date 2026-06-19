@@ -73,6 +73,9 @@ export interface ChatRoom {
   topic: string;
   is_active: boolean;
   last_message_at: string | null;
+  last_message_content: string;
+  last_message_sender_name: string;
+  participant_user_ids: string[];
   created_by: string;
   created_at: string;
   updated_at: string;

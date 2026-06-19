@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Hash, Plus, Loader2, Edit3, Trash2, X, Check } from 'lucide-react';
-import { chatEndpoints } from '@/lib/api/endpoints';
+import { chatEndpoints, profileEndpoints } from '@/lib/api/endpoints';
+import { useAuthStore } from '@/lib/stores/auth-store';
+import { formatCompactTime, truncate } from '@/lib/utils';
 import { CreateChannelDialog } from './create-channel-dialog';
 
 interface ChannelSidebarProps {
@@ -17,6 +19,7 @@ interface ChannelSidebarProps {
 export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: ChannelSidebarProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const userId = useAuthStore(s => s.user?.id);
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -26,6 +29,31 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
     queryFn: () => chatEndpoints.listRooms(workspaceId),
     enabled: !!workspaceId,
   });
+
+  const roomsList = Array.isArray(rooms) ? rooms : (rooms?.results ?? []);
+  const channels = roomsList.filter(r => r.room_type === 'workspace' || r.room_type === 'group');
+  const dms = roomsList.filter(r => r.room_type === 'dm');
+
+  const dmUserIds = useMemo(() => {
+    if (!userId) return [];
+    const ids = new Set<string>();
+    for (const room of dms) {
+      const other = (room.participant_user_ids ?? []).find(id => id !== userId);
+      if (other) ids.add(other);
+    }
+    return Array.from(ids);
+  }, [dms, userId]);
+
+  const { data: profilesData } = useQuery({
+    queryKey: ['profiles-by-ids', dmUserIds],
+    queryFn: () => profileEndpoints.getProfilesByIds(dmUserIds),
+    enabled: dmUserIds.length > 0,
+  });
+
+  const profileMap = useMemo(() => {
+    if (!profilesData?.profiles) return {};
+    return profilesData.profiles;
+  }, [profilesData]);
 
   const renameMut = useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) =>
@@ -53,10 +81,6 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
       </div>
     );
   }
-
-  const roomsList = Array.isArray(rooms) ? rooms : (rooms?.results ?? []);
-  const channels = roomsList.filter(r => r.room_type === 'workspace' || r.room_type === 'group');
-  const dms = roomsList.filter(r => r.room_type === 'dm');
 
   return (
     <div className="w-[260px] bg-[#111113] border-r border-[#27272A] flex flex-col shrink-0 select-none">
@@ -175,25 +199,48 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
             )}
             {dms.map((room) => {
               const active = room.id === currentRoomId;
+              const otherUserId = (room.participant_user_ids ?? []).find(id => id !== userId);
+              const profile = otherUserId ? profileMap[otherUserId] : undefined;
+              const displayName = profile?.display_name ?? room.name;
+              const avatarUrl = profile?.avatar_url ?? '';
               return (
-                <div 
+                <Link
                   key={room.id}
-                  className={`group flex items-center mx-2 rounded-md transition-colors ${
+                  href={`/${workspaceSlug}/chat/${room.id}`}
+                  className={`flex items-start gap-2.5 mx-2 px-2 py-2 rounded-md transition-colors ${
                     active
-                      ? 'bg-[#27272A] text-[#FAFAFA]'
-                      : 'text-text-secondary hover:bg-white/[0.04] hover:text-[#FAFAFA]'
+                      ? 'bg-[#27272A]'
+                      : 'hover:bg-white/[0.04]'
                   }`}
                 >
-                  <Link
-                    href={`/${workspaceSlug}/chat/${room.id}`}
-                    className="flex-1 flex items-center gap-3 px-2 py-1.5 min-w-0 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-[#27272A] flex items-center justify-center text-[13px] font-bold text-[#FAFAFA] shrink-0">
-                      {room.name.charAt(0).toUpperCase()}
+                  {/* Avatar */}
+                  <div className="w-8 h-8 rounded-full bg-[#27272A] flex items-center justify-center text-[13px] font-bold text-[#FAFAFA] shrink-0 overflow-hidden">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      displayName.charAt(0).toUpperCase()
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-[14px] font-medium text-[#FAFAFA]">
+                        {displayName}
+                      </span>
+                      {room.last_message_at && (
+                        <span className="text-[11px] text-text-tertiary shrink-0">
+                          {formatCompactTime(room.last_message_at)}
+                        </span>
+                      )}
                     </div>
-                    <span className="truncate text-[14px] font-medium">{room.name}</span>
-                  </Link>
-                </div>
+                    {room.last_message_content && (
+                      <p className="text-[12px] text-text-tertiary truncate mt-0.5">
+                        {truncate(room.last_message_content, 80)}
+                      </p>
+                    )}
+                  </div>
+                </Link>
               );
             })}
           </div>

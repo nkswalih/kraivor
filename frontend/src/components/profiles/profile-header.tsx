@@ -1,11 +1,13 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Avatar } from './avatar';
 import { FollowButton } from './follow-button';
+import { chatEndpoints } from '@/lib/api/endpoints';
+import { useAuthStore } from '@/lib/stores/auth-store';
 import type { Profile } from '@/types/domain/profiles';
-import { MapPin, Link as LinkIcon, Github, Twitter, Linkedin, Pencil, Share2 } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Github, Twitter, Linkedin, Pencil, Share2, MessageSquare } from 'lucide-react';
 import { copyToClipboard } from '@/lib/utils';
 
 interface ProfileHeaderProps {
@@ -15,6 +17,19 @@ interface ProfileHeaderProps {
 
 export function ProfileHeader({ profile, userAvatarUrl }: ProfileHeaderProps) {
   const router = useRouter();
+  const params = useParams<{ workspace: string }>();
+  const workspaceSlug = params?.workspace ?? '';
+  const workspaceId = useAuthStore(s => s.workspaceId);
+
+  const handleMessage = async () => {
+    if (!workspaceId || !profile.user_id) return;
+    try {
+      const room = await chatEndpoints.createDm(workspaceId, profile.user_id, profile.display_name);
+      router.push(`/${workspaceSlug}/chat/${room.id}`);
+    } catch {
+      toast.error('Failed to start conversation');
+    }
+  };
 
   const handleShare = async () => {
     const url = `${window.location.origin}/profile/${profile.username}`;
@@ -49,6 +64,15 @@ export function ProfileHeader({ profile, userAvatarUrl }: ProfileHeaderProps) {
             <p className="text-[13px] text-muted-foreground">@{profile.username}</p>
           </div>
           <div className="flex items-center gap-2">
+            {!profile.is_owner && workspaceId && (
+              <button
+                onClick={handleMessage}
+                className="flex items-center gap-1.5 text-[12px] font-medium text-foreground px-3 py-1.5 rounded-md border border-venom-yellow/50 bg-venom-yellow/10 hover:bg-venom-yellow/20 transition-colors"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                Message
+              </button>
+            )}
             {profile.is_owner && (
               <button
                 onClick={() => router.push(`/profile/${profile.username}/edit`)}

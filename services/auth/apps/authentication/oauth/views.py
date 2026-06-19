@@ -6,6 +6,10 @@ import logging
 
 from django.conf import settings
 from django.shortcuts import redirect
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -24,6 +28,12 @@ logger = logging.getLogger(__name__)
 class GitHubOAuthInitiateView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Initiate GitHub OAuth",
+        description="Returns GitHub OAuth authorization URL for user login.",
+        tags=["Authentication"],
+        responses={200: OpenApiResponse(description="Authorization URL")},
+    )
     def get(self, request: Request) -> Response:
         provider = "github"
         try:
@@ -43,6 +53,12 @@ class GitHubOAuthInitiateView(APIView):
 class GitHubOAuthCallbackView(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="GitHub OAuth callback",
+        description="Handles the GitHub OAuth callback, exchanges authorization code for tokens, and creates/finds the user.",
+        tags=["Authentication"],
+        responses={302: OpenApiResponse(description="Redirect with JWT tokens")},
+    )
     def get(self, request: Request) -> Response:
         code = request.query_params.get("code")
         state = request.query_params.get("state")
@@ -148,6 +164,12 @@ class GitHubConnectView(APIView):
     authentication_classes = []
     permission_classes = []
   
+    @extend_schema(
+        summary="Connect GitHub repo",
+        description="Returns GitHub OAuth URL with repo scope for connecting a repository to Kraivor.",
+        tags=["Authentication"],
+        responses={200: OpenApiResponse(description="Authorization URL with repo scope")},
+    )
     def get(self, request):
         state_manager = get_state_manager()
         state = state_manager.generate_state("github_connect")

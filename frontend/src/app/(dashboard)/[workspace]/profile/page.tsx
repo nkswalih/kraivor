@@ -1,10 +1,12 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks';
 import { Skeleton } from '@/components/ui/shadcn';
-import { User, Mail, Shield } from 'lucide-react';
+import { ArrowLeft, User, Mail, Shield } from 'lucide-react';
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -26,6 +28,12 @@ export default function ProfilePage() {
 
   return (
     <div className="p-8 max-w-2xl mx-auto">
+      <button
+        onClick={() => router.back()}
+        className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground mb-4 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" /> Back
+      </button>
       <div className="flex items-center gap-4 mb-8">
         <div className="w-16 h-16 rounded-full bg-krait-surface3 border border-krait-border flex items-center justify-center text-xl font-semibold text-text-primary">
           {initials}

@@ -2,6 +2,13 @@ import { coreApi } from '../client';
 import type { ChatRoom, ChatMessage, CursorPage, CreateRoomPayload, SendMessagePayload } from '@/types/api';
 
 export const chatEndpoints = {
+  createDm: (workspacePk: string, targetUserId: string, targetUserName: string) =>
+    coreApi.post<ChatRoom>(`/workspaces/${workspacePk}/chat/dm/`, {
+      target_user_id: targetUserId,
+      target_user_name: targetUserName,
+    }),
+
+
   listRooms: (workspacePk: string) =>
     coreApi.get<ChatRoom[] | { results: ChatRoom[] }>(`/workspaces/${workspacePk}/chat/rooms/`),
 

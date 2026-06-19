@@ -4,6 +4,11 @@ import uuid
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.utils import timezone
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+)
 from profiles.constants import (
     ALLOWED_IMAGE_TYPES,
     AVATAR_MAX_BYTES,
@@ -24,7 +29,6 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 
 logger = logging.getLogger(__name__)
 

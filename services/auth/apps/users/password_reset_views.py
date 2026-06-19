@@ -10,11 +10,14 @@ POST /api/auth/reset-password/   — Reset password with token
 import logging
 
 from django.conf import settings
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 from users.email_service import email_service
 from users.models import User
 from users.rate_limiter import RateLimitExceededError, rate_limiter

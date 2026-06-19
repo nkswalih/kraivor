@@ -26,11 +26,14 @@ import logging
 from dataclasses import dataclass
 
 from django.utils import timezone
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 from users.models import User
 
 from .cookie_utils import create_refresh_cookie

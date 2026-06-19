@@ -6,12 +6,15 @@ import logging
 
 from django.conf import settings
 from django.shortcuts import redirect
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 
 from ..jwt import generate_token_pair
 from ..services.user_service import find_or_create_oauth_user

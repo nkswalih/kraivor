@@ -2,11 +2,14 @@ import logging
 import uuid
 
 from django.conf import settings
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 
 from .email_service import email_service
 from .models import User

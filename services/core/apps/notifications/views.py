@@ -14,9 +14,42 @@ from apps.notifications.models import FCMToken, Notification
 from apps.notifications.serializers import FCMTokenSerializer, NotificationSerializer
 from apps.workspaces.permissions import IsAuthenticated
 
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 logger = logging.getLogger(__name__)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List notifications",
+        tags=["Notifications"],
+        responses={200: NotificationSerializer(many=True)},
+    ),
+    retrieve=extend_schema(
+        summary="Get notification",
+        tags=["Notifications"],
+        responses={200: NotificationSerializer},
+    ),
+    mark_all_read=extend_schema(
+        summary="Mark all notifications as read",
+        tags=["Notifications"],
+        responses={200: OpenApiResponse(description="Mark all as read status")},
+    ),
+    mark_read=extend_schema(
+        summary="Mark notification as read",
+        tags=["Notifications"],
+        responses={200: OpenApiResponse(description="Mark as read status")},
+    ),
+    dismiss=extend_schema(
+        summary="Dismiss notification",
+        tags=["Notifications"],
+        responses={200: OpenApiResponse(description="Dismiss status")},
+    ),
+    unread_count=extend_schema(
+        summary="Get unread notification count",
+        tags=["Notifications"],
+        responses={200: OpenApiResponse(description="Unread count")},
+    ),
+)
 class NotificationViewSet(ReadOnlyModelViewSet):
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
@@ -64,6 +97,19 @@ class NotificationViewSet(ReadOnlyModelViewSet):
         return Response({"unread_count": count})
 
 
+@extend_schema_view(
+    create=extend_schema(
+        summary="Register FCM token",
+        tags=["Notifications"],
+        request=FCMTokenSerializer,
+        responses={201: OpenApiResponse(description="Token registered")},
+    ),
+    destroy=extend_schema(
+        summary="Remove FCM token",
+        tags=["Notifications"],
+        responses={200: OpenApiResponse(description="Token removed")},
+    ),
+)
 class FCMTokenViewSet(ViewSet):
     permission_classes = [IsAuthenticated]
 
@@ -83,3 +129,4 @@ class FCMTokenViewSet(ViewSet):
         if deleted:
             return Response({"status": "removed"})
         return Response({"error": "not_found"}, status=status.HTTP_404_NOT_FOUND)
+

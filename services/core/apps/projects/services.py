@@ -9,10 +9,9 @@ Design principles:
   - Services handle business logic and database access.
   - Events are published inside the service layer after successful mutations.
 """
+
 import logging
-import uuid
 from collections import deque
-from typing import Optional
 
 from django.db import transaction
 from django.db.models import Count, Max, Q, QuerySet
@@ -24,7 +23,6 @@ from .constants import (
     MAX_DEPENDENCY_DEPTH,
     POSITION_MULTIPLIER,
     POSITION_REBALANCE_THRESHOLD,
-    TERMINAL_TASK_STATUSES,
     TaskStatus,
 )
 from .events import ProjectEventPublisher, TaskEventPublisher
@@ -45,8 +43,8 @@ class ProjectService:
     @staticmethod
     def list_for_workspace(
         workspace_id: str,
-        status: Optional[str] = None,
-        user_id: Optional[str] = None,
+        status: str | None = None,
+        user_id: str | None = None,
     ) -> QuerySet:
         qs = (
             Project.objects.filter(workspace_id=workspace_id)
@@ -86,9 +84,9 @@ class ProjectService:
         color: str = "",
         status: str = "planning",
         visibility: str = "workspace",
-        repository_id: Optional[str] = None,
-        knowledge_space_id: Optional[str] = None,
-        owner_id: Optional[str] = None,
+        repository_id: str | None = None,
+        knowledge_space_id: str | None = None,
+        owner_id: str | None = None,
     ) -> Project:
         project = Project.objects.create(
             workspace_id=workspace_id,
@@ -132,7 +130,7 @@ class ProjectService:
                 .get(id=project_id, workspace_id=workspace_id)
             )
         except Project.DoesNotExist:
-            raise Http404(f"Project {project_id} not found.")
+            raise Http404(f"Project {project_id} not found.") from None
 
     @staticmethod
     def update(project: Project, user_id: str, **validated_data) -> Project:
@@ -169,9 +167,9 @@ class TaskService:
     @staticmethod
     def list_for_project(
         project_id: str,
-        status: Optional[str] = None,
-        assignee_id: Optional[str] = None,
-        priority: Optional[str] = None,
+        status: str | None = None,
+        assignee_id: str | None = None,
+        priority: str | None = None,
     ) -> QuerySet:
         qs = (
             Task.objects.filter(project_id=project_id, parent_task__isnull=True)
@@ -275,7 +273,7 @@ class TaskService:
                 .get(id=task_id, project__workspace_id=workspace_id)
             )
         except Task.DoesNotExist:
-            raise Http404(f"Task {task_id} not found.")
+            raise Http404(f"Task {task_id} not found.") from None
 
     @staticmethod
     def update(task: Task, user_id: str, **validated_data) -> Task:
@@ -303,7 +301,7 @@ class TaskService:
     def update_status(
         task: Task,
         new_status: str,
-        position: Optional[float],
+        position: float | None,
         user_id: str,
     ) -> Task:
         old_status = task.status
@@ -327,7 +325,10 @@ class TaskService:
 
         logger.info(
             "Task status updated: id=%s %s \u2192 %s position=%.2f",
-            task.id, old_status, new_status, task.position,
+            task.id,
+            old_status,
+            new_status,
+            task.position,
         )
         return task
 
@@ -366,7 +367,7 @@ class TaskService:
                 created_by=user_id,
             )
         except Exception:
-            raise ValidationError("This dependency already exists.")
+            raise ValidationError("This dependency already exists.") from None
 
         return link
 
@@ -396,7 +397,7 @@ class TaskService:
                 workspace_id=workspace_id,
             )
         except Repository.DoesNotExist:
-            raise ValidationError("Repository not found in this workspace.")
+            raise ValidationError("Repository not found in this workspace.") from None
 
         link, created = TaskRepositoryLink.objects.get_or_create(
             task=task,
@@ -434,7 +435,9 @@ class TaskService:
                 workspace_id=workspace_id,
             )
         except KnowledgeSpace.DoesNotExist:
-            raise ValidationError("Knowledge space not found in this workspace.")
+            raise ValidationError(
+                "Knowledge space not found in this workspace."
+            ) from None
 
         link, created = TaskKnowledgeLink.objects.get_or_create(
             task=task,
@@ -473,8 +476,8 @@ class TaskService:
     def calculate_new_position(
         project_id: str,
         status: str,
-        above_task_id: Optional[str] = None,
-        below_task_id: Optional[str] = None,
+        above_task_id: str | None = None,
+        below_task_id: str | None = None,
     ) -> float:
         above_pos = None
         below_pos = None
@@ -534,7 +537,9 @@ class TaskService:
 
         logger.info(
             "Positions rebalanced: project=%s status=%s count=%d",
-            project_id, status, len(tasks),
+            project_id,
+            status,
+            len(tasks),
         )
 
     @staticmethod
@@ -578,7 +583,7 @@ class AIRecommendationService:
         return []
 
     @staticmethod
-    def estimate_story_points(task_id: str) -> Optional[int]:
+    def estimate_story_points(task_id: str) -> int | None:
         return None
 
     @staticmethod

@@ -24,6 +24,10 @@ import logging
 import uuid
 
 from django.conf import settings
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
@@ -58,6 +62,11 @@ class RepositoryView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="List repositories",
+        tags=["Repositories"],
+        responses={200: RepositorySerializer(many=True)},
+    )
     def get(self, request, workspace_pk=None):
         """
         List all active repositories connected to the workspace.
@@ -67,6 +76,12 @@ class RepositoryView(WorkspaceContextMixin, APIView):
         repositories = RepositoryService().list_repositories(workspace=workspace)
         return Response(RepositorySerializer(repositories, many=True).data)
 
+    @extend_schema(
+        summary="Connect repository",
+        tags=["Repositories"],
+        request=RepositoryConnectSerializer,
+        responses={201: RepositorySerializer},
+    )
     def post(self, request, workspace_pk=None):
         """
         Connect a GitHub repository to the workspace.
@@ -112,6 +127,11 @@ class RepositoryDetailView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Disconnect repository",
+        tags=["Repositories"],
+        responses={204: OpenApiResponse(description="No content")},
+    )
     def delete(self, request, workspace_pk=None, repo_id=None):
         """
         Disconnect the repository identified by repo_id.
@@ -162,6 +182,11 @@ class GitHubRepoSearchView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Search GitHub repositories",
+        tags=["Repositories"],
+        responses={200: InstallationRepoItemSerializer(many=True)},
+    )
     def get(self, request, workspace_pk=None):
         workspace = self._get_workspace_or_404(workspace_pk)
         actor_id = self._get_user_id()
@@ -217,6 +242,11 @@ class GitHubOAuthConnectView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get GitHub OAuth URL",
+        tags=["Repositories"],
+        responses={200: OpenApiResponse(description="OAuth URL")},
+    )
     def get(self, request):
         # Delegate to auth service's connect endpoint via internal HTTP call
         auth_service_url = getattr(

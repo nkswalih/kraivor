@@ -19,15 +19,15 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = "Sync denormalized author fields on Discussions and Comments from profile data."
+    help = (
+        "Sync denormalized author fields on Discussions and Comments from profile data."
+    )
 
     def handle(self, *args, **options):
         disc_ids = set(
             Discussion.objects.values_list("author_id", flat=True).distinct()
         )
-        comm_ids = set(
-            Comment.objects.values_list("author_id", flat=True).distinct()
-        )
+        comm_ids = set(Comment.objects.values_list("author_id", flat=True).distinct())
         all_author_ids = disc_ids | comm_ids
 
         if not all_author_ids:
@@ -61,7 +61,9 @@ class Command(BaseCommand):
                         self.stdout.write(f"  Queued sync for author {author_id}")
                     else:
                         self.stdout.write(
-                            self.style.WARNING(f"  No profile found for author {author_id}")
+                            self.style.WARNING(
+                                f"  No profile found for author {author_id}"
+                            )
                         )
                 else:
                     self.stdout.write(
@@ -74,4 +76,6 @@ class Command(BaseCommand):
                     self.style.ERROR(f"  Request failed for author {author_id}: {exc}")
                 )
 
-        self.stdout.write(self.style.SUCCESS("Done. Celery workers will process the sync tasks."))
+        self.stdout.write(
+            self.style.SUCCESS("Done. Celery workers will process the sync tasks.")
+        )

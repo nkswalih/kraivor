@@ -4,17 +4,19 @@ Provides ``ProjectFactory``, ``TaskFactory``, and ``TaskLinkFactory`` for use
 in test fixtures. Factories auto-generate UUIDs for owner/creator fields and
 use ``factory.Sequence`` for unique names/titles.
 """
+
 import uuid
 
 import factory
 import factory.django
 
 from ..constants import ProjectStatus, TaskLinkType, TaskPriority, TaskStatus, TaskType
-from ..models import Project, Task, TaskLink, TaskKnowledgeLink, TaskRepositoryLink
+from ..models import Project, Task, TaskLink
 
 
 class ProjectFactory(factory.django.DjangoModelFactory):
     """Factory for creating test Project instances with sensible defaults."""
+
     class Meta:
         model = Project
 
@@ -29,6 +31,7 @@ class ProjectFactory(factory.django.DjangoModelFactory):
 
 class TaskFactory(factory.django.DjangoModelFactory):
     """Factory for creating test Task instances with sensible defaults and sequential positions."""
+
     class Meta:
         model = Task
 
@@ -45,6 +48,7 @@ class TaskFactory(factory.django.DjangoModelFactory):
 
 class TaskLinkFactory(factory.django.DjangoModelFactory):
     """Factory for creating test TaskLink (dependency) instances with default BLOCKS relationship."""
+
     class Meta:
         model = TaskLink
 

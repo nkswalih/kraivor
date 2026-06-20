@@ -13,6 +13,7 @@ Design decisions:
   - Link models (``TaskLink``, ``TaskRepositoryLink``, ``TaskKnowledgeLink``) use
     ``UniqueConstraint`` to prevent duplicate relationships.
 """
+
 import uuid
 
 from django.db import models
@@ -32,6 +33,7 @@ from .constants import (
 
 class Project(TimestampedModel):
     """A workspace-scoped project that groups related tasks together."""
+
     workspace = models.ForeignKey(
         "workspaces.Workspace",
         on_delete=models.CASCADE,
@@ -69,6 +71,7 @@ class Project(TimestampedModel):
     )
     owner_id = models.UUIDField()
     created_by = models.UUIDField()
+
     class Meta:
         ordering = ["-updated_at"]
         indexes = [
@@ -246,4 +249,6 @@ class TaskKnowledgeLink(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"TaskKnowledgeLink(task={self.task_id}, space={self.knowledge_space_id})"
+        return (
+            f"TaskKnowledgeLink(task={self.task_id}, space={self.knowledge_space_id})"
+        )

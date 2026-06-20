@@ -2,6 +2,10 @@ import logging
 
 import requests
 from django.conf import settings
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -24,7 +28,6 @@ from .serializers import (
 )
 from .services import CommentService, DiscussionService, TagService, VoteService
 
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 logger = logging.getLogger(__name__)
 
 PAGE_SIZE = 20

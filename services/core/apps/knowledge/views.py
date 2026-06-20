@@ -1,6 +1,10 @@
 import logging
 import uuid
 
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.response import Response
@@ -24,7 +28,6 @@ from .services import (
     KnowledgeSpaceService,
 )
 
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 logger = logging.getLogger(__name__)
 
 

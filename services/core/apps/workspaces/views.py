@@ -23,6 +23,11 @@ import uuid
 import requests
 from django.conf import settings
 from django.db.models import Count, Prefetch, Q
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+)
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.pagination import CursorPagination
@@ -52,7 +57,6 @@ from .services import (
     WorkspaceService,
 )
 
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 logger = logging.getLogger(__name__)
 
 

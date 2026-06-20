@@ -14,7 +14,6 @@ Design:
     (``github_repo`` for repositories, ``name`` for knowledge spaces).
 """
 import logging
-from typing import Optional
 
 from rest_framework import serializers
 
@@ -119,7 +118,7 @@ class ProjectCreateSerializer(serializers.Serializer):
     knowledge_space_id = serializers.UUIDField(required=False, allow_null=True, default=None)
     owner_id = serializers.UUIDField(required=False, allow_null=True, default=None)
 
-    def validate_repository_id(self, value: Optional[str]) -> Optional[str]:
+    def validate_repository_id(self, value: str | None) -> str | None:
         if value is None:
             return value
 
@@ -132,7 +131,7 @@ class ProjectCreateSerializer(serializers.Serializer):
             )
         return value
 
-    def validate_knowledge_space_id(self, value: Optional[str]) -> Optional[str]:
+    def validate_knowledge_space_id(self, value: str | None) -> str | None:
         if value is None:
             return value
 
@@ -203,7 +202,7 @@ class TaskCreateSerializer(serializers.Serializer):
     )
     parent_task_id = serializers.UUIDField(required=False, allow_null=True, default=None)
 
-    def validate_parent_task_id(self, value: Optional[str]) -> Optional[str]:
+    def validate_parent_task_id(self, value: str | None) -> str | None:
         if value is None:
             return value
 
@@ -214,7 +213,7 @@ class TaskCreateSerializer(serializers.Serializer):
             )
         return value
 
-    def validate_assignee_id(self, value: Optional[str]) -> Optional[str]:
+    def validate_assignee_id(self, value: str | None) -> str | None:
         if value is None:
             return value
 

@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -133,7 +132,7 @@ class RoomDetailView(APIView):
     )
     def patch(self, request: Request, pk: str | None = None, workspace_pk: str | None = None) -> Response:
         user_id: str = str(getattr(request, "user_id", ""))
-        room: ChatRoom = self._get_room(pk)
+        self._get_room(pk)
         serializer: ChatRoomUpdateSerializer = ChatRoomUpdateSerializer(
             data=request.data, partial=True
         )

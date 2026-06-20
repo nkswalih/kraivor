@@ -2,7 +2,6 @@ import uuid
 
 import pytest
 
-from ..models import Discussion
 from ..tasks import recalculate_discussion_counters, update_author_denormalization
 from .factories import DiscussionFactory
 

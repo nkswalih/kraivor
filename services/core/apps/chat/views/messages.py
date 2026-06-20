@@ -26,7 +26,6 @@ from apps.chat.serializers import (
 from apps.chat.services import ChatMessageService, ChatRoomService
 from apps.chat.signals import message_sent
 from apps.chat.views.exceptions import ServiceUnavailable
-from apps.chat.views.pagination import MessageCursorPagination
 from apps.workspaces.permissions import IsAuthenticated
 
 logger = logging.getLogger(__name__)

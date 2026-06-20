@@ -10,7 +10,7 @@ import factory
 import factory.django
 
 from ..constants import ProjectStatus, TaskLinkType, TaskPriority, TaskStatus, TaskType
-from ..models import Project, Task, TaskLink, TaskKnowledgeLink, TaskRepositoryLink
+from ..models import Project, Task, TaskLink
 
 
 class ProjectFactory(factory.django.DjangoModelFactory):

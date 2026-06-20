@@ -12,10 +12,11 @@ import uuid
 import pytest
 from rest_framework.test import APIClient
 
+from apps.workspaces.tests.factories import WorkspaceFactory
+
 from ..constants import TaskStatus
 from ..models import TaskLink
 from .factories import ProjectFactory, TaskFactory
-from apps.workspaces.tests.factories import WorkspaceFactory
 
 
 @pytest.fixture

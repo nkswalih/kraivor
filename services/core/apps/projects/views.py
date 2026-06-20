@@ -16,13 +16,18 @@ Design:
 import logging
 
 from django.utils import timezone
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
-from apps.workspaces.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.workspaces.permissions import IsAuthenticated
 from apps.workspaces.views import WorkspaceContextMixin
+from core.pagination import StandardPagination
 
 from .permissions import IsProjectOwnerOrWorkspaceAdmin
 from .serializers import (
@@ -37,10 +42,8 @@ from .serializers import (
     TaskStatusUpdateSerializer,
     TaskUpdateSerializer,
 )
-from core.pagination import StandardPagination
 from .services import AIRecommendationService, ProjectService, TaskService
 
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 logger = logging.getLogger(__name__)
 
 

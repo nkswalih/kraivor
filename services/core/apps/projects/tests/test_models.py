@@ -3,7 +3,6 @@
 Covers string representation, soft-delete behaviour, relationship integrity
 (unique constraints, subtask FK), and workspace scoping defaults.
 """
-import uuid
 
 import pytest
 from django.db import IntegrityError
@@ -34,7 +33,7 @@ class TestProjectModel:
 
     def test_workspace_scoping(self, workspace):
         from ..models import Project
-        p1 = ProjectFactory(workspace=workspace)
+        ProjectFactory(workspace=workspace)
         ProjectFactory()
         assert Project.objects.filter(workspace=workspace).count() == 1
 

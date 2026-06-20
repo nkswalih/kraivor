@@ -11,7 +11,6 @@ from ..serializers import (
     TaskCreateSerializer,
     TaskSerializer,
 )
-from .factories import ProjectFactory, TaskFactory
 
 
 @pytest.mark.django_db

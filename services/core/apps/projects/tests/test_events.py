@@ -12,7 +12,6 @@ from unittest.mock import patch
 import pytest
 
 from ..events import ProjectEventPublisher, TaskEventPublisher, _build_envelope
-from .factories import ProjectFactory, TaskFactory
 
 
 @pytest.mark.django_db

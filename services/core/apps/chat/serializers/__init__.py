@@ -1,14 +1,14 @@
+from apps.chat.serializers.message_serializers import (
+    MessageSerializer,
+    MessageUpdateSerializer,
+    SendMessageSerializer,
+)
 from apps.chat.serializers.room_serializers import (
     ChatRoomCreateSerializer,
     ChatRoomDetailSerializer,
     ChatRoomListSerializer,
     ChatRoomUpdateSerializer,
     CreateDmSerializer,
-)
-from apps.chat.serializers.message_serializers import (
-    MessageSerializer,
-    MessageUpdateSerializer,
-    SendMessageSerializer,
 )
 
 __all__ = [

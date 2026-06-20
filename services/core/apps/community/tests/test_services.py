@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from ..models import Comment, Discussion, Tag, Vote
+from ..models import Comment, Discussion
 from ..services import (
     CommentService,
     DiscussionService,

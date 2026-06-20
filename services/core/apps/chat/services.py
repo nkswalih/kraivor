@@ -199,7 +199,6 @@ class ChatMessageService:
     def get_messages(
         room_id: str, limit: int = 50, start_key: dict[str, Any] | None = None
     ) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
-        repo: ChatMessageService = ChatMessageService._repo
         messages, last_key = get_repository().get_messages(
             room_id=room_id, limit=limit, start_key=start_key
         )

@@ -24,6 +24,10 @@ import logging
 import uuid
 
 from django.conf import settings
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
@@ -43,8 +47,6 @@ from .services import (
     RepositoryPermissionError,
     RepositoryService,
 )
-
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 
 logger = logging.getLogger(__name__)
 

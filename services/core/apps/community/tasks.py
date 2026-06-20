@@ -1,7 +1,6 @@
 import logging
 
 from celery import shared_task
-from django.db.models import F
 from django.utils import timezone
 
 from .constants import TRENDING_WINDOW_HOURS

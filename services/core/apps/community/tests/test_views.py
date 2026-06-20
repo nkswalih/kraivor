@@ -4,9 +4,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from ..models import Vote
 from .factories import (
-    CommentFactory,
     DiscussionFactory,
     TagFactory,
     VoteFactory,

@@ -5,6 +5,11 @@ REST API views for notification management.
 import logging
 
 from django.utils import timezone
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+)
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -14,7 +19,6 @@ from apps.notifications.models import FCMToken, Notification
 from apps.notifications.serializers import FCMTokenSerializer, NotificationSerializer
 from apps.workspaces.permissions import IsAuthenticated
 
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 logger = logging.getLogger(__name__)
 
 

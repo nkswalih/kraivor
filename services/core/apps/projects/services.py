@@ -10,9 +10,7 @@ Design principles:
   - Events are published inside the service layer after successful mutations.
 """
 import logging
-import uuid
 from collections import deque
-from typing import Optional
 
 from django.db import transaction
 from django.db.models import Count, Max, Q, QuerySet
@@ -24,7 +22,6 @@ from .constants import (
     MAX_DEPENDENCY_DEPTH,
     POSITION_MULTIPLIER,
     POSITION_REBALANCE_THRESHOLD,
-    TERMINAL_TASK_STATUSES,
     TaskStatus,
 )
 from .events import ProjectEventPublisher, TaskEventPublisher
@@ -45,8 +42,8 @@ class ProjectService:
     @staticmethod
     def list_for_workspace(
         workspace_id: str,
-        status: Optional[str] = None,
-        user_id: Optional[str] = None,
+        status: str | None = None,
+        user_id: str | None = None,
     ) -> QuerySet:
         qs = (
             Project.objects.filter(workspace_id=workspace_id)
@@ -86,9 +83,9 @@ class ProjectService:
         color: str = "",
         status: str = "planning",
         visibility: str = "workspace",
-        repository_id: Optional[str] = None,
-        knowledge_space_id: Optional[str] = None,
-        owner_id: Optional[str] = None,
+        repository_id: str | None = None,
+        knowledge_space_id: str | None = None,
+        owner_id: str | None = None,
     ) -> Project:
         project = Project.objects.create(
             workspace_id=workspace_id,
@@ -169,9 +166,9 @@ class TaskService:
     @staticmethod
     def list_for_project(
         project_id: str,
-        status: Optional[str] = None,
-        assignee_id: Optional[str] = None,
-        priority: Optional[str] = None,
+        status: str | None = None,
+        assignee_id: str | None = None,
+        priority: str | None = None,
     ) -> QuerySet:
         qs = (
             Task.objects.filter(project_id=project_id, parent_task__isnull=True)
@@ -303,7 +300,7 @@ class TaskService:
     def update_status(
         task: Task,
         new_status: str,
-        position: Optional[float],
+        position: float | None,
         user_id: str,
     ) -> Task:
         old_status = task.status
@@ -473,8 +470,8 @@ class TaskService:
     def calculate_new_position(
         project_id: str,
         status: str,
-        above_task_id: Optional[str] = None,
-        below_task_id: Optional[str] = None,
+        above_task_id: str | None = None,
+        below_task_id: str | None = None,
     ) -> float:
         above_pos = None
         below_pos = None
@@ -578,7 +575,7 @@ class AIRecommendationService:
         return []
 
     @staticmethod
-    def estimate_story_points(task_id: str) -> Optional[int]:
+    def estimate_story_points(task_id: str) -> int | None:
         return None
 
     @staticmethod

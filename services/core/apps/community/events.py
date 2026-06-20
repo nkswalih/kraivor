@@ -53,13 +53,19 @@ def _publish(topic, event, user_id=None):
     except Exception as exc:
         logger.error(
             "kafka.publish.failed",
-            extra={"topic": topic, "event_type": event.get("event_type"), "error": str(exc)},
+            extra={
+                "topic": topic,
+                "event_type": event.get("event_type"),
+                "error": str(exc),
+            },
         )
 
 
 def _delivery_report(err, msg):
     if err is not None:
-        logger.error("kafka.delivery.failed", extra={"error": str(err), "topic": msg.topic()})
+        logger.error(
+            "kafka.delivery.failed", extra={"error": str(err), "topic": msg.topic()}
+        )
 
 
 def publish_discussion_created(discussion, user_id):

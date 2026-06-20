@@ -13,6 +13,7 @@ Design:
   - Minimal serializers expose only ``id`` and a display-name field
     (``github_repo`` for repositories, ``name`` for knowledge spaces).
 """
+
 import logging
 
 from rest_framework import serializers
@@ -38,18 +39,21 @@ logger = logging.getLogger(__name__)
 
 class RepositoryMinimalSerializer(serializers.Serializer):
     """Minimal repository representation (id + github_repo) for nested serialization."""
+
     id = serializers.UUIDField()
     github_repo = serializers.CharField()
 
 
 class KnowledgeSpaceMinimalSerializer(serializers.Serializer):
     """Minimal knowledge space representation (id + name) for nested serialization."""
+
     id = serializers.UUIDField()
     name = serializers.CharField()
 
 
 class TaskRepositoryLinkReadSerializer(serializers.ModelSerializer):
     """Read serializer for task-repository links; flattens the FK into id + github_repo."""
+
     repository_id = serializers.UUIDField(source="repository.id")
     repository_github_repo = serializers.CharField(source="repository.github_repo")
 
@@ -60,6 +64,7 @@ class TaskRepositoryLinkReadSerializer(serializers.ModelSerializer):
 
 class TaskKnowledgeLinkReadSerializer(serializers.ModelSerializer):
     """Read serializer for task-knowledge links; flattens the FK into id + name."""
+
     knowledge_space_id = serializers.UUIDField(source="knowledge_space.id")
     space_name = serializers.CharField(source="knowledge_space.name")
 
@@ -70,6 +75,7 @@ class TaskKnowledgeLinkReadSerializer(serializers.ModelSerializer):
 
 class TaskDependencyReadSerializer(serializers.ModelSerializer):
     """Read serializer for task dependencies; exposes target task id + title + relationship type."""
+
     task_id = serializers.UUIDField(source="target_task.id")
     title = serializers.CharField(source="target_task.title")
 
@@ -80,6 +86,7 @@ class TaskDependencyReadSerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
     """Read serializer for Project — includes nested repository/knowledge-space and annotated counts."""
+
     repository = RepositoryMinimalSerializer(read_only=True)
     knowledge_space = KnowledgeSpaceMinimalSerializer(read_only=True)
     task_count = serializers.IntegerField(read_only=True, default=0)
@@ -89,21 +96,37 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = [
-            "id", "name", "description", "icon", "color",
-            "status", "visibility", "owner_id", "created_by",
-            "repository", "knowledge_space",
-            "task_count", "blocked_task_count", "done_task_count",
-            "created_at", "updated_at",
+            "id",
+            "name",
+            "description",
+            "icon",
+            "color",
+            "status",
+            "visibility",
+            "owner_id",
+            "created_by",
+            "repository",
+            "knowledge_space",
+            "task_count",
+            "blocked_task_count",
+            "done_task_count",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["id", "created_by", "created_at", "updated_at"]
 
 
 class ProjectCreateSerializer(serializers.Serializer):
     """Write serializer for creating a project. Validates repository/knowledge-space belong to the workspace."""
+
     name = serializers.CharField(max_length=255)
     description = serializers.CharField(required=False, allow_blank=True, default="")
-    icon = serializers.CharField(max_length=50, required=False, allow_blank=True, default="")
-    color = serializers.CharField(max_length=7, required=False, allow_blank=True, default="")
+    icon = serializers.CharField(
+        max_length=50, required=False, allow_blank=True, default=""
+    )
+    color = serializers.CharField(
+        max_length=7, required=False, allow_blank=True, default=""
+    )
     status = serializers.ChoiceField(
         choices=ProjectStatus.choices,
         default=ProjectStatus.PLANNING,
@@ -115,7 +138,9 @@ class ProjectCreateSerializer(serializers.Serializer):
         required=False,
     )
     repository_id = serializers.UUIDField(required=False, allow_null=True, default=None)
-    knowledge_space_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    knowledge_space_id = serializers.UUIDField(
+        required=False, allow_null=True, default=None
+    )
     owner_id = serializers.UUIDField(required=False, allow_null=True, default=None)
 
     def validate_repository_id(self, value: str | None) -> str | None:
@@ -126,9 +151,7 @@ class ProjectCreateSerializer(serializers.Serializer):
 
         workspace_id = self.context.get("workspace_id")
         if not Repository.objects.filter(id=value, workspace_id=workspace_id).exists():
-            raise serializers.ValidationError(
-                "Repository not found in this workspace."
-            )
+            raise serializers.ValidationError("Repository not found in this workspace.")
         return value
 
     def validate_knowledge_space_id(self, value: str | None) -> str | None:
@@ -138,7 +161,9 @@ class ProjectCreateSerializer(serializers.Serializer):
         from apps.knowledge.models import KnowledgeSpace
 
         workspace_id = self.context.get("workspace_id")
-        if not KnowledgeSpace.objects.filter(id=value, workspace_id=workspace_id).exists():
+        if not KnowledgeSpace.objects.filter(
+            id=value, workspace_id=workspace_id
+        ).exists():
             raise serializers.ValidationError(
                 "Knowledge space not found in this workspace."
             )
@@ -147,12 +172,15 @@ class ProjectCreateSerializer(serializers.Serializer):
 
 class ProjectUpdateSerializer(serializers.Serializer):
     """Write serializer for updating a project — all fields optional for partial updates."""
+
     name = serializers.CharField(max_length=255, required=False)
     description = serializers.CharField(required=False, allow_blank=True)
     icon = serializers.CharField(max_length=50, required=False, allow_blank=True)
     color = serializers.CharField(max_length=7, required=False, allow_blank=True)
     status = serializers.ChoiceField(choices=ProjectStatus.choices, required=False)
-    visibility = serializers.ChoiceField(choices=ProjectVisibility.choices, required=False)
+    visibility = serializers.ChoiceField(
+        choices=ProjectVisibility.choices, required=False
+    )
     repository_id = serializers.UUIDField(required=False, allow_null=True)
     knowledge_space_id = serializers.UUIDField(required=False, allow_null=True)
     owner_id = serializers.UUIDField(required=False)
@@ -160,6 +188,7 @@ class ProjectUpdateSerializer(serializers.Serializer):
 
 class TaskSerializer(serializers.ModelSerializer):
     """Read serializer for Task — includes nested links, dependencies, and subtask count."""
+
     repository_links = TaskRepositoryLinkReadSerializer(many=True, read_only=True)
     knowledge_links = TaskKnowledgeLinkReadSerializer(many=True, read_only=True)
     dependencies = TaskDependencyReadSerializer(
@@ -170,20 +199,39 @@ class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            "id", "project_id", "parent_task_id",
-            "title", "description",
-            "status", "priority", "task_type",
-            "assignee_id", "reporter_id",
-            "due_date", "estimate_points", "position",
+            "id",
+            "project_id",
+            "parent_task_id",
+            "title",
+            "description",
+            "status",
+            "priority",
+            "task_type",
+            "assignee_id",
+            "reporter_id",
+            "due_date",
+            "estimate_points",
+            "position",
             "subtask_count",
-            "repository_links", "knowledge_links", "dependencies",
-            "created_by", "created_at", "updated_at",
+            "repository_links",
+            "knowledge_links",
+            "dependencies",
+            "created_by",
+            "created_at",
+            "updated_at",
         ]
-        read_only_fields = ["id", "reporter_id", "created_by", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "reporter_id",
+            "created_by",
+            "created_at",
+            "updated_at",
+        ]
 
 
 class TaskCreateSerializer(serializers.Serializer):
     """Write serializer for creating a task. Validates parent task exists in project and assignee is a workspace member."""
+
     title = serializers.CharField(max_length=500)
     description = serializers.CharField(required=False, allow_blank=True, default="")
     status = serializers.ChoiceField(
@@ -200,7 +248,9 @@ class TaskCreateSerializer(serializers.Serializer):
     estimate_points = serializers.IntegerField(
         required=False, allow_null=True, min_value=0, max_value=100, default=None
     )
-    parent_task_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    parent_task_id = serializers.UUIDField(
+        required=False, allow_null=True, default=None
+    )
 
     def validate_parent_task_id(self, value: str | None) -> str | None:
         if value is None:
@@ -208,9 +258,7 @@ class TaskCreateSerializer(serializers.Serializer):
 
         project_id = self.context.get("project_id")
         if not Task.objects.filter(id=value, project_id=project_id).exists():
-            raise serializers.ValidationError(
-                "Parent task not found in this project."
-            )
+            raise serializers.ValidationError("Parent task not found in this project.")
         return value
 
     def validate_assignee_id(self, value: str | None) -> str | None:
@@ -232,6 +280,7 @@ class TaskCreateSerializer(serializers.Serializer):
 
 class TaskUpdateSerializer(serializers.Serializer):
     """Write serializer for updating a task — all fields optional for partial updates."""
+
     title = serializers.CharField(max_length=500, required=False)
     description = serializers.CharField(required=False, allow_blank=True)
     status = serializers.ChoiceField(choices=TaskStatus.choices, required=False)
@@ -246,12 +295,14 @@ class TaskUpdateSerializer(serializers.Serializer):
 
 class TaskStatusUpdateSerializer(serializers.Serializer):
     """Write serializer for the dedicated status-update endpoint. Requires ``status``, optional ``position``."""
+
     status = serializers.ChoiceField(choices=TaskStatus.choices)
     position = serializers.FloatField(required=False, allow_null=True, default=None)
 
 
 class TaskDependencySerializer(serializers.Serializer):
     """Write serializer for creating a dependency link. Validates target task exists in the workspace."""
+
     target_task_id = serializers.UUIDField()
     relationship_type = serializers.ChoiceField(choices=TaskLinkType.choices)
 
@@ -260,15 +311,19 @@ class TaskDependencySerializer(serializers.Serializer):
         if not Task.objects.filter(
             id=value, project__workspace_id=workspace_id
         ).exists():
-            raise serializers.ValidationError("Target task not found in this workspace.")
+            raise serializers.ValidationError(
+                "Target task not found in this workspace."
+            )
         return value
 
 
 class TaskRepositoryLinkSerializer(serializers.Serializer):
     """Write serializer for linking a repository to a task."""
+
     repository_id = serializers.UUIDField()
 
 
 class TaskKnowledgeLinkSerializer(serializers.Serializer):
     """Write serializer for linking a knowledge space to a task."""
+
     knowledge_space_id = serializers.UUIDField()

@@ -1,4 +1,5 @@
 """Django admin configuration for project and task models."""
+
 from django.contrib import admin
 
 from .models import Project, Task, TaskKnowledgeLink, TaskLink, TaskRepositoryLink
@@ -8,7 +9,14 @@ from .models import Project, Task, TaskKnowledgeLink, TaskLink, TaskRepositoryLi
 class ProjectAdmin(admin.ModelAdmin):
     """Admin for Project — supports name/description search, status/visibility filtering."""
 
-    list_display = ["name", "workspace_id", "status", "visibility", "owner_id", "created_at"]
+    list_display = [
+        "name",
+        "workspace_id",
+        "status",
+        "visibility",
+        "owner_id",
+        "created_at",
+    ]
     list_filter = ["status", "visibility", "created_at"]
     search_fields = ["name", "description"]
     readonly_fields = ["id", "created_at", "updated_at"]
@@ -19,7 +27,15 @@ class ProjectAdmin(admin.ModelAdmin):
 class TaskAdmin(admin.ModelAdmin):
     """Admin for Task — supports title/description search, status/priority/type filtering."""
 
-    list_display = ["title", "project", "status", "priority", "assignee_id", "due_date", "created_at"]
+    list_display = [
+        "title",
+        "project",
+        "status",
+        "priority",
+        "assignee_id",
+        "due_date",
+        "created_at",
+    ]
     list_filter = ["status", "priority", "task_type", "created_at"]
     search_fields = ["title", "description"]
     readonly_fields = ["id", "created_at", "updated_at"]

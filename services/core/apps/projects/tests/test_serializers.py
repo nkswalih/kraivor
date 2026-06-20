@@ -3,6 +3,7 @@
 Covers serialization output (annotated fields present) and write-serializer
 validation (required fields, custom validators).
 """
+
 import pytest
 
 from ..serializers import (
@@ -16,6 +17,7 @@ from ..serializers import (
 @pytest.mark.django_db
 class TestProjectSerializer:
     """ProjectSerializer: serialized output includes annotations; ProjectCreateSerializer validates required fields."""
+
     def test_serializes_project(self, project):
         serializer = ProjectSerializer(project)
         assert serializer.data["name"] == project.name
@@ -43,13 +45,16 @@ class TestProjectSerializer:
 @pytest.mark.django_db
 class TestTaskSerializer:
     """TaskSerializer: serialized output includes links/dependencies/subtask_count; TaskCreateSerializer validates required fields."""
+
     def test_serializes_task(self, task):
         serializer = TaskSerializer(task)
         assert serializer.data["title"] == task.title
         assert "subtask_count" in serializer.data
         assert "dependencies" in serializer.data
 
-    def test_create_serializer_valid(self, project, workspace, user_id, workspace_member):
+    def test_create_serializer_valid(
+        self, project, workspace, user_id, workspace_member
+    ):
         data = {
             "title": "Test Task",
             "project_id": str(project.id),

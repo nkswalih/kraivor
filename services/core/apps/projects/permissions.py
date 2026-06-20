@@ -9,6 +9,7 @@ ADR: The project views use ``_get_workspace_or_404`` (404 for non-members) inste
 of ``IsWorkspaceMember`` (403 for non-members) to avoid leaking workspace existence.
 These permission classes remain available for other call sites that need explicit 403.
 """
+
 import logging
 
 from rest_framework.permissions import BasePermission
@@ -19,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 
 class IsWorkspaceMember(BasePermission):
-
     message = "You must be an active member of this workspace."
 
     def has_permission(self, request, view) -> bool:
@@ -36,7 +36,6 @@ class IsWorkspaceMember(BasePermission):
 
 
 class IsProjectOwnerOrWorkspaceAdmin(BasePermission):
-
     message = "Only the project owner or workspace admins can perform this action."
 
     def has_object_permission(self, request, view, obj) -> bool:

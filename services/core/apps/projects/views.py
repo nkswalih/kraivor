@@ -13,6 +13,7 @@ Design:
     passed as keyword arguments by Django's URL resolver.
   - Pagination uses ``StandardPagination`` (page-based with configurable size).
 """
+
 import logging
 
 from django.utils import timezone
@@ -422,7 +423,9 @@ class TaskDependencyDestroyView(WorkspaceContextMixin, APIView):
         tags=["Projects"],
         responses={204: OpenApiResponse(description="No content")},
     )
-    def delete(self, request: Request, workspace_pk, task_id: str, dependency_id: str) -> Response:
+    def delete(
+        self, request: Request, workspace_pk, task_id: str, dependency_id: str
+    ) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
             task_id=str(task_id),
@@ -445,7 +448,9 @@ class TaskRepositoryLinkDestroyView(WorkspaceContextMixin, APIView):
         tags=["Projects"],
         responses={204: OpenApiResponse(description="No content")},
     )
-    def delete(self, request: Request, workspace_pk, task_id: str, link_id: str) -> Response:
+    def delete(
+        self, request: Request, workspace_pk, task_id: str, link_id: str
+    ) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
             task_id=str(task_id),
@@ -465,7 +470,9 @@ class TaskKnowledgeLinkDestroyView(WorkspaceContextMixin, APIView):
         tags=["Projects"],
         responses={204: OpenApiResponse(description="No content")},
     )
-    def delete(self, request: Request, workspace_pk, task_id: str, link_id: str) -> Response:
+    def delete(
+        self, request: Request, workspace_pk, task_id: str, link_id: str
+    ) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
             task_id=str(task_id),

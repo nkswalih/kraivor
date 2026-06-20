@@ -42,7 +42,9 @@ def _resolve_profile(user_id: str) -> dict:
         resp = requests.post(
             endpoint,
             json={"user_ids": [user_id]},
-            headers={getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"): "1"},
+            headers={
+                getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"): "1"
+            },
             timeout=5,
         )
         if resp.status_code == 200:
@@ -67,9 +69,15 @@ class DiscussionListView(APIView):
         sort = request.query_params.get("sort", "latest")
         workspace_id = request.query_params.get("workspace_id")
         items, total = DiscussionService.list_discussions(
-            page=page, page_size=PAGE_SIZE, tag=tag, sort=sort, workspace_id=workspace_id
+            page=page,
+            page_size=PAGE_SIZE,
+            tag=tag,
+            sort=sort,
+            workspace_id=workspace_id,
         )
-        serializer = DiscussionListSerializer(items, many=True, context={"request": request})
+        serializer = DiscussionListSerializer(
+            items, many=True, context={"request": request}
+        )
         return Response(
             {
                 "results": serializer.data,
@@ -94,8 +102,12 @@ class DiscussionListView(APIView):
             serializer.validated_data,
             user_id=request.user_id,
             username=profile.get("username", request.data.get("author_username", "")),
-            display_name=profile.get("display_name", request.data.get("author_display_name", "")),
-            avatar_url=profile.get("avatar_url", request.data.get("author_avatar_url", "")),
+            display_name=profile.get(
+                "display_name", request.data.get("author_display_name", "")
+            ),
+            avatar_url=profile.get(
+                "avatar_url", request.data.get("author_avatar_url", "")
+            ),
         )
         publish_discussion_created(discussion, request.user_id)
         return Response(
@@ -115,7 +127,9 @@ class DiscussionDetailView(APIView):
     def get(self, request, discussion_id):
         discussion = DiscussionService.get_detail(discussion_id)
         if not discussion:
-            return Response({"detail": "Discussion not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Discussion not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         return Response(
             DiscussionDetailSerializer(discussion, context={"request": request}).data
         )
@@ -129,14 +143,20 @@ class DiscussionDetailView(APIView):
     def patch(self, request, discussion_id):
         discussion = DiscussionService.get_detail(discussion_id)
         if not discussion:
-            return Response({"detail": "Discussion not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Discussion not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         if str(request.user_id) != str(discussion.author_id):
-            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN
+            )
         serializer = UpdateDiscussionSerializer(data=request.data, partial=True)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         discussion = DiscussionService.update_discussion(
-            discussion, serializer.validated_data, tag_names=serializer.validated_data.get("tags")
+            discussion,
+            serializer.validated_data,
+            tag_names=serializer.validated_data.get("tags"),
         )
         return Response(
             DiscussionDetailSerializer(discussion, context={"request": request}).data
@@ -150,9 +170,13 @@ class DiscussionDetailView(APIView):
     def delete(self, request, discussion_id):
         discussion = DiscussionService.get_detail(discussion_id)
         if not discussion:
-            return Response({"detail": "Discussion not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Discussion not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         if str(request.user_id) != str(discussion.author_id):
-            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN
+            )
         DiscussionService.soft_delete(discussion, request.user_id)
         publish_discussion_deleted(str(discussion.id), str(discussion.author_id))
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -167,10 +191,15 @@ class DiscussionVoteView(APIView):
     def post(self, request, discussion_id):
         discussion = DiscussionService.get_detail(discussion_id)
         if not discussion:
-            return Response({"detail": "Discussion not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Discussion not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         value = request.data.get("value", 1)
         if value not in (1, -1):
-            return Response({"detail": "Value must be 1 (upvote) or -1 (downvote)."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Value must be 1 (upvote) or -1 (downvote)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         vote, action = VoteService.vote_discussion(discussion, request.user_id, value)
         if action != "no_change":
             publish_discussion_upvoted(discussion, request.user_id)
@@ -184,7 +213,9 @@ class DiscussionVoteView(APIView):
     def delete(self, request, discussion_id):
         discussion = DiscussionService.get_detail(discussion_id)
         if not discussion:
-            return Response({"detail": "Discussion not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Discussion not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         VoteService.remove_discussion_vote(discussion, request.user_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -200,10 +231,14 @@ class CommentListView(APIView):
     def get(self, request, discussion_id):
         discussion = DiscussionService.get_detail(discussion_id)
         if not discussion:
-            return Response({"detail": "Discussion not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Discussion not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         page = int(request.query_params.get("page", 1))
         sort = request.query_params.get("sort", "newest")
-        items, total = CommentService.get_comments(discussion_id, page=page, page_size=COMMENT_PAGE_SIZE, sort=sort)
+        items, total = CommentService.get_comments(
+            discussion_id, page=page, page_size=COMMENT_PAGE_SIZE, sort=sort
+        )
         serializer = CommentSerializer(items, many=True, context={"request": request})
         return Response(
             {
@@ -223,7 +258,9 @@ class CommentListView(APIView):
     def post(self, request, discussion_id):
         discussion = DiscussionService.get_detail(discussion_id)
         if not discussion:
-            return Response({"detail": "Discussion not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Discussion not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         serializer = CreateCommentSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -233,8 +270,12 @@ class CommentListView(APIView):
             serializer.validated_data,
             user_id=request.user_id,
             username=profile.get("username", request.data.get("author_username", "")),
-            display_name=profile.get("display_name", request.data.get("author_display_name", "")),
-            avatar_url=profile.get("avatar_url", request.data.get("author_avatar_url", "")),
+            display_name=profile.get(
+                "display_name", request.data.get("author_display_name", "")
+            ),
+            avatar_url=profile.get(
+                "avatar_url", request.data.get("author_avatar_url", "")
+            ),
         )
         publish_comment_created(comment, request.user_id)
         return Response(
@@ -267,10 +308,15 @@ class CommentVoteView(APIView):
     def post(self, request, discussion_id, comment_id):
         comment = CommentService.get_by_id(comment_id, discussion_id)
         if not comment:
-            return Response({"detail": "Comment not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Comment not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         value = request.data.get("value", 1)
         if value not in (1, -1):
-            return Response({"detail": "Value must be 1 (upvote) or -1 (downvote)."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Value must be 1 (upvote) or -1 (downvote)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         vote, action = VoteService.vote_comment(comment, request.user_id, value)
         return Response({"value": vote.value, "action": action})
 
@@ -282,7 +328,9 @@ class CommentVoteView(APIView):
     def delete(self, request, discussion_id, comment_id):
         comment = CommentService.get_by_id(comment_id, discussion_id)
         if not comment:
-            return Response({"detail": "Comment not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Comment not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         VoteService.remove_comment_vote(comment, request.user_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -326,6 +374,9 @@ class TagSearchView(APIView):
     def get(self, request):
         query = request.query_params.get("q", "").strip()
         if not query:
-            return Response({"detail": "Query parameter 'q' is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Query parameter 'q' is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         tags = TagService.search_tags(query)
         return Response({"results": TagSerializer(tags, many=True).data})

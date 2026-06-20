@@ -7,134 +7,357 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('knowledge', '0001_initial'),
-        ('repositories', '0003_rename_idx_gh_install_workspace_active_idx_gh_install_ws_active'),
-        ('workspaces', '0001_initial'),
+        ("knowledge", "0001_initial"),
+        (
+            "repositories",
+            "0003_rename_idx_gh_install_workspace_active_idx_gh_install_ws_active",
+        ),
+        ("workspaces", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Project',
+            name="Project",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('deleted_at', models.DateTimeField(blank=True, db_index=True, null=True)),
-                ('name', models.CharField(max_length=255)),
-                ('description', models.TextField(blank=True, default='')),
-                ('icon', models.CharField(blank=True, default='', max_length=50)),
-                ('color', models.CharField(blank=True, default='', max_length=7)),
-                ('status', models.CharField(choices=[('planning', 'Planning'), ('active', 'Active'), ('completed', 'Completed'), ('archived', 'Archived')], db_index=True, default='planning', max_length=20)),
-                ('visibility', models.CharField(choices=[('private', 'Private'), ('workspace', 'Workspace')], default='workspace', max_length=20)),
-                ('owner_id', models.UUIDField()),
-                ('created_by', models.UUIDField()),
-                ('knowledge_space', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='projects', to='knowledge.knowledgespace')),
-                ('repository', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='projects', to='repositories.repository')),
-                ('workspace', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='projects', to='workspaces.workspace')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "deleted_at",
+                    models.DateTimeField(blank=True, db_index=True, null=True),
+                ),
+                ("name", models.CharField(max_length=255)),
+                ("description", models.TextField(blank=True, default="")),
+                ("icon", models.CharField(blank=True, default="", max_length=50)),
+                ("color", models.CharField(blank=True, default="", max_length=7)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("planning", "Planning"),
+                            ("active", "Active"),
+                            ("completed", "Completed"),
+                            ("archived", "Archived"),
+                        ],
+                        db_index=True,
+                        default="planning",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "visibility",
+                    models.CharField(
+                        choices=[("private", "Private"), ("workspace", "Workspace")],
+                        default="workspace",
+                        max_length=20,
+                    ),
+                ),
+                ("owner_id", models.UUIDField()),
+                ("created_by", models.UUIDField()),
+                (
+                    "knowledge_space",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="projects",
+                        to="knowledge.knowledgespace",
+                    ),
+                ),
+                (
+                    "repository",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="projects",
+                        to="repositories.repository",
+                    ),
+                ),
+                (
+                    "workspace",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="projects",
+                        to="workspaces.workspace",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-updated_at'],
+                "ordering": ["-updated_at"],
             },
         ),
         migrations.CreateModel(
-            name='Task',
+            name="Task",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('deleted_at', models.DateTimeField(blank=True, db_index=True, null=True)),
-                ('title', models.CharField(max_length=500)),
-                ('description', models.TextField(blank=True, default='')),
-                ('status', models.CharField(choices=[('backlog', 'Backlog'), ('todo', 'Todo'), ('in_progress', 'In Progress'), ('in_review', 'In Review'), ('blocked', 'Blocked'), ('done', 'Done'), ('cancelled', 'Cancelled')], default='backlog', max_length=20)),
-                ('priority', models.CharField(choices=[('low', 'Low'), ('medium', 'Medium'), ('high', 'High'), ('critical', 'Critical')], default='medium', max_length=20)),
-                ('task_type', models.CharField(choices=[('feature', 'Feature'), ('bug', 'Bug'), ('improvement', 'Improvement'), ('research', 'Research'), ('spike', 'Spike'), ('documentation', 'Documentation'), ('technical_debt', 'Technical Debt'), ('incident', 'Incident')], default='feature', max_length=30)),
-                ('assignee_id', models.UUIDField(blank=True, null=True)),
-                ('reporter_id', models.UUIDField()),
-                ('due_date', models.DateField(blank=True, null=True)),
-                ('estimate_points', models.PositiveSmallIntegerField(blank=True, null=True)),
-                ('position', models.FloatField(default=0.0)),
-                ('created_by', models.UUIDField()),
-                ('parent_task', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='subtasks', to='projects.task')),
-                ('project', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='tasks', to='projects.project')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "deleted_at",
+                    models.DateTimeField(blank=True, db_index=True, null=True),
+                ),
+                ("title", models.CharField(max_length=500)),
+                ("description", models.TextField(blank=True, default="")),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("backlog", "Backlog"),
+                            ("todo", "Todo"),
+                            ("in_progress", "In Progress"),
+                            ("in_review", "In Review"),
+                            ("blocked", "Blocked"),
+                            ("done", "Done"),
+                            ("cancelled", "Cancelled"),
+                        ],
+                        default="backlog",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "priority",
+                    models.CharField(
+                        choices=[
+                            ("low", "Low"),
+                            ("medium", "Medium"),
+                            ("high", "High"),
+                            ("critical", "Critical"),
+                        ],
+                        default="medium",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "task_type",
+                    models.CharField(
+                        choices=[
+                            ("feature", "Feature"),
+                            ("bug", "Bug"),
+                            ("improvement", "Improvement"),
+                            ("research", "Research"),
+                            ("spike", "Spike"),
+                            ("documentation", "Documentation"),
+                            ("technical_debt", "Technical Debt"),
+                            ("incident", "Incident"),
+                        ],
+                        default="feature",
+                        max_length=30,
+                    ),
+                ),
+                ("assignee_id", models.UUIDField(blank=True, null=True)),
+                ("reporter_id", models.UUIDField()),
+                ("due_date", models.DateField(blank=True, null=True)),
+                (
+                    "estimate_points",
+                    models.PositiveSmallIntegerField(blank=True, null=True),
+                ),
+                ("position", models.FloatField(default=0.0)),
+                ("created_by", models.UUIDField()),
+                (
+                    "parent_task",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="subtasks",
+                        to="projects.task",
+                    ),
+                ),
+                (
+                    "project",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="tasks",
+                        to="projects.project",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['position', '-created_at'],
+                "ordering": ["position", "-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='TaskKnowledgeLink',
+            name="TaskKnowledgeLink",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('knowledge_space', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='task_links', to='knowledge.knowledgespace')),
-                ('task', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='knowledge_links', to='projects.task')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "knowledge_space",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="task_links",
+                        to="knowledge.knowledgespace",
+                    ),
+                ),
+                (
+                    "task",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="knowledge_links",
+                        to="projects.task",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='TaskLink',
+            name="TaskLink",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('relationship_type', models.CharField(choices=[('blocks', 'Blocks'), ('blocked_by', 'Blocked By'), ('duplicates', 'Duplicates'), ('relates_to', 'Relates To'), ('caused_by', 'Caused By')], max_length=20)),
-                ('created_by', models.UUIDField()),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('source_task', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='outgoing_links', to='projects.task')),
-                ('target_task', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='incoming_links', to='projects.task')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                (
+                    "relationship_type",
+                    models.CharField(
+                        choices=[
+                            ("blocks", "Blocks"),
+                            ("blocked_by", "Blocked By"),
+                            ("duplicates", "Duplicates"),
+                            ("relates_to", "Relates To"),
+                            ("caused_by", "Caused By"),
+                        ],
+                        max_length=20,
+                    ),
+                ),
+                ("created_by", models.UUIDField()),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "source_task",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="outgoing_links",
+                        to="projects.task",
+                    ),
+                ),
+                (
+                    "target_task",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="incoming_links",
+                        to="projects.task",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['created_at'],
+                "ordering": ["created_at"],
             },
         ),
         migrations.CreateModel(
-            name='TaskRepositoryLink',
+            name="TaskRepositoryLink",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('repository', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='task_links', to='repositories.repository')),
-                ('task', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='repository_links', to='projects.task')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "repository",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="task_links",
+                        to="repositories.repository",
+                    ),
+                ),
+                (
+                    "task",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="repository_links",
+                        to="projects.task",
+                    ),
+                ),
             ],
         ),
         migrations.AddIndex(
-            model_name='project',
-            index=models.Index(fields=['workspace_id'], name='projects_workspace_idx'),
+            model_name="project",
+            index=models.Index(fields=["workspace_id"], name="projects_workspace_idx"),
         ),
         migrations.AddIndex(
-            model_name='project',
-            index=models.Index(fields=['workspace_id', 'status'], name='projects_workspace_status_idx'),
+            model_name="project",
+            index=models.Index(
+                fields=["workspace_id", "status"], name="projects_workspace_status_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='project',
-            index=models.Index(fields=['workspace_id', '-updated_at'], name='projects_workspace_updated_idx'),
+            model_name="project",
+            index=models.Index(
+                fields=["workspace_id", "-updated_at"],
+                name="projects_workspace_updated_idx",
+            ),
         ),
         migrations.AddIndex(
-            model_name='task',
-            index=models.Index(fields=['project_id'], name='tasks_project_idx'),
+            model_name="task",
+            index=models.Index(fields=["project_id"], name="tasks_project_idx"),
         ),
         migrations.AddIndex(
-            model_name='task',
-            index=models.Index(fields=['assignee_id'], name='tasks_assignee_idx'),
+            model_name="task",
+            index=models.Index(fields=["assignee_id"], name="tasks_assignee_idx"),
         ),
         migrations.AddIndex(
-            model_name='task',
-            index=models.Index(fields=['project_id', 'status'], name='tasks_project_status_idx'),
+            model_name="task",
+            index=models.Index(
+                fields=["project_id", "status"], name="tasks_project_status_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='task',
-            index=models.Index(fields=['due_date'], name='tasks_due_date_idx'),
+            model_name="task",
+            index=models.Index(fields=["due_date"], name="tasks_due_date_idx"),
         ),
         migrations.AddConstraint(
-            model_name='taskknowledgelink',
-            constraint=models.UniqueConstraint(fields=('task', 'knowledge_space'), name='unique_task_knowledge_link'),
+            model_name="taskknowledgelink",
+            constraint=models.UniqueConstraint(
+                fields=("task", "knowledge_space"), name="unique_task_knowledge_link"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='tasklink',
-            constraint=models.UniqueConstraint(fields=('source_task', 'target_task', 'relationship_type'), name='unique_task_link'),
+            model_name="tasklink",
+            constraint=models.UniqueConstraint(
+                fields=("source_task", "target_task", "relationship_type"),
+                name="unique_task_link",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='taskrepositorylink',
-            constraint=models.UniqueConstraint(fields=('task', 'repository'), name='unique_task_repository_link'),
+            model_name="taskrepositorylink",
+            constraint=models.UniqueConstraint(
+                fields=("task", "repository"), name="unique_task_repository_link"
+            ),
         ),
     ]

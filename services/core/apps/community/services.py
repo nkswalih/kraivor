@@ -29,7 +29,9 @@ class DiscussionService:
             qs = qs.filter(tags__slug=tag)
         if sort == "trending":
             cutoff = timezone.now() - timedelta(hours=TRENDING_WINDOW_HOURS)
-            qs = qs.filter(created_at__gte=cutoff).order_by("-upvote_count", "-created_at")
+            qs = qs.filter(created_at__gte=cutoff).order_by(
+                "-upvote_count", "-created_at"
+            )
         elif sort == "top":
             qs = qs.order_by("-upvote_count", "-created_at")
         else:
@@ -41,7 +43,9 @@ class DiscussionService:
 
     @staticmethod
     def get_detail(discussion_id: str):
-        return Discussion.objects.prefetch_related("tags").filter(id=discussion_id).first()
+        return (
+            Discussion.objects.prefetch_related("tags").filter(id=discussion_id).first()
+        )
 
     @staticmethod
     def create_discussion(data, user_id, username, display_name, avatar_url):
@@ -114,14 +118,15 @@ class DiscussionService:
 class CommentService:
     @staticmethod
     def get_by_id(comment_id: str, discussion_id: str):
-        return Comment.objects.filter(id=comment_id, discussion_id=discussion_id).first()
+        return Comment.objects.filter(
+            id=comment_id, discussion_id=discussion_id
+        ).first()
 
     @staticmethod
     def get_comments(discussion_id: str, page=1, page_size=30, sort="newest"):
-        qs = (
-            Comment.objects.filter(discussion_id=discussion_id, parent__isnull=True)
-            .select_related(None)
-        )
+        qs = Comment.objects.filter(
+            discussion_id=discussion_id, parent__isnull=True
+        ).select_related(None)
         if sort == "top":
             qs = qs.order_by("-upvote_count", "-created_at")
         else:
@@ -264,13 +269,18 @@ class VoteService:
         return True
 
     @staticmethod
-    def get_user_votes(user_id: str, discussion_ids: list = None, comment_ids: list = None):
+    def get_user_votes(
+        user_id: str, discussion_ids: list = None, comment_ids: list = None
+    ):
         q = Q(user_id=user_id)
         if discussion_ids:
             q &= Q(discussion_id__in=discussion_ids)
         elif comment_ids:
             q &= Q(comment_id__in=comment_ids)
-        return {str(v.discussion_id or v.comment_id): v.value for v in Vote.objects.filter(q)}
+        return {
+            str(v.discussion_id or v.comment_id): v.value
+            for v in Vote.objects.filter(q)
+        }
 
 
 class TagService:

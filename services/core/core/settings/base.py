@@ -237,6 +237,12 @@ AWS_REGION = env("AWS_REGION", default="us-east-1")
 REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/0")
 
 # =============================================================================
+# AWS Lambda — Notification dispatch (email / Slack / SMS)
+# =============================================================================
+
+AWS_LAMBDA_NOTIFICATION_FN = env("AWS_LAMBDA_NOTIFICATION_FN", default="")
+
+# =============================================================================
 # Firebase — Push Notifications (optional)
 # =============================================================================
 

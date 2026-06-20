@@ -40,6 +40,7 @@ from .serializers import (
 from core.pagination import StandardPagination
 from .services import AIRecommendationService, ProjectService, TaskService
 
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 logger = logging.getLogger(__name__)
 
 
@@ -49,6 +50,11 @@ class ProjectListCreateView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="List projects",
+        tags=["Projects"],
+        responses={200: ProjectSerializer(many=True)},
+    )
     def get(self, request: Request, workspace_pk) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         status_filter = request.query_params.get("status")
@@ -60,6 +66,12 @@ class ProjectListCreateView(WorkspaceContextMixin, APIView):
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        summary="Create project",
+        tags=["Projects"],
+        request=ProjectCreateSerializer,
+        responses={201: ProjectSerializer},
+    )
     def post(self, request: Request, workspace_pk) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         serializer = ProjectCreateSerializer(
@@ -85,6 +97,11 @@ class ProjectDetailView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get project",
+        tags=["Projects"],
+        responses={200: ProjectSerializer},
+    )
     def get(self, request: Request, workspace_pk, project_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         project = ProjectService.get(
@@ -93,6 +110,12 @@ class ProjectDetailView(WorkspaceContextMixin, APIView):
         )
         return Response(ProjectSerializer(project).data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        summary="Update project",
+        tags=["Projects"],
+        request=ProjectUpdateSerializer,
+        responses={200: ProjectSerializer},
+    )
     def patch(self, request: Request, workspace_pk, project_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         project = ProjectService.get(
@@ -110,6 +133,11 @@ class ProjectDetailView(WorkspaceContextMixin, APIView):
         )
         return Response(ProjectSerializer(project).data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        summary="Delete project",
+        tags=["Projects"],
+        responses={204: OpenApiResponse(description="No content")},
+    )
     def delete(self, request: Request, workspace_pk, project_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         project = ProjectService.get(
@@ -134,6 +162,11 @@ class ProjectTaskListView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="List project tasks",
+        tags=["Projects"],
+        responses={200: OpenApiResponse(description="Paginated task list response")},
+    )
     def get(self, request: Request, workspace_pk, project_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         ProjectService.get(
@@ -162,6 +195,11 @@ class ProjectAIRecommendationsView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get AI recommendations",
+        tags=["Projects"],
+        responses={200: OpenApiResponse(description="AI recommendations")},
+    )
     def get(self, request: Request, workspace_pk, project_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         ProjectService.get(
@@ -193,6 +231,11 @@ class TaskListCreateView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="List tasks",
+        tags=["Projects"],
+        responses={200: OpenApiResponse(description="Paginated task list response")},
+    )
     def get(self, request: Request, workspace_pk) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         tasks = TaskService.list_for_workspace(
@@ -207,6 +250,12 @@ class TaskListCreateView(WorkspaceContextMixin, APIView):
         serializer = TaskSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
 
+    @extend_schema(
+        summary="Create task",
+        tags=["Projects"],
+        request=TaskCreateSerializer,
+        responses={201: TaskSerializer},
+    )
     def post(self, request: Request, workspace_pk) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         project_id = request.data.get("project_id")
@@ -244,6 +293,11 @@ class TaskDetailView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get task",
+        tags=["Projects"],
+        responses={200: TaskSerializer},
+    )
     def get(self, request: Request, workspace_pk, task_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
@@ -252,6 +306,12 @@ class TaskDetailView(WorkspaceContextMixin, APIView):
         )
         return Response(TaskSerializer(task).data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        summary="Update task",
+        tags=["Projects"],
+        request=TaskUpdateSerializer,
+        responses={200: TaskSerializer},
+    )
     def patch(self, request: Request, workspace_pk, task_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
@@ -267,6 +327,11 @@ class TaskDetailView(WorkspaceContextMixin, APIView):
         )
         return Response(TaskSerializer(task).data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        summary="Delete task",
+        tags=["Projects"],
+        responses={204: OpenApiResponse(description="No content")},
+    )
     def delete(self, request: Request, workspace_pk, task_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
@@ -286,6 +351,12 @@ class TaskStatusUpdateView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Update task status",
+        tags=["Projects"],
+        request=TaskStatusUpdateSerializer,
+        responses={200: TaskSerializer},
+    )
     def patch(self, request: Request, workspace_pk, task_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
@@ -311,6 +382,12 @@ class TaskDependencyView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Add task dependency",
+        tags=["Projects"],
+        request=TaskDependencySerializer,
+        responses={201: OpenApiResponse(description="Dependency created")},
+    )
     def post(self, request: Request, workspace_pk, task_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
@@ -337,6 +414,11 @@ class TaskDependencyView(WorkspaceContextMixin, APIView):
 class TaskDependencyDestroyView(WorkspaceContextMixin, APIView):
     """DELETE /api/workspaces/<pk>/tasks/<id>/dependencies/<dep_id>/ — remove a dependency."""
 
+    @extend_schema(
+        summary="Remove task dependency",
+        tags=["Projects"],
+        responses={204: OpenApiResponse(description="No content")},
+    )
     def delete(self, request: Request, workspace_pk, task_id: str, dependency_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
@@ -355,6 +437,11 @@ class TaskRepositoryLinkDestroyView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Remove repository link from task",
+        tags=["Projects"],
+        responses={204: OpenApiResponse(description="No content")},
+    )
     def delete(self, request: Request, workspace_pk, task_id: str, link_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
@@ -370,6 +457,11 @@ class TaskKnowledgeLinkDestroyView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Remove knowledge link from task",
+        tags=["Projects"],
+        responses={204: OpenApiResponse(description="No content")},
+    )
     def delete(self, request: Request, workspace_pk, task_id: str, link_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
@@ -388,6 +480,12 @@ class TaskRepositoryLinkView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Link repository to task",
+        tags=["Projects"],
+        request=TaskRepositoryLinkSerializer,
+        responses={201: OpenApiResponse(description="Repository linked")},
+    )
     def post(self, request: Request, workspace_pk, task_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(
@@ -415,6 +513,12 @@ class TaskKnowledgeLinkView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Link knowledge space to task",
+        tags=["Projects"],
+        request=TaskKnowledgeLinkSerializer,
+        responses={201: OpenApiResponse(description="Knowledge space linked")},
+    )
     def post(self, request: Request, workspace_pk, task_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(

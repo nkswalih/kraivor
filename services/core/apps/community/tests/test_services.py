@@ -21,7 +21,10 @@ from .factories import (
 class TestDiscussionService:
     def test_create_discussion(self, user_id):
         d = DiscussionService.create_discussion(
-            {"title": "Test Discussion Title Here", "body": "This is the body of the test discussion."},
+            {
+                "title": "Test Discussion Title Here",
+                "body": "This is the body of the test discussion.",
+            },
             user_id=user_id,
             username="testuser",
             display_name="Test User",
@@ -32,7 +35,11 @@ class TestDiscussionService:
 
     def test_create_with_tags(self, user_id, tag):
         d = DiscussionService.create_discussion(
-            {"title": "Test Discussion Title Here", "body": "This is the body of the test discussion.", "tags": [tag.name]},
+            {
+                "title": "Test Discussion Title Here",
+                "body": "This is the body of the test discussion.",
+                "tags": [tag.name],
+            },
             user_id=user_id,
             username="testuser",
             display_name="Test User",

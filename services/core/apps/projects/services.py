@@ -9,6 +9,7 @@ Design principles:
   - Services handle business logic and database access.
   - Events are published inside the service layer after successful mutations.
 """
+
 import logging
 from collections import deque
 
@@ -129,7 +130,7 @@ class ProjectService:
                 .get(id=project_id, workspace_id=workspace_id)
             )
         except Project.DoesNotExist:
-            raise Http404(f"Project {project_id} not found.")
+            raise Http404(f"Project {project_id} not found.") from None
 
     @staticmethod
     def update(project: Project, user_id: str, **validated_data) -> Project:
@@ -272,7 +273,7 @@ class TaskService:
                 .get(id=task_id, project__workspace_id=workspace_id)
             )
         except Task.DoesNotExist:
-            raise Http404(f"Task {task_id} not found.")
+            raise Http404(f"Task {task_id} not found.") from None
 
     @staticmethod
     def update(task: Task, user_id: str, **validated_data) -> Task:
@@ -324,7 +325,10 @@ class TaskService:
 
         logger.info(
             "Task status updated: id=%s %s \u2192 %s position=%.2f",
-            task.id, old_status, new_status, task.position,
+            task.id,
+            old_status,
+            new_status,
+            task.position,
         )
         return task
 
@@ -363,7 +367,7 @@ class TaskService:
                 created_by=user_id,
             )
         except Exception:
-            raise ValidationError("This dependency already exists.")
+            raise ValidationError("This dependency already exists.") from None
 
         return link
 
@@ -393,7 +397,7 @@ class TaskService:
                 workspace_id=workspace_id,
             )
         except Repository.DoesNotExist:
-            raise ValidationError("Repository not found in this workspace.")
+            raise ValidationError("Repository not found in this workspace.") from None
 
         link, created = TaskRepositoryLink.objects.get_or_create(
             task=task,
@@ -431,7 +435,9 @@ class TaskService:
                 workspace_id=workspace_id,
             )
         except KnowledgeSpace.DoesNotExist:
-            raise ValidationError("Knowledge space not found in this workspace.")
+            raise ValidationError(
+                "Knowledge space not found in this workspace."
+            ) from None
 
         link, created = TaskKnowledgeLink.objects.get_or_create(
             task=task,
@@ -531,7 +537,9 @@ class TaskService:
 
         logger.info(
             "Positions rebalanced: project=%s status=%s count=%d",
-            project_id, status, len(tasks),
+            project_id,
+            status,
+            len(tasks),
         )
 
     @staticmethod

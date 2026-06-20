@@ -10,6 +10,7 @@ Architecture:
 ADR: Overdue checking is a background batch process rather than a real-time
 trigger to keep the task-create/update path fast and side-effect-free.
 """
+
 import logging
 
 from celery import shared_task
@@ -33,12 +34,14 @@ def check_overdue_tasks(self) -> dict:
     try:
         today = timezone.now().date()
 
-        overdue_tasks = Task.objects.filter(
-            due_date__lt=today,
-            deleted_at__isnull=True,
-        ).exclude(
-            status__in=list(TERMINAL_TASK_STATUSES)
-        ).select_related("project")
+        overdue_tasks = (
+            Task.objects.filter(
+                due_date__lt=today,
+                deleted_at__isnull=True,
+            )
+            .exclude(status__in=list(TERMINAL_TASK_STATUSES))
+            .select_related("project")
+        )
 
         count = 0
         for task in overdue_tasks.iterator(chunk_size=100):
@@ -50,4 +53,4 @@ def check_overdue_tasks(self) -> dict:
 
     except Exception as exc:
         logger.exception("check_overdue_tasks failed: %s", exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc

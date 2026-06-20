@@ -3,6 +3,8 @@
 .env.local
 .env.*.local
 docker-compose.override.yml
+.venv
+
 
 # Python
 __pycache__/
@@ -13,6 +15,10 @@ __pycache__/
 dist/
 build/
 *.egg-info
+.ruff_cache
+.pytest_cache
+.uv-cache
+.mypy_cache
 
 # Node
 node_modules/
@@ -79,6 +85,7 @@ frontend-projects.md
 .keys/jwt-public.pem
 .keys/oauth-encryption.key
 oauth-encryption.key
+firebase-service-account.json
 .keys/*
 *.pem
 *.key

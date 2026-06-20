@@ -133,6 +133,30 @@ def dispatch_notification(
                 extra={"user_id": user_id, "error": str(exc)},
             )
 
+    # ── 4. Invoke AWS Lambda for email / Slack dispatch ────────────────────
+    from django.conf import settings
+
+    if settings.AWS_LAMBDA_NOTIFICATION_FN:
+        try:
+            from apps.notifications.lambda_client import invoke_notification_lambda
+
+            invoke_notification_lambda(
+                {
+                    "user_id": user_id,
+                    "notification_type": notification_type,
+                    "title": title,
+                    "body": body,
+                    "link": link,
+                    "workspace_id": workspace_id or "",
+                    "actor_id": actor_id or "",
+                }
+            )
+        except Exception as exc:
+            logger.warning(
+                "task.notification.lambda_failed",
+                extra={"user_id": user_id, "error": str(exc)},
+            )
+
     return {
         "status": "dispatched",
         "notification_id": str(notif.id),

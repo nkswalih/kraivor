@@ -3,7 +3,6 @@
 Covers string representation, soft-delete behaviour, relationship integrity
 (unique constraints, subtask FK), and workspace scoping defaults.
 """
-import uuid
 
 import pytest
 from django.db import IntegrityError
@@ -15,6 +14,7 @@ from .factories import ProjectFactory, TaskFactory, TaskLinkFactory
 @pytest.mark.django_db
 class TestProjectModel:
     """Project model: string representation, soft-delete lifecycle, workspace scoping."""
+
     def test_str_representation(self, project):
         assert "Project" in str(project)
         assert project.name in str(project)
@@ -34,7 +34,8 @@ class TestProjectModel:
 
     def test_workspace_scoping(self, workspace):
         from ..models import Project
-        p1 = ProjectFactory(workspace=workspace)
+
+        ProjectFactory(workspace=workspace)
         ProjectFactory()
         assert Project.objects.filter(workspace=workspace).count() == 1
 
@@ -42,6 +43,7 @@ class TestProjectModel:
 @pytest.mark.django_db
 class TestTaskModel:
     """Task model: string representation, position defaults, soft-delete, subtask FK, dependency uniqueness."""
+
     def test_str_representation(self, task):
         assert task.title in str(task)
         assert task.status in str(task)
@@ -60,6 +62,10 @@ class TestTaskModel:
 
     def test_task_link_unique_constraint(self, task):
         other_task = TaskFactory(project=task.project)
-        TaskLinkFactory(source_task=task, target_task=other_task, relationship_type="blocks")
+        TaskLinkFactory(
+            source_task=task, target_task=other_task, relationship_type="blocks"
+        )
         with pytest.raises(IntegrityError):
-            TaskLinkFactory(source_task=task, target_task=other_task, relationship_type="blocks")
+            TaskLinkFactory(
+                source_task=task, target_task=other_task, relationship_type="blocks"
+            )

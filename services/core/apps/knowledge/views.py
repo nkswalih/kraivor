@@ -1,6 +1,10 @@
 import logging
 import uuid
 
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.response import Response
@@ -51,6 +55,11 @@ def _get_knowledge_space_or_404(pk, user_id) -> KnowledgeSpace:
 class KnowledgeSpaceListCreateView(WorkspaceContextMixin, APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="List knowledge spaces",
+        tags=["Knowledge"],
+        responses={200: KnowledgeSpaceListSerializer(many=True)},
+    )
     def get(self, request, workspace_pk=None):
         workspace = self._get_workspace_or_404(workspace_pk)
         search = request.query_params.get("search", "").strip() or None
@@ -60,6 +69,12 @@ class KnowledgeSpaceListCreateView(WorkspaceContextMixin, APIView):
         )
         return Response(KnowledgeSpaceListSerializer(knowledge_spaces, many=True).data)
 
+    @extend_schema(
+        summary="Create knowledge space",
+        tags=["Knowledge"],
+        request=KnowledgeSpaceCreateSerializer,
+        responses={201: KnowledgeSpaceSerializer},
+    )
     def post(self, request, workspace_pk=None):
         workspace = self._get_workspace_or_404(workspace_pk)
 
@@ -87,10 +102,21 @@ class KnowledgeSpaceListCreateView(WorkspaceContextMixin, APIView):
 class KnowledgeSpaceDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get knowledge space",
+        tags=["Knowledge"],
+        responses={200: KnowledgeSpaceSerializer},
+    )
     def get(self, request, pk=None):
         knowledge_space = _get_knowledge_space_or_404(pk, request.user_id)
         return Response(KnowledgeSpaceSerializer(knowledge_space).data)
 
+    @extend_schema(
+        summary="Update knowledge space",
+        tags=["Knowledge"],
+        request=KnowledgeSpaceUpdateSerializer,
+        responses={200: KnowledgeSpaceSerializer},
+    )
     def put(self, request, pk=None):
         knowledge_space = _get_knowledge_space_or_404(pk, request.user_id)
 
@@ -108,6 +134,11 @@ class KnowledgeSpaceDetailView(APIView):
 
         return Response(KnowledgeSpaceSerializer(updated).data)
 
+    @extend_schema(
+        summary="Delete knowledge space",
+        tags=["Knowledge"],
+        responses={204: OpenApiResponse(description="No content")},
+    )
     def delete(self, request, pk=None):
         knowledge_space = _get_knowledge_space_or_404(pk, request.user_id)
 
@@ -135,11 +166,22 @@ class KnowledgeAssetListCreateView(APIView):
     def _get_space(self, request, knowledge_pk) -> KnowledgeSpace:
         return _get_knowledge_space_or_404(knowledge_pk, request.user_id)
 
+    @extend_schema(
+        summary="List assets",
+        tags=["Knowledge"],
+        responses={200: KnowledgeAssetSerializer(many=True)},
+    )
     def get(self, request, knowledge_pk=None):
         knowledge_space = self._get_space(request, knowledge_pk)
         assets = KnowledgeAssetService().list_assets(knowledge_space=knowledge_space)
         return Response(KnowledgeAssetSerializer(assets, many=True).data)
 
+    @extend_schema(
+        summary="Upload asset",
+        tags=["Knowledge"],
+        request=KnowledgeAssetInputSerializer,
+        responses={201: KnowledgeAssetSerializer},
+    )
     def post(self, request, knowledge_pk=None):
         knowledge_space = self._get_space(request, knowledge_pk)
 
@@ -171,6 +213,11 @@ class KnowledgeAssetDetailView(APIView):
     permission_classes = [IsAuthenticated]
     http_method_names = ["delete"]
 
+    @extend_schema(
+        summary="Delete asset",
+        tags=["Knowledge"],
+        responses={204: OpenApiResponse(description="No content")},
+    )
     def delete(self, request, knowledge_pk=None, pk=None):
         knowledge_space = _get_knowledge_space_or_404(knowledge_pk, request.user_id)
 
@@ -196,3 +243,4 @@ class KnowledgeAssetDetailView(APIView):
             raise PermissionDenied(str(exc)) from exc
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+

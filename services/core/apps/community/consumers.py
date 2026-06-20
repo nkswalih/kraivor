@@ -1,4 +1,3 @@
-import json
 import logging
 
 from .tasks import update_author_denormalization

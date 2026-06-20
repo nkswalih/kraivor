@@ -23,6 +23,10 @@ from urllib.parse import quote
 
 from django.conf import settings
 from django.shortcuts import redirect
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
@@ -63,6 +67,11 @@ class GitHubAppInstallInitiateView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Initiate GitHub App installation",
+        tags=["Repositories"],
+        responses={200: GitHubAppInstallInitiateSerializer},
+    )
     def get(self, request, workspace_pk=None):
         workspace = self._get_workspace_or_404(workspace_pk)
         actor_id = self._get_user_id()
@@ -128,6 +137,11 @@ class GitHubAppInstallCallbackView(APIView):
     # No authentication required — state token proves intent
     permission_classes = []
 
+    @extend_schema(
+        summary="Handle GitHub App installation callback",
+        tags=["Repositories"],
+        responses={302: OpenApiResponse(description="Redirect to frontend")},
+    )
     def get(self, request):
         installation_id_raw = request.query_params.get("installation_id")
         setup_action = request.query_params.get("setup_action", "install")
@@ -204,6 +218,11 @@ class GitHubAppInstallationImportView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Import GitHub App installation",
+        tags=["Repositories"],
+        responses={200: GitHubAppInstallationSerializer, 201: GitHubAppInstallationSerializer},
+    )
     def post(self, request, workspace_pk=None):
         workspace = self._get_workspace_or_404(workspace_pk)
         actor_id = self._get_user_id()
@@ -274,6 +293,11 @@ class GitHubAppInstallationListView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="List GitHub App installations",
+        tags=["Repositories"],
+        responses={200: OpenApiResponse(description="Installation list")},
+    )
     def get(self, request, workspace_pk=None):
         workspace = self._get_workspace_or_404(workspace_pk)
         actor_id = self._get_user_id()
@@ -303,6 +327,11 @@ class GitHubAppInstallationRefreshView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Refresh installation repositories",
+        tags=["Repositories"],
+        responses={200: GitHubAppInstallationSerializer},
+    )
     def post(self, request, workspace_pk=None, installation_pk=None):
         workspace = self._get_workspace_or_404(workspace_pk)
         actor_id = self._get_user_id()
@@ -334,6 +363,11 @@ class GitHubAppInstallationRemoveView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Remove GitHub App installation",
+        tags=["Repositories"],
+        responses={204: OpenApiResponse(description="No content")},
+    )
     def delete(self, request, workspace_pk=None, installation_pk=None):
         workspace = self._get_workspace_or_404(workspace_pk)
         actor_id = self._get_user_id()

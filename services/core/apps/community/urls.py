@@ -14,8 +14,16 @@ from .views import (
 
 discussion_patterns = [
     path("", DiscussionListView.as_view(), name="discussion-list"),
-    path("<uuid:discussion_id>/", DiscussionDetailView.as_view(), name="discussion-detail"),
-    path("<uuid:discussion_id>/vote/", DiscussionVoteView.as_view(), name="discussion-vote"),
+    path(
+        "<uuid:discussion_id>/",
+        DiscussionDetailView.as_view(),
+        name="discussion-detail",
+    ),
+    path(
+        "<uuid:discussion_id>/vote/",
+        DiscussionVoteView.as_view(),
+        name="discussion-vote",
+    ),
     path(
         "<uuid:discussion_id>/comments/",
         CommentListView.as_view(),

@@ -23,6 +23,11 @@ import uuid
 import requests
 from django.conf import settings
 from django.db.models import Count, Prefetch, Q
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+)
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.pagination import CursorPagination
@@ -154,6 +159,35 @@ class WorkspaceContextMixin:
 # ─── Workspace ViewSet (KRV-019) ──────────────────────────────────────────────
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List workspaces",
+        tags=["Workspaces"],
+        responses={200: OpenApiResponse(description="Paginated list response")},
+    ),
+    create=extend_schema(
+        summary="Create workspace",
+        tags=["Workspaces"],
+        request=WorkspaceCreateSerializer,
+        responses={201: WorkspaceDetailSerializer},
+    ),
+    retrieve=extend_schema(
+        summary="Get workspace",
+        tags=["Workspaces"],
+        responses={200: WorkspaceDetailSerializer},
+    ),
+    partial_update=extend_schema(
+        summary="Update workspace",
+        tags=["Workspaces"],
+        request=WorkspaceUpdateSerializer,
+        responses={200: WorkspaceDetailSerializer},
+    ),
+    destroy=extend_schema(
+        summary="Delete workspace",
+        tags=["Workspaces"],
+        responses={204: OpenApiResponse(description="No content")},
+    ),
+)
 class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
     """
     Core workspace CRUD endpoints.
@@ -271,6 +305,30 @@ class WorkspaceViewSet(WorkspaceContextMixin, ViewSet):
 # ─── Member ViewSet (KRV-020) ─────────────────────────────────────────────────
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List members",
+        tags=["Workspaces"],
+        responses={200: WorkspaceMemberSerializer(many=True)},
+    ),
+    invite=extend_schema(
+        summary="Invite member",
+        tags=["Workspaces"],
+        request=WorkspaceInvitationCreateSerializer,
+        responses={201: WorkspaceInvitationSerializer},
+    ),
+    partial_update=extend_schema(
+        summary="Update member role",
+        tags=["Workspaces"],
+        request=MemberRoleUpdateSerializer,
+        responses={200: WorkspaceMemberSerializer},
+    ),
+    destroy=extend_schema(
+        summary="Remove member",
+        tags=["Workspaces"],
+        responses={204: OpenApiResponse(description="No content")},
+    ),
+)
 class WorkspaceMemberViewSet(WorkspaceContextMixin, ViewSet):
     """
     Member management endpoints nested under workspaces.
@@ -427,6 +485,11 @@ class WorkspaceInvitationListView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="List invitations",
+        tags=["Workspaces"],
+        responses={200: WorkspaceInvitationSerializer(many=True)},
+    )
     def get(self, request, workspace_pk=None):
         workspace = self._get_workspace_or_404(workspace_pk)
         user_id = self._get_user_id()
@@ -450,6 +513,11 @@ class InvitationRevokeView(WorkspaceContextMixin, APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Revoke invitation",
+        tags=["Workspaces"],
+        responses={204: OpenApiResponse(description="No content")},
+    )
     def delete(self, request, workspace_pk=None, invitation_id=None):
         workspace = self._get_workspace_or_404(workspace_pk)
 
@@ -500,6 +568,11 @@ class InvitationAcceptView(APIView):
 
     permission_classes = [IsAuthenticated]  # must be authenticated to accept
 
+    @extend_schema(
+        summary="Accept invitation",
+        tags=["Workspaces"],
+        responses={200: InvitationAcceptResponseSerializer},
+    )
     def post(self, request, token=None):
         if not token:
             raise NotFound("Invalid invitation link.")
@@ -537,3 +610,4 @@ class InvitationAcceptView(APIView):
 
         serializer = InvitationAcceptResponseSerializer(response_data)
         return Response(serializer.data, status=status.HTTP_200_OK)
+

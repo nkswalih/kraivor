@@ -128,7 +128,7 @@ class Vote(models.Model):
         db_table = "community_votes"
         constraints = [
             models.CheckConstraint(
-                check=(
+                condition=(
                     models.Q(discussion__isnull=False, comment__isnull=True)
                     | models.Q(discussion__isnull=True, comment__isnull=False)
                 ),

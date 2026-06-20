@@ -24,6 +24,7 @@ from .serializers import (
 )
 from .services import CommentService, DiscussionService, TagService, VoteService
 
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 logger = logging.getLogger(__name__)
 
 PAGE_SIZE = 20
@@ -52,6 +53,11 @@ def _resolve_profile(user_id: str) -> dict:
 class DiscussionListView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="List discussions",
+        tags=["Community"],
+        responses={200: OpenApiResponse(description="Paginated discussion list")},
+    )
     def get(self, request):
         page = int(request.query_params.get("page", 1))
         tag = request.query_params.get("tag")
@@ -70,6 +76,12 @@ class DiscussionListView(APIView):
             }
         )
 
+    @extend_schema(
+        summary="Create discussion",
+        tags=["Community"],
+        request=CreateDiscussionSerializer,
+        responses={201: DiscussionDetailSerializer},
+    )
     def post(self, request):
         serializer = CreateDiscussionSerializer(data=request.data)
         if not serializer.is_valid():
@@ -92,6 +104,11 @@ class DiscussionListView(APIView):
 class DiscussionDetailView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Get discussion",
+        tags=["Community"],
+        responses={200: DiscussionDetailSerializer},
+    )
     def get(self, request, discussion_id):
         discussion = DiscussionService.get_detail(discussion_id)
         if not discussion:
@@ -100,6 +117,12 @@ class DiscussionDetailView(APIView):
             DiscussionDetailSerializer(discussion, context={"request": request}).data
         )
 
+    @extend_schema(
+        summary="Update discussion",
+        tags=["Community"],
+        request=UpdateDiscussionSerializer,
+        responses={200: DiscussionDetailSerializer},
+    )
     def patch(self, request, discussion_id):
         discussion = DiscussionService.get_detail(discussion_id)
         if not discussion:
@@ -116,6 +139,11 @@ class DiscussionDetailView(APIView):
             DiscussionDetailSerializer(discussion, context={"request": request}).data
         )
 
+    @extend_schema(
+        summary="Delete discussion",
+        tags=["Community"],
+        responses={204: OpenApiResponse(description="No content")},
+    )
     def delete(self, request, discussion_id):
         discussion = DiscussionService.get_detail(discussion_id)
         if not discussion:
@@ -128,6 +156,11 @@ class DiscussionDetailView(APIView):
 
 
 class DiscussionVoteView(APIView):
+    @extend_schema(
+        summary="Vote on discussion",
+        tags=["Community"],
+        responses={200: OpenApiResponse(description="Vote recorded")},
+    )
     def post(self, request, discussion_id):
         discussion = DiscussionService.get_detail(discussion_id)
         if not discussion:
@@ -140,6 +173,11 @@ class DiscussionVoteView(APIView):
             publish_discussion_upvoted(discussion, request.user_id)
         return Response({"value": vote.value, "action": action})
 
+    @extend_schema(
+        summary="Remove discussion vote",
+        tags=["Community"],
+        responses={204: OpenApiResponse(description="No content")},
+    )
     def delete(self, request, discussion_id):
         discussion = DiscussionService.get_detail(discussion_id)
         if not discussion:
@@ -151,6 +189,11 @@ class DiscussionVoteView(APIView):
 class CommentListView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="List comments",
+        tags=["Community"],
+        responses={200: OpenApiResponse(description="Paginated comment list")},
+    )
     def get(self, request, discussion_id):
         discussion = DiscussionService.get_detail(discussion_id)
         if not discussion:
@@ -168,6 +211,12 @@ class CommentListView(APIView):
             }
         )
 
+    @extend_schema(
+        summary="Create comment",
+        tags=["Community"],
+        request=CreateCommentSerializer,
+        responses={201: CommentSerializer},
+    )
     def post(self, request, discussion_id):
         discussion = DiscussionService.get_detail(discussion_id)
         if not discussion:
@@ -194,6 +243,11 @@ class CommentListView(APIView):
 class CommentRepliesView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="List comment replies",
+        tags=["Community"],
+        responses={200: CommentSerializer(many=True)},
+    )
     def get(self, request, discussion_id, comment_id):
         replies = CommentService.get_replies(comment_id)
         return Response(
@@ -202,6 +256,11 @@ class CommentRepliesView(APIView):
 
 
 class CommentVoteView(APIView):
+    @extend_schema(
+        summary="Vote on comment",
+        tags=["Community"],
+        responses={200: OpenApiResponse(description="Vote recorded")},
+    )
     def post(self, request, discussion_id, comment_id):
         comment = CommentService.get_by_id(comment_id, discussion_id)
         if not comment:
@@ -212,6 +271,11 @@ class CommentVoteView(APIView):
         vote, action = VoteService.vote_comment(comment, request.user_id, value)
         return Response({"value": vote.value, "action": action})
 
+    @extend_schema(
+        summary="Remove comment vote",
+        tags=["Community"],
+        responses={204: OpenApiResponse(description="No content")},
+    )
     def delete(self, request, discussion_id, comment_id):
         comment = CommentService.get_by_id(comment_id, discussion_id)
         if not comment:
@@ -223,6 +287,11 @@ class CommentVoteView(APIView):
 class TrendingDiscussionsView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Get trending discussions",
+        tags=["Community"],
+        responses={200: OpenApiResponse(description="Trending discussions")},
+    )
     def get(self, request):
         limit = int(request.query_params.get("limit", 10))
         discussions = DiscussionService.get_trending(limit=limit)
@@ -232,6 +301,11 @@ class TrendingDiscussionsView(APIView):
 class PopularTagsView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Get popular tags",
+        tags=["Community"],
+        responses={200: OpenApiResponse(description="Popular tags")},
+    )
     def get(self, request):
         limit = int(request.query_params.get("limit", 20))
         tags = TagService.get_popular_tags(limit=limit)
@@ -241,6 +315,11 @@ class PopularTagsView(APIView):
 class TagSearchView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Search tags",
+        tags=["Community"],
+        responses={200: OpenApiResponse(description="Tag search results")},
+    )
     def get(self, request):
         query = request.query_params.get("q", "").strip()
         if not query:

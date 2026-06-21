@@ -1,5 +1,4 @@
-"""
-Django Base Settings - Production-Grade Configuration
+"""Django Base Settings - Production-Grade Configuration
 ========================================================
 
 This file contains the core configuration that applies to ALL environments.
@@ -33,9 +32,11 @@ project/
 import hashlib
 import os
 from datetime import timedelta
+
 from pathlib import Path
 
 import environ
+
 from django.core.exceptions import ImproperlyConfigured
 
 # =============================================================================
@@ -404,18 +405,27 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 DEFAULT_FILE_STORAGE = env(
     "DEFAULT_FILE_STORAGE",
-    default="django.core.files.storage.FileSystemStorage",
+    default="storages.backends.s3boto3.S3Boto3Storage",
 )
+
+STORAGES = {
+    "default": {
+        "BACKEND": DEFAULT_FILE_STORAGE,
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 
 AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
 AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
 AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
-AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="us-east-1")
+AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="ap-southeast-2")
 AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN", default="")
 AWS_S3_OBJECT_PARAMETERS = {
     "CacheControl": "max-age=86400",
 }
-AWS_DEFAULT_ACL = None
+AWS_DEFAULT_ACL = "public-read"
 AWS_QUERYSTRING_AUTH = False
 
 # =============================================================================

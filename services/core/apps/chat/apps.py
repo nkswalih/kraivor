@@ -9,3 +9,4 @@ class ChatConfig(AppConfig):
 
     def ready(self) -> None:
         import apps.chat.handlers  # noqa
+        import core.signals  # noqa

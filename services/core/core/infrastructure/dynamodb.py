@@ -11,8 +11,9 @@ Usage:
     table.put_item(Item={...})
 """
 
-import boto3
 import logging
+
+import boto3
 from botocore.config import Config as BotoConfig
 from django.conf import settings
 

@@ -57,7 +57,14 @@ class JWTAuthenticationMiddleware:
         "/api/github-app/webhook/",
         "/api/health/",
     )
-    _SKIP_PREFIXES = ("/admin/", "/health/", "/api/health/", "/api/schema/", "/api/docs/", "/api/redoc/")
+    _SKIP_PREFIXES = (
+        "/admin/",
+        "/health/",
+        "/api/health/",
+        "/api/schema/",
+        "/api/docs/",
+        "/api/redoc/",
+    )
 
     def __init__(self, get_response):
         self.get_response = get_response

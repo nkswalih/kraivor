@@ -73,6 +73,12 @@ INTERNAL_REQUEST_HEADER = "X-Internal-Request"
 # TEST OPTIMIZATIONS
 # =============================================================================
 
+DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+STORAGES = {
+    "default": {"BACKEND": DEFAULT_FILE_STORAGE},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+
 LOGGING = {"version": 1, "disable_existing_loggers": True}
 
 # Faster tests

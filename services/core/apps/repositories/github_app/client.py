@@ -346,6 +346,4 @@ class GitHubAppClient:
             raise GitHubAppError(
                 "GitHub App slug is not configured. Set GITHUB_APP_SLUG."
             )
-        return (
-            f"https://github.com/apps/{self._slug}/installations/new?state={state}"
-        )
+        return f"https://github.com/apps/{self._slug}/installations/new?state={state}"

@@ -7,8 +7,12 @@ import { CanvasElementRenderer } from '../elements/canvas-element';
 import { CanvasToolbar } from './canvas-toolbar';
 import { CanvasMinimap } from './canvas-minimap';
 import { nanoid } from 'nanoid';
+import { pdfjs } from 'react-pdf';
 import type { ShapeType, ArrowElementData, Position } from '@/types/knowledge';
 import { resolveArrowPoints } from '@/types/knowledge';
+import { s3ProxyUrl } from '@/lib/s3-proxy';
+
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 function pointToSegmentDist(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
   const abx = bx - ax;
@@ -42,6 +46,8 @@ export function KnowledgeCanvas({ spaceId }: Props) {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPanning, setIsPanning] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const dragCounter = useRef(0);
   const panRef = useRef({ active: false, startX: 0, startY: 0, startVx: 0, startVy: 0 });
   const dragRef = useRef<{
     elementId: string;
@@ -797,6 +803,118 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     }
   };
 
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounter.current++;
+    if (dragCounter.current === 1) {
+      setIsDragOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    dragCounter.current--;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const EXT_LANGUAGE: Record<string, string> = {
+    js: 'javascript', jsx: 'javascript', ts: 'typescript', tsx: 'typescript',
+    py: 'python', rb: 'ruby', rs: 'rust', go: 'go', java: 'java',
+    cpp: 'cpp', c: 'c', cs: 'csharp', swift: 'swift', kt: 'kotlin',
+    scala: 'scala', php: 'php', html: 'html', css: 'css',
+    scss: 'scss', less: 'less', json: 'json', xml: 'xml',
+    yml: 'yaml', yaml: 'yaml', sql: 'sql', sh: 'shell', bash: 'shell',
+    zsh: 'shell', ps1: 'powershell', md  : 'markdown', mdx: 'markdown',
+    graphql: 'graphql', proto: 'protobuf', toml: 'toml',
+    ini: 'ini', cfg: 'ini', env: 'ini', txt: 'plaintext',
+  };
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    dragCounter.current = 0;
+    const raw = e.dataTransfer.getData('application/json');
+    if (!raw) return;
+    let data: Record<string, unknown>;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    if (data.type !== 'asset') return;
+    const world = screenToWorld(e.clientX, e.clientY);
+    if (!world) return;
+    const url = data.url as string | null;
+    if (!url) return;
+    const mimeType = (data.mimeType as string) ?? '';
+    const fileName = (data.fileName as string) ?? '';
+    const assetId = (data.assetId as string) ?? '';
+
+    const state = store.getState();
+    state.pushUndoState(spaceId);
+
+    if (mimeType.startsWith('image/')) {
+      state.addElement(spaceId, 'image',
+        { x: world.x - 100, y: world.y - 75 },
+        { width: 200, height: 150 },
+        { url, assetId, alt: fileName, objectFit: 'contain' },
+      );
+      return;
+    }
+
+    if (mimeType === 'application/pdf') {
+      let numPages = 1;
+      try {
+        const pdf = await pdfjs.getDocument({ url: s3ProxyUrl(url) }).promise;
+        numPages = pdf.numPages;
+      } catch {
+        // Fallback to single page if PDF fails to load
+      }
+      const PAGE_GAP = 30;
+      for (let i = 1; i <= numPages; i++) {
+        state.addElement(spaceId, 'pdf',
+          { x: world.x - 150 + (i - 1) * PAGE_GAP, y: world.y - 200 + (i - 1) * PAGE_GAP },
+          { width: 300, height: 400 },
+          { url, assetId, pageNumber: i, scale: 1 },
+        );
+      }
+      return;
+    }
+
+    const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
+
+    try {
+      const resp = await fetch(s3ProxyUrl(url));
+      if (!resp.ok) return;
+      const text = await resp.text();
+
+      if (mimeType.includes('markdown') || ext === 'md' || ext === 'mdx') {
+        state.addElement(spaceId, 'markdown',
+          { x: world.x - 200, y: world.y - 150 },
+          { width: 400, height: 300 },
+          { source: text, backgroundColor: null },
+        );
+        return;
+      }
+
+      const language = EXT_LANGUAGE[ext] ?? 'plaintext';
+      state.addElement(spaceId, 'code',
+        { x: world.x - 250, y: world.y - 175 },
+        { width: 500, height: 350 },
+        { code: text, language, theme: 'dark', showLineNumbers: true, backgroundColor: null },
+      );
+    } catch {
+      // fetch failed — skip silently
+    }
+  }, [store, spaceId, screenToWorld]);
+
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -846,7 +964,14 @@ export function KnowledgeCanvas({ spaceId }: Props) {
         onClick={handleCanvasClick}
         onDoubleClick={handleCanvasDoubleClick}
         onMouseDown={handleMouseDown}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       >
+        {isDragOver && (
+          <div className="absolute inset-0 bg-venom-yellow/5 border-2 border-venom-yellow/40 border-dashed rounded-lg pointer-events-none z-50 transition-all" />
+        )}
         <div
           style={{
             transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,

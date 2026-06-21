@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [("repositories", "0002_github_app_models")]
 
     operations = [

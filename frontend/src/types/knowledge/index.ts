@@ -207,15 +207,17 @@ export interface CanvasState {
 
 export interface KnowledgeAssetReference {
   id: string;
-  knowledgeSpaceId: string;
-  fileName: string;
-  fileSize: number;
-  fileType: 'image' | 'pdf' | 'file' | 'code';
-  mimeType: string;
+  knowledge_space_id: string;
+  file_name: string;
+  file_size: number;
+  file_type: 'image' | 'pdf' | 'file' | 'code';
+  mime_type: string;
+  storage_key: string;
   url: string | null;
-  uploadedBy: string;
-  createdAt: string;
+  uploaded_by: string;
   metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string | null;
 }
 
 export interface KnowledgeSpaceVersionSummary {

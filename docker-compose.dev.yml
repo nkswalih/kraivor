@@ -147,7 +147,7 @@ services:
     volumes:
       # Source code mount — edits on host appear instantly inside container
       - ./services/auth:/app
-      - ./.keys:/app/.keys
+      - ./.keys:/.keys
       # ── venv exclusion fix ──────────────────────────────────────────────────
       # The image builds the venv at /opt/venv (set by UV_PROJECT_ENVIRONMENT).
       # Because the venv is NOT under /app, the source volume mount above

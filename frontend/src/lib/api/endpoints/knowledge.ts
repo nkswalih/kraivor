@@ -14,7 +14,7 @@ export const knowledgeEndpoints = {
     coreApi.get<KnowledgeSpace>(`/knowledge/${knowledgePk}/`),
 
   update: (knowledgePk: string, payload: Partial<CreateKnowledgePayload>) =>
-    coreApi.put<KnowledgeSpace>(`/knowledge/${knowledgePk}/`, payload),
+    coreApi.patch<KnowledgeSpace>(`/knowledge/${knowledgePk}/`, payload),
 
   delete: (knowledgePk: string) =>
     coreApi.delete<void>(`/knowledge/${knowledgePk}/`),

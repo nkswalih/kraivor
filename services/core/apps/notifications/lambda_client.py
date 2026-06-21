@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 def invoke_notification_lambda(payload: dict) -> dict | None:
     function_name = settings.AWS_LAMBDA_NOTIFICATION_FN
     if not function_name:
-        logger.info("lambda.disabled", extra={"reason": "AWS_LAMBDA_NOTIFICATION_FN not set"})
+        logger.info(
+            "lambda.disabled", extra={"reason": "AWS_LAMBDA_NOTIFICATION_FN not set"}
+        )
         return None
 
     try:

@@ -106,7 +106,7 @@ class RepositoryDetailView(WorkspaceContextMixin, APIView):
         workspace = self._get_workspace_or_404(workspace_pk)
         try:
             RepositoryService().disconnect_repository(
-                repo_id=repo_id, workspace=workspace, actor_id=request.user_id
+                repository_id=repo_id, workspace=workspace, actor_id=request.user_id
             )
         except RepositoryPermissionError as exc:
             raise PermissionDenied(str(exc)) from exc

@@ -22,6 +22,7 @@ from ..serializers import (
     KnowledgeSpaceUpdateSerializer,
 )
 from ..services import KnowledgeSpaceService
+from ..services.base import KnowledgePermissionError
 
 logger = __import__("logging").getLogger(__name__)
 
@@ -77,9 +78,14 @@ class KnowledgeSpaceListView(WorkspaceContextMixin, APIView):
         workspace = self._get_workspace_or_404(workspace_pk)
         serializer = KnowledgeSpaceCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        space = KnowledgeSpaceService().create_knowledge_space(
-            workspace=workspace, actor_id=request.user_id, **serializer.validated_data
-        )
+        try:
+            space = KnowledgeSpaceService().create_knowledge_space(
+                workspace=workspace, actor_id=request.user_id, **serializer.validated_data
+            )
+        except KnowledgePermissionError as e:
+            return Response(
+                {"detail": str(e)}, status=status.HTTP_403_FORBIDDEN
+            )
         return Response(
             KnowledgeSpaceSerializer(space).data, status=status.HTTP_201_CREATED
         )
@@ -107,18 +113,28 @@ class KnowledgeSpaceDetailView(APIView):
             space, data=request.data, partial=True
         )
         serializer.is_valid(raise_exception=True)
-        updated = KnowledgeSpaceService().update_knowledge_space(
-            knowledge_space=space, actor_id=request.user_id, updates=serializer.validated_data
-        )
+        try:
+            updated = KnowledgeSpaceService().update_knowledge_space(
+                knowledge_space=space, actor_id=request.user_id, updates=serializer.validated_data
+            )
+        except KnowledgePermissionError as e:
+            return Response(
+                {"detail": str(e)}, status=status.HTTP_403_FORBIDDEN
+            )
         return Response(KnowledgeSpaceSerializer(updated).data)
-
+    
     @extend_schema(
         summary="Delete knowledge space",
         responses={204: OpenApiResponse(description="No content")},
     )
     def delete(self, request: Request, pk: str | None = None) -> Response:
         space = _get_space_or_404(pk, request.user_id)
-        KnowledgeSpaceService().delete_knowledge_space(
-            knowledge_space=space, actor_id=request.user_id
-        )
+        try:
+            KnowledgeSpaceService().delete_knowledge_space(
+                knowledge_space=space, actor_id=request.user_id
+            )
+        except KnowledgePermissionError as e:
+            return Response(
+                {"detail": str(e)}, status=status.HTTP_403_FORBIDDEN
+            )
         return Response(status=status.HTTP_204_NO_CONTENT)

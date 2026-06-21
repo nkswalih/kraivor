@@ -37,7 +37,7 @@ class DiscussionListSerializer(serializers.ModelSerializer):
         if user_votes is not None:
             return user_votes[0].value if user_votes else None
         request = self.context.get("request")
-        if not request or not request.user_id:
+        if not request or not getattr(request, "user_id", None):
             return None
         try:
             vote = obj.votes.filter(user_id=request.user_id).first()

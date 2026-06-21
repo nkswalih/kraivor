@@ -7,6 +7,7 @@ import { TextElement } from './text-element';
 import { MarkdownElement } from './markdown-element';
 import { CodeElement } from './code-element';
 import { ImageElement } from './image-element';
+import { PdfElement } from './pdf-element';
 import { StickyNoteElement } from './sticky-note-element';
 
 interface Props {
@@ -58,6 +59,8 @@ function renderContent(
       return <CodeElement data={data as never} />;
     case 'image':
       return <ImageElement data={data as never} />;
+    case 'pdf':
+      return <PdfElement data={data as never} />;
     case 'sticky_note':
       return <StickyNoteElement data={data as never} elementId={elementId} spaceId={spaceId} isEditing={isEditing} onEditEnd={onEditEnd} />;
     default:

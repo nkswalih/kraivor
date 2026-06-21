@@ -3,7 +3,11 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
-from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
 
 from apps.repositories.github_app.views import GitHubAppInstallCallbackView
 from apps.repositories.github_app.webhook import github_app_webhook
@@ -19,7 +23,11 @@ urlpatterns = [
     path("api/health/", health_check, name="health"),
     # OpenAPI / Swagger
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path(
+        "api/docs/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     path("api/", include("apps.workspaces.urls")),
     path("api/", include("apps.repositories.urls")),
@@ -28,7 +36,6 @@ urlpatterns = [
     path("api/", include("apps.chat.urls")),
     path("api/", include("apps.projects.urls")),
     path("api/community/", include("apps.community.urls")),
-
     path(
         "api/oauth/github/connect/",
         GitHubOAuthConnectView.as_view(),

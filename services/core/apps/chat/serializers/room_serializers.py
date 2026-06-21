@@ -1,4 +1,3 @@
-
 from rest_framework import serializers
 
 from apps.chat.models import ChatRoom
@@ -8,8 +7,12 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
     room_type_display: serializers.CharField = serializers.CharField(
         source="get_room_type_display", read_only=True
     )
-    last_message_at: serializers.DateTimeField = serializers.DateTimeField(read_only=True)
-    participant_user_ids: serializers.SerializerMethodField = serializers.SerializerMethodField()
+    last_message_at: serializers.DateTimeField = serializers.DateTimeField(
+        read_only=True
+    )
+    participant_user_ids: serializers.SerializerMethodField = (
+        serializers.SerializerMethodField()
+    )
 
     class Meta:
         model: type[ChatRoom] = ChatRoom
@@ -48,7 +51,9 @@ class ChatRoomDetailSerializer(serializers.ModelSerializer):
     room_type_display: serializers.CharField = serializers.CharField(
         source="get_room_type_display", read_only=True
     )
-    participant_user_ids: serializers.SerializerMethodField = serializers.SerializerMethodField()
+    participant_user_ids: serializers.SerializerMethodField = (
+        serializers.SerializerMethodField()
+    )
 
     class Meta:
         model: type[ChatRoom] = ChatRoom
@@ -91,9 +96,13 @@ class ChatRoomCreateSerializer(serializers.ModelSerializer):
     def validate_name(self, value: str) -> str:
         value = value.strip()
         if len(value) < 2:
-            raise serializers.ValidationError("Room name must be at least 2 characters.")
+            raise serializers.ValidationError(
+                "Room name must be at least 2 characters."
+            )
         if len(value) > 255:
-            raise serializers.ValidationError("Room name must not exceed 255 characters.")
+            raise serializers.ValidationError(
+                "Room name must not exceed 255 characters."
+            )
         return value
 
     def validate_room_type(self, value: str) -> str:
@@ -116,7 +125,9 @@ class ChatRoomUpdateSerializer(serializers.ModelSerializer):
     def validate_name(self, value: str) -> str:
         value = value.strip()
         if len(value) < 2:
-            raise serializers.ValidationError("Room name must be at least 2 characters.")
+            raise serializers.ValidationError(
+                "Room name must be at least 2 characters."
+            )
         return value
 
 

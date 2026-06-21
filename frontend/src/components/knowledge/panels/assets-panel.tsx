@@ -1,19 +1,20 @@
 'use client';
 
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Upload, File, Image, Trash2, Loader2 } from 'lucide-react';
 import { knowledgeAssetApi } from '@/lib/knowledge/knowledge-api';
 import type { KnowledgeAssetReference } from '@/types/knowledge';
+import { UploadFileDialog } from '../dialogs/upload-file-dialog';
 
 interface Props {
   spaceId: string;
 }
 
 export function AssetsPanel({ spaceId }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const [assets, setAssets] = useState<KnowledgeAssetReference[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -31,18 +32,17 @@ export function AssetsPanel({ spaceId }: Props) {
     load();
   }, [load]);
 
-  const handleUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleUpload = useCallback(async (files: File[]) => {
     setUploading(true);
     try {
-      await knowledgeAssetApi.upload(spaceId, file);
+      for (const file of files) {
+        await knowledgeAssetApi.upload(spaceId, file);
+      }
       await load();
     } catch {
       // ignore
     } finally {
       setUploading(false);
-      if (inputRef.current) inputRef.current.value = '';
     }
   }, [spaceId, load]);
 
@@ -55,12 +55,13 @@ export function AssetsPanel({ spaceId }: Props) {
     }
   }, [spaceId]);
 
-  const fileTypeIcon = (mime: string) => {
-    if (mime.startsWith('image/')) return <Image className="w-4 h-4" />;
+  const fileTypeIcon = (mime: string | null | undefined) => {
+    if (mime?.startsWith('image/')) return <Image className="w-4 h-4" />;
     return <File className="w-4 h-4" />;
   };
 
-  const formatSize = (bytes: number) => {
+  const formatSize = (bytes: number | null | undefined) => {
+    if (bytes == null) return '-';
     if (bytes < 1024) return `${bytes}B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
@@ -74,20 +75,16 @@ export function AssetsPanel({ spaceId }: Props) {
         </h3>
         <button
           className="p-1.5 rounded-lg text-text-tertiary hover:text-foreground hover:bg-krait-surface3 transition-colors disabled:opacity-50"
-          onClick={() => inputRef.current?.click()}
+          onClick={() => setDialogOpen(true)}
           disabled={uploading}
         >
-          {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+          {uploading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Upload className="w-3.5 h-3.5" />
+          )}
         </button>
       </div>
-
-      <input
-        ref={inputRef}
-        type="file"
-        className="hidden"
-        onChange={handleUpload}
-        accept="image/*,.pdf,.md,.txt,.js,.ts,.jsx,.tsx,.json,.css,.html"
-      />
 
       {loading ? (
         <div className="flex justify-center py-8">
@@ -106,12 +103,32 @@ export function AssetsPanel({ spaceId }: Props) {
           {assets.map(asset => (
             <div
               key={asset.id}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-krait-surface3 group"
+              draggable={!!asset.url}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-krait-surface3 group cursor-grab active:cursor-grabbing"
+              onDragStart={e => {
+                e.dataTransfer.setData(
+                  'application/json',
+                  JSON.stringify({
+                    type: 'asset',
+                    url: asset.url,
+                    mimeType: asset.mime_type,
+                    fileName: asset.file_name,
+                    assetId: asset.id,
+                  }),
+                );
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
             >
-              <span className="text-venom-yellow">{fileTypeIcon(asset.mimeType)}</span>
+              <span className="text-venom-yellow">
+                {fileTypeIcon(asset.mime_type)}
+              </span>
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] text-foreground truncate">{asset.fileName}</p>
-                <p className="text-[10px] text-text-tertiary">{formatSize(asset.fileSize)}</p>
+                <p className="text-[12px] text-foreground truncate">
+                  {asset.file_name}
+                </p>
+                <p className="text-[10px] text-text-tertiary">
+                  {formatSize(asset.file_size)}
+                </p>
               </div>
               <button
                 className="p-0.5 text-text-tertiary opacity-0 group-hover:opacity-100 hover:text-red-400 transition-all"
@@ -123,6 +140,12 @@ export function AssetsPanel({ spaceId }: Props) {
           ))}
         </div>
       )}
+
+      <UploadFileDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onUpload={handleUpload}
+      />
     </div>
   );
 }

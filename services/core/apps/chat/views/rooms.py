@@ -66,19 +66,27 @@ class RoomListCreateView(APIView):
         examples=[
             OpenApiExample(
                 "Request example",
-                value={"name": "my-channel", "room_type": "group", "topic": "Chat about stuff"},
+                value={
+                    "name": "my-channel",
+                    "room_type": "group",
+                    "topic": "Chat about stuff",
+                },
             ),
         ],
     )
     def post(self, request: Request, workspace_pk: str | None = None) -> Response:
         user_id: str = str(getattr(request, "user_id", ""))
         workspace_id: str = str(workspace_pk)
-        serializer: ChatRoomCreateSerializer = ChatRoomCreateSerializer(data=request.data)
+        serializer: ChatRoomCreateSerializer = ChatRoomCreateSerializer(
+            data=request.data
+        )
         serializer.is_valid(raise_exception=True)
         room: ChatRoom = ChatRoomService.create_room(
             workspace_id=workspace_id,
             name=serializer.validated_data["name"],
-            room_type=serializer.validated_data.get("room_type", ChatRoom.RoomType.GROUP),
+            room_type=serializer.validated_data.get(
+                "room_type", ChatRoom.RoomType.GROUP
+            ),
             created_by=user_id,
             topic=serializer.validated_data.get("topic", ""),
         )
@@ -106,7 +114,9 @@ class RoomDetailView(APIView):
             404: OpenApiResponse(description="Chat room not found"),
         },
     )
-    def get(self, request: Request, pk: str | None = None, workspace_pk: str | None = None) -> Response:
+    def get(
+        self, request: Request, pk: str | None = None, workspace_pk: str | None = None
+    ) -> Response:
         room: ChatRoom = self._get_room(pk)
         serializer: ChatRoomDetailSerializer = ChatRoomDetailSerializer(
             room, context={"request": request}
@@ -130,7 +140,9 @@ class RoomDetailView(APIView):
             ),
         ],
     )
-    def patch(self, request: Request, pk: str | None = None, workspace_pk: str | None = None) -> Response:
+    def patch(
+        self, request: Request, pk: str | None = None, workspace_pk: str | None = None
+    ) -> Response:
         user_id: str = str(getattr(request, "user_id", ""))
         self._get_room(pk)
         serializer: ChatRoomUpdateSerializer = ChatRoomUpdateSerializer(
@@ -152,11 +164,19 @@ class RoomDetailView(APIView):
         tags=["chat-rooms"],
         description="Soft-delete (archive) a chat room.",
         responses={
-            200: OpenApiResponse(description="Room archived", response={"type": "object", "properties": {"status": {"type": "string"}}}),
+            200: OpenApiResponse(
+                description="Room archived",
+                response={
+                    "type": "object",
+                    "properties": {"status": {"type": "string"}},
+                },
+            ),
             404: OpenApiResponse(description="Chat room not found"),
         },
     )
-    def delete(self, request: Request, pk: str | None = None, workspace_pk: str | None = None) -> Response:
+    def delete(
+        self, request: Request, pk: str | None = None, workspace_pk: str | None = None
+    ) -> Response:
         user_id: str = str(getattr(request, "user_id", ""))
         success: bool = ChatRoomService.archive_room(room_id=str(pk), user_id=user_id)
         if not success:

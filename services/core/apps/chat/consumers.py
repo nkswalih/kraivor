@@ -116,7 +116,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
         )
 
-    async def _update_last_message(self, room_id: str, content: str, sender_name: str) -> None:
+    async def _update_last_message(
+        self, room_id: str, content: str, sender_name: str
+    ) -> None:
         await database_sync_to_async(ChatRoomService.update_last_message)(
             room_id=room_id, content=content, sender_name=sender_name
         )
@@ -198,7 +200,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not message_id:
             return
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, dynamodb_delete_message, self.room_id, message_id)
+        await loop.run_in_executor(
+            None, dynamodb_delete_message, self.room_id, message_id
+        )
         await self.channel_layer.group_send(
             self.room_group,
             {

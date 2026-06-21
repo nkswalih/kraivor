@@ -57,11 +57,13 @@ class ChatMessageRepository:
         try:
             self._table().put_item(Item=item)
             logger.debug(
-                "dynamodb.message.put", extra={"room_id": room_id, "message_id": message_id}
+                "dynamodb.message.put",
+                extra={"room_id": room_id, "message_id": message_id},
             )
         except ClientError as exc:
             logger.error(
-                "dynamodb.message.put_failed", extra={"room_id": room_id, "error": str(exc)}
+                "dynamodb.message.put_failed",
+                extra={"room_id": room_id, "error": str(exc)},
             )
             raise
         return item
@@ -82,7 +84,8 @@ class ChatMessageRepository:
             items: list[dict[str, Any]] = response.get("Items", [])
             last_key: dict[str, Any] | None = response.get("LastEvaluatedKey")
             logger.debug(
-                "dynamodb.messages.query", extra={"room_id": room_id, "count": len(items)}
+                "dynamodb.messages.query",
+                extra={"room_id": room_id, "count": len(items)},
             )
             return items, last_key
         except ClientError as exc:
@@ -135,7 +138,9 @@ class ChatMessageRepository:
             )
             raise
 
-    def update_message(self, room_id: str, message_id: str, content: str) -> dict[str, Any] | None:
+    def update_message(
+        self, room_id: str, message_id: str, content: str
+    ) -> dict[str, Any] | None:
         now: str = datetime.now(tz=UTC).isoformat()
         try:
             response: dict[str, Any] = self._table().update_item(
@@ -167,7 +172,9 @@ class ChatMessageRepository:
                 {"room_id": room_id, "message_id": mid} for mid in message_ids
             ]
             response: dict[str, Any] = self._table().meta.client.batch_get_item(
-                RequestItems={self._table().name: {"Keys": keys, "ConsistentRead": False}}
+                RequestItems={
+                    self._table().name: {"Keys": keys, "ConsistentRead": False}
+                }
             )
             items: list[dict[str, Any]] = response.get("Responses", {}).get(
                 self._table().name, []
@@ -234,7 +241,9 @@ def put_message(**kwargs: Any) -> dict[str, Any]:
 def get_messages(
     room_id: str, limit: int = 50, start_key: dict[str, Any] | None = None
 ) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
-    return get_repository().get_messages(room_id=room_id, limit=limit, start_key=start_key)
+    return get_repository().get_messages(
+        room_id=room_id, limit=limit, start_key=start_key
+    )
 
 
 def delete_message(room_id: str, message_id: str) -> None:
@@ -245,8 +254,12 @@ def get_message_by_id(room_id: str, message_id: str) -> dict[str, Any] | None:
     return get_repository().get_message_by_id(room_id=room_id, message_id=message_id)
 
 
-def update_message(room_id: str, message_id: str, content: str) -> dict[str, Any] | None:
-    return get_repository().update_message(room_id=room_id, message_id=message_id, content=content)
+def update_message(
+    room_id: str, message_id: str, content: str
+) -> dict[str, Any] | None:
+    return get_repository().update_message(
+        room_id=room_id, message_id=message_id, content=content
+    )
 
 
 def batch_get_messages(room_id: str, message_ids: list[str]) -> list[dict[str, Any]]:

@@ -221,7 +221,10 @@ class GitHubAppInstallationImportView(WorkspaceContextMixin, APIView):
     @extend_schema(
         summary="Import GitHub App installation",
         tags=["Repositories"],
-        responses={200: GitHubAppInstallationSerializer, 201: GitHubAppInstallationSerializer},
+        responses={
+            200: GitHubAppInstallationSerializer,
+            201: GitHubAppInstallationSerializer,
+        },
     )
     def post(self, request, workspace_pk=None):
         workspace = self._get_workspace_or_404(workspace_pk)

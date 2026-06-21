@@ -45,7 +45,6 @@ class InstallationStateManager:
 
     def _get_redis(self):
         try:
-
             return get_redis()
         except ImportError:
             logger.warning(

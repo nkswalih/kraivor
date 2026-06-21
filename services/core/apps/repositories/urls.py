@@ -1,24 +1,3 @@
-"""
-URL configuration for the repositories app — KRV-021.
-
-All routes are nested under the workspaces/ prefix (mounted at api/ in core/urls.py).
-The /workspace/ segment visible in the ticket spec is an nginx/gateway prefix.
-
-Full Django-level paths (under the api/ mount):
-
-  Repository management (KRV-021):
-    GET    workspaces/{workspace_pk}/repos/             list connected repositories
-    POST   workspaces/{workspace_pk}/repos/             connect a repository
-    DELETE workspaces/{workspace_pk}/repos/{repo_id}/   disconnect a repository
-
-URL design decisions:
-  - workspace_pk follows the same naming convention as member management in
-    workspaces/urls.py — the outer workspace PK is always workspace_pk
-  - repo_id is the Kraivor repository UUID (not the GitHub repo ID)
-  - No retrieve (GET /repos/{id}/) endpoint is required by KRV-021; list returns
-    all repos and includes full metadata for each
-"""
-
 from django.urls import path
 
 from .github_app.views import (
@@ -28,7 +7,11 @@ from .github_app.views import (
     GitHubAppInstallationRemoveView,
     GitHubAppInstallInitiateView,
 )
-from .views import GitHubRepoSearchView, RepositoryDetailView, RepositoryView
+from .views.repositories import (
+    GitHubRepoSearchView,
+    RepositoryDetailView,
+    RepositoryListView,
+)
 
 urlpatterns = [
     path(
@@ -36,7 +19,6 @@ urlpatterns = [
         GitHubRepoSearchView.as_view(),
         name="workspace-github-repo-search",
     ),
-    # GitHub App installation endpoints
     path(
         "workspaces/<uuid:workspace_pk>/repos/github/install/",
         GitHubAppInstallInitiateView.as_view(),
@@ -64,7 +46,7 @@ urlpatterns = [
     ),
     path(
         "workspaces/<uuid:workspace_pk>/repos/",
-        RepositoryView.as_view(),
+        RepositoryListView.as_view(),
         name="workspace-repository-list",
     ),
     path(

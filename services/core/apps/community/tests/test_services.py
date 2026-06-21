@@ -104,7 +104,7 @@ class TestVoteService:
         assert discussion.upvote_count == 1
 
     def test_vote_discussion_change(self, user_id, discussion):
-        VoteFactory(discussion=discussion, user_id=uuid.UUID(user_id), value=1)
+        VoteService.vote_discussion(discussion, user_id, 1)
         vote, action = VoteService.vote_discussion(discussion, user_id, -1)
         assert action == "changed"
         assert vote.value == -1

@@ -64,7 +64,7 @@ class DiscussionListView(APIView):
             tag=tag,
             sort=sort,
             workspace_id=workspace_id,
-            user_id=request.user_id,
+            user_id=getattr(request, "user_id", None),
         )
         serializer = DiscussionListSerializer(
             items, many=True, context={"request": request}

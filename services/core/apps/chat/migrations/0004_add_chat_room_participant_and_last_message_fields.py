@@ -4,8 +4,12 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
-    dependencies = [("chat", "0003_rename_chat_rooms_workspa_cb_8f1b_idx_chat_rooms_workspa_74753b_idx_and_more")]
+    dependencies = [
+        (
+            "chat",
+            "0003_rename_chat_rooms_workspa_cb_8f1b_idx_chat_rooms_workspa_74753b_idx_and_more",
+        )
+    ]
 
     operations = [
         migrations.AddField(
@@ -21,7 +25,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="ChatRoomParticipant",
             fields=[
-                ("id", models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)),
+                (
+                    "id",
+                    models.UUIDField(
+                        primary_key=True, default=uuid.uuid4, editable=False
+                    ),
+                ),
                 ("user_id", models.UUIDField()),
                 ("joined_at", models.DateTimeField(auto_now_add=True)),
                 ("left_at", models.DateTimeField(blank=True, null=True)),
@@ -43,6 +52,8 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="chatroomparticipant",
-            index=models.Index(fields=["user_id", "room"], name="chat_room_pa_user_id_2376ee_idx"),
+            index=models.Index(
+                fields=["user_id", "room"], name="chat_room_pa_user_id_2376ee_idx"
+            ),
         ),
     ]

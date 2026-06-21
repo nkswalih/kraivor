@@ -64,7 +64,10 @@ class MessageListSendView(APIView):
                 response={
                     "type": "object",
                     "properties": {
-                        "results": {"type": "array", "items": {"$ref": "#/components/schemas/Message"}},
+                        "results": {
+                            "type": "array",
+                            "items": {"$ref": "#/components/schemas/Message"},
+                        },
                         "has_next": {"type": "boolean"},
                         "next_start_key": {"type": "string"},
                     },
@@ -73,7 +76,12 @@ class MessageListSendView(APIView):
             400: OpenApiResponse(description="Invalid start_key format"),
         },
     )
-    def get(self, request: Request, workspace_pk: str | None = None, room_pk: str | None = None) -> Response:
+    def get(
+        self,
+        request: Request,
+        workspace_pk: str | None = None,
+        room_pk: str | None = None,
+    ) -> Response:
         self._get_room(room_pk)
         room_id: str = str(room_pk)
         limit: int = int(request.query_params.get("limit", 50))
@@ -98,7 +106,9 @@ class MessageListSendView(APIView):
                 "chat.messages.list_failed",
                 extra={"room_id": room_id, "error": str(exc)},
             )
-            raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
+            raise ServiceUnavailable(
+                "Message store is temporarily unavailable."
+            ) from exc
         serializer: MessageSerializer = MessageSerializer(messages, many=True)
         result: dict[str, Any] = {
             "results": serializer.data,
@@ -129,7 +139,12 @@ class MessageListSendView(APIView):
             ),
         ],
     )
-    def post(self, request: Request, workspace_pk: str | None = None, room_pk: str | None = None) -> Response:
+    def post(
+        self,
+        request: Request,
+        workspace_pk: str | None = None,
+        room_pk: str | None = None,
+    ) -> Response:
         self._get_room(room_pk)
         user_id: str = str(getattr(request, "user_id", ""))
         user_name: str = getattr(request, "user_name", "")
@@ -188,7 +203,13 @@ class MessageDetailView(APIView):
             503: OpenApiResponse(description="Message store unavailable"),
         },
     )
-    def get(self, request: Request, pk: str | None = None, workspace_pk: str | None = None, room_pk: str | None = None) -> Response:
+    def get(
+        self,
+        request: Request,
+        pk: str | None = None,
+        workspace_pk: str | None = None,
+        room_pk: str | None = None,
+    ) -> Response:
         self._get_room(room_pk)
         try:
             message: dict[str, Any] | None = ChatMessageService.get_message(
@@ -199,7 +220,9 @@ class MessageDetailView(APIView):
                 "chat.message.get_failed",
                 extra={"message_id": str(pk), "error": str(exc)},
             )
-            raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
+            raise ServiceUnavailable(
+                "Message store is temporarily unavailable."
+            ) from exc
         if not message or message.get("deleted_at"):
             raise NotFound("Message not found.")
         serializer: MessageSerializer = MessageSerializer(message)
@@ -223,7 +246,13 @@ class MessageDetailView(APIView):
             ),
         ],
     )
-    def patch(self, request: Request, pk: str | None = None, workspace_pk: str | None = None, room_pk: str | None = None) -> Response:
+    def patch(
+        self,
+        request: Request,
+        pk: str | None = None,
+        workspace_pk: str | None = None,
+        room_pk: str | None = None,
+    ) -> Response:
         self._get_room(room_pk)
         user_id: str = str(getattr(request, "user_id", ""))
         serializer: MessageUpdateSerializer = MessageUpdateSerializer(data=request.data)
@@ -240,7 +269,9 @@ class MessageDetailView(APIView):
                 "chat.message.edit_failed",
                 extra={"message_id": str(pk), "error": str(exc)},
             )
-            raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
+            raise ServiceUnavailable(
+                "Message store is temporarily unavailable."
+            ) from exc
         if updated is None:
             raise NotFound("Message not found or you can only edit your own messages.")
         output: MessageSerializer = MessageSerializer(updated)
@@ -253,13 +284,22 @@ class MessageDetailView(APIView):
         responses={
             200: OpenApiResponse(
                 description="Message deleted",
-                response={"type": "object", "properties": {"status": {"type": "string"}}},
+                response={
+                    "type": "object",
+                    "properties": {"status": {"type": "string"}},
+                },
             ),
             404: OpenApiResponse(description="Message not found"),
             503: OpenApiResponse(description="Message store unavailable"),
         },
     )
-    def delete(self, request: Request, pk: str | None = None, workspace_pk: str | None = None, room_pk: str | None = None) -> Response:
+    def delete(
+        self,
+        request: Request,
+        pk: str | None = None,
+        workspace_pk: str | None = None,
+        room_pk: str | None = None,
+    ) -> Response:
         self._get_room(room_pk)
         try:
             success: bool = ChatMessageService.delete_message(
@@ -270,7 +310,9 @@ class MessageDetailView(APIView):
                 "chat.message.delete_failed",
                 extra={"message_id": str(pk), "error": str(exc)},
             )
-            raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
+            raise ServiceUnavailable(
+                "Message store is temporarily unavailable."
+            ) from exc
         if not success:
             raise NotFound("Message not found or already deleted.")
         return Response({"status": "deleted"}, status=status.HTTP_200_OK)
@@ -303,7 +345,10 @@ class MessageSearchView(APIView):
                 response={
                     "type": "object",
                     "properties": {
-                        "results": {"type": "array", "items": {"$ref": "#/components/schemas/Message"}},
+                        "results": {
+                            "type": "array",
+                            "items": {"$ref": "#/components/schemas/Message"},
+                        },
                         "count": {"type": "integer"},
                     },
                 },
@@ -318,7 +363,12 @@ class MessageSearchView(APIView):
             ),
         ],
     )
-    def get(self, request: Request, workspace_pk: str | None = None, room_pk: str | None = None) -> Response:
+    def get(
+        self,
+        request: Request,
+        workspace_pk: str | None = None,
+        room_pk: str | None = None,
+    ) -> Response:
         self._get_room(room_pk)
         query: str = request.query_params.get("q", "").strip()
         if not query or len(query) < 2:
@@ -328,13 +378,16 @@ class MessageSearchView(APIView):
             )
         try:
             results: list[dict[str, Any]] = ChatMessageService.search_messages(
-                room_id=str(room_pk), query=query,
+                room_id=str(room_pk),
+                query=query,
             )
         except Exception as exc:
             logger.error(
                 "chat.messages.search_failed",
                 extra={"room_id": str(room_pk), "error": str(exc)},
             )
-            raise ServiceUnavailable("Message store is temporarily unavailable.") from exc
+            raise ServiceUnavailable(
+                "Message store is temporarily unavailable."
+            ) from exc
         serializer: MessageSerializer = MessageSerializer(results, many=True)
         return Response({"results": serializer.data, "count": len(results)})

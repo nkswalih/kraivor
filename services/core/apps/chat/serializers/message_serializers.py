@@ -1,4 +1,3 @@
-
 from rest_framework import serializers
 
 
@@ -10,11 +9,17 @@ class MessageSerializer(serializers.Serializer):
     content: serializers.CharField = serializers.CharField()
     content_type: serializers.CharField = serializers.CharField(default="text")
     reply_to: serializers.CharField = serializers.CharField(required=False, default="")
-    mentions: serializers.ListField = serializers.ListField(child=serializers.CharField(), default=list)
-    attachment_url: serializers.CharField = serializers.CharField(required=False, default="")
+    mentions: serializers.ListField = serializers.ListField(
+        child=serializers.CharField(), default=list
+    )
+    attachment_url: serializers.CharField = serializers.CharField(
+        required=False, default=""
+    )
     created_at: serializers.CharField = serializers.CharField()
     edited_at: serializers.CharField = serializers.CharField(required=False, default="")
-    deleted_at: serializers.CharField = serializers.CharField(required=False, default="")
+    deleted_at: serializers.CharField = serializers.CharField(
+        required=False, default=""
+    )
 
     class Meta:
         fields: list[str] = [
@@ -41,7 +46,9 @@ class MessageUpdateSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError("Content cannot be empty.")
         if len(value) > 10000:
-            raise serializers.ValidationError("Content must not exceed 10000 characters.")
+            raise serializers.ValidationError(
+                "Content must not exceed 10000 characters."
+            )
         return value
 
 

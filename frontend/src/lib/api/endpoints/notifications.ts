@@ -2,20 +2,22 @@ import { coreApi } from '../client';
 import type { Notification, MarkAllReadResponse, UnreadCountResponse } from '@/types/api';
 
 export const notificationEndpoints = {
-  list: () =>
-    coreApi.get<Notification[]>('/notifications/'),
+  list: async () => {
+    const data = await coreApi.get<{ results: Notification[] }>('/notifications/');
+    return data.results ?? [];
+  },
 
   get: (id: string) =>
     coreApi.get<Notification>(`/notifications/${id}/`),
 
   markRead: (id: string) =>
-    coreApi.post<{ status: string }>(`/notifications/${id}/mark_read/`),
+    coreApi.patch<Notification>(`/notifications/${id}/read/`),
 
   dismiss: (id: string) =>
-    coreApi.post<{ status: string }>(`/notifications/${id}/dismiss/`),
+    coreApi.delete<void>(`/notifications/${id}/`),
 
   markAllRead: () =>
-    coreApi.post<MarkAllReadResponse>('/notifications/mark_all_read/'),
+    coreApi.post<MarkAllReadResponse>('/notifications/'),
 
   unreadCount: () =>
     coreApi.get<UnreadCountResponse>('/notifications/unread_count/'),

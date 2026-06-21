@@ -1,18 +1,26 @@
-"""
-URL configuration for the notifications API endpoints.
+from django.urls import path
 
-Registers DRF routers:
-- notifications/ — NotificationViewSet (list, retrieve, mark_read, dismiss)
-- fcm-tokens/  — FCMTokenViewSet (register, unregister device tokens)
-"""
+from .views import (
+    FCMTokenCreateView,
+    FCMTokenDeleteView,
+    NotificationDetailView,
+    NotificationListView,
+    UnreadCountView,
+)
 
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter
-
-from apps.notifications.views import FCMTokenViewSet, NotificationViewSet
-
-router = DefaultRouter()
-router.register(r"notifications", NotificationViewSet, basename="notification")
-router.register(r"fcm-tokens", FCMTokenViewSet, basename="fcm-token")
-
-urlpatterns = [path("", include(router.urls))]
+urlpatterns = [
+    path("notifications/", NotificationListView.as_view(), name="notification-list"),
+    path("notifications/unread_count/", UnreadCountView.as_view(), name="notification-unread-count"),
+    path(
+        "notifications/<uuid:pk>/",
+        NotificationDetailView.as_view(),
+        name="notification-detail",
+    ),
+    path(
+        "notifications/<uuid:pk>/read/",
+        NotificationDetailView.as_view(),
+        name="notification-mark-read",
+    ),
+    path("fcm-tokens/", FCMTokenCreateView.as_view(), name="fcm-token-create"),
+    path("fcm-tokens/<str:pk>/", FCMTokenDeleteView.as_view(), name="fcm-token-delete"),
+]

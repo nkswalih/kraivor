@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [("chat", "0002_chatroom_topic_last_message_at_indexes")]
 
     operations = [

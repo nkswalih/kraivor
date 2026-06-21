@@ -1,9 +1,10 @@
 import logging
+import mimetypes
 import uuid
 from pathlib import Path
 
 from django.conf import settings
-from django.core.files.storage import FileSystemStorage, default_storage
+from django.core.files.storage import default_storage
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +27,11 @@ class KnowledgeAssetStorage:
             return settings.KNOWLEDGE_STORAGE()
         return default_storage
 
-    def _generate_url(self, storage_key: str) -> str:
-        if isinstance(self._get_storage(), FileSystemStorage):
+    def _generate_url(self, storage_key: str) -> str | None:
+        try:
             return self._get_storage().url(storage_key)
-        return None
+        except Exception:
+            return None
 
     def save(
         self, knowledge_space_id: uuid.UUID, file_field
@@ -47,7 +49,13 @@ class KnowledgeAssetStorage:
 
         saved_path = storage.save(storage_key, file_field)
         file_size = file_field.size
-        mime_type = getattr(file_field, "content_type", "application/octet-stream")
+        mime_type = getattr(file_field, "content_type", None)
+        if not mime_type or mime_type == "application/octet-stream":
+            guessed = mimetypes.guess_type(original_name)[0]
+            if guessed:
+                mime_type = guessed
+        if not mime_type:
+            mime_type = "application/octet-stream"
         url = self._generate_url(saved_path)
 
         logger.info(

@@ -11,7 +11,7 @@ Soft-delete note:
   SoftDeleteManager excludes deleted rows from the default queryset).
 
 Views under test:
-  KnowledgeSpaceListCreateView — GET list (with/without search), POST create
+  KnowledgeSpaceListView — GET list (with/without search), POST create
   KnowledgeSpaceDetailView     — GET retrieve, PUT update, DELETE delete
 
 Scenarios per view:
@@ -30,7 +30,7 @@ from rest_framework import status
 from rest_framework.test import APIRequestFactory
 
 from apps.knowledge.models import KnowledgeSpace
-from apps.knowledge.views import KnowledgeSpaceDetailView, KnowledgeSpaceListCreateView
+from apps.knowledge.views import KnowledgeSpaceDetailView, KnowledgeSpaceListView
 
 from .conftest import make_request
 
@@ -43,7 +43,7 @@ class TestKnowledgeSpaceListView:
         request = make_request(
             "get", "/api/workspaces/x/knowledge/", user_id, data=data
         )
-        return KnowledgeSpaceListCreateView.as_view()(
+        return KnowledgeSpaceListView.as_view()(
             request, workspace_pk=workspace.id
         )
 
@@ -93,7 +93,7 @@ class TestKnowledgeSpaceListView:
     def test_returns_403_without_user_id(self, workspace):
         raw = APIRequestFactory().get("/api/workspaces/x/knowledge/", format="json")
         # Deliberately omit raw.user_id
-        response = KnowledgeSpaceListCreateView.as_view()(
+        response = KnowledgeSpaceListView.as_view()(
             raw, workspace_pk=workspace.id
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -141,7 +141,7 @@ class TestKnowledgeSpaceCreateView:
             user_id,
             data=data if data is not None else self._PAYLOAD,
         )
-        return KnowledgeSpaceListCreateView.as_view()(
+        return KnowledgeSpaceListView.as_view()(
             request, workspace_pk=workspace.id
         )
 
@@ -186,7 +186,7 @@ class TestKnowledgeSpaceCreateView:
     def test_returns_400_for_missing_name(self, workspace, owner_member, owner_id):
         response = self._call(workspace, owner_id, data={})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "name" in response.data
+        assert "name" in response.data["detail"]
 
     def test_returns_400_for_blank_name(self, workspace, owner_member, owner_id):
         response = self._call(workspace, owner_id, data={"name": "   "})
@@ -199,7 +199,7 @@ class TestKnowledgeSpaceCreateView:
             workspace, owner_id, data={"name": "X", "canvas_data": [1, 2]}
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "canvas_data" in response.data
+        assert "canvas_data" in response.data["detail"]
 
 
 # ─── GET /knowledge/{pk}/ ─────────────────────────────────────────────────────
@@ -287,7 +287,7 @@ class TestKnowledgeSpaceUpdateView:
 
     def _call(self, user_id, pk, data=None):
         request = make_request(
-            "put", f"/api/knowledge/{pk}/", user_id, data=data or self._PAYLOAD
+            "patch", f"/api/knowledge/{pk}/", user_id, data=data or self._PAYLOAD
         )
         return KnowledgeSpaceDetailView.as_view()(request, pk=pk)
 
@@ -356,14 +356,14 @@ class TestKnowledgeSpaceUpdateView:
             == status.HTTP_404_NOT_FOUND
         )
 
-    def test_returns_400_for_missing_name(
+    def test_returns_400_for_blank_name(
         self, workspace, owner_member, owner_id, knowledge_space
     ):
         response = self._call(
-            owner_id, knowledge_space.id, data={"description": "no name"}
+            owner_id, knowledge_space.id, data={"name": "   "}
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "name" in response.data
+        assert "name" in response.data["detail"]
 
     def test_returns_400_for_canvas_data_as_list(
         self, workspace, owner_member, owner_id, knowledge_space
@@ -374,6 +374,7 @@ class TestKnowledgeSpaceUpdateView:
             data={"name": "X", "canvas_data": ["not", "a", "dict"]},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "canvas_data" in response.data["detail"]
 
 
 # ─── DELETE /knowledge/{pk}/ ──────────────────────────────────────────────────

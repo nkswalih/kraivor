@@ -70,6 +70,9 @@ class NotificationSelector:
             token=token,
             defaults={"platform": platform},
         )
+        if not created and obj.platform != platform:
+            obj.platform = platform
+            obj.save(update_fields=["platform"])
         return obj, created
 
     @staticmethod

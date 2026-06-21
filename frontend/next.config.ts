@@ -16,6 +16,14 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: false,
   },
+  async rewrites() {
+    return [
+      {
+        source: '/s3-proxy/:path*',
+        destination: 'https://kraivor-uploads.s3.amazonaws.com/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

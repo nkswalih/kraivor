@@ -36,7 +36,7 @@ function useDebounce<T>(value: T, delay = 400): T {
       clearTimeout(timer.current);
       timer.current = setTimeout(() => setDebounced(v), delay);
     },
-    [delay],
+    [delay]
   );
   const prev = useRef(value);
   if (prev.current !== value) {
@@ -70,7 +70,7 @@ function isGitHubAuthError(err: unknown): boolean {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
-  const workspaceId = useAuthStore((s) => s.workspaceId);
+  const workspaceId = useAuthStore(s => s.workspaceId);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [connectingId, setConnectingId] = useState<string | null>(null);
@@ -139,8 +139,8 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
 
   const connectedSet = new Set(
     (connectedRepos as Array<{ github_repo: string; status: string }>)
-      .filter((r) => r.status === 'connected')
-      .map((r) => r.github_repo),
+      .filter(r => r.status === 'connected')
+      .map(r => r.github_repo)
   );
 
   // ── GitHub repo list from backend (installation-backed) ───────────────────
@@ -161,7 +161,11 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
   });
 
   // ── Installations list (used to detect installations and check admin role) ─
-  const { data: installationsData, isLoading: installationsLoading, refetch: refetchInstallations } = useQuery({
+  const {
+    data: installationsData,
+    isLoading: installationsLoading,
+    refetch: refetchInstallations,
+  } = useQuery({
     queryKey: ['github-installations', workspaceId],
     queryFn: () => repositoryEndpoints.listInstallations(workspaceId!),
     enabled: !!workspaceId && open,
@@ -172,10 +176,8 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
 
   // ── Connect a selected repo ───────────────────────────────────────────────
   const { mutate: connectRepo, error: connectError } = useMutation({
-    mutationFn: (github_repo: string) =>
-      repositoryEndpoints
-        .connect(workspaceId!, { github_repo }),
-    onMutate: (id) => setConnectingId(id),
+    mutationFn: (github_repo: string) => repositoryEndpoints.connect(workspaceId!, { github_repo }),
+    onMutate: id => setConnectingId(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['repos', workspaceId] });
       setConnectingId(null);
@@ -193,12 +195,11 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
   const hasInstallations = installations.length > 0;
 
   const connectErrMsg =
-    (connectError as any)?.response?.data?.detail ??
-    (connectError as any)?.message;
+    (connectError as any)?.response?.data?.detail ?? (connectError as any)?.message;
 
   const otherErrMsg =
     !githubNotConnected && reposError
-      ? (reposErrorDetail || 'Failed to load repositories. Please try again.')
+      ? reposErrorDetail || 'Failed to load repositories. Please try again.'
       : null;
 
   // ── Popup helper ─────────────────────────────────────────────────────────
@@ -206,7 +207,7 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
     const popup = window.open(
       url,
       'github-install',
-      'width=1000,height=700,scrollbars=yes,resizable=yes,left=200,top=100',
+      'width=1000,height=700,scrollbars=yes,resizable=yes,left=200,top=100'
     );
     if (!popup) {
       window.location.href = url;
@@ -255,12 +256,11 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onMouseDown={(e) => {
+      onMouseDown={e => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div className="w-full max-w-lg bg-[#141416] border border-[#27272A] rounded-xl shadow-2xl flex flex-col max-h-[80vh]">
-
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#27272A] shrink-0">
           <h2 className="text-[15px] font-semibold text-[#FAFAFA] flex items-center gap-2">
@@ -305,7 +305,6 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
               Click here to refocus the popup
             </button>
           </div>
-
         ) : githubNotConfigured ? (
           // ── GitHub App not configured on server ───────────────────────────
           <div className="flex flex-col items-center justify-center py-10 px-8 text-center gap-5">
@@ -317,12 +316,11 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
                 GitHub integration not available
               </p>
               <p className="text-[12px] text-text-tertiary max-w-xs leading-relaxed">
-                The GitHub App integration has not been configured on this server.
-                Contact your administrator to set it up.
+                The GitHub App integration has not been configured on this server. Contact your
+                administrator to set it up.
               </p>
             </div>
           </div>
-
         ) : githubNotConnected ? (
           // ── GitHub App not installed (admin only — non-admins get 200 []) ─
           <div className="flex flex-col items-center justify-center py-10 px-8 text-center gap-5">
@@ -331,13 +329,10 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
             </div>
 
             <div className="space-y-1.5">
-              <p className="text-[14px] font-semibold text-[#FAFAFA]">
-                Authorize GitHub access
-              </p>
+              <p className="text-[14px] font-semibold text-[#FAFAFA]">Authorize GitHub access</p>
               <p className="text-[12px] text-text-tertiary max-w-xs leading-relaxed">
-                Kraivor needs access to your GitHub repositories.
-                You'll be redirected to GitHub to grant access —
-                choose all repositories or select specific ones.
+                Kraivor needs access to your GitHub repositories. You'll be redirected to GitHub to
+                grant access — choose all repositories or select specific ones.
               </p>
             </div>
 
@@ -346,7 +341,7 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
                 { icon: '📂', label: 'Repository access', sub: 'Read your repositories' },
                 { icon: '👤', label: 'Account information', sub: 'Read your public profile' },
                 { icon: '📧', label: 'Email addresses', sub: 'Read your verified emails' },
-              ].map((item) => (
+              ].map(item => (
                 <div key={item.label} className="flex items-center gap-3 px-3 py-2.5">
                   <span className="text-base">{item.icon}</span>
                   <div>
@@ -368,16 +363,16 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
             </button>
 
             <p className="text-[10px] text-text-tertiary">
-              You'll be redirected to GitHub. After granting access you'll return here automatically.
+              You'll be redirected to GitHub. After granting access you'll return here
+              automatically.
             </p>
           </div>
-
         ) : !canAdmin ? (
           // ── Non-admin — show only already-connected repos ─────────────────
           <div className="flex-1 overflow-y-auto px-2 pb-3 min-h-0">
             {connectedSet.size > 0 ? (
               <ul className="space-y-0.5 mt-1">
-                {Array.from(connectedSet).map((repoFullName) => (
+                {Array.from(connectedSet).map(repoFullName => (
                   <li key={repoFullName}>
                     <div className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg opacity-60 cursor-default">
                       <div className="shrink-0 w-7 h-7 rounded-md bg-[#1E1E21] border border-[#27272A] flex items-center justify-center">
@@ -396,16 +391,13 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
                 <GitBranch className="w-8 h-8 text-text-tertiary mb-1" />
-                <p className="text-[13px] text-text-secondary">
-                  No repositories connected yet.
-                </p>
+                <p className="text-[13px] text-text-secondary">No repositories connected yet.</p>
                 <p className="text-[11px] text-text-tertiary max-w-xs">
                   Only workspace admins can connect GitHub repositories.
                 </p>
               </div>
             )}
           </div>
-
         ) : (
           // ── Admin — show full repo picker with configure options ─────────
           <>
@@ -415,7 +407,7 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-tertiary" />
                 <input
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={e => setSearch(e.target.value)}
                   placeholder="Search repositories..."
                   autoFocus
                   className="w-full pl-9 pr-3 py-2 bg-[#0A0A0B] border border-[#27272A] rounded-lg text-[13px] text-[#FAFAFA] placeholder:text-text-tertiary focus:outline-none focus:border-venom-yellow/50 transition-colors"
@@ -472,21 +464,22 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
                       Select additional repositories on GitHub.
                     </p>
                   )}
-                  {hasInstallations && installations.map((inst) => (
-                    <button
-                      key={inst.id}
-                      onClick={() => handleConfigure(inst.installation_id)}
-                      className="flex items-center gap-2 px-4 py-2 border border-[#27272A] rounded-lg text-[12px] text-text-secondary hover:text-[#FAFAFA] hover:border-[#FAFAFA]/30 transition-colors"
-                    >
-                      <Settings className="w-3.5 h-3.5" />
-                      Configure {inst.github_account_login}
-                      <ExternalLink className="w-3 h-3 opacity-50" />
-                    </button>
-                  ))}
+                  {hasInstallations &&
+                    installations.map(inst => (
+                      <button
+                        key={inst.id}
+                        onClick={() => handleConfigure(inst.installation_id)}
+                        className="flex items-center gap-2 px-4 py-2 border border-[#27272A] rounded-lg text-[12px] text-text-secondary hover:text-[#FAFAFA] hover:border-[#FAFAFA]/30 transition-colors"
+                      >
+                        <Settings className="w-3.5 h-3.5" />
+                        Configure {inst.github_account_login}
+                        <ExternalLink className="w-3 h-3 opacity-50" />
+                      </button>
+                    ))}
                 </div>
               ) : (
                 <ul className="space-y-0.5 mt-1">
-                  {githubRepos.map((repo) => {
+                  {githubRepos.map(repo => {
                     const isConnected = connectedSet.has(repo.full_name);
                     const isConnecting = connectingId === repo.full_name;
 
@@ -512,10 +505,15 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
                                 {repo.full_name}
                               </span>
                               <span className="shrink-0 flex items-center gap-0.5 text-[10px] text-text-tertiary bg-[#27272A] px-1.5 py-0.5 rounded">
-                                {repo.private
-                                  ? <><Lock className="w-2.5 h-2.5" /> Private</>
-                                  : <><Globe className="w-2.5 h-2.5" /> Public</>
-                                }
+                                {repo.private ? (
+                                  <>
+                                    <Lock className="w-2.5 h-2.5" /> Private
+                                  </>
+                                ) : (
+                                  <>
+                                    <Globe className="w-2.5 h-2.5" /> Public
+                                  </>
+                                )}
                               </span>
                             </div>
                             {repo.description && (
@@ -557,14 +555,14 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
                 : githubNotConnected
                   ? 'GitHub authorization required'
                   : !canAdmin
-                ? connectedSet.size > 0
-                  ? `${connectedSet.size} repo${connectedSet.size > 1 ? 's' : ''} connected`
-                  : 'No repositories connected'
-                : connectedSet.size > 0
-                  ? `${connectedSet.size} repo${connectedSet.size > 1 ? 's' : ''} already connected`
-                  : hasInstallations
-                    ? 'Select a repository or manage access'
-                    : 'Click a repository to connect it'}
+                    ? connectedSet.size > 0
+                      ? `${connectedSet.size} repo${connectedSet.size > 1 ? 's' : ''} connected`
+                      : 'No repositories connected'
+                    : connectedSet.size > 0
+                      ? `${connectedSet.size} repo${connectedSet.size > 1 ? 's' : ''} already connected`
+                      : hasInstallations
+                        ? 'Select a repository or manage access'
+                        : 'Click a repository to connect it'}
           </p>
           <button
             onClick={onClose}

@@ -13,7 +13,7 @@ export function TopContributors() {
   if (isLoading) {
     return (
       <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
+        {[1, 2, 3].map(i => (
           <div key={i} className="h-8 bg-muted rounded animate-pulse" />
         ))}
       </div>
@@ -26,14 +26,19 @@ export function TopContributors() {
         Top Contributors
       </h3>
       <div className="space-y-3">
-        {data?.results.map((user) => (
+        {data?.results.map(user => (
           <Link
             key={user.user_id}
             href={`/${workspace}/profile/${user.username}`}
             className="flex items-center justify-between group cursor-pointer"
           >
             <div className="flex items-center gap-2 min-w-0">
-              <Avatar src={user.avatar_url} fallbackSrc={user.user_avatar_url} name={user.display_name} size="sm" />
+              <Avatar
+                src={user.avatar_url}
+                fallbackSrc={user.user_avatar_url}
+                name={user.display_name}
+                size="sm"
+              />
               <div className="min-w-0">
                 <div className="text-[13px] font-medium text-foreground group-hover:underline truncate">
                   {user.display_name}

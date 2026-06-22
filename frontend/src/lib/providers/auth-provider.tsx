@@ -52,23 +52,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
-    authApi.refreshSession().then(() => {
-      initWorkspace().then(() => {
-        const pathSegments = pathname.split('/').filter(Boolean);
-        const slugFromUrl = pathSegments[0];
-        if (slugFromUrl && !isPublicRoute(pathname) && !isAuthRedirectRoute(pathname)) {
-          const state = useAuthStore.getState();
-          if (state.workspaceSlug !== slugFromUrl && state.workspaces.length > 0) {
-            const ws = state.workspaces.find((w: any) => w.slug === slugFromUrl);
-            if (ws) {
-              state.setWorkspace(ws.id, ws.slug);
+    authApi
+      .refreshSession()
+      .then(() => {
+        initWorkspace().then(() => {
+          const pathSegments = pathname.split('/').filter(Boolean);
+          const slugFromUrl = pathSegments[0];
+          if (slugFromUrl && !isPublicRoute(pathname) && !isAuthRedirectRoute(pathname)) {
+            const state = useAuthStore.getState();
+            if (state.workspaceSlug !== slugFromUrl && state.workspaces.length > 0) {
+              const ws = state.workspaces.find((w: any) => w.slug === slugFromUrl);
+              if (ws) {
+                state.setWorkspace(ws.id, ws.slug);
+              }
             }
           }
-        }
+        });
+      })
+      .finally(() => {
+        sessionReady.current = true;
       });
-    }).finally(() => {
-      sessionReady.current = true;
-    });
   }, [initWorkspace, pathname]);
 
   useEffect(() => {
@@ -78,10 +81,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
       router.replace(redirect);
       return;
     }
-    if (sessionReady.current && !routeIsPublic && !isAuthenticated && !pathname.startsWith('/oauth/')) {
+    if (
+      sessionReady.current &&
+      !routeIsPublic &&
+      !isAuthenticated &&
+      !pathname.startsWith('/oauth/')
+    ) {
       router.replace(`${ROUTES.LOGIN}?callbackUrl=${encodeURIComponent(pathname)}`);
     }
-  }, [isAuthenticated, isLoading, pathname, routeIsAuthRedirect, routeIsPublic, router, workspaceSlug]);
+  }, [
+    isAuthenticated,
+    isLoading,
+    pathname,
+    routeIsAuthRedirect,
+    routeIsPublic,
+    router,
+    workspaceSlug,
+  ]);
 
   /* ─── Real-time notification socket ──────────────────────────── */
   const queryClient = useQueryClient();
@@ -97,14 +113,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.debug('[NotificationSocket] connected');
     };
 
-    socket.onNotification = (event) => {
+    socket.onNotification = event => {
       // Invalidate queries so inbox popover and inbox page update in real-time
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['unread-count'] });
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
     };
 
-    socket.onAuthError = (code) => {
+    socket.onAuthError = code => {
       console.warn('[NotificationSocket] auth error', code);
     };
 

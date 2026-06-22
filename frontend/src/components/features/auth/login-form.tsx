@@ -13,28 +13,56 @@ import { ROUTES } from '@/constants';
 
 const GithubIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
   </svg>
 );
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    <path
+      fill="#4285F4"
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+    />
+    <path
+      fill="#EA4335"
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+    />
   </svg>
 );
 
 const EyeIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden="true"
+  >
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
     <circle cx="12" cy="12" r="3" />
   </svg>
 );
 
 const EyeOffIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden="true"
+  >
     <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
     <line x1="1" y1="1" x2="23" y2="23" />
   </svg>
@@ -93,20 +121,31 @@ export function LoginForm() {
           {step === 'PASSWORD' && 'Enter password'}
           {step === 'OTP_ENTER' && 'Verify your email'}
         </h1>
-        {step === 'IDENTIFY' && <p className="mt-1.5 text-sm text-slate-400">Sign in to your workspace</p>}
-        {step !== 'IDENTIFY' && <p className="mt-1.5 text-sm font-medium text-slate-400">{email}</p>}
+        {step === 'IDENTIFY' && (
+          <p className="mt-1.5 text-sm text-slate-400">Sign in to your workspace</p>
+        )}
+        {step !== 'IDENTIFY' && (
+          <p className="mt-1.5 text-sm font-medium text-slate-400">{email}</p>
+        )}
       </div>
 
       <div className="rounded-2xl p-8 bg-krait-surface1 border border-krait-border">
         {serverError && (
-          <div className="mb-4 rounded-lg px-4 py-3 text-sm text-red-300 bg-red-500/10 border border-red-500/20" role="alert">
+          <div
+            className="mb-4 rounded-lg px-4 py-3 text-sm text-red-300 bg-red-500/10 border border-red-500/20"
+            role="alert"
+          >
             {serverError}
           </div>
         )}
 
         {step === 'IDENTIFY' && (
           <IdentifyStep
-            onSuccess={(e: string, m: string[]) => { setEmail(e); setMethods(m); setStep('CHOOSE_METHOD'); }}
+            onSuccess={(e: string, m: string[]) => {
+              setEmail(e);
+              setMethods(m);
+              setStep('CHOOSE_METHOD');
+            }}
             setGlobalError={setServerError}
             isLoading={isLoading}
             setIsLoading={setIsLoading}
@@ -158,7 +197,10 @@ export function LoginForm() {
       {step === 'IDENTIFY' && (
         <p className="mt-6 text-center text-sm text-slate-500 animate-fade-up-delay-2">
           Don&apos;t have an account?{' '}
-          <Link href={ROUTES.REGISTER} className="font-medium text-[hsl(var(--primary-light))] transition-colors hover:text-[hsl(var(--primary))]">
+          <Link
+            href={ROUTES.REGISTER}
+            className="font-medium text-[hsl(var(--primary-light))] transition-colors hover:text-[hsl(var(--primary))]"
+          >
             Create one free
           </Link>
         </p>
@@ -173,7 +215,12 @@ export function LoginForm() {
 
 function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: any) {
   const schema = z.object({ email: z.string().email('Invalid email address') });
-  const { register, handleSubmit, setError: setFieldError, formState: { errors } } = useForm({ resolver: zodResolver(schema) });
+  const {
+    register,
+    handleSubmit,
+    setError: setFieldError,
+    formState: { errors },
+  } = useForm({ resolver: zodResolver(schema) });
 
   const onSubmit = async (data: any) => {
     setGlobalError(null);
@@ -187,7 +234,10 @@ function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: an
       }
 
       if (res.user_exists && res.email_verified === false) {
-        setFieldError('email', { type: 'manual', message: res.message || 'Please verify your email first.' });
+        setFieldError('email', {
+          type: 'manual',
+          message: res.message || 'Please verify your email first.',
+        });
         return;
       }
 
@@ -201,9 +251,15 @@ function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: an
       if (errorData?.user_exists === false) {
         setFieldError('email', { type: 'manual', message: 'Account not found. Please register.' });
       } else if (errorData?.email_verified === false) {
-        setFieldError('email', { type: 'manual', message: errorData.message || 'Please verify your email first.' });
+        setFieldError('email', {
+          type: 'manual',
+          message: errorData.message || 'Please verify your email first.',
+        });
       } else {
-        setFieldError('email', { type: 'manual', message: errorData.message || 'Account not found. Please register.' });
+        setFieldError('email', {
+          type: 'manual',
+          message: errorData.message || 'Account not found. Please register.',
+        });
       }
     } finally {
       setIsLoading(false);
@@ -271,7 +327,9 @@ function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: an
             className={`auth-input w-full px-4 py-3 text-sm ${errors.email ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' : ''}`}
             placeholder="you@company.com"
           />
-          {errors.email && <p className="text-xs text-red-400 mt-1">{errors.email.message as string}</p>}
+          {errors.email && (
+            <p className="text-xs text-red-400 mt-1">{errors.email.message as string}</p>
+          )}
         </div>
         <button
           type="submit"
@@ -280,9 +338,25 @@ function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: an
         >
           {isLoading ? (
             <>
-              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              <svg
+                className="h-4 w-4 animate-spin"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
               </svg>
               Checking...
             </>
@@ -295,7 +369,14 @@ function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: an
   );
 }
 
-function ChooseMethodStep({ methods, email, onSelectPassword, onSelectOtp, isLoading, onBack }: any) {
+function ChooseMethodStep({
+  methods,
+  email,
+  onSelectPassword,
+  onSelectOtp,
+  isLoading,
+  onBack,
+}: any) {
   const maskEmail = (email: string) => {
     const [localPart, domain] = email.split('@');
     if (!localPart || !domain) return email;
@@ -308,27 +389,47 @@ function ChooseMethodStep({ methods, email, onSelectPassword, onSelectOtp, isLoa
       <p className="text-sm text-slate-300 text-center mb-6">How would you like to sign in?</p>
 
       {methods?.includes('password') && (
-        <button onClick={onSelectPassword} className="w-full flex items-center p-4 border border-white/10 rounded-xl hover:bg-white/5 transition-colors text-left group">
+        <button
+          onClick={onSelectPassword}
+          className="w-full flex items-center p-4 border border-white/10 rounded-xl hover:bg-white/5 transition-colors text-left group"
+        >
           <div className="flex-1">
-            <h3 className="text-sm font-medium text-white group-hover:text-[hsl(var(--primary-light))] transition-colors">Use your password</h3>
-            <p className="text-xs text-slate-400 mt-1">Sign in with your Kraivor account password</p>
+            <h3 className="text-sm font-medium text-white group-hover:text-[hsl(var(--primary-light))] transition-colors">
+              Use your password
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">
+              Sign in with your Kraivor account password
+            </p>
           </div>
           <ArrowLeftIcon />
         </button>
       )}
 
       {methods?.includes('otp') && (
-        <button onClick={onSelectOtp} disabled={isLoading} className="w-full flex items-center p-4 border border-white/10 rounded-xl hover:bg-white/5 transition-colors text-left group">
+        <button
+          onClick={onSelectOtp}
+          disabled={isLoading}
+          className="w-full flex items-center p-4 border border-white/10 rounded-xl hover:bg-white/5 transition-colors text-left group"
+        >
           <div className="flex-1">
-            <h3 className="text-sm font-medium text-white group-hover:text-[hsl(var(--primary-light))] transition-colors">Send a code</h3>
+            <h3 className="text-sm font-medium text-white group-hover:text-[hsl(var(--primary-light))] transition-colors">
+              Send a code
+            </h3>
             <p className="text-xs text-slate-400 mt-1">We'll send a code to {masked}</p>
           </div>
-          {isLoading ? <span className="text-xs text-slate-400">Sending...</span> : <ArrowLeftIcon />}
+          {isLoading ? (
+            <span className="text-xs text-slate-400">Sending...</span>
+          ) : (
+            <ArrowLeftIcon />
+          )}
         </button>
       )}
 
       <div className="pt-4 border-t border-white/10 mt-6 text-center">
-        <button onClick={onBack} className="text-sm text-slate-400 hover:text-white transition-colors">
+        <button
+          onClick={onBack}
+          className="text-sm text-slate-400 hover:text-white transition-colors"
+        >
           Sign in with a different account
         </button>
       </div>
@@ -338,8 +439,12 @@ function ChooseMethodStep({ methods, email, onSelectPassword, onSelectOtp, isLoa
 
 function PasswordStep({ email, onSuccess, setError, onBack, onReset }: any) {
   const [show, setShow] = useState(false);
-  const { register, handleSubmit, formState: { isSubmitting } } = useForm({
-    resolver: zodResolver(z.object({ password: z.string().min(1, 'Password required') }))
+  const {
+    register,
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm({
+    resolver: zodResolver(z.object({ password: z.string().min(1, 'Password required') })),
   });
 
   const onSubmit = async (data: any) => {
@@ -357,19 +462,49 @@ function PasswordStep({ email, onSuccess, setError, onBack, onReset }: any) {
       <div className="space-y-1.5">
         <label className="block text-sm font-medium text-slate-300">Password</label>
         <div className="relative">
-          <input {...register('password')} autoFocus type={show ? 'text' : 'password'} className="auth-input w-full px-4 py-3 pr-11 text-sm" placeholder="Enter your password" />
-          <button type="button" onClick={() => setShow(!show)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+          <input
+            {...register('password')}
+            autoFocus
+            type={show ? 'text' : 'password'}
+            className="auth-input w-full px-4 py-3 pr-11 text-sm"
+            placeholder="Enter your password"
+          />
+          <button
+            type="button"
+            onClick={() => setShow(!show)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+          >
             {show ? <EyeOffIcon /> : <EyeIcon />}
           </button>
         </div>
       </div>
 
-      <button type="submit" disabled={isSubmitting} className="btn-shimmer flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 disabled:cursor-not-allowed">
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="btn-shimmer flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 disabled:cursor-not-allowed"
+      >
         {isSubmitting ? (
           <>
-            <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            <svg
+              className="mr-2 h-4 w-4 animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
             </svg>
             Signing in...
           </>
@@ -379,10 +514,18 @@ function PasswordStep({ email, onSuccess, setError, onBack, onReset }: any) {
       </button>
 
       <div className="flex flex-col gap-3 pt-4 border-t border-white/10 text-center">
-        <button type="button" onClick={onBack} className="text-sm text-[hsl(var(--primary-light))] hover:text-white transition-colors">
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-sm text-[hsl(var(--primary-light))] hover:text-white transition-colors"
+        >
           Other way to sign in
         </button>
-        <button type="button" onClick={onReset} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+        <button
+          type="button"
+          onClick={onReset}
+          className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+        >
           Sign in with a different Kraivor Account
         </button>
       </div>
@@ -452,19 +595,22 @@ function OtpStep({ email, onSuccess, setError, onBack }: any) {
   return (
     <div className="animate-fade-up space-y-6">
       <p className="text-sm text-slate-300 text-center">
-        If <span className="font-medium text-white">{masked}</span> matches the email address on your account, we'll send you a code.
+        If <span className="font-medium text-white">{masked}</span> matches the email address on
+        your account, we'll send you a code.
       </p>
 
       <div className="flex justify-center gap-2" onPaste={handlePaste}>
         {otp.map((digit, i) => (
           <input
             key={i}
-            ref={(el) => { inputRefs.current[i] = el; }}
+            ref={el => {
+              inputRefs.current[i] = el;
+            }}
             type="text"
             maxLength={1}
             value={digit}
-            onChange={(e) => handleChange(i, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(i, e)}
+            onChange={e => handleChange(i, e.target.value)}
+            onKeyDown={e => handleKeyDown(i, e)}
             className="auth-input w-12 h-14 text-center text-xl font-bold rounded-lg focus:ring-2 focus:ring-[hsl(var(--primary))] transition-all"
             autoFocus={i === 0}
           />
@@ -478,9 +624,25 @@ function OtpStep({ email, onSuccess, setError, onBack }: any) {
       >
         {isVerifying ? (
           <>
-            <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            <svg
+              className="mr-2 h-4 w-4 animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
             </svg>
             Verifying...
           </>
@@ -490,10 +652,17 @@ function OtpStep({ email, onSuccess, setError, onBack }: any) {
       </button>
 
       <div className="flex flex-col gap-3 pt-4 border-t border-white/10 text-center">
-        <button onClick={handleResend} className="text-sm text-slate-400 hover:text-white transition-colors">
-          Didn't receive it? <span className="text-[hsl(var(--primary-light))] hover:underline">Resend code</span>
+        <button
+          onClick={handleResend}
+          className="text-sm text-slate-400 hover:text-white transition-colors"
+        >
+          Didn't receive it?{' '}
+          <span className="text-[hsl(var(--primary-light))] hover:underline">Resend code</span>
         </button>
-        <button onClick={onBack} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+        <button
+          onClick={onBack}
+          className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+        >
           Other way to sign in
         </button>
       </div>

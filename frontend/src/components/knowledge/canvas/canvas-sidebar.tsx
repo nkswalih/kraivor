@@ -32,10 +32,9 @@ export function CanvasSidebar({ spaceId }: Props) {
     const el = scrollContainerRef.current;
     if (!el) return;
 
-    const canScrollRight = 
-      el.scrollWidth > el.clientWidth && 
-      el.scrollLeft + el.clientWidth < el.scrollWidth - 8;
-      
+    const canScrollRight =
+      el.scrollWidth > el.clientWidth && el.scrollLeft + el.clientWidth < el.scrollWidth - 8;
+
     setShowArrow(canScrollRight);
   };
 
@@ -77,11 +76,10 @@ export function CanvasSidebar({ spaceId }: Props) {
       className="border-l border-border bg-krait-surface1 flex flex-col shrink-0"
       style={{ width: sidebarWidth }}
     >
-
       {/* Tab bar */}
       <div className="relative flex items-center border-b border-border h-10 w-full bg-krait-surface1">
         {/* Scrollable track without a scrollbar */}
-        <div 
+        <div
           ref={scrollContainerRef}
           className="flex items-center h-full w-full overflow-x-auto no-scrollbar scroll-smooth px-2 gap-1"
         >
@@ -111,9 +109,6 @@ export function CanvasSidebar({ spaceId }: Props) {
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
-
-
-
 
       {/* Panel content */}
       <div className="flex-1 overflow-y-auto">

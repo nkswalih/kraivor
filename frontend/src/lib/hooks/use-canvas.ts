@@ -11,14 +11,12 @@ export function useCanvasAutosave(
   knowledgeId: string,
   workspaceId: string,
   spaceName?: string,
-  spaceDescription?: string | null,
+  spaceDescription?: string | null
 ) {
   const saveCanvas = useSaveCanvas(knowledgeId, workspaceId);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savingRef = useRef(false);
-  const isDirty = useKnowledgeStore(s =>
-    spaceId ? !!s.dirtySpaceIds[spaceId] : false
-  );
+  const isDirty = useKnowledgeStore(s => (spaceId ? !!s.dirtySpaceIds[spaceId] : false));
   const getCanvasState = useKnowledgeStore(s => s.getCanvasState);
   const markClean = useKnowledgeStore(s => s.markClean);
   const setSaving = useKnowledgeStore(s => s.setSaving);
@@ -53,7 +51,16 @@ export function useCanvasAutosave(
         },
       }
     );
-  }, [spaceId, getCanvasState, markClean, setSaving, saveCanvas, spaceName, spaceDescription, setLastSavedAt]);
+  }, [
+    spaceId,
+    getCanvasState,
+    markClean,
+    setSaving,
+    saveCanvas,
+    spaceName,
+    spaceDescription,
+    setLastSavedAt,
+  ]);
 
   const flushRef = useRef(flush);
   flushRef.current = flush;
@@ -83,7 +90,12 @@ export function useCanvasKeyboard(spaceId: string | undefined) {
 
     const handleKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') return;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.contentEditable === 'true'
+      )
+        return;
 
       const state = store.getState();
       const canvas = state.spaces[spaceId];

@@ -1,21 +1,32 @@
 import { coreApi } from '../client';
-import type { Workspace, WorkspaceMember, WorkspaceInvitation, InvitationAcceptResponse, CursorPageLegacy } from '@/types/api';
+import type {
+  Workspace,
+  WorkspaceMember,
+  WorkspaceInvitation,
+  InvitationAcceptResponse,
+  CursorPageLegacy,
+} from '@/types/api';
 
 export const workspaceEndpoints = {
   list: (pageSize = 20) =>
     coreApi.get<CursorPageLegacy<Workspace>>(`/workspaces/?page_size=${pageSize}`),
 
-  get: (idOrSlug: string) =>
-    coreApi.get<Workspace>(`/workspaces/${idOrSlug}/`),
+  get: (idOrSlug: string) => coreApi.get<Workspace>(`/workspaces/${idOrSlug}/`),
 
-  create: (payload: { name: string; slug?: string; avatar_url?: string; description?: string; settings?: Record<string, unknown> }) =>
-    coreApi.post<Workspace>('/workspaces/', payload),
+  create: (payload: {
+    name: string;
+    slug?: string;
+    avatar_url?: string;
+    description?: string;
+    settings?: Record<string, unknown>;
+  }) => coreApi.post<Workspace>('/workspaces/', payload),
 
-  update: (id: string, payload: Partial<Pick<Workspace, 'name' | 'avatar_url' | 'description' | 'settings'>>) =>
-    coreApi.patch<Workspace>(`/workspaces/${id}/`, payload),
+  update: (
+    id: string,
+    payload: Partial<Pick<Workspace, 'name' | 'avatar_url' | 'description' | 'settings'>>
+  ) => coreApi.patch<Workspace>(`/workspaces/${id}/`, payload),
 
-  delete: (id: string) =>
-    coreApi.delete<void>(`/workspaces/${id}/`),
+  delete: (id: string) => coreApi.delete<void>(`/workspaces/${id}/`),
 
   getMembers: (workspacePk: string) =>
     coreApi.get<WorkspaceMember[]>(`/workspaces/${workspacePk}/members/`),

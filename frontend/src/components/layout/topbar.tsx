@@ -11,26 +11,26 @@ import { CreateWorkspaceDialog } from '@/components/features/create-workspace-di
 
 const ROUTE_LABELS: Record<string, string> = {
   '': 'Home',
-  'chat': 'Chat',
-  'repositories': 'Repositories',
-  'analysis': 'Analysis',
-  'ai': 'AI Workspace',
-  'knowledge': 'Knowledge',
-  'projects': 'Projects',
-  'tasks': 'Tasks',
-  'community': 'Community',
-  'inbox': 'Inbox',
-  'settings': 'Settings',
-  'profile': 'Profile',
+  chat: 'Chat',
+  repositories: 'Repositories',
+  analysis: 'Analysis',
+  ai: 'AI Workspace',
+  knowledge: 'Knowledge',
+  projects: 'Projects',
+  tasks: 'Tasks',
+  community: 'Community',
+  inbox: 'Inbox',
+  settings: 'Settings',
+  profile: 'Profile',
 };
 
 export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
   const router = useRouter();
-  
+
   // Destructure UI state (assuming you have a way to check if it's open for the active state)
-  const toggleRightPanel = useUIStore((state) => state.toggleRightPanel);
-  const setCommandPaletteOpen = useUIStore((state) => state.setCommandPaletteOpen);
-  
+  const toggleRightPanel = useUIStore(state => state.toggleRightPanel);
+  const setCommandPaletteOpen = useUIStore(state => state.setCommandPaletteOpen);
+
   const { workspaces, workspaceId, setWorkspace } = useAuthStore();
   const pathname = usePathname();
   const [wsOpen, setWsOpen] = useState(false);
@@ -69,7 +69,6 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
 
   return (
     <header className="h-12 border-b border-[#27272A] flex items-center px-4 bg-[#0A0A0B] shrink-0 gap-4">
-      
       {/* Left — workspace switcher + route */}
       <div className="flex items-center gap-1 min-w-0">
         <div ref={wsRef} className="relative">
@@ -100,7 +99,11 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
                 {(workspaces as any[]).map((ws: any) => (
                   <button
                     key={ws.id}
-                    onClick={() => { setWorkspace(ws.id, ws.slug); setWsOpen(false); router.push(`/${ws.slug}`); }}
+                    onClick={() => {
+                      setWorkspace(ws.id, ws.slug);
+                      setWsOpen(false);
+                      router.push(`/${ws.slug}`);
+                    }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-text-secondary hover:bg-krait-surface2 hover:text-[#FAFAFA] transition-colors text-left"
                   >
                     <div className="w-5 h-5 rounded-[4px] bg-[#27272A] flex items-center justify-center text-[10px] font-bold text-[#FAFAFA] shrink-0">
@@ -115,7 +118,10 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
               </div>
               <div className="border-t border-[#27272A] py-1">
                 <button
-                  onClick={() => { setWsOpen(false); setShowCreate(true); }}
+                  onClick={() => {
+                    setWsOpen(false);
+                    setShowCreate(true);
+                  }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-venom-yellow hover:bg-krait-surface2 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
@@ -135,7 +141,6 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
 
       {/* Right Side — Search + Context Panel Icons */}
       <div className="flex items-center gap-3 shrink-0">
-        
         {/* Search */}
         <button
           onClick={() => setCommandPaletteOpen(true)}
@@ -154,7 +159,7 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
         {/* Icons */}
         <div className="flex items-center gap-1.5">
           <InboxPopover />
-          
+
           {/* VS Code Style Right Panel Toggle */}
           <button
             onClick={toggleRightPanel}
@@ -170,7 +175,7 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
       <CreateWorkspaceDialog
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        onCreated={(slug) => router.push(`/${slug}`)}
+        onCreated={slug => router.push(`/${slug}`)}
       />
 
       <CommandPalette workspaceSlug={workspaceSlug} />

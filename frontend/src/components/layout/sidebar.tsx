@@ -10,11 +10,22 @@ import { useChatStore } from '@/lib/stores/chat-store';
 import { useUIStore } from '@/lib/stores/ui-store';
 import { profileEndpoints, chatEndpoints } from '@/lib/api/endpoints';
 import { getInitials, cn } from '@/lib/utils';
-import { 
-  Home, GitBranch, Activity, Sparkles, Edit3, 
-  KanbanSquare, CheckSquare, MessageSquare, Globe, 
-  Inbox, Settings, LogOut, Building2,
-  PanelLeftClose, PanelLeftOpen
+import {
+  Home,
+  GitBranch,
+  Activity,
+  Sparkles,
+  Edit3,
+  KanbanSquare,
+  CheckSquare,
+  MessageSquare,
+  Globe,
+  Inbox,
+  Settings,
+  LogOut,
+  Building2,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 
 export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
@@ -42,7 +53,9 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
   const roomsList = Array.isArray(rooms) ? rooms : (rooms?.results ?? []);
 
   const syncUnread = useChatStore(s => s.syncUnreadFromRooms);
-  useEffect(() => { if (roomsList.length) syncUnread(roomsList); }, [roomsList, syncUnread]);
+  useEffect(() => {
+    if (roomsList.length) syncUnread(roomsList);
+  }, [roomsList, syncUnread]);
 
   const totalUnread = useChatStore(s => s.totalUnread());
 
@@ -59,56 +72,59 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
   ];
 
   return (
-    <aside className={`${collapsed ? 'w-[60px]' : 'w-[240px]'} flex-shrink-0 flex flex-col bg-[#111113] border-r border-[#27272A] h-full select-none transition-all duration-200`}>
-
+    <aside
+      className={`${collapsed ? 'w-[60px]' : 'w-[240px]'} flex-shrink-0 flex flex-col bg-[#111113] border-r border-[#27272A] h-full select-none transition-all duration-200`}
+    >
       {/* Main Navigation */}
       <div className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-        {navItems.map((item) => {
-          const isActive = item.href === `/${workspaceSlug}` 
-            ? pathname === item.href 
-            : pathname.startsWith(item.href);
+        {navItems.map(item => {
+          const isActive =
+            item.href === `/${workspaceSlug}`
+              ? pathname === item.href
+              : pathname.startsWith(item.href);
 
           return (
-            <Link 
-              key={item.name} 
+            <Link
+              key={item.name}
               href={item.href}
               title={collapsed ? item.name : undefined}
               className={cn(
-                "flex items-center rounded-[6px] transition-colors text-[13px] font-medium",
-                collapsed
-                  ? "justify-center px-0 py-2 relative"
-                  : "gap-2.5 px-2.5 py-1.5",
-                isActive 
-                  ? "bg-[#18181B] text-[#FAFAFA]" 
-                  : "text-[#A1A1AA] hover:bg-[#18181B]/50 hover:text-[#FAFAFA]"
+                'flex items-center rounded-[6px] transition-colors text-[13px] font-medium',
+                collapsed ? 'justify-center px-0 py-2 relative' : 'gap-2.5 px-2.5 py-1.5',
+                isActive
+                  ? 'bg-[#18181B] text-[#FAFAFA]'
+                  : 'text-[#A1A1AA] hover:bg-[#18181B]/50 hover:text-[#FAFAFA]'
               )}
             >
-              <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-[#FAFAFA]" : "text-[#A1A1AA]")} />
+              <item.icon
+                className={cn('w-4 h-4 shrink-0', isActive ? 'text-[#FAFAFA]' : 'text-[#A1A1AA]')}
+              />
               <span className={collapsed ? 'hidden' : ''}>{item.name}</span>
-              
-              {item.name === 'Chat' && totalUnread > 0 && (
-                collapsed
-                  ? <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#EF4444]" />
-                  : <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-[#EF4444] text-[10px] font-extrabold text-white px-1">
-                      {totalUnread > 99 ? '99+' : totalUnread}
-                    </span>
-              )}
+
+              {item.name === 'Chat' &&
+                totalUnread > 0 &&
+                (collapsed ? (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#EF4444]" />
+                ) : (
+                  <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-[#EF4444] text-[10px] font-extrabold text-white px-1">
+                    {totalUnread > 99 ? '99+' : totalUnread}
+                  </span>
+                ))}
             </Link>
           );
         })}
 
         <div className="my-3 border-t border-[#27272A]" />
       </div>
-      
+
       {/* Bottom Section */}
       <div className="p-2 border-t border-[#27272A] space-y-0.5">
-
         <Link
           href={`/${workspaceSlug}/settings/workspace`}
           title={collapsed ? 'Workspaces' : undefined}
           className={cn(
-            "flex items-center rounded-[6px] text-[#A1A1AA] hover:bg-[#18181B]/50 hover:text-[#FAFAFA] transition-colors text-[13px] font-medium",
-            collapsed ? "justify-center px-0 py-2" : "gap-2.5 px-2.5 py-1.5"
+            'flex items-center rounded-[6px] text-[#A1A1AA] hover:bg-[#18181B]/50 hover:text-[#FAFAFA] transition-colors text-[13px] font-medium',
+            collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-2.5 py-1.5'
           )}
         >
           <Building2 className="w-4 h-4 shrink-0" />
@@ -119,8 +135,8 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
           href={`/${workspaceSlug}/inbox`}
           title={collapsed ? 'Inbox' : undefined}
           className={cn(
-            "flex items-center rounded-[6px] text-[#A1A1AA] hover:bg-[#18181B]/50 hover:text-[#FAFAFA] transition-colors text-[13px] font-medium",
-            collapsed ? "justify-center px-0 py-2" : "gap-2.5 px-2.5 py-1.5"
+            'flex items-center rounded-[6px] text-[#A1A1AA] hover:bg-[#18181B]/50 hover:text-[#FAFAFA] transition-colors text-[13px] font-medium',
+            collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-2.5 py-1.5'
           )}
         >
           <Inbox className="w-4 h-4 shrink-0" />
@@ -132,8 +148,8 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
           href={`/${workspaceSlug}/settings`}
           title={collapsed ? 'Settings' : undefined}
           className={cn(
-            "flex items-center rounded-[6px] text-[#A1A1AA] hover:bg-[#18181B]/50 hover:text-[#FAFAFA] transition-colors text-[13px] font-medium",
-            collapsed ? "justify-center px-0 py-2" : "gap-2.5 px-2.5 py-1.5"
+            'flex items-center rounded-[6px] text-[#A1A1AA] hover:bg-[#18181B]/50 hover:text-[#FAFAFA] transition-colors text-[13px] font-medium',
+            collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-2.5 py-1.5'
           )}
         >
           <Settings className="w-4 h-4 shrink-0" />
@@ -149,26 +165,28 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
             onClick={() => {
               if (profile?.username) router.push(`/${workspaceSlug}/profile/${profile.username}`);
             }}
-            title={collapsed ? (profile?.display_name || user?.name || 'Profile') : undefined}
+            title={collapsed ? profile?.display_name || user?.name || 'Profile' : undefined}
             className={cn(
-              "w-full flex items-center rounded-[6px] hover:bg-[#18181B] transition-colors group text-left",
-              collapsed ? "justify-center py-2" : "gap-3 px-2 py-1.5"
+              'w-full flex items-center rounded-[6px] hover:bg-[#18181B] transition-colors group text-left',
+              collapsed ? 'justify-center py-2' : 'gap-3 px-2 py-1.5'
             )}
           >
             {bestAvatar ? (
-              <img 
-                src={bestAvatar} 
-                alt={user?.name || 'User'} 
+              <img
+                src={bestAvatar}
+                alt={user?.name || 'User'}
                 className={cn(
-                  "shrink-0 object-cover border border-[#27272A]",
-                  collapsed ? "w-8 h-8 rounded-full" : "w-8 h-8 rounded-[4px]"
+                  'shrink-0 object-cover border border-[#27272A]',
+                  collapsed ? 'w-8 h-8 rounded-full' : 'w-8 h-8 rounded-[4px]'
                 )}
               />
             ) : (
-              <div className={cn(
-                "bg-[#27272A] border border-[#27272A] flex items-center justify-center text-[11px] font-medium text-[#FAFAFA] shrink-0",
-                collapsed ? "w-8 h-8 rounded-full" : "w-8 h-8 rounded-[4px]"
-              )}>
+              <div
+                className={cn(
+                  'bg-[#27272A] border border-[#27272A] flex items-center justify-center text-[11px] font-medium text-[#FAFAFA] shrink-0',
+                  collapsed ? 'w-8 h-8 rounded-full' : 'w-8 h-8 rounded-[4px]'
+                )}
+              >
                 {user?.name ? getInitials(user.name) : 'U'}
               </div>
             )}
@@ -184,9 +202,17 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
                   </p>
                 </div>
 
-                <span 
-                  onClick={(e) => { e.stopPropagation(); logout(); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); logout(); } }}
+                <span
+                  onClick={e => {
+                    e.stopPropagation();
+                    logout();
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.stopPropagation();
+                      logout();
+                    }
+                  }}
                   role="button"
                   tabIndex={0}
                   className="p-1.5 text-[#A1A1AA] hover:text-[#EF4444] opacity-0 group-hover:opacity-100 transition-all shrink-0 rounded-[4px] hover:bg-[#EF4444]/10 cursor-pointer"
@@ -205,7 +231,11 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
           className="w-full flex items-center justify-center py-2 rounded-[6px] text-[#A1A1AA] hover:bg-[#18181B]/50 hover:text-[#FAFAFA] transition-colors"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+          {collapsed ? (
+            <PanelLeftOpen className="w-4 h-4" />
+          ) : (
+            <PanelLeftClose className="w-4 h-4" />
+          )}
         </button>
       </div>
     </aside>

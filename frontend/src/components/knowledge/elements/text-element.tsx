@@ -43,12 +43,15 @@ export function TextElement({ data, elementId, spaceId, isEditing, onEditEnd }: 
     onEditEnd();
   }, [save, onEditEnd]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      save();
-      onEditEnd();
-    }
-  }, [save, onEditEnd]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        save();
+        onEditEnd();
+      }
+    },
+    [save, onEditEnd]
+  );
 
   return (
     <div

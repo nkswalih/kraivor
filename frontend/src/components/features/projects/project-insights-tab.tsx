@@ -3,7 +3,13 @@
 import { Sparkles, Loader2, AlertTriangle, Lightbulb, GitMerge } from 'lucide-react';
 import { useAIRecommendations } from '@/lib/hooks/use-projects';
 
-export function ProjectInsightsTab({ workspaceId, projectId }: { workspaceId: string; projectId: string }) {
+export function ProjectInsightsTab({
+  workspaceId,
+  projectId,
+}: {
+  workspaceId: string;
+  projectId: string;
+}) {
   const { data: recommendations, isLoading } = useAIRecommendations(workspaceId, projectId);
 
   return (
@@ -51,13 +57,14 @@ export function ProjectInsightsTab({ workspaceId, projectId }: { workspaceId: st
           {recommendations.suggested_tasks.length === 0 &&
             recommendations.blocked_risk.length === 0 &&
             recommendations.suggested_dependencies.length === 0 && (
-            <div className="flex items-center gap-3 bg-[var(--krait-surface-1)] border border-[var(--krait-border)] rounded-[8px] px-4 py-3">
-              <Sparkles size={14} className="text-[var(--venom-yellow)] shrink-0" />
-              <span className="text-[13px] text-[var(--text-secondary)]">
-                No insights available yet. Add more tasks and dependencies to see AI-powered suggestions.
-              </span>
-            </div>
-          )}
+              <div className="flex items-center gap-3 bg-[var(--krait-surface-1)] border border-[var(--krait-border)] rounded-[8px] px-4 py-3">
+                <Sparkles size={14} className="text-[var(--venom-yellow)] shrink-0" />
+                <span className="text-[13px] text-[var(--text-secondary)]">
+                  No insights available yet. Add more tasks and dependencies to see AI-powered
+                  suggestions.
+                </span>
+              </div>
+            )}
 
           <p className="text-[11px] text-[var(--text-tertiary)] text-right">
             Generated at {new Date(recommendations.generated_at).toLocaleString()}
@@ -67,7 +74,12 @@ export function ProjectInsightsTab({ workspaceId, projectId }: { workspaceId: st
 
       {!isLoading && !recommendations && (
         <div className="space-y-3">
-          {['Blocked task detection', 'Story point estimation', 'Dependency suggestions', 'Sprint retrospective'].map((feature) => (
+          {[
+            'Blocked task detection',
+            'Story point estimation',
+            'Dependency suggestions',
+            'Sprint retrospective',
+          ].map(feature => (
             <div
               key={feature}
               className="flex items-center gap-3 bg-[var(--krait-surface-1)] border border-[var(--krait-border)] rounded-[8px] px-4 py-3"

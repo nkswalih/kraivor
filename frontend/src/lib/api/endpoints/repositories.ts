@@ -32,8 +32,7 @@ export interface GitHubInstallationsResponse {
 }
 
 export const repositoryEndpoints = {
-  list: (workspacePk: string) =>
-    coreApi.get<Repository[]>(`/workspaces/${workspacePk}/repos/`),
+  list: (workspacePk: string) => coreApi.get<Repository[]>(`/workspaces/${workspacePk}/repos/`),
 
   connect: (workspacePk: string, payload: ConnectRepoPayload) =>
     coreApi.post<Repository>(`/workspaces/${workspacePk}/repos/`, payload),
@@ -48,14 +47,21 @@ export const repositoryEndpoints = {
 
   installApp: (workspacePk: string, installationId?: number) => {
     const query = installationId ? `?installation_id=${installationId}` : '';
-    return coreApi.get<InstallAppResponse>(`/workspaces/${workspacePk}/repos/github/install/${query}`);
+    return coreApi.get<InstallAppResponse>(
+      `/workspaces/${workspacePk}/repos/github/install/${query}`
+    );
   },
 
   listInstallations: (workspacePk: string) =>
-    coreApi.get<GitHubInstallationsResponse>(`/workspaces/${workspacePk}/repos/github/installations/`),
+    coreApi.get<GitHubInstallationsResponse>(
+      `/workspaces/${workspacePk}/repos/github/installations/`
+    ),
 
   importInstallation: (workspacePk: string, installationId: number) =>
-    coreApi.post<GitHubInstallation>(`/workspaces/${workspacePk}/repos/github/installations/import/`, {
-      installation_id: installationId,
-    }),
+    coreApi.post<GitHubInstallation>(
+      `/workspaces/${workspacePk}/repos/github/installations/import/`,
+      {
+        installation_id: installationId,
+      }
+    ),
 };

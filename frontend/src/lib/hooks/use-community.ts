@@ -12,16 +12,21 @@ import type {
 } from '@/types/domain/community';
 
 export const communityKeys = {
-  all:              () => ['community'] as const,
-  discussions:      () => [...communityKeys.all(), 'discussions'] as const,
-  discussionList:   (params?: object) => [...communityKeys.discussions(), 'list', params] as const,
+  all: () => ['community'] as const,
+  discussions: () => [...communityKeys.all(), 'discussions'] as const,
+  discussionList: (params?: object) => [...communityKeys.discussions(), 'list', params] as const,
   discussionDetail: (id: string) => [...communityKeys.discussions(), 'detail', id] as const,
-  comments:         (id: string) => [...communityKeys.all(), 'comments', id] as const,
-  trending:         () => [...communityKeys.all(), 'trending'] as const,
-  tags:             () => [...communityKeys.all(), 'tags'] as const,
+  comments: (id: string) => [...communityKeys.all(), 'comments', id] as const,
+  trending: () => [...communityKeys.all(), 'trending'] as const,
+  tags: () => [...communityKeys.all(), 'tags'] as const,
 };
 
-export function useDiscussions(params?: { page?: number; tag?: string; sort?: SortOption; workspace_id?: string }) {
+export function useDiscussions(params?: {
+  page?: number;
+  tag?: string;
+  sort?: SortOption;
+  workspace_id?: string;
+}) {
   return useQuery({
     queryKey: communityKeys.discussionList(params),
     queryFn: () => communityEndpoints.listDiscussions(params),
@@ -41,8 +46,7 @@ export function useDiscussion(discussionId: string) {
 export function useCreateDiscussion() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: DiscussionCreatePayload) =>
-      communityEndpoints.createDiscussion(payload),
+    mutationFn: (payload: DiscussionCreatePayload) => communityEndpoints.createDiscussion(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: communityKeys.discussions() });
     },
@@ -54,7 +58,7 @@ export function useUpdateDiscussion(discussionId: string) {
   return useMutation({
     mutationFn: (payload: DiscussionUpdatePayload) =>
       communityEndpoints.updateDiscussion(discussionId, payload),
-    onSuccess: (updated) => {
+    onSuccess: updated => {
       qc.setQueryData(communityKeys.discussionDetail(discussionId), updated);
       qc.invalidateQueries({ queryKey: communityKeys.discussions() });
     },
@@ -64,8 +68,7 @@ export function useUpdateDiscussion(discussionId: string) {
 export function useDeleteDiscussion() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (discussionId: string) =>
-      communityEndpoints.deleteDiscussion(discussionId),
+    mutationFn: (discussionId: string) => communityEndpoints.deleteDiscussion(discussionId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: communityKeys.discussions() });
     },
@@ -75,8 +78,7 @@ export function useDeleteDiscussion() {
 export function useVoteDiscussion(discussionId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (value: 1 | -1) =>
-      communityEndpoints.voteDiscussion(discussionId, value),
+    mutationFn: (value: 1 | -1) => communityEndpoints.voteDiscussion(discussionId, value),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: communityKeys.discussionDetail(discussionId) });
       qc.invalidateQueries({ queryKey: communityKeys.discussions() });
@@ -94,7 +96,10 @@ export function useRemoveVote(discussionId: string) {
   });
 }
 
-export function useComments(discussionId: string, params?: { page?: number; sort?: 'newest' | 'top' }) {
+export function useComments(
+  discussionId: string,
+  params?: { page?: number; sort?: 'newest' | 'top' }
+) {
   return useQuery({
     queryKey: [...communityKeys.comments(discussionId), params] as const,
     queryFn: () => communityEndpoints.listComments(discussionId, params),
@@ -118,8 +123,7 @@ export function useCreateComment(discussionId: string) {
 export function useVoteComment(discussionId: string, commentId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (value: 1 | -1) =>
-      communityEndpoints.voteComment(discussionId, commentId, value),
+    mutationFn: (value: 1 | -1) => communityEndpoints.voteComment(discussionId, commentId, value),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: communityKeys.comments(discussionId) });
     },

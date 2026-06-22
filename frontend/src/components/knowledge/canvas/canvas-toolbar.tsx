@@ -3,10 +3,28 @@
 import { useState, useRef, useEffect } from 'react';
 import { useKnowledgeStore } from '@/lib/stores/knowledge-store';
 import {
-  MousePointer2, Hand, Type, StickyNote, Square, ArrowUpRight,
-  GitBranch, PanelRightOpen, PanelRightClose, Minus, Plus,
-  RotateCcw, RotateCw, Grid3X3, Magnet, LayoutPanelTop,
-  Trash2, Circle, Triangle, Diamond, Hexagon, ChevronDown,
+  MousePointer2,
+  Hand,
+  Type,
+  StickyNote,
+  Square,
+  ArrowUpRight,
+  GitBranch,
+  PanelRightOpen,
+  PanelRightClose,
+  Minus,
+  Plus,
+  RotateCcw,
+  RotateCw,
+  Grid3X3,
+  Magnet,
+  LayoutPanelTop,
+  Trash2,
+  Circle,
+  Triangle,
+  Diamond,
+  Hexagon,
+  ChevronDown,
 } from 'lucide-react';
 import type { ShapeType } from '@/types/knowledge';
 
@@ -94,11 +112,14 @@ export function CanvasToolbar({ spaceId }: Props) {
 
   return (
     <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 px-2 py-1.5 rounded-xl bg-krait-surface2/90 backdrop-blur-md border border-border shadow-lg">
-      {tools.map(tool => (
+      {tools.map(tool =>
         tool.id === 'rectangle' ? (
           <div key={tool.id} ref={shapeRef} className="relative">
             <button
-              onClick={() => { setSelectedTool('rectangle'); setShapeOpen(!shapeOpen); }}
+              onClick={() => {
+                setSelectedTool('rectangle');
+                setShapeOpen(!shapeOpen);
+              }}
               className={`flex items-center gap-0.5 p-1.5 rounded-lg transition-colors ${
                 selectedTool === 'rectangle'
                   ? 'bg-venom-yellow/15 text-venom-yellow'
@@ -116,7 +137,11 @@ export function CanvasToolbar({ spaceId }: Props) {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => { setSubTool(item.id); setSelectedTool('rectangle'); setShapeOpen(false); }}
+                      onClick={() => {
+                        setSubTool(item.id);
+                        setSelectedTool('rectangle');
+                        setShapeOpen(false);
+                      }}
                       className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-[12px] transition-colors ${
                         subTool === item.id && selectedTool === 'rectangle'
                           ? 'bg-venom-yellow/15 text-venom-yellow'
@@ -145,7 +170,7 @@ export function CanvasToolbar({ spaceId }: Props) {
             <tool.icon className="w-4 h-4" />
           </button>
         )
-      ))}
+      )}
       <div className="w-px h-5 bg-border mx-1" />
       <button
         onClick={() => zoomOut(spaceId)}
@@ -198,7 +223,9 @@ export function CanvasToolbar({ spaceId }: Props) {
       <button
         onClick={toggleMinimap}
         className={`p-1.5 rounded-lg transition-colors ${
-          showMinimap ? 'bg-venom-yellow/15 text-venom-yellow' : 'text-text-tertiary hover:text-foreground hover:bg-krait-surface3'
+          showMinimap
+            ? 'bg-venom-yellow/15 text-venom-yellow'
+            : 'text-text-tertiary hover:text-foreground hover:bg-krait-surface3'
         }`}
         title="Toggle minimap"
       >
@@ -207,7 +234,9 @@ export function CanvasToolbar({ spaceId }: Props) {
       <button
         onClick={() => toggleGrid(spaceId)}
         className={`p-1.5 rounded-lg transition-colors ${
-          gridOn ? 'bg-venom-yellow/15 text-venom-yellow' : 'text-text-tertiary hover:text-foreground hover:bg-krait-surface3'
+          gridOn
+            ? 'bg-venom-yellow/15 text-venom-yellow'
+            : 'text-text-tertiary hover:text-foreground hover:bg-krait-surface3'
         }`}
         title="Toggle grid"
       >
@@ -216,7 +245,9 @@ export function CanvasToolbar({ spaceId }: Props) {
       <button
         onClick={() => toggleSnap(spaceId)}
         className={`p-1.5 rounded-lg transition-colors ${
-          snapOn ? 'bg-venom-yellow/15 text-venom-yellow' : 'text-text-tertiary hover:text-foreground hover:bg-krait-surface3'
+          snapOn
+            ? 'bg-venom-yellow/15 text-venom-yellow'
+            : 'text-text-tertiary hover:text-foreground hover:bg-krait-surface3'
         }`}
         title="Toggle snap"
       >
@@ -228,7 +259,11 @@ export function CanvasToolbar({ spaceId }: Props) {
         className="p-1.5 rounded-lg text-text-tertiary hover:text-foreground hover:bg-krait-surface3"
         title="Toggle sidebar"
       >
-        {showSidebar ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+        {showSidebar ? (
+          <PanelRightClose className="w-4 h-4" />
+        ) : (
+          <PanelRightOpen className="w-4 h-4" />
+        )}
       </button>
     </div>
   );

@@ -68,7 +68,10 @@ export function AiInput({
             <ArrowUpCircle className="w-4 h-4 text-blue-400 shrink-0" strokeWidth={1.8} />
             <span className="text-[13px] text-[#f2f2f3]">
               You&rsquo;ve run out of free AI responses.{' '}
-              <a href="/pricing" className="text-blue-400 font-medium hover:text-blue-300 underline underline-offset-2 transition-colors">
+              <a
+                href="/pricing"
+                className="text-blue-400 font-medium hover:text-blue-300 underline underline-offset-2 transition-colors"
+              >
                 Upgrade Kraivor AI
               </a>
             </span>
@@ -85,7 +88,7 @@ export function AiInput({
           <div className="px-4 pt-3.5">
             <textarea
               value={value}
-              onChange={(e) => onChange(e.target.value)}
+              onChange={e => onChange(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder="Do anything with AI..."
               rows={1}

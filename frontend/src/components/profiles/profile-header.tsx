@@ -7,7 +7,16 @@ import { FollowButton } from './follow-button';
 import { chatEndpoints } from '@/lib/api/endpoints';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import type { Profile } from '@/types/domain/profiles';
-import { MapPin, Link as LinkIcon, Github, Twitter, Linkedin, Pencil, Share2, MessageSquare } from 'lucide-react';
+import {
+  MapPin,
+  Link as LinkIcon,
+  Github,
+  Twitter,
+  Linkedin,
+  Pencil,
+  Share2,
+  MessageSquare,
+} from 'lucide-react';
 import { copyToClipboard } from '@/lib/utils';
 
 interface ProfileHeaderProps {
@@ -53,14 +62,17 @@ export function ProfileHeader({ profile, userAvatarUrl }: ProfileHeaderProps) {
       {/* Avatar & Info */}
       <div className="px-6 pb-6">
         <div className="-mt-12 mb-4">
-          <Avatar src={profile.avatar_url} fallbackSrc={userAvatarUrl} name={profile.display_name} size="xl" />
+          <Avatar
+            src={profile.avatar_url}
+            fallbackSrc={userAvatarUrl}
+            name={profile.display_name}
+            size="xl"
+          />
         </div>
 
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-medium text-foreground">
-              {profile.display_name}
-            </h1>
+            <h1 className="text-xl font-medium text-foreground">{profile.display_name}</h1>
             <p className="text-[13px] text-muted-foreground">@{profile.username}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -97,9 +109,7 @@ export function ProfileHeader({ profile, userAvatarUrl }: ProfileHeaderProps) {
           </div>
         </div>
 
-        {profile.bio && (
-          <p className="text-[13px] text-foreground mt-3 max-w-lg">{profile.bio}</p>
-        )}
+        {profile.bio && <p className="text-[13px] text-foreground mt-3 max-w-lg">{profile.bio}</p>}
 
         <div className="flex items-center gap-4 mt-3 text-[12px] text-muted-foreground flex-wrap">
           {profile.location && (
@@ -184,7 +194,7 @@ function ProfileStats({
 
   return (
     <div className="flex items-center gap-6 mt-4 pt-4 border-t border-border">
-      {stats.map((stat) => (
+      {stats.map(stat => (
         <div key={stat.label} className="text-center">
           <div className="text-sm font-medium text-foreground">{stat.value}</div>
           <div className="text-[11px] text-muted-foreground">{stat.label}</div>

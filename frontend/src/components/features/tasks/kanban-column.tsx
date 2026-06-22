@@ -10,13 +10,13 @@ import { useProjectsStore } from '@/lib/stores/projects-store';
 import { cn } from '@/lib/utils';
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
-  backlog:     'Backlog',
-  todo:        'Todo',
+  backlog: 'Backlog',
+  todo: 'Todo',
   in_progress: 'In Progress',
-  in_review:   'In Review',
-  blocked:     'Blocked',
-  done:        'Done',
-  cancelled:   'Cancelled',
+  in_review: 'In Review',
+  blocked: 'Blocked',
+  done: 'Done',
+  cancelled: 'Cancelled',
 };
 
 interface KanbanColumnProps {
@@ -27,7 +27,7 @@ interface KanbanColumnProps {
 
 export function KanbanColumn({ status, tasks, projectId }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
-  const openCreateTask = useProjectsStore((s) => s.openCreateTask);
+  const openCreateTask = useProjectsStore(s => s.openCreateTask);
 
   return (
     <div className="flex flex-col min-w-[260px] max-w-[260px]">
@@ -37,9 +37,7 @@ export function KanbanColumn({ status, tasks, projectId }: KanbanColumnProps) {
           <span className="text-[13px] font-medium text-[var(--text-primary)]">
             {STATUS_LABELS[status]}
           </span>
-          <span className="text-[12px] text-[var(--text-tertiary)] ml-0.5">
-            {tasks.length}
-          </span>
+          <span className="text-[12px] text-[var(--text-tertiary)] ml-0.5">{tasks.length}</span>
         </div>
         <button
           onClick={() => openCreateTask(projectId)}
@@ -53,11 +51,11 @@ export function KanbanColumn({ status, tasks, projectId }: KanbanColumnProps) {
         ref={setNodeRef}
         className={cn(
           'flex-1 space-y-2 min-h-[120px] rounded-[6px] p-1 transition-colors duration-100',
-          isOver && 'bg-[var(--venom-glow)] ring-1 ring-[var(--venom-yellow)]/20',
+          isOver && 'bg-[var(--venom-glow)] ring-1 ring-[var(--venom-yellow)]/20'
         )}
       >
-        <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-          {tasks.map((task) => (
+        <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+          {tasks.map(task => (
             <KanbanTaskCard key={task.id} task={task} />
           ))}
         </SortableContext>

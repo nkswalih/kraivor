@@ -1,17 +1,23 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Hash, Send, Loader2, ChevronDown, Trash2, Edit3, X, Check } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useChatStore } from '@/lib/stores/chat-store';
-import { chatEndpoints } from '@/lib/api/endpoints';
+import { chatEndpoints, profileEndpoints } from '@/lib/api/endpoints';
 import { ChatSocket } from '@/lib/ws/chat-socket';
 import { ChannelSidebar } from '@/components/features/channel-sidebar';
 import { MembersPanel } from '@/components/features/members-panel';
 import { formatRelativeTime } from '@/lib/utils';
-import { SkeletonMessage, SkeletonChatSidebar, SkeletonBlock, SkeletonLine } from '@/components/ui/skeletons';
+import { avatarUrl } from '@/lib/utils';
+import {
+  SkeletonMessage,
+  SkeletonChatSidebar,
+  SkeletonBlock,
+  SkeletonLine,
+} from '@/components/ui/skeletons';
 import type { ChatMessage } from '@/types/api';
 
 export default function ChatRoomPage() {
@@ -22,9 +28,41 @@ export default function ChatRoomPage() {
   const queryClient = useQueryClient();
   const userId = useAuthStore(s => s.user?.id);
 
-  const { messagesByRoom, addMessage, prependMessages, setNextKey, nextKeyByRoom, removeMessage, updateMessage } = useChatStore();
+  const {
+    messagesByRoom,
+    addMessage,
+    prependMessages,
+    setNextKey,
+    nextKeyByRoom,
+    removeMessage,
+    updateMessage,
+    setCurrentRoom,
+  } = useChatStore();
   const messages = messagesByRoom[roomId] ?? [];
   const nextKey = nextKeyByRoom[roomId] ?? null;
+
+  /* ─── Mark room as read on mount ──────────────────────────── */
+  useEffect(() => {
+    setCurrentRoom(roomId);
+    return () => setCurrentRoom(null);
+  }, [roomId, setCurrentRoom]);
+
+  /* ─── Profile fetch for sender avatars ────────────────────── */
+  const senderIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const m of messages) if (m.sender_id) ids.add(m.sender_id);
+    return Array.from(ids);
+  }, [messages]);
+
+  const { data: senderProfiles } = useQuery({
+    queryKey: ['profiles-by-ids', senderIds],
+    queryFn: () => profileEndpoints.getProfilesByIds(senderIds),
+    enabled: senderIds.length > 0,
+    staleTime: 60_000,
+  });
+
+  const senderProfileMap: Record<string, { avatar_url?: string; user_avatar_url?: string }> =
+    useMemo(() => senderProfiles?.profiles ?? {}, [senderProfiles]);
 
   const [input, setInput] = useState('');
   const [loadingMore, setLoadingMore] = useState(false);
@@ -89,9 +127,8 @@ export default function ChatRoomPage() {
 
   /* ─── Send message ───────────────────────────────────────── */
   const sendMutation = useMutation({
-    mutationFn: (content: string) =>
-      chatEndpoints.sendMessage(workspaceId!, roomId, { content }),
-    onSuccess: (msg) => {
+    mutationFn: (content: string) => chatEndpoints.sendMessage(workspaceId!, roomId, { content }),
+    onSuccess: msg => {
       addMessage(roomId, msg);
       setInput('');
       shouldAutoScroll.current = true;
@@ -114,15 +151,14 @@ export default function ChatRoomPage() {
 
   /* ─── Edit / Delete ───────────────────────────────────────── */
   const deleteMut = useMutation({
-    mutationFn: (messageId: string) =>
-      chatEndpoints.deleteMessage(workspaceId!, roomId, messageId),
+    mutationFn: (messageId: string) => chatEndpoints.deleteMessage(workspaceId!, roomId, messageId),
     onSuccess: (_, messageId) => removeMessage(roomId, messageId),
   });
 
   const editMut = useMutation({
     mutationFn: ({ messageId, content }: { messageId: string; content: string }) =>
       chatEndpoints.editMessage(workspaceId!, roomId, messageId, content),
-    onSuccess: (msg) => {
+    onSuccess: msg => {
       updateMessage(roomId, msg);
       setEditingMsg(null);
       setEditContent('');
@@ -134,7 +170,7 @@ export default function ChatRoomPage() {
     if (!roomId) return;
     const socket = new ChatSocket();
     socketRef.current = socket;
-    socket.onEvent = (event) => {
+    socket.onEvent = event => {
       if (event.type === 'message' && event.message_id) {
         addMessage(roomId, event as unknown as ChatMessage);
       }
@@ -165,7 +201,9 @@ export default function ChatRoomPage() {
             <SkeletonLine className="w-32" />
           </div>
           <div className="flex-1 p-2">
-            {Array.from({ length: 6 }).map((_, i) => <SkeletonMessage key={i} />)}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonMessage key={i} />
+            ))}
           </div>
         </div>
       </div>
@@ -174,13 +212,19 @@ export default function ChatRoomPage() {
 
   return (
     <div className="flex flex-1 min-h-0 w-full bg-background">
-      <ChannelSidebar workspaceId={workspaceId} workspaceSlug={workspaceSlug} currentRoomId={roomId} />
+      <ChannelSidebar
+        workspaceId={workspaceId}
+        workspaceSlug={workspaceSlug}
+        currentRoomId={roomId}
+      />
 
       <div className="flex-1 flex flex-col min-w-0 bg-[#0A0A0B]">
         {/* Chat Header */}
         <div className="h-[49px] border-b border-[#27272A] flex items-center px-4 shrink-0 bg-[#0A0A0B]">
           <Hash className="w-5 h-5 text-text-tertiary mr-2 shrink-0" />
-          <h2 className="font-semibold text-[15px] text-[#FAFAFA] truncate">{room?.name ?? '...'}</h2>
+          <h2 className="font-semibold text-[15px] text-[#FAFAFA] truncate">
+            {room?.name ?? '...'}
+          </h2>
           {room?.topic && (
             <span className="text-[13px] text-text-tertiary ml-3 pl-3 border-l border-[#27272A] truncate hidden lg:inline">
               {room.topic}
@@ -209,7 +253,8 @@ export default function ChatRoomPage() {
                 Welcome to #{room?.name ?? 'channel'}
               </h3>
               <p className="text-[14px] text-text-tertiary max-w-md">
-                This is the start of the {room?.name ?? 'channel'} channel. Send a message to get the conversation going.
+                This is the start of the {room?.name ?? 'channel'} channel. Send a message to get
+                the conversation going.
               </p>
             </div>
           ) : (
@@ -225,13 +270,20 @@ export default function ChatRoomPage() {
                 const isOwn = msg.sender_id === userId;
 
                 return (
-                  <div key={msg.message_id} className="group relative px-4 py-0.5 hover:bg-white/[0.02]">
+                  <div
+                    key={msg.message_id}
+                    className="group relative px-4 py-0.5 hover:bg-white/[0.02]"
+                  >
                     {/* Time separator */}
                     {timeGap > 600000 && prev && (
                       <div className="flex items-center gap-3 py-2">
                         <div className="flex-1 h-px bg-[#27272A]" />
                         <span className="text-[11px] text-text-tertiary shrink-0">
-                          {new Date(msg.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {new Date(msg.created_at).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
                         </span>
                         <div className="flex-1 h-px bg-[#27272A]" />
                       </div>
@@ -240,9 +292,21 @@ export default function ChatRoomPage() {
                     <div className={`flex gap-3 ${showHeader ? 'mt-3' : ''}`}>
                       {/* Avatar */}
                       {showHeader ? (
-                        <div className="w-9 h-9 rounded-full bg-[#27272A] flex items-center justify-center text-[13px] font-bold text-[#FAFAFA] shrink-0 mt-0.5">
-                          {msg.sender_name?.charAt(0)?.toUpperCase() ?? '?'}
-                        </div>
+                        (() => {
+                          const p = senderProfileMap[msg.sender_id];
+                          const src = avatarUrl(p?.avatar_url, p?.user_avatar_url);
+                          return src ? (
+                            <img
+                              src={src}
+                              alt={msg.sender_name}
+                              className="w-9 h-9 rounded-full object-cover shrink-0 mt-0.5 bg-[#27272A]"
+                            />
+                          ) : (
+                            <div className="w-9 h-9 rounded-full bg-[#27272A] flex items-center justify-center text-[13px] font-bold text-[#FAFAFA] shrink-0 mt-0.5">
+                              {msg.sender_name?.charAt(0)?.toUpperCase() ?? '?'}
+                            </div>
+                          );
+                        })()
                       ) : (
                         <div className="w-9 shrink-0" />
                       )}
@@ -265,14 +329,17 @@ export default function ChatRoomPage() {
                           <div className="flex items-center gap-2 mt-1">
                             <input
                               value={editContent}
-                              onChange={(e) => setEditContent(e.target.value)}
+                              onChange={e => setEditContent(e.target.value)}
                               className="flex-1 px-3 py-1.5 bg-[#0A0A0B] border border-[#27272A] rounded text-[14px] text-[#FAFAFA] focus:outline-none focus:border-venom-yellow/50"
                               autoFocus
-                              onKeyDown={(e) => {
+                              onKeyDown={e => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                   e.preventDefault();
                                   if (editContent.trim()) {
-                                    editMut.mutate({ messageId: msg.message_id, content: editContent });
+                                    editMut.mutate({
+                                      messageId: msg.message_id,
+                                      content: editContent,
+                                    });
                                   }
                                 }
                                 if (e.key === 'Escape') {
@@ -282,14 +349,19 @@ export default function ChatRoomPage() {
                               }}
                             />
                             <button
-                              onClick={() => editMut.mutate({ messageId: msg.message_id, content: editContent })}
+                              onClick={() =>
+                                editMut.mutate({ messageId: msg.message_id, content: editContent })
+                              }
                               disabled={editMut.isPending || !editContent.trim()}
                               className="p-1 text-green-400 hover:text-green-300 disabled:opacity-40"
                             >
                               <Check className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => { setEditingMsg(null); setEditContent(''); }}
+                              onClick={() => {
+                                setEditingMsg(null);
+                                setEditContent('');
+                              }}
                               className="p-1 text-text-tertiary hover:text-[#FAFAFA]"
                             >
                               <X className="w-4 h-4" />
@@ -310,14 +382,20 @@ export default function ChatRoomPage() {
                             {isOwn && (
                               <>
                                 <button
-                                  onClick={() => { setEditingMsg(msg.message_id); setEditContent(msg.content); }}
+                                  onClick={() => {
+                                    setEditingMsg(msg.message_id);
+                                    setEditContent(msg.content);
+                                  }}
                                   className="p-1.5 text-text-tertiary hover:text-[#FAFAFA] transition-colors"
                                   title="Edit"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />
                                 </button>
                                 <button
-                                  onClick={() => { if (confirm('Delete this message?')) deleteMut.mutate(msg.message_id); }}
+                                  onClick={() => {
+                                    if (confirm('Delete this message?'))
+                                      deleteMut.mutate(msg.message_id);
+                                  }}
                                   disabled={deleteMut.isPending}
                                   className="p-1.5 text-text-tertiary hover:text-red-400 transition-colors"
                                   title="Delete"
@@ -340,7 +418,10 @@ export default function ChatRoomPage() {
           {!shouldAutoScroll.current && messages.length > 0 && (
             <div className="sticky bottom-2 flex justify-center">
               <button
-                onClick={() => { scrollToBottom(); shouldAutoScroll.current = true; }}
+                onClick={() => {
+                  scrollToBottom();
+                  shouldAutoScroll.current = true;
+                }}
                 className="bg-[#27272A] border border-[#3A3A3D] rounded-full px-3 py-1.5 text-[12px] text-[#FAFAFA] hover:bg-[#3A3A3D] shadow-lg flex items-center gap-1.5 transition-colors"
               >
                 <ChevronDown className="w-3.5 h-3.5" /> New messages
@@ -357,7 +438,7 @@ export default function ChatRoomPage() {
             <textarea
               ref={inputRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={`Message #${room?.name ?? 'channel'}`}
               rows={1}

@@ -25,7 +25,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    set => ({
       user: null,
       accessToken: null,
       isAuthenticated: false,
@@ -36,15 +36,15 @@ export const useAuthStore = create<AuthState>()(
         set({ user, accessToken, isAuthenticated: true, mfaToken: null });
       },
 
-      setTokens: (accessToken) => {
+      setTokens: accessToken => {
         setAuthCookie();
         set({ accessToken, isAuthenticated: !!accessToken });
       },
 
-      setMfaToken: (mfaToken) => set({ mfaToken }),
+      setMfaToken: mfaToken => set({ mfaToken }),
 
-      updateUser: (updates) =>
-        set((state) => ({
+      updateUser: updates =>
+        set(state => ({
           user: state.user ? { ...state.user, ...updates } : null,
         })),
 
@@ -56,10 +56,10 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'kraivor-auth',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ 
+      partialize: state => ({
         user: state.user,
         accessToken: state.accessToken, // Persist access token to reduce visual flicker on reload
-        isAuthenticated: state.isAuthenticated 
+        isAuthenticated: state.isAuthenticated,
       }),
     }
   )

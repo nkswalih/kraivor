@@ -8,11 +8,7 @@ export default function DiscussionPage() {
   const discussionId = params?.id as string;
 
   if (!discussionId) {
-    return (
-      <div className="p-6 text-center text-muted-foreground">
-        Discussion not found.
-      </div>
-    );
+    return <div className="p-6 text-center text-muted-foreground">Discussion not found.</div>;
   }
 
   return <DiscussionDetail discussionId={discussionId} />;

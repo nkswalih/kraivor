@@ -65,8 +65,8 @@ export function CreateTaskDialog({
         <input
           autoFocus
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => {
+          onChange={e => setTitle(e.target.value)}
+          onKeyDown={e => {
             if (e.key === 'Enter' && !e.shiftKey) handleSubmit();
             if (e.key === 'Escape') onClose();
           }}
@@ -77,32 +77,49 @@ export function CreateTaskDialog({
         <div className="flex items-center gap-2 flex-wrap mb-5">
           <select
             value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
+            onChange={e => setProjectId(e.target.value)}
             className="text-[12px] bg-[var(--krait-surface-2)] border border-[var(--krait-border)] text-[var(--text-secondary)] rounded-[5px] px-2 py-1 outline-none focus:border-[var(--krait-border-hi)]"
           >
             <option value="">Select project...</option>
-            {(projects ?? []).map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+            {(projects ?? []).map(p => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
             ))}
           </select>
 
           <select
             value={priority}
-            onChange={(e) => setPriority(e.target.value as TaskPriority)}
+            onChange={e => setPriority(e.target.value as TaskPriority)}
             className="text-[12px] bg-[var(--krait-surface-2)] border border-[var(--krait-border)] text-[var(--text-secondary)] rounded-[5px] px-2 py-1 outline-none focus:border-[var(--krait-border-hi)]"
           >
-            {(['critical', 'high', 'medium', 'low'] as const).map((p) => (
-              <option key={p} value={p} className="capitalize">{p}</option>
+            {(['critical', 'high', 'medium', 'low'] as const).map(p => (
+              <option key={p} value={p} className="capitalize">
+                {p}
+              </option>
             ))}
           </select>
 
           <select
             value={taskType}
-            onChange={(e) => setTaskType(e.target.value as TaskType)}
+            onChange={e => setTaskType(e.target.value as TaskType)}
             className="text-[12px] bg-[var(--krait-surface-2)] border border-[var(--krait-border)] text-[var(--text-secondary)] rounded-[5px] px-2 py-1 outline-none focus:border-[var(--krait-border-hi)]"
           >
-            {(['feature', 'bug', 'improvement', 'research', 'spike', 'documentation', 'technical_debt', 'incident'] as const).map((t) => (
-              <option key={t} value={t}>{t.replace('_', ' ')}</option>
+            {(
+              [
+                'feature',
+                'bug',
+                'improvement',
+                'research',
+                'spike',
+                'documentation',
+                'technical_debt',
+                'incident',
+              ] as const
+            ).map(t => (
+              <option key={t} value={t}>
+                {t.replace('_', ' ')}
+              </option>
             ))}
           </select>
         </div>
@@ -116,7 +133,7 @@ export function CreateTaskDialog({
             disabled={!title.trim() || !projectId || createTask.isPending}
             className={cn(
               'flex items-center gap-2 text-[12px] font-medium px-3.5 py-1.5 rounded-[6px] text-black transition-opacity',
-              (!title.trim() || !projectId) && 'opacity-40 cursor-not-allowed',
+              (!title.trim() || !projectId) && 'opacity-40 cursor-not-allowed'
             )}
             style={{ background: 'var(--venom-yellow)' }}
           >

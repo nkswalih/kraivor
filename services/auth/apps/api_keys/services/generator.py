@@ -17,9 +17,9 @@ Example:
 """
  
 from __future__ import annotations
- 
+
 import secrets
- 
+
 API_KEY_PREFIX = "krv_live_"
 API_KEY_RANDOM_BYTES = 32  # 32 bytes → 64 hex characters
  

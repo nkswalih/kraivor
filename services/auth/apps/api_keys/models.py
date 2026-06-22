@@ -1,8 +1,8 @@
 import uuid
- 
+
 from django.db import models
 from django.utils import timezone
- 
+
 VALID_SCOPES = frozenset({"analysis:read", "analysis:write", "ai:chat", "admin"})
  
  

@@ -8,9 +8,9 @@ import { cn } from '@/lib/utils';
 
 const PRIORITY_BORDER: Record<string, string> = {
   critical: 'border-l-[var(--venom-orange)]',
-  high:     'border-l-[var(--venom-yellow)]',
-  medium:   'border-l-[var(--krait-border)]',
-  low:      'border-l-transparent',
+  high: 'border-l-[var(--venom-yellow)]',
+  medium: 'border-l-[var(--krait-border)]',
+  low: 'border-l-transparent',
 };
 
 interface TaskRowProps {
@@ -19,20 +19,20 @@ interface TaskRowProps {
 }
 
 export function TaskRow({ task, identifier }: TaskRowProps) {
-  const openTaskDrawer = useProjectsStore((s) => s.openTaskDrawer);
+  const openTaskDrawer = useProjectsStore(s => s.openTaskDrawer);
 
   return (
     <div
       role="button"
       tabIndex={0}
       onClick={() => openTaskDrawer(task.id)}
-      onKeyDown={(e) => e.key === 'Enter' && openTaskDrawer(task.id)}
+      onKeyDown={e => e.key === 'Enter' && openTaskDrawer(task.id)}
       className={cn(
         'group flex items-center gap-3 px-4 py-2',
         'border-l-2',
         PRIORITY_BORDER[task.priority],
         'hover:bg-[var(--krait-surface-2)] transition-colors duration-100',
-        'cursor-pointer text-[13px]',
+        'cursor-pointer text-[13px]'
       )}
     >
       <StatusIcon status={task.status} size={14} />
@@ -63,18 +63,25 @@ export function TaskRow({ task, identifier }: TaskRowProps) {
         )}
 
         {task.due_date && (
-          <span className={cn(
-            'text-[11px] px-1.5 py-0.5 rounded border',
-            new Date(task.due_date) < new Date()
-              ? 'text-[var(--color-error)] border-[var(--color-error)]/30 bg-[var(--color-error)]/10'
-              : 'text-[var(--text-secondary)] border-[var(--krait-border)] bg-[var(--krait-surface-2)]',
-          )}>
-            {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          <span
+            className={cn(
+              'text-[11px] px-1.5 py-0.5 rounded border',
+              new Date(task.due_date) < new Date()
+                ? 'text-[var(--color-error)] border-[var(--color-error)]/30 bg-[var(--color-error)]/10'
+                : 'text-[var(--text-secondary)] border-[var(--krait-border)] bg-[var(--krait-surface-2)]'
+            )}
+          >
+            {new Date(task.due_date).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            })}
           </span>
         )}
 
         <div className="w-5 h-5 rounded-full shrink-0 bg-[var(--krait-surface-4)] border border-[var(--krait-border)] flex items-center justify-center text-[9px] text-[var(--text-secondary)]">
-          {task.assignee_id ? task.assignee_id.slice(0, 2).toUpperCase() : (
+          {task.assignee_id ? (
+            task.assignee_id.slice(0, 2).toUpperCase()
+          ) : (
             <span className="text-[var(--text-tertiary)]">+</span>
           )}
         </div>

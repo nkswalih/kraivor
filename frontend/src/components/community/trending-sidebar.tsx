@@ -18,13 +18,13 @@ export function TrendingSidebar() {
       </h3>
       {isLoading ? (
         <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3].map(i => (
             <div key={i} className="h-4 bg-muted rounded animate-pulse" />
           ))}
         </div>
       ) : (
         <div className="space-y-3">
-          {data?.results.map((d) => (
+          {data?.results.map(d => (
             <div
               key={d.id}
               onClick={() => router.push(`/${workspace}/community/${d.id}`)}

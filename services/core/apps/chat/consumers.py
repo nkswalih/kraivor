@@ -34,6 +34,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         await self.channel_layer.group_add(self.room_group, self.channel_name)
         await self._add_presence()
+        await database_sync_to_async(ChatRoomService.mark_room_read)(
+            room_id=self.room_id, user_id=self.user_id
+        )
         await self.accept()
         logger.info(
             "chat.connect.accepted",
@@ -122,6 +125,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await database_sync_to_async(ChatRoomService.update_last_message)(
             room_id=room_id, content=content, sender_name=sender_name
         )
+        await database_sync_to_async(ChatRoomService.increment_message_count)(
+            room_id=room_id
+        )
 
     async def _handle_message(self, data: dict) -> None:
         content: str = html.escape(data.get("content", "").strip())
@@ -188,11 +194,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def _handle_mark_read(self, data: dict) -> None:
         message_id: str | None = data.get("message_id")
-        if not message_id:
+        if not message_id or not self.user_id:
             return
+        await database_sync_to_async(ChatRoomService.mark_room_read)(
+            room_id=self.room_id, user_id=self.user_id
+        )
         await self.channel_layer.group_send(
-            self.room_group,
-            {"type": "chat_message", "message_id": message_id, "read_by": self.user_id},
+            self.room_group, {"type": "chat_message", "message_id": message_id, "read_by": self.user_id},
         )
 
     async def _handle_delete(self, data: dict) -> None:

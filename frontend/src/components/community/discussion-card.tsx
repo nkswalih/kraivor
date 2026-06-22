@@ -47,7 +47,9 @@ export function DiscussionCard({ discussion }: DiscussionCardProps) {
       role="button"
       tabIndex={0}
       onClick={() => router.push(`/${workspace}/community/${discussion.id}`)}
-      onKeyDown={(e) => { if (e.key === 'Enter') router.push(`/${workspace}/community/${discussion.id}`); }}
+      onKeyDown={e => {
+        if (e.key === 'Enter') router.push(`/${workspace}/community/${discussion.id}`);
+      }}
       className="block bg-card border border-border rounded-lg p-4 hover:border-primary/40 transition-colors cursor-pointer group"
     >
       <div className="flex gap-4">
@@ -59,10 +61,14 @@ export function DiscussionCard({ discussion }: DiscussionCardProps) {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-1.5">
-            <Avatar src={discussion.author_avatar_url} name={discussion.author_display_name} size="sm" />
+            <Avatar
+              src={discussion.author_avatar_url}
+              name={discussion.author_display_name}
+              size="sm"
+            />
             <Link
               href={`/${workspace}/profile/${discussion.author_username}`}
-              onClick={(e) => e.stopPropagation()}
+              onClick={e => e.stopPropagation()}
               className="font-medium text-foreground hover:underline"
             >
               {discussion.author_display_name}
@@ -77,7 +83,7 @@ export function DiscussionCard({ discussion }: DiscussionCardProps) {
 
           {discussion.tags.length > 0 && (
             <div className="flex items-center gap-2 mb-3 flex-wrap">
-              {discussion.tags.map((tag) => (
+              {discussion.tags.map(tag => (
                 <TagChip key={tag.id} name={tag.name} slug={tag.slug} />
               ))}
             </div>
@@ -87,7 +93,10 @@ export function DiscussionCard({ discussion }: DiscussionCardProps) {
             <span className="flex items-center gap-1.5 hover:text-foreground transition-colors">
               <MessageSquare className="w-4 h-4" /> {discussion.comment_count}
             </span>
-            <button onClick={handleShare} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+            >
               <Share2 className="w-4 h-4" /> Share
             </button>
           </div>

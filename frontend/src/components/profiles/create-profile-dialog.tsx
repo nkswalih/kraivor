@@ -12,8 +12,9 @@ import { Camera, Loader2, X } from 'lucide-react';
 
 export function CreateProfileDialog() {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
-  const defaultUsername = user?.name?.toLowerCase().replace(/\s+/g, '_') || user?.email?.split('@')[0] || 'user';
+  const user = useAuthStore(s => s.user);
+  const defaultUsername =
+    user?.name?.toLowerCase().replace(/\s+/g, '_') || user?.email?.split('@')[0] || 'user';
   const updateMutation = useUpdateProfile();
   const uploadMutation = useUploadProfileImage();
 
@@ -36,7 +37,9 @@ export function CreateProfileDialog() {
     } else {
       document.body.style.overflow = 'hidden';
     }
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [open]);
 
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,11 +177,13 @@ export function CreateProfileDialog() {
 
           {/* Display Name */}
           <div>
-            <Label htmlFor="cd-displayName" className="text-[13px] text-muted-foreground">Display name *</Label>
+            <Label htmlFor="cd-displayName" className="text-[13px] text-muted-foreground">
+              Display name *
+            </Label>
             <Input
               id="cd-displayName"
               value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
+              onChange={e => setDisplayName(e.target.value)}
               placeholder="Your name"
               className="mt-1"
               required
@@ -187,11 +192,15 @@ export function CreateProfileDialog() {
 
           {/* Username */}
           <div>
-            <Label htmlFor="cd-username" className="text-[13px] text-muted-foreground">Username</Label>
+            <Label htmlFor="cd-username" className="text-[13px] text-muted-foreground">
+              Username
+            </Label>
             <Input
               id="cd-username"
               value={formUsername}
-              onChange={(e) => setFormUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+              onChange={e =>
+                setFormUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))
+              }
               placeholder="your_username"
               className="mt-1"
             />
@@ -199,11 +208,13 @@ export function CreateProfileDialog() {
 
           {/* Bio */}
           <div>
-            <Label htmlFor="cd-bio" className="text-[13px] text-muted-foreground">Bio</Label>
+            <Label htmlFor="cd-bio" className="text-[13px] text-muted-foreground">
+              Bio
+            </Label>
             <textarea
               id="cd-bio"
               value={bio}
-              onChange={(e) => setBio(e.target.value)}
+              onChange={e => setBio(e.target.value)}
               placeholder="Tell us about yourself"
               className="mt-1 flex min-h-[72px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
               maxLength={1000}

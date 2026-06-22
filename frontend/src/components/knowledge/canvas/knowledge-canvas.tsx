@@ -14,7 +14,14 @@ import { s3ProxyUrl } from '@/lib/s3-proxy';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
-function pointToSegmentDist(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+function pointToSegmentDist(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number
+): number {
   const abx = bx - ax;
   const aby = by - ay;
   const len2 = abx * abx + aby * aby;
@@ -24,12 +31,35 @@ function pointToSegmentDist(px: number, py: number, ax: number, ay: number, bx: 
   return Math.hypot(px - (ax + t * abx), py - (ay + t * aby));
 }
 
-const SHAPE_DEFAULTS: Record<ShapeType, { width: number; height: number; data: Record<string, unknown> }> = {
-  rectangle: { width: 160, height: 100, data: { fillColor: 'transparent', strokeColor: '#cbd5e1', strokeWidth: 2 } },
-  circle: { width: 120, height: 120, data: { fillColor: 'transparent', strokeColor: '#cbd5e1', strokeWidth: 2 } },
-  triangle: { width: 120, height: 120, data: { fillColor: 'transparent', strokeColor: '#cbd5e1', strokeWidth: 2 } },
-  rhombus: { width: 140, height: 100, data: { fillColor: 'transparent', strokeColor: '#cbd5e1', strokeWidth: 2 } },
-  hexagon: { width: 140, height: 120, data: { fillColor: 'transparent', strokeColor: '#cbd5e1', strokeWidth: 2 } },
+const SHAPE_DEFAULTS: Record<
+  ShapeType,
+  { width: number; height: number; data: Record<string, unknown> }
+> = {
+  rectangle: {
+    width: 160,
+    height: 100,
+    data: { fillColor: 'transparent', strokeColor: '#cbd5e1', strokeWidth: 2 },
+  },
+  circle: {
+    width: 120,
+    height: 120,
+    data: { fillColor: 'transparent', strokeColor: '#cbd5e1', strokeWidth: 2 },
+  },
+  triangle: {
+    width: 120,
+    height: 120,
+    data: { fillColor: 'transparent', strokeColor: '#cbd5e1', strokeWidth: 2 },
+  },
+  rhombus: {
+    width: 140,
+    height: 100,
+    data: { fillColor: 'transparent', strokeColor: '#cbd5e1', strokeWidth: 2 },
+  },
+  hexagon: {
+    width: 140,
+    height: 120,
+    data: { fillColor: 'transparent', strokeColor: '#cbd5e1', strokeWidth: 2 },
+  },
 };
 
 interface Props {
@@ -56,15 +86,40 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     startPositions: Record<string, Position>;
     startArrowPts: Record<string, [number, number][]>;
     startArrowCp: Record<string, Position>;
-  }>({ elementId: '', offsetX: 0, offsetY: 0, startPositions: {}, startArrowPts: {}, startArrowCp: {} });
-  const selectionRef = useRef({ started: false, active: false, justSelected: false, startX: 0, startY: 0, endX: 0, endY: 0 });
+  }>({
+    elementId: '',
+    offsetX: 0,
+    offsetY: 0,
+    startPositions: {},
+    startArrowPts: {},
+    startArrowCp: {},
+  });
+  const selectionRef = useRef({
+    started: false,
+    active: false,
+    justSelected: false,
+    startX: 0,
+    startY: 0,
+    endX: 0,
+    endY: 0,
+  });
   const selectionRectRef = useRef<HTMLDivElement | null>(null);
   const resizeRef = useRef({
-    elementId: '', startX: 0, startY: 0, startW: 0, startH: 0,
-    startPosX: 0, startPosY: 0,
+    elementId: '',
+    startX: 0,
+    startY: 0,
+    startW: 0,
+    startH: 0,
+    startPosX: 0,
+    startPosY: 0,
     handlePos: '' as string,
   });
-  const createRef = useRef<{ active: boolean; startX: number; startY: number; elementId: string } | null>(null);
+  const createRef = useRef<{
+    active: boolean;
+    startX: number;
+    startY: number;
+    elementId: string;
+  } | null>(null);
   const arrowPointRef = useRef<{
     elementId: string;
     pointType: 'start' | 'end' | 'intermediate' | 'control';
@@ -81,43 +136,58 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     return containerRef.current?.getBoundingClientRect() ?? null;
   }, []);
 
-  const screenToWorld = useCallback((clientX: number, clientY: number) => {
-    const state = store.getState();
-    const c = state.spaces[spaceId];
-    const rect = getCanvasRect();
-    if (!c || !rect) return null;
-    return {
-      x: (clientX - rect.left - c.viewport.x) / c.viewport.zoom,
-      y: (clientY - rect.top - c.viewport.y) / c.viewport.zoom,
-    };
-  }, [store, spaceId, getCanvasRect]);
+  const screenToWorld = useCallback(
+    (clientX: number, clientY: number) => {
+      const state = store.getState();
+      const c = state.spaces[spaceId];
+      const rect = getCanvasRect();
+      if (!c || !rect) return null;
+      return {
+        x: (clientX - rect.left - c.viewport.x) / c.viewport.zoom,
+        y: (clientY - rect.top - c.viewport.y) / c.viewport.zoom,
+      };
+    },
+    [store, spaceId, getCanvasRect]
+  );
 
-  const findElementAtPoint = useCallback((clientX: number, clientY: number) => {
-    const state = store.getState();
-    const c = state.spaces[spaceId];
-    if (!c) return null;
-    const world = screenToWorld(clientX, clientY);
-    if (!world) return null;
-    const sorted = [...c.elements].sort((a, b) => b.zIndex - a.zIndex);
-    for (const el of sorted) {
-      if (el.type === 'arrow') {
-        const d = el.data as Partial<ArrowElementData>;
-        const pts = resolveArrowPoints(d);
-        for (let i = 0; i < pts.length - 1; i++) {
-          const dist = pointToSegmentDist(world.x, world.y, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1]);
-          if (dist < 10) return el;
+  const findElementAtPoint = useCallback(
+    (clientX: number, clientY: number) => {
+      const state = store.getState();
+      const c = state.spaces[spaceId];
+      if (!c) return null;
+      const world = screenToWorld(clientX, clientY);
+      if (!world) return null;
+      const sorted = [...c.elements].sort((a, b) => b.zIndex - a.zIndex);
+      for (const el of sorted) {
+        if (el.type === 'arrow') {
+          const d = el.data as Partial<ArrowElementData>;
+          const pts = resolveArrowPoints(d);
+          for (let i = 0; i < pts.length - 1; i++) {
+            const dist = pointToSegmentDist(
+              world.x,
+              world.y,
+              pts[i][0],
+              pts[i][1],
+              pts[i + 1][0],
+              pts[i + 1][1]
+            );
+            if (dist < 10) return el;
+          }
+          continue;
         }
-        continue;
+        if (
+          world.x >= el.position.x &&
+          world.x <= el.position.x + el.size.width &&
+          world.y >= el.position.y &&
+          world.y <= el.position.y + el.size.height
+        ) {
+          return el;
+        }
       }
-      if (
-        world.x >= el.position.x && world.x <= el.position.x + el.size.width &&
-        world.y >= el.position.y && world.y <= el.position.y + el.size.height
-      ) {
-        return el;
-      }
-    }
-    return null;
-  }, [store, spaceId, screenToWorld]);
+      return null;
+    },
+    [store, spaceId, screenToWorld]
+  );
 
   // Window-level mouse handlers
   useEffect(() => {
@@ -147,7 +217,8 @@ export function KnowledgeCanvas({ spaceId }: Props) {
         const pos = resizeRef.current.handlePos;
 
         let newW: number, newH: number;
-        let dx = 0, dy = 0;
+        let dx = 0,
+          dy = 0;
 
         if (pos === 'e' || pos === 'se' || pos === 'ne') {
           newW = Math.max(30, startW + dw);
@@ -169,16 +240,21 @@ export function KnowledgeCanvas({ spaceId }: Props) {
 
         const resizeEl = c.elements.find(ee => ee.id === resizeRef.current.elementId);
         if (resizeEl && resizeEl.type === 'arrow') {
-          const arrowData: ArrowElementData = JSON.parse(JSON.stringify(resizeEl.data)) as ArrowElementData;
+          const arrowData: ArrowElementData = JSON.parse(
+            JSON.stringify(resizeEl.data)
+          ) as ArrowElementData;
           const arrowPts = resolveArrowPoints(arrowData);
           const scaleX = newW / startW;
           const scaleY = newH / startH;
           const originX = resizeRef.current.startPosX + 40;
           const originY = resizeRef.current.startPosY + 40;
-          arrowData.points = arrowPts.map(([px, py]) => [
-            originX + (px - originX) * scaleX,
-            originY + (py - originY) * scaleY,
-          ] as [number, number]);
+          arrowData.points = arrowPts.map(
+            ([px, py]) =>
+              [originX + (px - originX) * scaleX, originY + (py - originY) * scaleY] as [
+                number,
+                number,
+              ]
+          );
           state.updateElement(spaceId, resizeRef.current.elementId, {
             position: { x: resizeRef.current.startPosX + dx, y: resizeRef.current.startPosY + dy },
             size: { width: newW, height: newH },
@@ -201,7 +277,9 @@ export function KnowledgeCanvas({ spaceId }: Props) {
         const dy = (e.clientY - arrowPointRef.current.startClientY) / c.viewport.zoom;
         const el = c.elements.find(ee => ee.id === arrowPointRef.current!.elementId);
         if (el) {
-          const arrowData: ArrowElementData = JSON.parse(JSON.stringify(el.data)) as ArrowElementData;
+          const arrowData: ArrowElementData = JSON.parse(
+            JSON.stringify(el.data)
+          ) as ArrowElementData;
           const { pointType, pointIndex, points, controlPoint } = arrowPointRef.current;
           if (pointType === 'control') {
             const newCp = { x: controlPoint!.x + dx, y: controlPoint!.y + dy };
@@ -213,7 +291,9 @@ export function KnowledgeCanvas({ spaceId }: Props) {
             }
           } else {
             arrowData.points = points.map((p, i) =>
-              i === pointIndex ? [p[0] + dx, p[1] + dy] as [number, number] : [p[0], p[1]] as [number, number]
+              i === pointIndex
+                ? ([p[0] + dx, p[1] + dy] as [number, number])
+                : ([p[0], p[1]] as [number, number])
             );
           }
           const updatedPts = resolveArrowPoints(arrowData);
@@ -262,8 +342,14 @@ export function KnowledgeCanvas({ spaceId }: Props) {
         if (!rect) return;
         const startPositions = dragRef.current.startPositions;
         const keys = Object.keys(startPositions);
-        const totalDx = ((e.clientX - rect.left - c.viewport.x) / c.viewport.zoom - dragRef.current.offsetX) - startPositions[dragRef.current.elementId].x;
-        const totalDy = ((e.clientY - rect.top - c.viewport.y) / c.viewport.zoom - dragRef.current.offsetY) - startPositions[dragRef.current.elementId].y;
+        const totalDx =
+          (e.clientX - rect.left - c.viewport.x) / c.viewport.zoom -
+          dragRef.current.offsetX -
+          startPositions[dragRef.current.elementId].x;
+        const totalDy =
+          (e.clientY - rect.top - c.viewport.y) / c.viewport.zoom -
+          dragRef.current.offsetY -
+          startPositions[dragRef.current.elementId].y;
         if (totalDx === 0 && totalDy === 0) return;
         for (const id of keys) {
           const sp = startPositions[id];
@@ -273,7 +359,10 @@ export function KnowledgeCanvas({ spaceId }: Props) {
             const srcPts = dragRef.current.startArrowPts[id];
             if (!srcPts) continue;
             const otherData = other.data as Record<string, unknown>;
-            const nd: Record<string, unknown> = { ...otherData, points: srcPts.map(([px, py]) => [px + totalDx, py + totalDy] as [number, number]) };
+            const nd: Record<string, unknown> = {
+              ...otherData,
+              points: srcPts.map(([px, py]) => [px + totalDx, py + totalDy] as [number, number]),
+            };
             const srcCp = dragRef.current.startArrowCp[id];
             if (srcCp) {
               nd.controlPoint = { x: srcCp.x + totalDx, y: srcCp.y + totalDy };
@@ -299,8 +388,13 @@ export function KnowledgeCanvas({ spaceId }: Props) {
         const sy = cr.startY;
         const el = c.elements.find(ee => ee.id === cr.elementId);
         if (el && el.type === 'arrow') {
-          const arrowData: ArrowElementData = JSON.parse(JSON.stringify(el.data)) as ArrowElementData;
-          arrowData.points = [[sx, sy], [worldX, worldY]];
+          const arrowData: ArrowElementData = JSON.parse(
+            JSON.stringify(el.data)
+          ) as ArrowElementData;
+          arrowData.points = [
+            [sx, sy],
+            [worldX, worldY],
+          ];
           const allX = [sx, worldX];
           const allY = [sy, worldY];
           const minX = Math.min(...allX) - 40;
@@ -317,7 +411,10 @@ export function KnowledgeCanvas({ spaceId }: Props) {
           const y = Math.min(sy, worldY);
           const w = Math.max(30, Math.abs(worldX - sx));
           const h = Math.max(20, Math.abs(worldY - sy));
-          state.updateElement(spaceId, createRef.current.elementId, { position: { x, y }, size: { width: w, height: h } });
+          state.updateElement(spaceId, createRef.current.elementId, {
+            position: { x, y },
+            size: { width: w, height: h },
+          });
         }
         return;
       }
@@ -382,12 +479,15 @@ export function KnowledgeCanvas({ spaceId }: Props) {
           const ry = Math.min(s.startY, s.endY);
           const rw = Math.abs(s.endX - s.startX);
           const rh = Math.abs(s.endY - s.startY);
-          const selected = c.elements.filter(el =>
-            el.position.x < rx + rw &&
-            el.position.x + el.size.width > rx &&
-            el.position.y < ry + rh &&
-            el.position.y + el.size.height > ry
-          ).map(el => el.id);
+          const selected = c.elements
+            .filter(
+              el =>
+                el.position.x < rx + rw &&
+                el.position.x + el.size.width > rx &&
+                el.position.y < ry + rh &&
+                el.position.y + el.size.height > ry
+            )
+            .map(el => el.id);
           state.setSelectedElements(spaceId, selected);
           selectionRef.current.justSelected = true;
         }
@@ -406,7 +506,11 @@ export function KnowledgeCanvas({ spaceId }: Props) {
             const midX = (sx + ex) / 2;
             const distX = Math.abs(ex - sx);
             const midY = distX > 100 ? sy : (sy + ey) / 2;
-            const pts: [number, number][] = [[sx, sy], [midX, midY], [ex, ey]];
+            const pts: [number, number][] = [
+              [sx, sy],
+              [midX, midY],
+              [ex, ey],
+            ];
             const allX = pts.map(p => p[0]);
             const allY = pts.map(p => p[1]);
             const minX = Math.min(...allX);
@@ -414,15 +518,21 @@ export function KnowledgeCanvas({ spaceId }: Props) {
             const maxX = Math.max(...allX);
             const maxY = Math.max(...allY);
             const pad = 40;
-            state.addElement(spaceId, 'arrow', { x: minX - pad, y: minY - pad }, { width: maxX - minX + pad * 2, height: maxY - minY + pad * 2 }, {
-              startElementId: arrowStart.elementId,
-              endElementId: target.id,
-              points: pts,
-              controlPoint: { x: midX, y: (sy + ey) / 2 },
-              arrowStyle: 'curved',
-              color: '#e2e8f0',
-              lineWidth: 2,
-            } as unknown as Record<string, unknown>);
+            state.addElement(
+              spaceId,
+              'arrow',
+              { x: minX - pad, y: minY - pad },
+              { width: maxX - minX + pad * 2, height: maxY - minY + pad * 2 },
+              {
+                startElementId: arrowStart.elementId,
+                endElementId: target.id,
+                points: pts,
+                controlPoint: { x: midX, y: (sy + ey) / 2 },
+                arrowStyle: 'curved',
+                color: '#e2e8f0',
+                lineWidth: 2,
+              } as unknown as Record<string, unknown>
+            );
           }
         }
         state.clearArrowStart();
@@ -481,19 +591,28 @@ export function KnowledgeCanvas({ spaceId }: Props) {
       state.pushUndoState(spaceId);
       const sx = world.x;
       const sy = world.y;
-      const pts: [number, number][] = [[sx, sy], [sx + 50, sy]];
+      const pts: [number, number][] = [
+        [sx, sy],
+        [sx + 50, sy],
+      ];
       const allX = [sx, sx + 50];
       const allY = [sy, sy];
       const minX = Math.min(...allX) - 40;
       const minY = Math.min(...allY) - 40;
       const maxX = Math.max(...allX) + 40;
       const maxY = Math.max(...allY) + 40;
-      const id = state.addElement(spaceId, 'arrow', { x: minX, y: minY }, { width: maxX - minX, height: maxY - minY }, {
-        points: pts,
-        arrowStyle: 'straight',
-        color: '#e2e8f0',
-        lineWidth: 2,
-      } as unknown as Record<string, unknown>);
+      const id = state.addElement(
+        spaceId,
+        'arrow',
+        { x: minX, y: minY },
+        { width: maxX - minX, height: maxY - minY },
+        {
+          points: pts,
+          arrowStyle: 'straight',
+          color: '#e2e8f0',
+          lineWidth: 2,
+        } as unknown as Record<string, unknown>
+      );
       createRef.current = { active: true, startX: sx, startY: sy, elementId: id };
       state.setEditingElementId(null);
       e.preventDefault();
@@ -508,7 +627,12 @@ export function KnowledgeCanvas({ spaceId }: Props) {
 
       const nw = 140;
       const gap = 20;
-      const nodeH: Record<string, number> = { 'start-node': 50, 'process-node': 60, 'decision-node': 80, 'end-node': 50 };
+      const nodeH: Record<string, number> = {
+        'start-node': 50,
+        'process-node': 60,
+        'decision-node': 80,
+        'end-node': 50,
+      };
 
       const flowNodes = [
         { type: 'start-node' as const, label: 'Start', yOff: 0, h: 50 },
@@ -522,22 +646,36 @@ export function KnowledgeCanvas({ spaceId }: Props) {
 
       for (const n of flowNodes) {
         const y = cy - 25 + n.yOff;
-        const id = state.addElement(spaceId, n.type, { x: cx - nw / 2, y }, { width: nw, height: n.h }, {
-          label: n.label,
-        });
+        const id = state.addElement(
+          spaceId,
+          n.type,
+          { x: cx - nw / 2, y },
+          { width: nw, height: n.h },
+          {
+            label: n.label,
+          }
+        );
         nodeIds.push(id);
       }
 
       function addArrowBetween(srcIdx: number, tgtIdx: number, label?: string) {
-        const srcEl = store.getState().spaces[spaceId]?.elements.find(e => e.id === nodeIds[srcIdx]);
-        const tgtEl = store.getState().spaces[spaceId]?.elements.find(e => e.id === nodeIds[tgtIdx]);
+        const srcEl = store
+          .getState()
+          .spaces[spaceId]?.elements.find(e => e.id === nodeIds[srcIdx]);
+        const tgtEl = store
+          .getState()
+          .spaces[spaceId]?.elements.find(e => e.id === nodeIds[tgtIdx]);
         if (!srcEl || !tgtEl) return;
         const sx = srcEl.position.x + srcEl.size.width / 2;
         const sy = srcEl.position.y + srcEl.size.height;
         const ex = tgtEl.position.x + tgtEl.size.width / 2;
         const ey = tgtEl.position.y;
         const midX = (sx + ex) / 2;
-        const pts: [number, number][] = [[sx, sy], [midX, (sy + ey) / 2], [ex, ey]];
+        const pts: [number, number][] = [
+          [sx, sy],
+          [midX, (sy + ey) / 2],
+          [ex, ey],
+        ];
         const allX = pts.map(p => p[0]);
         const allY = pts.map(p => p[1]);
         const minX = Math.min(...allX);
@@ -545,15 +683,21 @@ export function KnowledgeCanvas({ spaceId }: Props) {
         const maxX = Math.max(...allX);
         const maxY = Math.max(...allY);
         const pad = 40;
-        state.addElement(spaceId, 'arrow', { x: minX - pad, y: minY - pad }, { width: maxX - minX + pad * 2, height: maxY - minY + pad * 2 }, {
-          startElementId: nodeIds[srcIdx],
-          endElementId: nodeIds[tgtIdx],
-          points: pts,
-          controlPoint: { x: midX, y: (sy + ey) / 2 },
-          arrowStyle: 'curved',
-          color: '#e2e8f0',
-          lineWidth: 2,
-        } as unknown as Record<string, unknown>);
+        state.addElement(
+          spaceId,
+          'arrow',
+          { x: minX - pad, y: minY - pad },
+          { width: maxX - minX + pad * 2, height: maxY - minY + pad * 2 },
+          {
+            startElementId: nodeIds[srcIdx],
+            endElementId: nodeIds[tgtIdx],
+            points: pts,
+            controlPoint: { x: midX, y: (sy + ey) / 2 },
+            arrowStyle: 'curved',
+            color: '#e2e8f0',
+            lineWidth: 2,
+          } as unknown as Record<string, unknown>
+        );
       }
 
       addArrowBetween(0, 1);
@@ -571,7 +715,13 @@ export function KnowledgeCanvas({ spaceId }: Props) {
       if (!world) return;
       const defaults = SHAPE_DEFAULTS[subTool] ?? SHAPE_DEFAULTS.rectangle;
       state.pushUndoState(spaceId);
-      const id = state.addElement(spaceId, subTool, { x: world.x, y: world.y }, { width: 1, height: 1 }, defaults.data);
+      const id = state.addElement(
+        spaceId,
+        subTool,
+        { x: world.x, y: world.y },
+        { width: 1, height: 1 },
+        defaults.data
+      );
       createRef.current = { active: true, startX: world.x, startY: world.y, elementId: id };
       state.setEditingElementId(null);
       e.preventDefault();
@@ -583,7 +733,15 @@ export function KnowledgeCanvas({ spaceId }: Props) {
       const world = screenToWorld(e.clientX, e.clientY);
       if (!world) return;
       if (selectionRectRef.current) selectionRectRef.current.style.display = 'none';
-      selectionRef.current = { started: true, active: false, justSelected: false, startX: world.x, startY: world.y, endX: world.x, endY: world.y };
+      selectionRef.current = {
+        started: true,
+        active: false,
+        justSelected: false,
+        startX: world.x,
+        startY: world.y,
+        endX: world.x,
+        endY: world.y,
+      };
       e.preventDefault();
       return;
     }
@@ -697,7 +855,12 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     state.setEditingElementId(null);
   };
 
-  const handleArrowPointDragStart = (e: React.MouseEvent, elementId: string, pointType: 'start' | 'end' | 'intermediate' | 'control', pointIndex: number) => {
+  const handleArrowPointDragStart = (
+    e: React.MouseEvent,
+    elementId: string,
+    pointType: 'start' | 'end' | 'intermediate' | 'control',
+    pointIndex: number
+  ) => {
     e.stopPropagation();
     e.preventDefault();
     const state = store.getState();
@@ -769,36 +932,54 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     const worldY = (e.clientY - rect.top - c.viewport.y) / c.viewport.zoom;
 
     if (selectedTool === 'text') {
-      const id = state.addElement(spaceId, 'text', { x: worldX, y: worldY }, { width: 240, height: 80 }, {
-        text: 'Edit me',
-        fontSize: 14,
-        fontWeight: 'normal',
-        fontFamily: 'inherit',
-        color: '#e2e8f0',
-        backgroundColor: null,
-        textAlign: 'left',
-        padding: 12,
-      });
+      const id = state.addElement(
+        spaceId,
+        'text',
+        { x: worldX, y: worldY },
+        { width: 240, height: 80 },
+        {
+          text: 'Edit me',
+          fontSize: 14,
+          fontWeight: 'normal',
+          fontFamily: 'inherit',
+          color: '#e2e8f0',
+          backgroundColor: null,
+          textAlign: 'left',
+          padding: 12,
+        }
+      );
       state.setEditingElementId(id);
       state.setSelectedTool('select');
     } else if (selectedTool === 'sticky_note') {
-      state.addElement(spaceId, 'sticky_note', { x: worldX, y: worldY }, { width: 200, height: 200 }, {
-        text: 'New note',
-        color: '#fef08a',
-        fontSize: 14,
-      });
+      state.addElement(
+        spaceId,
+        'sticky_note',
+        { x: worldX, y: worldY },
+        { width: 200, height: 200 },
+        {
+          text: 'New note',
+          color: '#fef08a',
+          fontSize: 14,
+        }
+      );
       state.setSelectedTool('select');
     } else {
-      const id = state.addElement(spaceId, 'text', { x: worldX, y: worldY }, { width: 240, height: 80 }, {
-        text: 'Edit me',
-        fontSize: 14,
-        fontWeight: 'normal',
-        fontFamily: 'inherit',
-        color: '#e2e8f0',
-        backgroundColor: null,
-        textAlign: 'left',
-        padding: 12,
-      });
+      const id = state.addElement(
+        spaceId,
+        'text',
+        { x: worldX, y: worldY },
+        { width: 240, height: 80 },
+        {
+          text: 'Edit me',
+          fontSize: 14,
+          fontWeight: 'normal',
+          fontFamily: 'inherit',
+          color: '#e2e8f0',
+          backgroundColor: null,
+          textAlign: 'left',
+          padding: 12,
+        }
+      );
       state.setEditingElementId(id);
     }
   };
@@ -825,108 +1006,162 @@ export function KnowledgeCanvas({ spaceId }: Props) {
   }, []);
 
   const EXT_LANGUAGE: Record<string, string> = {
-    js: 'javascript', jsx: 'javascript', ts: 'typescript', tsx: 'typescript',
-    py: 'python', rb: 'ruby', rs: 'rust', go: 'go', java: 'java',
-    cpp: 'cpp', c: 'c', cs: 'csharp', swift: 'swift', kt: 'kotlin',
-    scala: 'scala', php: 'php', html: 'html', css: 'css',
-    scss: 'scss', less: 'less', json: 'json', xml: 'xml',
-    yml: 'yaml', yaml: 'yaml', sql: 'sql', sh: 'shell', bash: 'shell',
-    zsh: 'shell', ps1: 'powershell', md  : 'markdown', mdx: 'markdown',
-    graphql: 'graphql', proto: 'protobuf', toml: 'toml',
-    ini: 'ini', cfg: 'ini', env: 'ini', txt: 'plaintext',
+    js: 'javascript',
+    jsx: 'javascript',
+    ts: 'typescript',
+    tsx: 'typescript',
+    py: 'python',
+    rb: 'ruby',
+    rs: 'rust',
+    go: 'go',
+    java: 'java',
+    cpp: 'cpp',
+    c: 'c',
+    cs: 'csharp',
+    swift: 'swift',
+    kt: 'kotlin',
+    scala: 'scala',
+    php: 'php',
+    html: 'html',
+    css: 'css',
+    scss: 'scss',
+    less: 'less',
+    json: 'json',
+    xml: 'xml',
+    yml: 'yaml',
+    yaml: 'yaml',
+    sql: 'sql',
+    sh: 'shell',
+    bash: 'shell',
+    zsh: 'shell',
+    ps1: 'powershell',
+    md: 'markdown',
+    mdx: 'markdown',
+    graphql: 'graphql',
+    proto: 'protobuf',
+    toml: 'toml',
+    ini: 'ini',
+    cfg: 'ini',
+    env: 'ini',
+    txt: 'plaintext',
   };
 
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    dragCounter.current = 0;
-    const raw = e.dataTransfer.getData('application/json');
-    if (!raw) return;
-    let data: Record<string, unknown>;
-    try {
-      data = JSON.parse(raw);
-    } catch {
-      return;
-    }
-    if (data.type !== 'asset') return;
-    const world = screenToWorld(e.clientX, e.clientY);
-    if (!world) return;
-    const url = data.url as string | null;
-    if (!url) return;
-    const mimeType = (data.mimeType as string) ?? '';
-    const fileName = (data.fileName as string) ?? '';
-    const assetId = (data.assetId as string) ?? '';
-
-    const state = store.getState();
-    state.pushUndoState(spaceId);
-
-    if (mimeType.startsWith('image/')) {
-      state.addElement(spaceId, 'image',
-        { x: world.x - 100, y: world.y - 75 },
-        { width: 200, height: 150 },
-        { url, assetId, alt: fileName, objectFit: 'contain' },
-      );
-      return;
-    }
-
-    if (mimeType === 'application/pdf') {
-      let numPages = 1;
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      dragCounter.current = 0;
+      const raw = e.dataTransfer.getData('application/json');
+      if (!raw) return;
+      let data: Record<string, unknown>;
       try {
-        const pdf = await pdfjs.getDocument({ url: s3ProxyUrl(url) }).promise;
-        numPages = pdf.numPages;
+        data = JSON.parse(raw);
       } catch {
-        // Fallback to single page if PDF fails to load
+        return;
       }
-      const PAGE_GAP = 30;
-      for (let i = 1; i <= numPages; i++) {
-        state.addElement(spaceId, 'pdf',
-          { x: world.x - 150 + (i - 1) * PAGE_GAP, y: world.y - 200 + (i - 1) * PAGE_GAP },
-          { width: 300, height: 400 },
-          { url, assetId, pageNumber: i, scale: 1 },
-        );
-      }
-      return;
-    }
+      if (data.type !== 'asset') return;
+      const world = screenToWorld(e.clientX, e.clientY);
+      if (!world) return;
+      const url = data.url as string | null;
+      if (!url) return;
+      const mimeType = (data.mimeType as string) ?? '';
+      const fileName = (data.fileName as string) ?? '';
+      const assetId = (data.assetId as string) ?? '';
 
-    const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
+      const state = store.getState();
+      state.pushUndoState(spaceId);
 
-    try {
-      const resp = await fetch(s3ProxyUrl(url));
-      if (!resp.ok) return;
-      const text = await resp.text();
-
-      if (mimeType.includes('markdown') || ext === 'md' || ext === 'mdx') {
-        state.addElement(spaceId, 'markdown',
-          { x: world.x - 200, y: world.y - 150 },
-          { width: 400, height: 300 },
-          { source: text, backgroundColor: null },
+      if (mimeType.startsWith('image/')) {
+        state.addElement(
+          spaceId,
+          'image',
+          { x: world.x - 100, y: world.y - 75 },
+          { width: 200, height: 150 },
+          { url, assetId, alt: fileName, objectFit: 'contain' }
         );
         return;
       }
 
-      const language = EXT_LANGUAGE[ext] ?? 'plaintext';
-      state.addElement(spaceId, 'code',
-        { x: world.x - 250, y: world.y - 175 },
-        { width: 500, height: 350 },
-        { code: text, language, theme: 'dark', showLineNumbers: true, backgroundColor: null },
-      );
-    } catch {
-      // fetch failed — skip silently
-    }
-  }, [store, spaceId, screenToWorld]);
+      if (mimeType === 'application/pdf') {
+        let numPages = 1;
+        try {
+          const pdf = await pdfjs.getDocument({ url: s3ProxyUrl(url) }).promise;
+          numPages = pdf.numPages;
+        } catch {
+          // Fallback to single page if PDF fails to load
+        }
+        const PAGE_GAP = 30;
+        for (let i = 1; i <= numPages; i++) {
+          state.addElement(
+            spaceId,
+            'pdf',
+            { x: world.x - 150 + (i - 1) * PAGE_GAP, y: world.y - 200 + (i - 1) * PAGE_GAP },
+            { width: 300, height: 400 },
+            { url, assetId, pageNumber: i, scale: 1 }
+          );
+        }
+        return;
+      }
+
+      const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
+
+      try {
+        const resp = await fetch(s3ProxyUrl(url));
+        if (!resp.ok) return;
+        const text = await resp.text();
+
+        if (mimeType.includes('markdown') || ext === 'md' || ext === 'mdx') {
+          state.addElement(
+            spaceId,
+            'markdown',
+            { x: world.x - 200, y: world.y - 150 },
+            { width: 400, height: 300 },
+            { source: text, backgroundColor: null }
+          );
+          return;
+        }
+
+        const language = EXT_LANGUAGE[ext] ?? 'plaintext';
+        state.addElement(
+          spaceId,
+          'code',
+          { x: world.x - 250, y: world.y - 175 },
+          { width: 500, height: 350 },
+          { code: text, language, theme: 'dark', showLineNumbers: true, backgroundColor: null }
+        );
+      } catch {
+        // fetch failed — skip silently
+      }
+    },
+    [store, spaceId, screenToWorld]
+  );
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       const state = store.getState();
       switch (e.key.toLowerCase()) {
-        case 'v': state.setSelectedTool('select'); break;
-        case 'h': state.setSelectedTool('hand'); break;
-        case 't': state.setSelectedTool('text'); break;
-        case 'n': state.setSelectedTool('sticky_note'); break;
-        case 'r': state.setSelectedTool('rectangle'); break;
-        case 'a': state.setSelectedTool('arrow'); break;
-        case 'f': state.setSelectedTool('flowchart'); break;
+        case 'v':
+          state.setSelectedTool('select');
+          break;
+        case 'h':
+          state.setSelectedTool('hand');
+          break;
+        case 't':
+          state.setSelectedTool('text');
+          break;
+        case 'n':
+          state.setSelectedTool('sticky_note');
+          break;
+        case 'r':
+          state.setSelectedTool('rectangle');
+          break;
+        case 'a':
+          state.setSelectedTool('arrow');
+          break;
+        case 'f':
+          state.setSelectedTool('flowchart');
+          break;
         case 'Escape':
           if (arrowStart) state.clearArrowStart();
           state.setEditingElementId(null);
@@ -949,10 +1184,13 @@ export function KnowledgeCanvas({ spaceId }: Props) {
       <div
         ref={containerRef}
         className={`absolute inset-0 ${
-          isPanning ? 'cursor-grabbing' :
-          selectedTool === 'hand' ? 'cursor-grab' :
-          selectedTool !== 'select' ? 'cursor-crosshair' :
-          'cursor-default'
+          isPanning
+            ? 'cursor-grabbing'
+            : selectedTool === 'hand'
+              ? 'cursor-grab'
+              : selectedTool !== 'select'
+                ? 'cursor-crosshair'
+                : 'cursor-default'
         }`}
         style={{
           backgroundImage: gridEnabled

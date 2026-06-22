@@ -39,7 +39,7 @@ export class NotificationSocket {
       this.reconnectAttempts = 0;
       this.onConnected?.();
     };
-    this.ws.onmessage = (e) => {
+    this.ws.onmessage = e => {
       try {
         const data: WsServerEvent = JSON.parse(e.data);
         if (data.type === 'notification') {
@@ -49,7 +49,7 @@ export class NotificationSocket {
         // ignore malformed frames
       }
     };
-    this.ws.onclose = (e) => {
+    this.ws.onclose = e => {
       if ([4001, 4002, 4003].includes(e.code)) {
         this.onAuthError?.(e.code);
         return;

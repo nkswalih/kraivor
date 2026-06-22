@@ -11,8 +11,9 @@ Usage:
     pytest tests/test_*.py   # Specific files
 """
 
-import os
 from pathlib import Path
+
+import os
 
 _keys_dir = Path(__file__).resolve().parent.parent.parent / ".keys"
 _keys_dir.mkdir(parents=True, exist_ok=True)
@@ -47,7 +48,7 @@ os.environ.setdefault("JWT_PRIVATE_KEY_PATH", str(_keys_dir / "jwt-private.pem")
 os.environ.setdefault("JWT_PUBLIC_KEY_PATH", str(_keys_dir / "jwt-public.pem"))
 os.environ.setdefault("OAUTH_TOKEN_ENCRYPTION_KEY", str(_oauth_key_path))
 
-from .base import *
+from .base import *  # noqa: E402
 
 os.environ.setdefault("DJANGO_TEST_MODE", "1")
 os.environ.setdefault("APP_ENV", "test")

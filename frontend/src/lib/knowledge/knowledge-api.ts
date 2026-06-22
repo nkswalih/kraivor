@@ -13,7 +13,7 @@ export const knowledgeAssetApi = {
     form.append('file', file);
     return coreRequest<KnowledgeAssetReference>(
       `/knowledge/${stripPrefix(knowledgeSpaceId)}/assets/`,
-      { method: 'POST', body: form },
+      { method: 'POST', body: form }
     ) as Promise<KnowledgeAssetReference>;
   },
 

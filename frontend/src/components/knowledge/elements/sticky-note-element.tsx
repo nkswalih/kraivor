@@ -39,12 +39,15 @@ export function StickyNoteElement({ data, elementId, spaceId, isEditing, onEditE
     onEditEnd();
   }, [save, onEditEnd]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      save();
-      onEditEnd();
-    }
-  }, [save, onEditEnd]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        save();
+        onEditEnd();
+      }
+    },
+    [save, onEditEnd]
+  );
 
   return (
     <div

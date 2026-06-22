@@ -37,8 +37,8 @@ export function FollowButton({ username, isFollowing, isOwner }: FollowButtonPro
       {followMutation.isPending || unfollowMutation.isPending
         ? '...'
         : isFollowing
-        ? 'Following'
-        : 'Follow'}
+          ? 'Following'
+          : 'Follow'}
     </motion.button>
   );
 }

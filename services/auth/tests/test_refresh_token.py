@@ -13,6 +13,7 @@ Tests cover:
 """
 
 import uuid
+
 from authentication.cookie_utils import create_refresh_cookie
 from authentication.models import RefreshToken
 from authentication.tokens import (

@@ -15,6 +15,7 @@ request.auth  → the APIKey instance (use for scope checking in permissions)
 from __future__ import annotations
 
 import logging
+
 from api_keys.services.generator import is_api_key_format
 from api_keys.services.key_service import (
     APIKeyExpiredError,

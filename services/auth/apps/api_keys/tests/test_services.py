@@ -1,5 +1,7 @@
 """Unit tests for APIKey service layer."""
 
+from datetime import timedelta
+
 import pytest
 from api_keys.models import APIKey
 from api_keys.services.generator import generate_api_key
@@ -12,7 +14,6 @@ from api_keys.services.key_service import (
     create_api_key,
     revoke_api_key,
 )
-from datetime import timedelta
 from django.utils import timezone
 
 

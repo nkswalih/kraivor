@@ -8,6 +8,7 @@ POST /api/auth/reset-password/   — Reset password with token
 """
 
 import logging
+
 from django.conf import settings
 from drf_spectacular.utils import (
     OpenApiResponse,

@@ -19,13 +19,13 @@ The public API is intentionally simple:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import logging
 import smtplib
-from django.conf import settings
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from typing import TYPE_CHECKING
+
+from django.conf import settings
 
 if TYPE_CHECKING:
     from users.models import User

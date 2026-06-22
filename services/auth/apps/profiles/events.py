@@ -1,7 +1,7 @@
 import json
-
 import logging
 import uuid
+
 from django.db import transaction
 
 logger = logging.getLogger(__name__)

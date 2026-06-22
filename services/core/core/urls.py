@@ -36,6 +36,7 @@ urlpatterns = [
     path("api/", include("apps.chat.urls")),
     path("api/", include("apps.projects.urls")),
     path("api/community/", include("apps.community.urls")),
+    path("api/", include("apps.search.urls")),
     path(
         "api/oauth/github/connect/",
         GitHubOAuthConnectView.as_view(),

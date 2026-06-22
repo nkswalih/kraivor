@@ -1,5 +1,6 @@
-import pytest
 import uuid
+
+import pytest
 from django.db import IntegrityError
 
 from ..models import Discussion

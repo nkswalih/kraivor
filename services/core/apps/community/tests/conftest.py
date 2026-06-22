@@ -1,5 +1,6 @@
-import pytest
 import uuid
+
+import pytest
 from rest_framework.test import APIRequestFactory
 
 from .factories import DiscussionFactory, TagFactory

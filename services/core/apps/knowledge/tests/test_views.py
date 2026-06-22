@@ -23,8 +23,9 @@ Scenarios per view:
   - Service exception → HTTP status code mapping
 """
 
-import pytest
 import uuid
+
+import pytest
 from rest_framework import status
 from rest_framework.test import APIRequestFactory
 

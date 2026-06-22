@@ -1,4 +1,5 @@
 import uuid
+
 from django.db.models import Prefetch, Q, QuerySet
 
 from apps.knowledge.models import KnowledgeAsset, KnowledgeSpace

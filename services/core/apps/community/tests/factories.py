@@ -1,5 +1,6 @@
-import factory
 import uuid
+
+import factory
 from django.utils.text import slugify
 
 from ..models import Comment, Discussion, Tag, Vote

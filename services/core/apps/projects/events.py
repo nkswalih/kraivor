@@ -14,10 +14,10 @@ from a Celery task that runs outside any active database transaction.
 """
 
 import json
-
 import logging
 import uuid
 from datetime import UTC, datetime
+
 from django.db import transaction
 
 logger = logging.getLogger(__name__)

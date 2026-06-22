@@ -14,8 +14,9 @@ make_request():
   so drf_request.user_id resolves to raw_request.user_id transparently.
 """
 
-import pytest
 import uuid
+
+import pytest
 from rest_framework.test import APIRequestFactory
 
 from apps.knowledge.models import KnowledgeSpace

@@ -9,11 +9,12 @@ Covers:
     publishes overdue events, skips terminal-status tasks.
 """
 
-import pytest
 import uuid
 from datetime import timedelta
-from django.utils import timezone
 from unittest.mock import patch
+
+import pytest
+from django.utils import timezone
 
 from ..constants import ProjectStatus, TaskStatus
 from ..services import ProjectService, TaskService

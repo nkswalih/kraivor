@@ -1,4 +1,5 @@
 from datetime import timedelta
+
 from django.db.models import F, Prefetch, QuerySet
 from django.utils import timezone
 from django.utils.text import slugify

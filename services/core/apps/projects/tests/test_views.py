@@ -8,8 +8,9 @@ Covers full request/response cycle via DRF's ``APIClient``:
   - Task dependencies: add, self-dependency rejection, remove.
 """
 
-import pytest
 import uuid
+
+import pytest
 from rest_framework.test import APIClient
 
 from apps.workspaces.tests.factories import WorkspaceFactory

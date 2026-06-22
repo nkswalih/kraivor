@@ -8,8 +8,9 @@ Covers:
   - __str__ representation
 """
 
-import pytest
 import uuid
+
+import pytest
 
 from apps.knowledge.models import KnowledgeSpace
 

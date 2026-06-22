@@ -1,5 +1,6 @@
-import pytest
 import uuid
+
+import pytest
 
 from ..tasks import recalculate_discussion_counters, update_author_denormalization
 from .factories import DiscussionFactory

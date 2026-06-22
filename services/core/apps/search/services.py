@@ -1,11 +1,11 @@
-from dataclasses import dataclass, field
-
 import logging
-import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from functools import lru_cache
+
+import requests
 from django.conf import settings
 from django.db.models import Q
-from functools import lru_cache
 
 from apps.knowledge.models import KnowledgeAsset, KnowledgeSpace
 from apps.notifications.models import Notification

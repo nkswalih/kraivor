@@ -8,8 +8,9 @@ Covers:
   KnowledgeSpaceSerializer       — output shape (full, with canvas_data)
 """
 
-import pytest
 import uuid
+
+import pytest
 
 from apps.knowledge.serializers import (
     KnowledgeSpaceCreateSerializer,

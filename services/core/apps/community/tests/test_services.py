@@ -1,5 +1,6 @@
-import pytest
 import uuid
+
+import pytest
 
 from ..models import Comment, Discussion
 from ..services import (

@@ -5,9 +5,10 @@ in test fixtures. Factories auto-generate UUIDs for owner/creator fields and
 use ``factory.Sequence`` for unique names/titles.
 """
 
+import uuid
+
 import factory
 import factory.django
-import uuid
 
 from ..constants import ProjectStatus, TaskLinkType, TaskPriority, TaskStatus, TaskType
 from ..models import Project, Task, TaskLink

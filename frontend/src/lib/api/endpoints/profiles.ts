@@ -8,7 +8,7 @@ import type {
 
 export const profileEndpoints = {
   getProfilesByIds: (userIds: string[]) =>
-    identityApi.post<{ profiles: Record<string, { display_name: string; avatar_url: string; username: string }> }>(
+    identityApi.post<{ profiles: Record<string, { display_name: string; avatar_url: string; user_avatar_url: string; username: string }> }>(
       '/profiles/by-ids/', { user_ids: userIds }
     ),
 

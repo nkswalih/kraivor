@@ -36,3 +36,4 @@ export {
   useRemoveLinkKnowledge,
   useAIRecommendations,
 } from './use-projects';
+export { useSearch } from './use-search';

@@ -58,12 +58,14 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.projects",
     "apps.community",
+    "apps.search",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "core.middleware.csrf_exempt_api.CsrfExemptApiMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -257,6 +259,11 @@ CELERY_BEAT_SCHEDULE = {
         "options": {"queue": "default"},
     },
 }
+
+# =============================================================================
+# Identity Service
+# =============================================================================
+IDENTITY_SERVICE_URL = env("IDENTITY_SERVICE_URL", default="http://identity:8002/api")
 
 # =============================================================================
 # Kafka — Event Bus

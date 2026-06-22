@@ -120,13 +120,24 @@ class JWTAuthenticationMiddleware:
             )
 
         # ── Attach to request ─────────────────────────────────────────────────
+        user_id = payload.get("sub") or payload.get("user_id")
         request.jwt_payload = payload
-        request.user_id = payload.get("sub") or payload.get("user_id")
+        request.user_id = user_id
         request.user_name = payload.get("name") or payload.get("email", "")
         request.email = payload.get("email")
         request.user_email = payload.get("email")
         request.workspace_ids = payload.get("workspace_ids", [])
         request.roles = payload.get("roles", {})
+
+        # Set DRF-compatible user so that IsAuthenticated etc. work.
+        # Must be a local class (not top-level) to avoid polluting module namespace.
+        class _JwtUser:
+            is_authenticated = True
+            is_anonymous = False
+            is_active = True
+            pk = user_id
+            id = user_id
+        request.user = _JwtUser()
 
         return self.get_response(request)
 

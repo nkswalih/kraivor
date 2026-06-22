@@ -4,17 +4,17 @@ Pytest configuration and fixtures for Identity Service.
 Modern production-grade testing architecture with reusable fixtures.
 """
 
-import os
-import sys
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import django
+import os
 import pytest
+import sys
 from authentication.security import reset_lockout_manager
+from datetime import UTC, datetime, timedelta
 from django.conf import settings
 from rest_framework.test import APIClient
+from unittest.mock import MagicMock, patch
 from users.models import User
 
 BASE_DIR = Path(__file__).resolve().parent

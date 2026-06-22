@@ -2,15 +2,15 @@
 WebSocket consumers for real-time chat, notifications, and presence.
 """
 
+import json
+
 import asyncio
 import html
-import json
 import logging
 import uuid
-from datetime import UTC, datetime
-
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
+from datetime import UTC, datetime
 from django.utils import timezone
 
 from apps.chat.dynamodb import delete_message as dynamodb_delete_message

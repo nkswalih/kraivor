@@ -1,6 +1,5 @@
 import logging
 import uuid
-
 from django.conf import settings
 from drf_spectacular.utils import (
     OpenApiResponse,

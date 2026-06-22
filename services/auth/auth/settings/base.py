@@ -29,14 +29,12 @@ project/
 │       │       └── staging.py
 """
 
-import hashlib
-import os
-from datetime import timedelta
-
 from pathlib import Path
 
 import environ
-
+import hashlib
+import os
+from datetime import timedelta
 from django.core.exceptions import ImproperlyConfigured
 
 # =============================================================================

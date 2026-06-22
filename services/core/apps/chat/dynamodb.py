@@ -5,12 +5,12 @@ Provides CRUD operations for the kraivor-chat-messages table.
 Uses the shared DynamoDB client from core.infrastructure.dynamodb.
 """
 
-import logging
-import uuid
-from datetime import UTC, datetime
 from typing import Any
 
+import logging
+import uuid
 from botocore.exceptions import ClientError
+from datetime import UTC, datetime
 from django.conf import settings
 
 from core.infrastructure.dynamodb import get_dynamodb

@@ -252,7 +252,6 @@ def test_authenticate_revoked_key_raises(user):
 @pytest.mark.django_db
 def test_authenticate_expired_key_raises(user):
     from datetime import timedelta
-
     from django.utils import timezone
 
     result = create_api_key(
@@ -473,12 +472,11 @@ def test_model_is_valid_revoked_key(user):
 @pytest.mark.django_db
 def test_authentication_backend_expired_key_raises(user):
     """Cover the except APIKeyExpiredError branch in APIKeyAuthentication."""
-    from datetime import timedelta
-    from unittest.mock import MagicMock
-
     from api_keys.authentication.backend import APIKeyAuthentication
     from api_keys.services.key_service import create_api_key
+    from datetime import timedelta
     from django.utils import timezone
+    from unittest.mock import MagicMock
 
     result = create_api_key(
         user, "Exp Key", ["analysis:read"],
@@ -493,9 +491,8 @@ def test_authentication_backend_expired_key_raises(user):
 
 
 def test_authentication_backend_no_header_returns_none():
-    from unittest.mock import MagicMock
-
     from api_keys.authentication.backend import APIKeyAuthentication
+    from unittest.mock import MagicMock
 
     backend = APIKeyAuthentication()
     request = MagicMock()
@@ -504,9 +501,8 @@ def test_authentication_backend_no_header_returns_none():
 
 
 def test_authentication_backend_bearer_only_returns_none():
-    from unittest.mock import MagicMock
-
     from api_keys.authentication.backend import APIKeyAuthentication
+    from unittest.mock import MagicMock
 
     backend = APIKeyAuthentication()
     request = MagicMock()
@@ -515,9 +511,8 @@ def test_authentication_backend_bearer_only_returns_none():
 
 
 def test_authentication_backend_basic_auth_returns_none():
-    from unittest.mock import MagicMock
-
     from api_keys.authentication.backend import APIKeyAuthentication
+    from unittest.mock import MagicMock
 
     backend = APIKeyAuthentication()
     request = MagicMock()
@@ -526,9 +521,8 @@ def test_authentication_backend_basic_auth_returns_none():
 
 
 def test_authentication_backend_jwt_token_returns_none():
-    from unittest.mock import MagicMock
-
     from api_keys.authentication.backend import APIKeyAuthentication
+    from unittest.mock import MagicMock
 
     backend = APIKeyAuthentication()
     request = MagicMock()
@@ -538,10 +532,9 @@ def test_authentication_backend_jwt_token_returns_none():
 
 def test_authentication_backend_unexpected_error_raises():
     """Cover the except Exception branch in APIKeyAuthentication."""
-    from unittest.mock import MagicMock, patch
-
     from api_keys.authentication.backend import APIKeyAuthentication
     from rest_framework.exceptions import AuthenticationFailed
+    from unittest.mock import MagicMock, patch
 
     backend = APIKeyAuthentication()
     request = MagicMock()
@@ -557,7 +550,6 @@ def test_authentication_backend_unexpected_error_raises():
 @pytest.mark.django_db
 def test_model_is_valid_expired_key(user):
     from datetime import timedelta
-
     from django.utils import timezone
 
     result = create_api_key(

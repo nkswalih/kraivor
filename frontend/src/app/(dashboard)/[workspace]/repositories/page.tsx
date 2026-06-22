@@ -6,7 +6,12 @@ import { GitBranch, Plus, MoreHorizontal, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { repositoryEndpoints } from '@/lib/api/endpoints';
 import { ConnectRepoDialog } from '@/components/features/connect-repo-dialog';
-import { SkeletonTable, SkeletonCard, SkeletonBlock, SkeletonLine } from '@/components/ui/skeletons';
+import {
+  SkeletonTable,
+  SkeletonCard,
+  SkeletonBlock,
+  SkeletonLine,
+} from '@/components/ui/skeletons';
 
 export default function RepositoriesPage() {
   const workspaceId = useAuthStore(s => s.workspaceId);
@@ -47,7 +52,7 @@ export default function RepositoriesPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
-        {(!repos || repos.length === 0) ? (
+        {!repos || repos.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <GitBranch className="w-10 h-10 text-muted-foreground mb-3" />
             <h3 className="text-base font-medium text-foreground mb-1">No repositories</h3>
@@ -70,14 +75,19 @@ export default function RepositoriesPage() {
               <div></div>
             </div>
             <div className="divide-y divide-krait-border text-[13px]">
-              {repos.map((repo) => (
-                <div key={repo.id} className="grid grid-cols-[2fr_1fr_1fr_100px] gap-4 p-3 items-center hover:bg-krait-surface2/50 transition-colors cursor-pointer">
+              {repos.map(repo => (
+                <div
+                  key={repo.id}
+                  className="grid grid-cols-[2fr_1fr_1fr_100px] gap-4 p-3 items-center hover:bg-krait-surface2/50 transition-colors cursor-pointer"
+                >
                   <div className="flex items-center gap-2 font-medium text-text-primary">
                     <GitBranch className="w-4 h-4 text-text-tertiary" />
                     {repo.github_repo}
                   </div>
                   <div className="flex items-center gap-1.5 text-text-secondary">
-                    <span className={`w-1.5 h-1.5 rounded-full ${repo.status === 'connected' ? 'bg-green-500' : 'bg-text-tertiary'}`} />
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${repo.status === 'connected' ? 'bg-green-500' : 'bg-text-tertiary'}`}
+                    />
                     {repo.status === 'connected' ? 'Connected' : 'Disconnected'}
                   </div>
                   <div>

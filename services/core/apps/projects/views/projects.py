@@ -1,6 +1,6 @@
-import logging
 from typing import TYPE_CHECKING
 
+import logging
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status

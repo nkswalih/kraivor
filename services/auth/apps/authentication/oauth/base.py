@@ -7,8 +7,9 @@ Reused by GitHub and Google implementations.
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
+
+from abc import ABC, abstractmethod
 
 
 @dataclass(frozen=True)

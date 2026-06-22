@@ -14,13 +14,12 @@ Usage:
     })
 """
 
-import logging
-from urllib.parse import parse_qs
-
 import jwt
+import logging
 from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
 from django.conf import settings
+from urllib.parse import parse_qs
 
 from core.middleware.jwt_auth import _get_jwks_client
 

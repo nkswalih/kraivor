@@ -16,8 +16,6 @@ Views are intentionally thin — all business logic lives in services/.
 from __future__ import annotations
 
 import logging
-from urllib.parse import urlencode
-
 from authentication.cookie_utils import create_refresh_cookie
 from authentication.oauth.google.services.exchange import (
     GoogleTokenExchangeError,
@@ -42,6 +40,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from urllib.parse import urlencode
 
 logger = logging.getLogger(__name__)
 

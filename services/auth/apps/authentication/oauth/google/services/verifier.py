@@ -17,7 +17,6 @@ The google-auth library handles certificate fetching, caching, and validation.
 from __future__ import annotations
 
 import logging
-
 from authentication.oauth.base import OAuthIdentityVerifier, OAuthUserInfo
 from django.conf import settings
 from google.auth.exceptions import GoogleAuthError

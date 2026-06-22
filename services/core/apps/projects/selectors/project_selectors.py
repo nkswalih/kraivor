@@ -1,5 +1,4 @@
 import uuid
-
 from django.db.models import QuerySet
 
 from apps.projects.models import Project, Task

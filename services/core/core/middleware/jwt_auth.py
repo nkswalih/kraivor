@@ -1,10 +1,9 @@
-import logging
-from threading import Lock
-
 import jwt
+import logging
 from django.conf import settings
 from django.http import JsonResponse
 from jwt import PyJWKClient
+from threading import Lock
 
 logger = logging.getLogger(__name__)
 

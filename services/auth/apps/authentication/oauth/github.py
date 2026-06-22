@@ -5,9 +5,9 @@ GitHub OAuth Service
 Handles GitHub OAuth 2.0 authentication flow.
 """
 
-import logging
 from dataclasses import dataclass
 
+import logging
 import requests
 from django.conf import settings
 

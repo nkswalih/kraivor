@@ -11,7 +11,6 @@ These permission classes remain available for other call sites that need explici
 """
 
 import logging
-
 from rest_framework.permissions import BasePermission
 
 from apps.workspaces.models import WorkspaceMember

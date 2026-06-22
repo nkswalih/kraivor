@@ -1,11 +1,10 @@
 """Unit tests for the DRF APIKeyAuthentication backend."""
 
-from unittest.mock import MagicMock, patch
-
 import pytest
 from api_keys.authentication.backend import APIKeyAuthentication
 from api_keys.services.key_service import APIKeyExpiredError, APIKeyNotFoundError
 from rest_framework.exceptions import AuthenticationFailed
+from unittest.mock import MagicMock, patch
 
 
 @pytest.fixture

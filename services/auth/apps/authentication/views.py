@@ -21,10 +21,10 @@ Token strategy
 - refresh_token  → HttpOnly cookie (30-day lifetime, rotated on every use)
 """
 
-import hashlib
-import logging
 from dataclasses import dataclass
 
+import hashlib
+import logging
 from django.utils import timezone
 from drf_spectacular.utils import (
     OpenApiResponse,
@@ -45,9 +45,7 @@ from .otp import (
     get_otp_sender,
     get_otp_service,
 )
-from .security import (
-    check_password as verify_password,
-)
+from .security import check_password as verify_password
 from .security import (
     generate_device_id,
     get_client_ip,

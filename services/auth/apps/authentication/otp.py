@@ -11,9 +11,8 @@ Handles:
 from __future__ import annotations
 
 import logging
-import secrets
-
 import redis
+import secrets
 from django.conf import settings
 
 logger = logging.getLogger(__name__)

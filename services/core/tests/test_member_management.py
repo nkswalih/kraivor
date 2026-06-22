@@ -20,14 +20,13 @@ Test structure:
   TestCeleryTasks              — task dispatch verification
 """
 
+import pytest
 import uuid
 from datetime import timedelta
-from unittest.mock import MagicMock, patch
-
-import pytest
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
+from unittest.mock import MagicMock, patch
 
 from apps.workspaces.constants import WorkspacePlan, WorkspaceRole
 from apps.workspaces.models import Workspace, WorkspaceInvitation, WorkspaceMember

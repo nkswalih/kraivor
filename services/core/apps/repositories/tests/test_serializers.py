@@ -6,8 +6,9 @@ Covers:
   RepositorySerializer        — output shape and status field
 """
 
-import pytest
 import uuid
+
+import pytest
 
 from apps.repositories.serializers import (
     RepositoryConnectSerializer,

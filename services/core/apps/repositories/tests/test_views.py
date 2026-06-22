@@ -24,10 +24,11 @@ Scenarios covered:
   - Service error translation (PermissionError → 403, NotFoundError → 404, etc.)
 """
 
-import pytest
 import uuid
-from rest_framework import status
 from unittest.mock import patch
+
+import pytest
+from rest_framework import status
 
 from apps.repositories.models import Repository
 from apps.repositories.views import RepositoryDetailView, RepositoryListView

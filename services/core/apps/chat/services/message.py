@@ -1,6 +1,5 @@
-from typing import Any
-
 import logging
+from typing import Any
 
 from apps.chat.dynamodb import get_repository
 

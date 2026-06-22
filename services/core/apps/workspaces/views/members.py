@@ -1,6 +1,7 @@
 import logging
-import requests
 import uuid
+
+import requests
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
 from rest_framework import status

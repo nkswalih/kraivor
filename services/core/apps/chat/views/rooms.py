@@ -1,4 +1,5 @@
 import logging
+
 from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiResponse,

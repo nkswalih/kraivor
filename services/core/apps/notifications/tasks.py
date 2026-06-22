@@ -3,8 +3,9 @@ Celery tasks for notification dispatch and lifecycle management.
 """
 
 import logging
-from celery import shared_task
 from datetime import timedelta
+
+from celery import shared_task
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)

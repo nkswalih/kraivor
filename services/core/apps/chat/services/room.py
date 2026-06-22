@@ -1,7 +1,7 @@
-from typing import Any
-
 import logging
 from datetime import UTC, datetime
+from typing import Any
+
 from django.db import transaction
 from django.db.models import Count, QuerySet
 

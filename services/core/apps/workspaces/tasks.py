@@ -21,6 +21,7 @@ Queue assignment (system design §10):
 
 import logging
 import uuid
+
 from celery import shared_task
 from django.conf import settings
 from django.core.mail import send_mail

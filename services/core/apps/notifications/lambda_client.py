@@ -1,7 +1,7 @@
 import json
+import logging
 
 import boto3
-import logging
 from botocore.config import Config
 from django.conf import settings
 

@@ -18,9 +18,10 @@ Covers:
   disconnect_repository — happy path, permission, not found
 """
 
-import pytest
 import uuid
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from apps.repositories.github_app.client import GitHubAppError
 from apps.repositories.models import Repository

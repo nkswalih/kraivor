@@ -1,6 +1,7 @@
+import uuid
+
 import factory
 import factory.django
-import uuid
 
 from apps.workspaces.constants import WorkspaceRole
 from apps.workspaces.models import Workspace, WorkspaceMember

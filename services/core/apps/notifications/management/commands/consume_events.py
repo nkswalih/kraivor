@@ -19,11 +19,11 @@ failed (e.g. Identity service was temporarily unreachable).
 """
 
 import json
-
 import logging
-import requests
 import signal
 import sys
+
+import requests
 from django.conf import settings
 from django.core.management.base import BaseCommand
 

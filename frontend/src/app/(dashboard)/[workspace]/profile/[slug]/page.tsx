@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { useProfile, useFollowers, useFollowing } from '@/lib/hooks/use-profiles';
 import { ProfileHeader } from '@/components/profiles/profile-header';
 import { Avatar } from '@/components/profiles/avatar';
@@ -15,7 +14,6 @@ type Tab = 'discussions' | 'comments' | 'followers' | 'following';
 
 export default function UserProfilePage() {
   const params = useParams();
-  const router = useRouter();
   const username = params?.slug as string;
   const { data: profile, isLoading, error } = useProfile(username);
   const [activeTab, setActiveTab] = useState<Tab>('followers');
@@ -54,12 +52,6 @@ export default function UserProfilePage() {
 
   return (
     <div className="max-w-3xl mx-auto p-6 w-full">
-      <button
-        onClick={() => router.back()}
-        className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground mb-4 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" /> Back
-      </button>
       <ProfileHeader profile={profile} userAvatarUrl={profile.user_avatar_url} />
 
       {/* Tabs */}

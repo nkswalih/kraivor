@@ -10,9 +10,9 @@ Shared by all OAuth providers.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
-import logging
 from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
 

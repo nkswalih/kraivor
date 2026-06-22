@@ -11,6 +11,7 @@ IMPORTANT SECURITY NOTE:
 from __future__ import annotations
 
 import logging
+
 import requests
 from authentication.oauth.base import OAuthTokenExchanger
 from django.conf import settings

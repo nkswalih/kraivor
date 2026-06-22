@@ -3,8 +3,9 @@ OAuth State Manager - CSRF state with Redis
 """
 
 import logging
-import redis
 import secrets
+
+import redis
 from django.conf import settings
 
 logger = logging.getLogger(__name__)

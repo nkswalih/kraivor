@@ -2,10 +2,11 @@
 Unit and integration tests for KRV-011 sign-in flow.
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 from authentication.security import reset_lockout_manager
 from rest_framework.test import APIClient
-from unittest.mock import MagicMock, patch
 
 from tests.factories import UserFactory
 

@@ -20,10 +20,11 @@ Token storage:
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
+
 from authentication.models import OAuthIdentity
 from authentication.oauth.base import OAuthUserInfo
 from authentication.oauth.encryption import encrypt_token
-from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 from users.models import User

@@ -4,12 +4,13 @@ authentication/tests/test_google_oauth.py
 Production-grade Google OAuth tests for Kraivor Identity Service.
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 from authentication.oauth.base import OAuthUserInfo
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
-from unittest.mock import MagicMock, patch
 
 VALID_CLAIMS = {
     "sub": "google-sub-123456",

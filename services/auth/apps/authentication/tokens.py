@@ -12,12 +12,12 @@ This service handles all JWT token operations with security best practices:
 This implements KRV-013: Refresh Token Rotation
 """
 
-from dataclasses import dataclass
-
 import hashlib
 import logging
 import secrets
+from dataclasses import dataclass
 from datetime import timedelta
+
 from django.conf import settings
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken

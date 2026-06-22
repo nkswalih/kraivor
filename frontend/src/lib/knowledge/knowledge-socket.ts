@@ -37,7 +37,7 @@ export class KnowledgeSocket {
       this.startHeartbeat();
       this.onConnected?.();
     };
-    this.ws.onmessage = (e) => {
+    this.ws.onmessage = e => {
       try {
         const data = JSON.parse(e.data);
         switch (data.type) {
@@ -61,7 +61,7 @@ export class KnowledgeSocket {
         /* ignore malformed frames */
       }
     };
-    this.ws.onclose = (e) => {
+    this.ws.onclose = e => {
       this.stopHeartbeat();
       if (this.closing) return;
       if ([4001, 4002, 4003].includes(e.code)) {

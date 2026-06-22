@@ -13,22 +13,41 @@ interface MembersPanelProps {
   onlineUserIds: Set<string>;
 }
 
-function MemberRow({ member, online, profile }: { member: WorkspaceMember; online: boolean; profile?: { avatar_url?: string; user_avatar_url?: string; username?: string; display_name?: string } }) {
+function MemberRow({
+  member,
+  online,
+  profile,
+}: {
+  member: WorkspaceMember;
+  online: boolean;
+  profile?: {
+    avatar_url?: string;
+    user_avatar_url?: string;
+    username?: string;
+    display_name?: string;
+  };
+}) {
   const currentUser = useAuthStore(s => s.user);
 
-  const name = profile?.username
-    || profile?.display_name
-    || member.user?.name
-    || (currentUser && member.user_id === currentUser.id ? currentUser.name : '')
-    || member.user?.email
-    || 'Member';
+  const name =
+    profile?.username ||
+    profile?.display_name ||
+    member.user?.name ||
+    (currentUser && member.user_id === currentUser.id ? currentUser.name : '') ||
+    member.user?.email ||
+    'Member';
 
-  const src = avatarUrl(profile?.avatar_url, profile?.user_avatar_url) || member.user?.avatar_url || null;
+  const src =
+    avatarUrl(profile?.avatar_url, profile?.user_avatar_url) || member.user?.avatar_url || null;
 
   return (
     <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-[4px] hover:bg-white/[0.04] transition-colors group">
       {src ? (
-        <img src={src} alt={name} className="w-7 h-7 rounded-[4px] border border-gray-800 object-cover shrink-0" />
+        <img
+          src={src}
+          alt={name}
+          className="w-7 h-7 rounded-[4px] border border-gray-800 object-cover shrink-0"
+        />
       ) : (
         <div className="w-7 h-7 rounded-[4px] bg-[#27272A] flex items-center justify-center text-[11px] font-bold text-[#FAFAFA] shrink-0">
           {name.charAt(0).toUpperCase()}
@@ -36,7 +55,9 @@ function MemberRow({ member, online, profile }: { member: WorkspaceMember; onlin
       )}
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-medium text-[#FAFAFA] truncate">{name}</p>
-        <p className="text-[11px] text-[#A1A1AA] truncate">{member.role.charAt(0).toUpperCase() + member.role.slice(1)}</p>
+        <p className="text-[11px] text-[#A1A1AA] truncate">
+          {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+        </p>
       </div>
       <div
         className={`w-2 h-2 rounded-full shrink-0 ${online ? 'bg-green-400' : 'bg-[#3A3A3D]'}`}
@@ -84,8 +105,13 @@ export function MembersPanel({ workspaceId, onlineUserIds }: MembersPanelProps) 
         ) : membersList.length === 0 ? (
           <p className="text-[12px] text-text-tertiary px-2 py-4 text-center">No members</p>
         ) : (
-          membersList.map((member) => (
-            <MemberRow key={member.id} member={member} online={onlineUserIds.has(member.user_id)} profile={profileMap[member.user_id]} />
+          membersList.map(member => (
+            <MemberRow
+              key={member.id}
+              member={member}
+              online={onlineUserIds.has(member.user_id)}
+              profile={profileMap[member.user_id]}
+            />
           ))
         )}
       </div>

@@ -101,7 +101,9 @@ export function InboxPopover() {
           <div className="max-h-[400px] overflow-y-auto">
             {/* Notifications */}
             <div className="px-3 py-2">
-              <p className="text-[10px] font-semibold tracking-wider text-text-tertiary uppercase mb-1">Notifications</p>
+              <p className="text-[10px] font-semibold tracking-wider text-text-tertiary uppercase mb-1">
+                Notifications
+              </p>
               {isLoading ? (
                 <div className="flex justify-center py-4">
                   <Loader2 className="w-4 h-4 text-venom-yellow animate-spin" />
@@ -123,28 +125,42 @@ export function InboxPopover() {
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <p className={`text-[12px] ${n.read_at ? 'text-text-secondary' : 'text-[#FAFAFA] font-medium'}`}>
+                            <p
+                              className={`text-[12px] ${n.read_at ? 'text-text-secondary' : 'text-[#FAFAFA] font-medium'}`}
+                            >
                               {n.title}
                             </p>
                             {n.body && (
-                              <p className="text-[11px] text-text-tertiary mt-0.5 line-clamp-1">{n.body}</p>
+                              <p className="text-[11px] text-text-tertiary mt-0.5 line-clamp-1">
+                                {n.body}
+                              </p>
                             )}
-                            <p className="text-[10px] text-text-tertiary mt-1">{formatRelativeTime(n.created_at)}</p>
+                            <p className="text-[10px] text-text-tertiary mt-1">
+                              {formatRelativeTime(n.created_at)}
+                            </p>
                           </div>
                           {isInvite && token && (
                             <button
-                              onClick={() => acceptInviteMut.mutate(token, {
-                                onSuccess: () => {
-                                  notificationEndpoints.dismiss(n.id).then(() => {
-                                    queryClient.invalidateQueries({ queryKey: ['notifications'] });
-                                    queryClient.invalidateQueries({ queryKey: ['unread-count'] });
-                                  });
-                                },
-                              })}
+                              onClick={() =>
+                                acceptInviteMut.mutate(token, {
+                                  onSuccess: () => {
+                                    notificationEndpoints.dismiss(n.id).then(() => {
+                                      queryClient.invalidateQueries({
+                                        queryKey: ['notifications'],
+                                      });
+                                      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+                                    });
+                                  },
+                                })
+                              }
                               disabled={acceptInviteMut.isPending}
                               className="shrink-0 px-2.5 py-1 bg-[#6366F1] hover:bg-[#4F46E5] text-white text-[11px] font-medium rounded-[4px] transition-colors disabled:opacity-50 flex items-center gap-1 mt-0.5"
                             >
-                              {acceptInviteMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                              {acceptInviteMut.isPending ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Check className="w-3 h-3" />
+                              )}
                               Accept
                             </button>
                           )}
@@ -185,7 +201,9 @@ export function InboxPopover() {
                           {ws.workspaceName.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[12px] font-medium text-[#FAFAFA] truncate">{ws.workspaceName}</p>
+                          <p className="text-[12px] font-medium text-[#FAFAFA] truncate">
+                            {ws.workspaceName}
+                          </p>
                           <p className="text-[10px] text-text-tertiary">Invited as {inv.role}</p>
                         </div>
                         <button
@@ -193,7 +211,11 @@ export function InboxPopover() {
                           disabled={acceptInviteMut.isPending}
                           className="shrink-0 px-2.5 py-1 bg-[#6366F1] hover:bg-[#4F46E5] text-white text-[11px] font-medium rounded-[4px] transition-colors disabled:opacity-50 flex items-center gap-1"
                         >
-                          {acceptInviteMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                          {acceptInviteMut.isPending ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Check className="w-3 h-3" />
+                          )}
                           Accept
                         </button>
                       </div>

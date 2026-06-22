@@ -27,7 +27,7 @@ export const OtpInput: React.FC<OtpInputProps> = ({
 
     const newValue = value.padEnd(length, ' ').split('');
     newValue[index] = val.substring(val.length - 1);
-    
+
     // Clean up spaces when reconstructing
     const combinedValue = newValue.join('').replace(/ /g, '');
     onChange(combinedValue);
@@ -47,7 +47,10 @@ export const OtpInput: React.FC<OtpInputProps> = ({
 
   const handlePaste = (e: ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text/plain').slice(0, length).replace(/[^0-9]/g, '');
+    const pastedData = e.clipboardData
+      .getData('text/plain')
+      .slice(0, length)
+      .replace(/[^0-9]/g, '');
     if (pastedData) {
       onChange(pastedData);
       const focusIndex = Math.min(pastedData.length, length - 1);
@@ -62,25 +65,27 @@ export const OtpInput: React.FC<OtpInputProps> = ({
         {Array.from({ length }).map((_, index) => (
           <input
             key={index}
-            ref={(el) => {
+            ref={el => {
               inputRefs.current[index] = el;
             }}
             type="text"
             inputMode="numeric"
             maxLength={1}
             value={value[index] || ''}
-            onChange={(e) => handleOtpChange(e, index)}
-            onKeyDown={(e) => handleKeyDown(e, index)}
+            onChange={e => handleOtpChange(e, index)}
+            onKeyDown={e => handleKeyDown(e, index)}
             onFocus={() => setActiveInput(index)}
             onPaste={handlePaste}
             disabled={disabled}
             className={cn(
-              "w-10 h-12 sm:w-12 sm:h-14 text-center text-xl font-semibold bg-[#151515] text-white",
-              "border border-white/10 rounded-xl transition-all duration-200",
-              "focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 focus:-translate-y-1",
-              activeInput === index && !disabled && "border-primary/50 ring-1 ring-primary/50 -translate-y-1",
-              error && "border-red-500/50 focus:border-red-500 focus:ring-red-500/20",
-              disabled && "opacity-50 cursor-not-allowed"
+              'w-10 h-12 sm:w-12 sm:h-14 text-center text-xl font-semibold bg-[#151515] text-white',
+              'border border-white/10 rounded-xl transition-all duration-200',
+              'focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 focus:-translate-y-1',
+              activeInput === index &&
+                !disabled &&
+                'border-primary/50 ring-1 ring-primary/50 -translate-y-1',
+              error && 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20',
+              disabled && 'opacity-50 cursor-not-allowed'
             )}
           />
         ))}

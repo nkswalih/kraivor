@@ -19,7 +19,8 @@ export function CreateKnowledgeDialog({ open, onClose }: CreateKnowledgeDialogPr
   const [error, setError] = useState('');
 
   const mutation = useMutation({
-    mutationFn: () => knowledgeEndpoints.create(workspaceId!, { name, description: description || undefined }),
+    mutationFn: () =>
+      knowledgeEndpoints.create(workspaceId!, { name, description: description || undefined }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['knowledge', workspaceId] });
       setName('');
@@ -47,14 +48,19 @@ export function CreateKnowledgeDialog({ open, onClose }: CreateKnowledgeDialogPr
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onMouseDown={e => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="w-full max-w-md bg-[#141416] border border-[#27272A] rounded-xl shadow-2xl animate-scale-in">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#27272A]">
           <h2 className="text-[15px] font-semibold text-[#FAFAFA] flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-venom-yellow" /> Create Knowledge Space
           </h2>
-          <button onClick={onClose} className="p-1 text-text-tertiary hover:text-[#FAFAFA] transition-colors">
+          <button
+            onClick={onClose}
+            className="p-1 text-text-tertiary hover:text-[#FAFAFA] transition-colors"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -64,7 +70,7 @@ export function CreateKnowledgeDialog({ open, onClose }: CreateKnowledgeDialogPr
             <label className="block text-[12px] font-medium text-text-secondary mb-1.5">Name</label>
             <input
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={e => setName(e.target.value)}
               placeholder="e.g. Architecture Decisions"
               className="w-full px-3 py-2 bg-[#0A0A0B] border border-[#27272A] rounded-lg text-[13px] text-[#FAFAFA] placeholder:text-text-tertiary focus:outline-none focus:border-venom-yellow/50 transition-colors"
               autoFocus
@@ -77,7 +83,7 @@ export function CreateKnowledgeDialog({ open, onClose }: CreateKnowledgeDialogPr
             </label>
             <textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={e => setDescription(e.target.value)}
               placeholder="What is this space for?"
               rows={3}
               className="w-full px-3 py-2 bg-[#0A0A0B] border border-[#27272A] rounded-lg text-[13px] text-[#FAFAFA] placeholder:text-text-tertiary focus:outline-none focus:border-venom-yellow/50 transition-colors resize-none"
@@ -103,7 +109,11 @@ export function CreateKnowledgeDialog({ open, onClose }: CreateKnowledgeDialogPr
               disabled={mutation.isPending}
               className="px-4 py-1.5 bg-venom-yellow text-black text-[13px] font-medium rounded-lg hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-1.5"
             >
-              {mutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BookOpen className="w-3.5 h-3.5" />}
+              {mutation.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <BookOpen className="w-3.5 h-3.5" />
+              )}
               Create
             </button>
           </div>

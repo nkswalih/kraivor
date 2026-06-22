@@ -3,8 +3,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Sparkles, ChevronDown, MessageSquare, Shield,
-  FileText, Gauge, CheckCircle,
+  Sparkles,
+  ChevronDown,
+  MessageSquare,
+  Shield,
+  FileText,
+  Gauge,
+  CheckCircle,
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { workspaceEndpoints } from '@/lib/api/endpoints';
@@ -73,75 +78,82 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
   }, [messages, isStreaming, scrollToBottom]);
 
   /* ─── Send message ─────────────────────────────────────────── */
-  const handleSend = useCallback(async (overrideContent?: string) => {
-    const trimmed = (overrideContent ?? input).trim();
-    if (!trimmed || isStreaming) return;
+  const handleSend = useCallback(
+    async (overrideContent?: string) => {
+      const trimmed = (overrideContent ?? input).trim();
+      if (!trimmed || isStreaming) return;
 
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: MessageRole.USER,
-      content: trimmed,
-      timestamp: new Date().toISOString(),
-      status: MessageStatus.SENT,
-    };
-
-    const assistantMsg: ChatMessage = {
-      id: `assistant-${Date.now()}`,
-      role: MessageRole.ASSISTANT,
-      content: '',
-      timestamp: new Date().toISOString(),
-      status: MessageStatus.SENDING,
-    };
-
-    setMessages(prev => [...prev, userMsg, assistantMsg]);
-    setInput('');
-    setIsStreaming(true);
-    shouldAutoScroll.current = true;
-
-    try {
-      let accumulated = '';
-      const stream = aiApi.streamMessage({
+      const userMsg: ChatMessage = {
+        id: `user-${Date.now()}`,
+        role: MessageRole.USER,
         content: trimmed,
-        context: {},
-      });
+        timestamp: new Date().toISOString(),
+        status: MessageStatus.SENT,
+      };
 
-      for await (const chunk of stream) {
-        const c = chunk as StreamChunk;
-        if (c.done) break;
-        const text = typeof c.content === 'string' ? c.content : (typeof c === 'string' ? c : '');
-        if (text) accumulated += text;
+      const assistantMsg: ChatMessage = {
+        id: `assistant-${Date.now()}`,
+        role: MessageRole.ASSISTANT,
+        content: '',
+        timestamp: new Date().toISOString(),
+        status: MessageStatus.SENDING,
+      };
+
+      setMessages(prev => [...prev, userMsg, assistantMsg]);
+      setInput('');
+      setIsStreaming(true);
+      shouldAutoScroll.current = true;
+
+      try {
+        let accumulated = '';
+        const stream = aiApi.streamMessage({
+          content: trimmed,
+          context: {},
+        });
+
+        for await (const chunk of stream) {
+          const c = chunk as StreamChunk;
+          if (c.done) break;
+          const text = typeof c.content === 'string' ? c.content : typeof c === 'string' ? c : '';
+          if (text) accumulated += text;
+
+          setMessages(prev => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            if (last && last.id === assistantMsg.id) {
+              next[next.length - 1] = { ...last, content: accumulated };
+            }
+            return next;
+          });
+        }
 
         setMessages(prev => {
           const next = [...prev];
           const last = next[next.length - 1];
           if (last && last.id === assistantMsg.id) {
-            next[next.length - 1] = { ...last, content: accumulated };
+            next[next.length - 1] = { ...last, status: MessageStatus.SENT };
           }
           return next;
         });
+      } catch {
+        setMessages(prev => {
+          const next = [...prev];
+          const last = next[next.length - 1];
+          if (last && last.id === assistantMsg.id) {
+            next[next.length - 1] = {
+              ...last,
+              content: last.content || 'Sorry, something went wrong.',
+              status: MessageStatus.ERROR,
+            };
+          }
+          return next;
+        });
+      } finally {
+        setIsStreaming(false);
       }
-
-      setMessages(prev => {
-        const next = [...prev];
-        const last = next[next.length - 1];
-        if (last && last.id === assistantMsg.id) {
-          next[next.length - 1] = { ...last, status: MessageStatus.SENT };
-        }
-        return next;
-      });
-    } catch {
-      setMessages(prev => {
-        const next = [...prev];
-        const last = next[next.length - 1];
-        if (last && last.id === assistantMsg.id) {
-          next[next.length - 1] = { ...last, content: last.content || 'Sorry, something went wrong.', status: MessageStatus.ERROR };
-        }
-        return next;
-      });
-    } finally {
-      setIsStreaming(false);
-    }
-  }, [input, isStreaming]);
+    },
+    [input, isStreaming]
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent, overrideContent?: string) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -153,7 +165,6 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
   /* ─── Render ───────────────────────────────────────────────── */
   return (
     <div className="flex flex-col h-full bg-[#0A0A0B] relative">
-
       {messages.length === 0 ? (
         /* ── Empty State: Hero + Input + Grid ──────────────────── */
         <div className="flex-1 overflow-y-auto">
@@ -161,7 +172,11 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
             {/* Hero */}
             <div className="text-center mb-8">
               {workspaceAvatar ? (
-                <img src={workspaceAvatar} alt="" className="w-14 h-14 rounded-full object-cover mx-auto mb-5 bg-[#1C1C1F]" />
+                <img
+                  src={workspaceAvatar}
+                  alt=""
+                  className="w-14 h-14 rounded-full object-cover mx-auto mb-5 bg-[#1C1C1F]"
+                />
               ) : (
                 <div className="w-14 h-14 rounded-2xl bg-[#1C1C1F] border border-[#27272A] flex items-center justify-center mx-auto mb-5">
                   <Sparkles className="w-7 h-7 text-venom-yellow" />
@@ -177,7 +192,7 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
               value={input}
               onChange={setInput}
               onSend={() => handleSend()}
-              onKeyDown={(e) => handleKeyDown(e)}
+              onKeyDown={e => handleKeyDown(e)}
               isStreaming={isStreaming}
               selectedModel={selectedModel}
               onModelSelect={setSelectedModel}
@@ -198,7 +213,10 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
                       onClick={() => handleSend(chat.title)}
                       className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[#1C1C1F] transition-colors text-left group"
                     >
-                      <MessageSquare className="w-4 h-4 text-[#5e5e72] shrink-0 group-hover:text-[#9898a6] transition-colors" strokeWidth={1.5} />
+                      <MessageSquare
+                        className="w-4 h-4 text-[#5e5e72] shrink-0 group-hover:text-[#9898a6] transition-colors"
+                        strokeWidth={1.5}
+                      />
                       <span className="text-[13px] text-[#9898a6] truncate group-hover:text-[#d1d5db] transition-colors">
                         {chat.title}
                       </span>
@@ -221,7 +239,10 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
                         onClick={() => handleSend(s.text)}
                         className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[#1C1C1F] transition-colors text-left group"
                       >
-                        <Icon className="w-4 h-4 text-[#5e5e72] shrink-0 group-hover:text-[#9898a6] transition-colors" strokeWidth={1.5} />
+                        <Icon
+                          className="w-4 h-4 text-[#5e5e72] shrink-0 group-hover:text-[#9898a6] transition-colors"
+                          strokeWidth={1.5}
+                        />
                         <span className="text-[13px] text-[#9898a6] group-hover:text-[#d1d5db] transition-colors">
                           {s.text}
                         </span>
@@ -237,11 +258,7 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
         /* ── Messages State ───────────────────────────────────── */
         <>
           {/* Messages Area */}
-          <div
-            ref={listRef}
-            onScroll={handleScroll}
-            className="flex-1 overflow-y-auto"
-          >
+          <div ref={listRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
             <div className="max-w-[720px] mx-auto px-6 py-4">
               <div className="space-y-1">
                 {messages.map((msg, idx) => {
@@ -255,11 +272,13 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
                     <div key={msg.id} className="py-2">
                       {isNewGroup && (
                         <div className="flex items-center gap-2 mb-2 mt-3 first:mt-0">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                            isUser
-                              ? 'bg-[#27272A]'
-                              : 'bg-venom-yellow/10 border border-venom-yellow/20'
-                          }`}>
+                          <div
+                            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                              isUser
+                                ? 'bg-[#27272A]'
+                                : 'bg-venom-yellow/10 border border-venom-yellow/20'
+                            }`}
+                          >
                             {isUser ? (
                               <span className="text-[11px] font-bold text-[#9898a6]">ME</span>
                             ) : (
@@ -271,7 +290,10 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
                           </span>
                           {!isStreamingMsg && msg.timestamp && (
                             <span className="text-[11px] text-[#5e5e72]">
-                              {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(msg.timestamp).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
                             </span>
                           )}
                         </div>
@@ -306,7 +328,10 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
             {!shouldAutoScroll.current && messages.length > 0 && (
               <div className="sticky bottom-2 flex justify-center">
                 <button
-                  onClick={() => { scrollToBottom(); shouldAutoScroll.current = true; }}
+                  onClick={() => {
+                    scrollToBottom();
+                    shouldAutoScroll.current = true;
+                  }}
                   className="bg-[#27272A] border border-[#3A3A3D] rounded-full px-3 py-1.5 text-[12px] text-[#f2f2f3] hover:bg-[#3A3A3D] shadow-lg flex items-center gap-1.5 transition-colors"
                 >
                   <ChevronDown className="w-3.5 h-3.5" /> New messages
@@ -321,7 +346,7 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
               value={input}
               onChange={setInput}
               onSend={() => handleSend()}
-              onKeyDown={(e) => handleKeyDown(e)}
+              onKeyDown={e => handleKeyDown(e)}
               isStreaming={isStreaming}
               selectedModel={selectedModel}
               onModelSelect={setSelectedModel}
@@ -352,9 +377,13 @@ function formatAssistantContent(content: string) {
       return (
         <div key={i} className="my-2 border-l-2 border-venom-yellow/30 pl-4 py-1">
           {lang && (
-            <div className="text-[11px] text-[#5e5e72] font-mono uppercase tracking-wider mb-1">{lang}</div>
+            <div className="text-[11px] text-[#5e5e72] font-mono uppercase tracking-wider mb-1">
+              {lang}
+            </div>
           )}
-          <pre className="text-[13px] text-[#d1d5db] font-mono leading-relaxed whitespace-pre-wrap overflow-x-auto">{body}</pre>
+          <pre className="text-[13px] text-[#d1d5db] font-mono leading-relaxed whitespace-pre-wrap overflow-x-auto">
+            {body}
+          </pre>
         </div>
       );
     }
@@ -368,7 +397,10 @@ function applyInlineCode(text: string) {
   return parts.map((part, i) => {
     if (part.startsWith('`') && part.endsWith('`')) {
       return (
-        <code key={i} className="bg-[#1C1C1F] border border-[#27272A] px-1.5 py-0.5 rounded text-[13px] text-venom-yellow/90 font-mono">
+        <code
+          key={i}
+          className="bg-[#1C1C1F] border border-[#27272A] px-1.5 py-0.5 rounded text-[13px] text-venom-yellow/90 font-mono"
+        >
           {part.slice(1, -1)}
         </code>
       );

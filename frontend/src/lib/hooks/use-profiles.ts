@@ -5,13 +5,13 @@ import { profileEndpoints } from '@/lib/api/endpoints/profiles';
 import type { Profile, ProfileUpdatePayload } from '@/types/domain/profiles';
 
 export const profileKeys = {
-  all:           () => ['profiles'] as const,
-  detail:        (username: string) => [...profileKeys.all(), 'detail', username] as const,
-  myProfile:     () => [...profileKeys.all(), 'me'] as const,
-  followers:     (username: string) => [...profileKeys.all(), 'followers', username] as const,
-  following:     (username: string) => [...profileKeys.all(), 'following', username] as const,
-  leaderboard:   () => [...profileKeys.all(), 'leaderboard'] as const,
-  contributors:  () => [...profileKeys.all(), 'contributors'] as const,
+  all: () => ['profiles'] as const,
+  detail: (username: string) => [...profileKeys.all(), 'detail', username] as const,
+  myProfile: () => [...profileKeys.all(), 'me'] as const,
+  followers: (username: string) => [...profileKeys.all(), 'followers', username] as const,
+  following: (username: string) => [...profileKeys.all(), 'following', username] as const,
+  leaderboard: () => [...profileKeys.all(), 'leaderboard'] as const,
+  contributors: () => [...profileKeys.all(), 'contributors'] as const,
 };
 
 export function useMyProfile() {

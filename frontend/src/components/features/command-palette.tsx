@@ -4,14 +4,40 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUIStore, useAuthStore } from '@/lib/stores';
 import { useSearch } from '@/lib/hooks/use-search';
-import { Search, Hash, BookOpen, GitBranch, Settings, MessageSquare, Inbox, Box, Users, FileText } from 'lucide-react';
+import {
+  Search,
+  Hash,
+  BookOpen,
+  GitBranch,
+  Settings,
+  MessageSquare,
+  Inbox,
+  Box,
+  Users,
+  FileText,
+} from 'lucide-react';
 
 const defaultActions = [
   { id: 'chat', label: 'Go to Chat', icon: MessageSquare, href: (ws: string) => `/${ws}/chat` },
-  { id: 'knowledge', label: 'Go to Knowledge', icon: BookOpen, href: (ws: string) => `/${ws}/knowledge` },
-  { id: 'repos', label: 'Go to Repositories', icon: GitBranch, href: (ws: string) => `/${ws}/repos` },
+  {
+    id: 'knowledge',
+    label: 'Go to Knowledge',
+    icon: BookOpen,
+    href: (ws: string) => `/${ws}/knowledge`,
+  },
+  {
+    id: 'repos',
+    label: 'Go to Repositories',
+    icon: GitBranch,
+    href: (ws: string) => `/${ws}/repos`,
+  },
   { id: 'inbox', label: 'Go to Inbox', icon: Inbox, href: (ws: string) => `/${ws}/inbox` },
-  { id: 'settings', label: 'Go to Settings', icon: Settings, href: (ws: string) => `/${ws}/settings` },
+  {
+    id: 'settings',
+    label: 'Go to Settings',
+    icon: Settings,
+    href: (ws: string) => `/${ws}/settings`,
+  },
 ];
 
 const typeIcons: Record<string, typeof Box> = {
@@ -44,14 +70,16 @@ export function CommandPalette({ workspaceSlug }: { workspaceSlug: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsContainerRef = useRef<HTMLDivElement>(null);
 
-  const workspaces = useAuthStore((s) => s.workspaces);
-  const workspaceId = workspaces.find((w: { slug: string }) => w.slug === workspaceSlug)?.id ?? null;
+  const workspaces = useAuthStore(s => s.workspaces);
+  const workspaceId =
+    workspaces.find((w: { slug: string }) => w.slug === workspaceSlug)?.id ?? null;
 
-  const { query, setQuery, results, totalResults, isLoading, clearSearch } = useSearch(workspaceId, 250);
-
-  const filtered = defaultActions.filter(
-    (a) => a.label.toLowerCase().includes(query.toLowerCase()),
+  const { query, setQuery, results, totalResults, isLoading, clearSearch } = useSearch(
+    workspaceId,
+    250
   );
+
+  const filtered = defaultActions.filter(a => a.label.toLowerCase().includes(query.toLowerCase()));
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -86,7 +114,8 @@ export function CommandPalette({ workspaceSlug }: { workspaceSlug: string }) {
 
   useEffect(() => {
     if (resultsContainerRef.current && selectedIndex >= 0) {
-      const items = resultsContainerRef.current.querySelectorAll<HTMLButtonElement>('[data-search-item]');
+      const items =
+        resultsContainerRef.current.querySelectorAll<HTMLButtonElement>('[data-search-item]');
       items[selectedIndex - filtered.length]?.scrollIntoView({ block: 'nearest' });
     }
   }, [selectedIndex, results, filtered.length]);
@@ -96,12 +125,12 @@ export function CommandPalette({ workspaceSlug }: { workspaceSlug: string }) {
     clearSearch();
   }, [setCommandPaletteOpen, clearSearch]);
 
-  const handleSelect = (action: typeof defaultActions[0]) => {
+  const handleSelect = (action: (typeof defaultActions)[0]) => {
     handleClose();
     router.push(action.href(workspaceSlug));
   };
 
-  const handleSearchSelect = (result: typeof results[0]) => {
+  const handleSearchSelect = (result: (typeof results)[0]) => {
     handleClose();
     router.push(result.url);
   };
@@ -111,10 +140,10 @@ export function CommandPalette({ workspaceSlug }: { workspaceSlug: string }) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex((i) => Math.min(i + 1, totalItems - 1));
+      setSelectedIndex(i => Math.min(i + 1, totalItems - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelectedIndex((i) => Math.max(i - 1, 0));
+      setSelectedIndex(i => Math.max(i - 1, 0));
     } else if (e.key === 'Enter') {
       const navCount = filtered.length;
       if (selectedIndex < navCount && filtered[selectedIndex]) {
@@ -135,7 +164,9 @@ export function CommandPalette({ workspaceSlug }: { workspaceSlug: string }) {
   return (
     <div
       className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] bg-black/60 backdrop-blur-sm animate-fade-in"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+      onMouseDown={e => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
     >
       <div className="w-full max-w-[560px] bg-[#141416] border border-[#27272A] rounded-xl shadow-2xl overflow-hidden animate-scale-in">
         <div className="flex items-center gap-3 px-4 py-2.5 border-b border-[#27272A]">
@@ -143,7 +174,10 @@ export function CommandPalette({ workspaceSlug }: { workspaceSlug: string }) {
           <input
             ref={inputRef}
             value={query}
-            onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }}
+            onChange={e => {
+              setQuery(e.target.value);
+              setSelectedIndex(0);
+            }}
             onKeyDown={handleKeyDown}
             placeholder="Type a command or search..."
             className="flex-1 bg-transparent border-none text-[14px] text-[#FAFAFA] placeholder:text-text-tertiary focus:outline-none"
@@ -220,7 +254,9 @@ export function CommandPalette({ workspaceSlug }: { workspaceSlug: string }) {
                 );
               })}
               {!isLoading && results.length === 0 && query.length >= 2 && (
-                <p className="px-3 py-4 text-center text-[13px] text-text-tertiary">No results for &quot;{query}&quot;</p>
+                <p className="px-3 py-4 text-center text-[13px] text-text-tertiary">
+                  No results for &quot;{query}&quot;
+                </p>
               )}
             </>
           )}

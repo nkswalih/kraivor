@@ -37,7 +37,9 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
 
   /* ─── Sync unread from room data ───────────────────────────── */
   const syncUnread = useChatStore(s => s.syncUnreadFromRooms);
-  useEffect(() => { if (roomsList.length) syncUnread(roomsList); }, [roomsList, syncUnread]);
+  useEffect(() => {
+    if (roomsList.length) syncUnread(roomsList);
+  }, [roomsList, syncUnread]);
 
   const dmUserIds = useMemo(() => {
     if (!userId) return [];
@@ -96,11 +98,12 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
 
       {/* Lists Container */}
       <div className="flex-1 overflow-y-auto py-4 space-y-6">
-        
         {/* Channels Section */}
         <div>
           <div className="flex items-center justify-between px-4 mb-1.5 group">
-            <span className="text-[12px] font-bold tracking-wider text-text-tertiary uppercase">Channels</span>
+            <span className="text-[12px] font-bold tracking-wider text-text-tertiary uppercase">
+              Channels
+            </span>
             <button
               onClick={() => setShowCreate(true)}
               className="text-text-tertiary hover:text-[#FAFAFA] transition-colors p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
@@ -109,18 +112,21 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
               <Plus className="w-4 h-4" />
             </button>
           </div>
-          
+
           <div className="space-y-[2px]">
             {channels.length === 0 && (
               <p className="text-[13px] text-text-tertiary px-4 py-2">No channels yet</p>
             )}
-            {channels.map((room) => {
+            {channels.map(room => {
               const active = room.id === currentRoomId;
               const isEditing = editingId === room.id;
 
               if (isEditing) {
                 return (
-                  <div key={room.id} className="flex items-center gap-1.5 px-2 py-1.5 mx-2 bg-[#0A0A0B] border border-[#6366F1] rounded-md shadow-sm">
+                  <div
+                    key={room.id}
+                    className="flex items-center gap-1.5 px-2 py-1.5 mx-2 bg-[#0A0A0B] border border-[#6366F1] rounded-md shadow-sm"
+                  >
                     <Hash className="w-5 h-5 shrink-0 text-text-tertiary opacity-70" />
                     <input
                       value={editName}
@@ -130,14 +136,18 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
                       onKeyDown={e => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
-                          if (editName.trim()) renameMut.mutate({ id: room.id, name: editName.trim() });
+                          if (editName.trim())
+                            renameMut.mutate({ id: room.id, name: editName.trim() });
                         }
                         if (e.key === 'Escape') setEditingId(null);
                       }}
                     />
                     <div className="flex items-center shrink-0">
                       <button
-                        onClick={() => editName.trim() && renameMut.mutate({ id: room.id, name: editName.trim() })}
+                        onClick={() =>
+                          editName.trim() &&
+                          renameMut.mutate({ id: room.id, name: editName.trim() })
+                        }
                         className="p-1 text-green-400 hover:text-green-300 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400"
                       >
                         <Check className="w-4 h-4" />
@@ -166,21 +176,30 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
                     href={`/${workspaceSlug}/chat/${room.id}`}
                     className="flex-1 flex items-center gap-1.5 px-2 py-1.5 min-w-0 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                   >
-                    <Hash className={`w-5 h-5 shrink-0 transition-colors ${active ? 'text-inherit' : 'text-text-tertiary group-hover:text-inherit'}`} />
+                    <Hash
+                      className={`w-5 h-5 shrink-0 transition-colors ${active ? 'text-inherit' : 'text-text-tertiary group-hover:text-inherit'}`}
+                    />
                     <span className="truncate text-[14px] font-medium">{room.name}</span>
                   </Link>
 
                   {/* Hover actions */}
                   <div className="hidden group-hover:flex items-center gap-0.5 pr-1.5 shrink-0">
                     <button
-                      onClick={(e) => { e.preventDefault(); setEditingId(room.id); setEditName(room.name); }}
+                      onClick={e => {
+                        e.preventDefault();
+                        setEditingId(room.id);
+                        setEditName(room.name);
+                      }}
                       className="p-1.5 text-text-tertiary hover:text-[#FAFAFA] transition-colors rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 bg-[#111113] group-hover:bg-transparent"
                       title="Rename"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={(e) => { e.preventDefault(); if (confirm(`Archive #${room.name}?`)) deleteMut.mutate(room.id); }}
+                      onClick={e => {
+                        e.preventDefault();
+                        if (confirm(`Archive #${room.name}?`)) deleteMut.mutate(room.id);
+                      }}
                       className="p-1.5 text-text-tertiary hover:text-red-400 transition-colors rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 bg-[#111113] group-hover:bg-transparent"
                       title="Archive"
                     >
@@ -196,13 +215,15 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
         {/* Direct Messages Section */}
         <div>
           <div className="flex items-center justify-between px-4 mb-1.5">
-            <span className="text-[12px] font-bold tracking-wider text-text-tertiary uppercase">Direct Messages</span>
+            <span className="text-[12px] font-bold tracking-wider text-text-tertiary uppercase">
+              Direct Messages
+            </span>
           </div>
           <div className="space-y-[2px]">
             {dms.length === 0 && (
               <p className="text-[13px] text-text-tertiary px-4 py-2">No conversations</p>
             )}
-            {dms.map((room) => {
+            {dms.map(room => {
               const active = room.id === currentRoomId;
               const otherUserId = (room.participant_user_ids ?? []).find(id => id !== userId);
               const profile = otherUserId ? profileMap[otherUserId] : undefined;
@@ -213,9 +234,7 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
                   key={room.id}
                   href={`/${workspaceSlug}/chat/${room.id}`}
                   className={`flex items-start gap-2.5 mx-2 px-2 py-2 rounded-md transition-colors ${
-                    active
-                      ? 'bg-[#27272A]'
-                      : 'hover:bg-white/[0.04]'
+                    active ? 'bg-[#27272A]' : 'hover:bg-white/[0.04]'
                   }`}
                 >
                   {/* Avatar */}
@@ -250,7 +269,6 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
             })}
           </div>
         </div>
-
       </div>
 
       <CreateChannelDialog

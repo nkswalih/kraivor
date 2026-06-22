@@ -32,28 +32,34 @@ export function AssetsPanel({ spaceId }: Props) {
     load();
   }, [load]);
 
-  const handleUpload = useCallback(async (files: File[]) => {
-    setUploading(true);
-    try {
-      for (const file of files) {
-        await knowledgeAssetApi.upload(spaceId, file);
+  const handleUpload = useCallback(
+    async (files: File[]) => {
+      setUploading(true);
+      try {
+        for (const file of files) {
+          await knowledgeAssetApi.upload(spaceId, file);
+        }
+        await load();
+      } catch {
+        // ignore
+      } finally {
+        setUploading(false);
       }
-      await load();
-    } catch {
-      // ignore
-    } finally {
-      setUploading(false);
-    }
-  }, [spaceId, load]);
+    },
+    [spaceId, load]
+  );
 
-  const handleDelete = useCallback(async (assetId: string) => {
-    try {
-      await knowledgeAssetApi.delete(spaceId, assetId);
-      setAssets(prev => prev.filter(a => a.id !== assetId));
-    } catch {
-      // ignore
-    }
-  }, [spaceId]);
+  const handleDelete = useCallback(
+    async (assetId: string) => {
+      try {
+        await knowledgeAssetApi.delete(spaceId, assetId);
+        setAssets(prev => prev.filter(a => a.id !== assetId));
+      } catch {
+        // ignore
+      }
+    },
+    [spaceId]
+  );
 
   const fileTypeIcon = (mime: string | null | undefined) => {
     if (mime?.startsWith('image/')) return <Image className="w-4 h-4" />;
@@ -114,21 +120,15 @@ export function AssetsPanel({ spaceId }: Props) {
                     mimeType: asset.mime_type,
                     fileName: asset.file_name,
                     assetId: asset.id,
-                  }),
+                  })
                 );
                 e.dataTransfer.effectAllowed = 'copy';
               }}
             >
-              <span className="text-venom-yellow">
-                {fileTypeIcon(asset.mime_type)}
-              </span>
+              <span className="text-venom-yellow">{fileTypeIcon(asset.mime_type)}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] text-foreground truncate">
-                  {asset.file_name}
-                </p>
-                <p className="text-[10px] text-text-tertiary">
-                  {formatSize(asset.file_size)}
-                </p>
+                <p className="text-[12px] text-foreground truncate">{asset.file_name}</p>
+                <p className="text-[10px] text-text-tertiary">{formatSize(asset.file_size)}</p>
               </div>
               <button
                 className="p-0.5 text-text-tertiary opacity-0 group-hover:opacity-100 hover:text-red-400 transition-all"

@@ -317,7 +317,9 @@ export function RegisterForm() {
               </button>
             </div>
             <PasswordStrength password={passwordValue} />
-            {errors.password && <p className="text-xs text-red-400 mt-1">{errors.password.message}</p>}
+            {errors.password && (
+              <p className="text-xs text-red-400 mt-1">{errors.password.message}</p>
+            )}
           </div>
 
           {/* Confirm password */}

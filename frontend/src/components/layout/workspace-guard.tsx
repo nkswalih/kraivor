@@ -7,7 +7,8 @@ import { CreateWorkspaceDialog } from '@/components/features/create-workspace-di
 
 export function WorkspaceGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated, isLoading, workspaceId, workspaceSlug, workspaces, initWorkspace } = useAuthStore();
+  const { isAuthenticated, isLoading, workspaceId, workspaceSlug, workspaces, initWorkspace } =
+    useAuthStore();
   const [showCreate, setShowCreate] = useState(false);
   const [checked, setChecked] = useState(false);
 
@@ -36,8 +37,18 @@ export function WorkspaceGuard({ children }: { children: ReactNode }) {
       <div className="flex h-screen w-full bg-[#0A0A0B] items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 rounded-xl bg-venom-yellow/10 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-6 h-6 text-venom-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            <svg
+              className="w-6 h-6 text-venom-yellow"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
             </svg>
           </div>
           <h1 className="text-xl font-semibold text-[#FAFAFA] mb-2">Welcome to Kraivor</h1>

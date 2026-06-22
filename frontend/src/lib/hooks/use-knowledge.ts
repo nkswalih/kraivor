@@ -5,9 +5,9 @@ import { knowledgeEndpoints } from '@/lib/api/endpoints/knowledge';
 import type { KnowledgeSpace } from '@/types/api';
 
 const knowledgeKeys = {
-  all:      ['knowledge'] as const,
-  list:     (wsId: string) => [...knowledgeKeys.all, 'list', wsId] as const,
-  detail:   (id: string) => [...knowledgeKeys.all, 'detail', id] as const,
+  all: ['knowledge'] as const,
+  list: (wsId: string) => [...knowledgeKeys.all, 'list', wsId] as const,
+  detail: (id: string) => [...knowledgeKeys.all, 'detail', id] as const,
   versions: (id: string) => [...knowledgeKeys.all, 'versions', id] as const,
 };
 
@@ -33,8 +33,11 @@ export function useKnowledgeDetail(id: string | undefined) {
 export function useCreateKnowledge(workspaceId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name: string; description?: string; canvas_data?: Record<string, unknown> }) =>
-      knowledgeEndpoints.create(workspaceId, data),
+    mutationFn: (data: {
+      name: string;
+      description?: string;
+      canvas_data?: Record<string, unknown>;
+    }) => knowledgeEndpoints.create(workspaceId, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: knowledgeKeys.list(workspaceId) });
     },
@@ -44,8 +47,11 @@ export function useCreateKnowledge(workspaceId: string) {
 export function useUpdateKnowledge(id: string, workspaceId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name?: string; description?: string; canvas_data?: Record<string, unknown> }) =>
-      knowledgeEndpoints.update(id, data),
+    mutationFn: (data: {
+      name?: string;
+      description?: string;
+      canvas_data?: Record<string, unknown>;
+    }) => knowledgeEndpoints.update(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: knowledgeKeys.detail(id) });
       qc.invalidateQueries({ queryKey: knowledgeKeys.list(workspaceId) });
@@ -66,8 +72,11 @@ export function useDeleteKnowledge(id: string, workspaceId: string) {
 export function useSaveCanvas(id: string, workspaceId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { name: string; description?: string; canvas_data?: Record<string, unknown> }) =>
-      knowledgeEndpoints.update(id, payload),
+    mutationFn: (payload: {
+      name: string;
+      description?: string;
+      canvas_data?: Record<string, unknown>;
+    }) => knowledgeEndpoints.update(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: knowledgeKeys.detail(id) });
       qc.invalidateQueries({ queryKey: knowledgeKeys.list(workspaceId) });

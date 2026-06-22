@@ -167,7 +167,11 @@ export default apiClient;
 /* ─── CORE BACKEND API (native fetch, no axios) ──────────────────── */
 
 class CoreApiError extends Error {
-  constructor(public status: number, public code: string, message: string) {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string
+  ) {
     super(message);
     this.name = 'CoreApiError';
   }
@@ -260,26 +264,52 @@ async function coreRequest<T>(path: string, init: RequestInit = {}): Promise<T> 
 export { coreRequest };
 
 export const coreApi = {
-  get:    <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'GET', ...init }),
-  post:   <T>(path: string, body?: unknown, init?: RequestInit) =>
-    coreRequest<T>(path, { method: 'POST', body: body != null ? JSON.stringify(body) : undefined, ...init }),
-  patch:  <T>(path: string, body?: unknown, init?: RequestInit) =>
-    coreRequest<T>(path, { method: 'PATCH', body: body != null ? JSON.stringify(body) : undefined, ...init }),
-  put:    <T>(path: string, body?: unknown, init?: RequestInit) =>
-    coreRequest<T>(path, { method: 'PUT', body: body != null ? JSON.stringify(body) : undefined, ...init }),
-  delete: <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'DELETE', ...init }),
+  get: <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'GET', ...init }),
+  post: <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, {
+      method: 'POST',
+      body: body != null ? JSON.stringify(body) : undefined,
+      ...init,
+    }),
+  patch: <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, {
+      method: 'PATCH',
+      body: body != null ? JSON.stringify(body) : undefined,
+      ...init,
+    }),
+  put: <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, {
+      method: 'PUT',
+      body: body != null ? JSON.stringify(body) : undefined,
+      ...init,
+    }),
+  delete: <T>(path: string, init?: RequestInit) =>
+    coreRequest<T>(path, { method: 'DELETE', ...init }),
 };
 
 /* ─── IDENTITY SERVICE API (same gateway, separate export) ─────── */
 export const identityRequest = coreRequest;
 
 export const identityApi = {
-  get:    <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'GET', ...init }),
-  post:   <T>(path: string, body?: unknown, init?: RequestInit) =>
-    coreRequest<T>(path, { method: 'POST', body: body != null ? JSON.stringify(body) : undefined, ...init }),
-  patch:  <T>(path: string, body?: unknown, init?: RequestInit) =>
-    coreRequest<T>(path, { method: 'PATCH', body: body != null ? JSON.stringify(body) : undefined, ...init }),
-  put:    <T>(path: string, body?: unknown, init?: RequestInit) =>
-    coreRequest<T>(path, { method: 'PUT', body: body != null ? JSON.stringify(body) : undefined, ...init }),
-  delete: <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'DELETE', ...init }),
+  get: <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'GET', ...init }),
+  post: <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, {
+      method: 'POST',
+      body: body != null ? JSON.stringify(body) : undefined,
+      ...init,
+    }),
+  patch: <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, {
+      method: 'PATCH',
+      body: body != null ? JSON.stringify(body) : undefined,
+      ...init,
+    }),
+  put: <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, {
+      method: 'PUT',
+      body: body != null ? JSON.stringify(body) : undefined,
+      ...init,
+    }),
+  delete: <T>(path: string, init?: RequestInit) =>
+    coreRequest<T>(path, { method: 'DELETE', ...init }),
 };

@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { X, Loader2 } from 'lucide-react';
-import { useUpdateProject, useProject, useRepositoriesList, useKnowledgeSpacesList } from '@/lib/hooks/use-projects';
+import {
+  useUpdateProject,
+  useProject,
+  useRepositoriesList,
+  useKnowledgeSpacesList,
+} from '@/lib/hooks/use-projects';
 import type { ProjectStatus, ProjectVisibility } from '@/types/domain/projects';
 
 interface EditProjectDialogProps {
@@ -87,8 +92,8 @@ export function EditProjectDialog({
               <input
                 autoFocus
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => {
+                onChange={e => setName(e.target.value)}
+                onKeyDown={e => {
                   if (e.key === 'Enter') handleSubmit();
                   if (e.key === 'Escape') onClose();
                 }}
@@ -98,7 +103,7 @@ export function EditProjectDialog({
 
               <textarea
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={e => setDescription(e.target.value)}
                 placeholder="Description (optional)"
                 rows={2}
                 className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] rounded-[6px] px-3 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--krait-border-hi)] resize-none"
@@ -106,20 +111,24 @@ export function EditProjectDialog({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">Icon</label>
+                  <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">
+                    Icon
+                  </label>
                   <input
                     value={icon}
-                    onChange={(e) => setIcon(e.target.value)}
+                    onChange={e => setIcon(e.target.value)}
                     placeholder="Emoji"
                     maxLength={2}
                     className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] rounded-[6px] px-3 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--krait-border-hi)]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">Color</label>
+                  <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">
+                    Color
+                  </label>
                   <input
                     value={color}
-                    onChange={(e) => setColor(e.target.value)}
+                    onChange={e => setColor(e.target.value)}
                     placeholder="#RRGGBB"
                     maxLength={7}
                     className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] rounded-[6px] px-3 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--krait-border-hi)]"
@@ -129,22 +138,28 @@ export function EditProjectDialog({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">Status</label>
+                  <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">
+                    Status
+                  </label>
                   <select
                     value={status}
-                    onChange={(e) => setStatus(e.target.value as ProjectStatus)}
+                    onChange={e => setStatus(e.target.value as ProjectStatus)}
                     className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] text-[var(--text-secondary)] rounded-[6px] px-3 py-2 text-[13px] outline-none focus:border-[var(--krait-border-hi)]"
                   >
-                    {(['planning', 'active', 'completed', 'archived'] as const).map((s) => (
-                      <option key={s} value={s} className="capitalize">{s}</option>
+                    {(['planning', 'active', 'completed', 'archived'] as const).map(s => (
+                      <option key={s} value={s} className="capitalize">
+                        {s}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">Visibility</label>
+                  <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">
+                    Visibility
+                  </label>
                   <select
                     value={visibility}
-                    onChange={(e) => setVisibility(e.target.value as ProjectVisibility)}
+                    onChange={e => setVisibility(e.target.value as ProjectVisibility)}
                     className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] text-[var(--text-secondary)] rounded-[6px] px-3 py-2 text-[13px] outline-none focus:border-[var(--krait-border-hi)]"
                   >
                     <option value="workspace">Workspace</option>
@@ -155,28 +170,36 @@ export function EditProjectDialog({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">Repository</label>
+                  <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">
+                    Repository
+                  </label>
                   <select
                     value={repositoryId ?? ''}
-                    onChange={(e) => setRepositoryId(e.target.value || null)}
+                    onChange={e => setRepositoryId(e.target.value || null)}
                     className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] text-[var(--text-secondary)] rounded-[6px] px-3 py-2 text-[13px] outline-none focus:border-[var(--krait-border-hi)]"
                   >
                     <option value="">None</option>
-                    {(repos ?? []).map((r) => (
-                      <option key={r.id} value={r.id}>{r.github_repo}</option>
+                    {(repos ?? []).map(r => (
+                      <option key={r.id} value={r.id}>
+                        {r.github_repo}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">Knowledge Space</label>
+                  <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">
+                    Knowledge Space
+                  </label>
                   <select
                     value={knowledgeSpaceId ?? ''}
-                    onChange={(e) => setKnowledgeSpaceId(e.target.value || null)}
+                    onChange={e => setKnowledgeSpaceId(e.target.value || null)}
                     className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] text-[var(--text-secondary)] rounded-[6px] px-3 py-2 text-[13px] outline-none focus:border-[var(--krait-border-hi)]"
                   >
                     <option value="">None</option>
-                    {(knowledgeSpaces ?? []).map((k) => (
-                      <option key={k.id} value={k.id}>{k.name}</option>
+                    {(knowledgeSpaces ?? []).map(k => (
+                      <option key={k.id} value={k.id}>
+                        {k.name}
+                      </option>
                     ))}
                   </select>
                 </div>

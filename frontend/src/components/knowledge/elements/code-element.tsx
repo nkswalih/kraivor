@@ -4,10 +4,10 @@ import dynamic from 'next/dynamic';
 import type { ComponentType } from 'react';
 import type { CodeElementData } from '@/types/knowledge';
 
-const MonacoEditor = dynamic(
-  () => import('@monaco-editor/react').then(mod => mod.Editor),
-  { ssr: false, loading: () => <div className="w-full h-full bg-krait-surface3 animate-pulse" /> }
-) as ComponentType<Record<string, unknown>>;
+const MonacoEditor = dynamic(() => import('@monaco-editor/react').then(mod => mod.Editor), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-krait-surface3 animate-pulse" />,
+}) as ComponentType<Record<string, unknown>>;
 
 interface Props {
   data: CodeElementData;

@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Hash, Send, Loader2, ChevronDown, Trash2, Edit3, X, Check } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useChatStore } from '@/lib/stores/chat-store';
-import { chatEndpoints } from '@/lib/api/endpoints';
+import { chatEndpoints, profileEndpoints } from '@/lib/api/endpoints';
 import { ChatSocket } from '@/lib/ws/chat-socket';
 import { ChannelSidebar } from '@/components/features/channel-sidebar';
 import { MembersPanel } from '@/components/features/members-panel';
 import { formatRelativeTime } from '@/lib/utils';
+import { avatarUrl } from '@/lib/utils';
 import { SkeletonMessage, SkeletonChatSidebar, SkeletonBlock, SkeletonLine } from '@/components/ui/skeletons';
 import type { ChatMessage } from '@/types/api';
 
@@ -22,9 +23,34 @@ export default function ChatRoomPage() {
   const queryClient = useQueryClient();
   const userId = useAuthStore(s => s.user?.id);
 
-  const { messagesByRoom, addMessage, prependMessages, setNextKey, nextKeyByRoom, removeMessage, updateMessage } = useChatStore();
+  const { messagesByRoom, addMessage, prependMessages, setNextKey, nextKeyByRoom, removeMessage, updateMessage, setCurrentRoom } = useChatStore();
   const messages = messagesByRoom[roomId] ?? [];
   const nextKey = nextKeyByRoom[roomId] ?? null;
+
+  /* ─── Mark room as read on mount ──────────────────────────── */
+  useEffect(() => {
+    setCurrentRoom(roomId);
+    return () => setCurrentRoom(null);
+  }, [roomId, setCurrentRoom]);
+
+  /* ─── Profile fetch for sender avatars ────────────────────── */
+  const senderIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const m of messages) if (m.sender_id) ids.add(m.sender_id);
+    return Array.from(ids);
+  }, [messages]);
+
+  const { data: senderProfiles } = useQuery({
+    queryKey: ['profiles-by-ids', senderIds],
+    queryFn: () => profileEndpoints.getProfilesByIds(senderIds),
+    enabled: senderIds.length > 0,
+    staleTime: 60_000,
+  });
+
+  const senderProfileMap: Record<string, { avatar_url?: string; user_avatar_url?: string }> = useMemo(
+    () => senderProfiles?.profiles ?? {},
+    [senderProfiles],
+  );
 
   const [input, setInput] = useState('');
   const [loadingMore, setLoadingMore] = useState(false);
@@ -240,9 +266,17 @@ export default function ChatRoomPage() {
                     <div className={`flex gap-3 ${showHeader ? 'mt-3' : ''}`}>
                       {/* Avatar */}
                       {showHeader ? (
-                        <div className="w-9 h-9 rounded-full bg-[#27272A] flex items-center justify-center text-[13px] font-bold text-[#FAFAFA] shrink-0 mt-0.5">
-                          {msg.sender_name?.charAt(0)?.toUpperCase() ?? '?'}
-                        </div>
+                        (() => {
+                          const p = senderProfileMap[msg.sender_id];
+                          const src = avatarUrl(p?.avatar_url, p?.user_avatar_url);
+                          return src ? (
+                            <img src={src} alt={msg.sender_name} className="w-9 h-9 rounded-full object-cover shrink-0 mt-0.5 bg-[#27272A]" />
+                          ) : (
+                            <div className="w-9 h-9 rounded-full bg-[#27272A] flex items-center justify-center text-[13px] font-bold text-[#FAFAFA] shrink-0 mt-0.5">
+                              {msg.sender_name?.charAt(0)?.toUpperCase() ?? '?'}
+                            </div>
+                          );
+                        })()
                       ) : (
                         <div className="w-9 shrink-0" />
                       )}

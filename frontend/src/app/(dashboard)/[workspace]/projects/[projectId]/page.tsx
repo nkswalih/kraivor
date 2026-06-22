@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Trash2 } from 'lucide-react';
 import { useProject, useProjectTasks, useDeleteProject } from '@/lib/hooks/use-projects';
@@ -81,6 +81,15 @@ export default function ProjectDetailPage() {
   const tasks: Task[] = tasksData?.results ?? [];
   const deleteProject = useDeleteProject(workspaceId);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const taskId = searchParams.get('task');
+    if (taskId && !tasksLoading && tasks.length > 0) {
+      useProjectsStore.getState().openTaskDrawer(taskId);
+    }
+  }, [searchParams, tasksLoading, tasks]);
 
   const {
     activeTab, setActiveTab,

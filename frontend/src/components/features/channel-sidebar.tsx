@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Hash, Plus, Loader2, Edit3, Trash2, X, Check } from 'lucide-react';
 import { chatEndpoints, profileEndpoints } from '@/lib/api/endpoints';
 import { useAuthStore } from '@/lib/stores/auth-store';
-import { formatCompactTime, truncate } from '@/lib/utils';
+import { useChatStore } from '@/lib/stores/chat-store';
+import { formatCompactTime, truncate, avatarUrl } from '@/lib/utils';
 import { CreateChannelDialog } from './create-channel-dialog';
 
 interface ChannelSidebarProps {
@@ -33,6 +34,10 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
   const roomsList = Array.isArray(rooms) ? rooms : (rooms?.results ?? []);
   const channels = roomsList.filter(r => r.room_type === 'workspace' || r.room_type === 'group');
   const dms = roomsList.filter(r => r.room_type === 'dm');
+
+  /* ─── Sync unread from room data ───────────────────────────── */
+  const syncUnread = useChatStore(s => s.syncUnreadFromRooms);
+  useEffect(() => { if (roomsList.length) syncUnread(roomsList); }, [roomsList, syncUnread]);
 
   const dmUserIds = useMemo(() => {
     if (!userId) return [];
@@ -202,7 +207,7 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
               const otherUserId = (room.participant_user_ids ?? []).find(id => id !== userId);
               const profile = otherUserId ? profileMap[otherUserId] : undefined;
               const displayName = profile?.display_name ?? room.name;
-              const avatarUrl = profile?.avatar_url ?? '';
+              const bestAvatar = avatarUrl(profile?.avatar_url, profile?.user_avatar_url);
               return (
                 <Link
                   key={room.id}
@@ -215,8 +220,8 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
                 >
                   {/* Avatar */}
                   <div className="w-8 h-8 rounded-full bg-[#27272A] flex items-center justify-center text-[13px] font-bold text-[#FAFAFA] shrink-0 overflow-hidden">
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                    {bestAvatar ? (
+                      <img src={bestAvatar} alt="" className="w-full h-full object-cover" />
                     ) : (
                       displayName.charAt(0).toUpperCase()
                     )}

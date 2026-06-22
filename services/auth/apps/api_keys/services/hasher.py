@@ -20,11 +20,11 @@ learning valid key prefixes through response-time differences.
 """
  
 from __future__ import annotations
- 
+
 import hashlib
 import hmac
- 
- 
+
+
 def hash_api_key(raw_key: str) -> str:
     """
     SHA-256 hash a raw API key for database storage.

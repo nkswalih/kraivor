@@ -45,9 +45,7 @@ from .otp import (
     get_otp_sender,
     get_otp_service,
 )
-from .security import (
-    check_password as verify_password,
-)
+from .security import check_password as verify_password
 from .security import (
     generate_device_id,
     get_client_ip,

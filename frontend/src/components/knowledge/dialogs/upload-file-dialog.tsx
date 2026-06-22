@@ -37,13 +37,16 @@ export function UploadFileDialog({ open, onClose, onUpload }: Props) {
     });
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    if (e.dataTransfer.files.length > 0) {
-      addFiles(e.dataTransfer.files);
-    }
-  }, [addFiles]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragOver(false);
+      if (e.dataTransfer.files.length > 0) {
+        addFiles(e.dataTransfer.files);
+      }
+    },
+    [addFiles]
+  );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -55,19 +58,24 @@ export function UploadFileDialog({ open, onClose, onUpload }: Props) {
     setDragOver(false);
   }, []);
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      addFiles(e.target.files);
-    }
-    e.target.value = '';
-  }, [addFiles]);
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files.length > 0) {
+        addFiles(e.target.files);
+      }
+      e.target.value = '';
+    },
+    [addFiles]
+  );
 
   const handleUpload = async () => {
     if (entries.length === 0) return;
     setUploading(true);
     try {
       await onUpload(entries.map(e => e.file));
-      entries.forEach(e => { if (e.preview) URL.revokeObjectURL(e.preview); });
+      entries.forEach(e => {
+        if (e.preview) URL.revokeObjectURL(e.preview);
+      });
       setEntries([]);
       onClose();
     } finally {
@@ -77,7 +85,9 @@ export function UploadFileDialog({ open, onClose, onUpload }: Props) {
 
   const handleClose = useCallback(() => {
     if (uploading) return;
-    entries.forEach(e => { if (e.preview) URL.revokeObjectURL(e.preview); });
+    entries.forEach(e => {
+      if (e.preview) URL.revokeObjectURL(e.preview);
+    });
     setEntries([]);
     onClose();
   }, [uploading, entries, onClose]);
@@ -101,10 +111,7 @@ export function UploadFileDialog({ open, onClose, onUpload }: Props) {
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
           <h2 className="text-[15px] font-medium text-foreground">Upload Files</h2>
-          <button
-            onClick={handleClose}
-            className="p-1 text-text-tertiary hover:text-foreground"
-          >
+          <button onClick={handleClose} className="p-1 text-text-tertiary hover:text-foreground">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -126,9 +133,7 @@ export function UploadFileDialog({ open, onClose, onUpload }: Props) {
               <span className="text-[13px] text-text-tertiary">
                 Drop files here or click to browse
               </span>
-              <span className="text-[11px] text-text-tertiary">
-                Any file type supported
-              </span>
+              <span className="text-[11px] text-text-tertiary">Any file type supported</span>
               <input
                 ref={inputRef}
                 type="file"
@@ -156,12 +161,8 @@ export function UploadFileDialog({ open, onClose, onUpload }: Props) {
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] text-foreground truncate">
-                      {entry.file.name}
-                    </p>
-                    <p className="text-[11px] text-text-tertiary">
-                      {formatSize(entry.file.size)}
-                    </p>
+                    <p className="text-[13px] text-foreground truncate">{entry.file.name}</p>
+                    <p className="text-[11px] text-text-tertiary">{formatSize(entry.file.size)}</p>
                   </div>
                   <button
                     disabled={uploading}

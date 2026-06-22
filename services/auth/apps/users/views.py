@@ -352,7 +352,7 @@ class ResolveUsersByIdView(APIView):
                 "id": str(user.id),
                 "name": user.name,
                 "email": user.email,
-                "avatar_url": None,
+                "avatar_url": user.avatar_url,
             }
             for user in users
         }

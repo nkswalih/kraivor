@@ -76,6 +76,7 @@ export interface ChatRoom {
   last_message_content: string;
   last_message_sender_name: string;
   participant_user_ids: string[];
+  unread_count?: number;
   created_by: string;
   created_at: string;
   updated_at: string;

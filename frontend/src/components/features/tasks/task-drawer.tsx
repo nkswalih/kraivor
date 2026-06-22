@@ -20,18 +20,20 @@ import {
 import { PriorityIcon } from './priority-icon';
 import { StatusIcon } from './status-icon';
 import { cn } from '@/lib/utils';
-import type {
-  TaskStatus,
-  TaskPriority,
-  TaskLinkType,
-} from '@/types/domain/projects';
+import type { TaskStatus, TaskPriority, TaskLinkType } from '@/types/domain/projects';
 
 interface TaskDrawerProps {
   workspaceId: string;
 }
 
 const STATUS_ORDER: TaskStatus[] = [
-  'backlog', 'todo', 'in_progress', 'in_review', 'blocked', 'done', 'cancelled',
+  'backlog',
+  'todo',
+  'in_progress',
+  'in_review',
+  'blocked',
+  'done',
+  'cancelled',
 ];
 
 const LINK_TYPES: { value: TaskLinkType; label: string }[] = [
@@ -103,10 +105,7 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
   return (
     <>
       {drawerOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
-          onClick={closeTaskDrawer}
-        />
+        <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={closeTaskDrawer} />
       )}
 
       <div
@@ -120,7 +119,7 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
           'fixed right-0 top-0 bottom-0 z-40',
           'w-full max-w-[480px]',
           'bg-[var(--krait-surface-1)] border-l border-[var(--krait-border)]',
-          'flex flex-col overflow-hidden',
+          'flex flex-col overflow-hidden'
         )}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--krait-border)] shrink-0">
@@ -170,13 +169,15 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
                     <select
                       autoFocus
                       value={task.status}
-                      onChange={(e) => updateField('status', e.target.value)}
+                      onChange={e => updateField('status', e.target.value)}
                       onBlur={() => setEditingField(null)}
-                      onKeyDown={(e) => e.key === 'Escape' && setEditingField(null)}
+                      onKeyDown={e => e.key === 'Escape' && setEditingField(null)}
                       className="w-full bg-[var(--krait-surface-3)] border border-[var(--krait-border-hi)] text-[13px] text-[var(--text-primary)] rounded-[4px] px-2 py-1 outline-none"
                     >
-                      {STATUS_ORDER.map((s) => (
-                        <option key={s} value={s}>{s.replace('_', ' ')}</option>
+                      {STATUS_ORDER.map(s => (
+                        <option key={s} value={s}>
+                          {s.replace('_', ' ')}
+                        </option>
                       ))}
                     </select>
                   ) : (
@@ -195,13 +196,15 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
                     <select
                       autoFocus
                       value={task.priority}
-                      onChange={(e) => updateField('priority', e.target.value)}
+                      onChange={e => updateField('priority', e.target.value)}
                       onBlur={() => setEditingField(null)}
-                      onKeyDown={(e) => e.key === 'Escape' && setEditingField(null)}
+                      onKeyDown={e => e.key === 'Escape' && setEditingField(null)}
                       className="w-full bg-[var(--krait-surface-3)] border border-[var(--krait-border-hi)] text-[13px] text-[var(--text-primary)] rounded-[4px] px-2 py-1 outline-none"
                     >
-                      {(['critical', 'high', 'medium', 'low'] as const).map((p) => (
-                        <option key={p} value={p}>{p}</option>
+                      {(['critical', 'high', 'medium', 'low'] as const).map(p => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
                       ))}
                     </select>
                   ) : (
@@ -221,9 +224,9 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
                       autoFocus
                       type="date"
                       value={task.due_date ?? ''}
-                      onChange={(e) => updateField('due_date', e.target.value || null)}
+                      onChange={e => updateField('due_date', e.target.value || null)}
                       onBlur={() => setEditingField(null)}
-                      onKeyDown={(e) => e.key === 'Escape' && setEditingField(null)}
+                      onKeyDown={e => e.key === 'Escape' && setEditingField(null)}
                       className="w-full bg-[var(--krait-surface-3)] border border-[var(--krait-border-hi)] text-[13px] text-[var(--text-primary)] rounded-[4px] px-2 py-1 outline-none"
                     />
                   ) : (
@@ -233,7 +236,9 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
                     >
                       {task.due_date
                         ? new Date(task.due_date).toLocaleDateString('en-US', {
-                            month: 'short', day: 'numeric', year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
                           })
                         : '\u2014'}
                     </button>
@@ -247,9 +252,14 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
                       type="number"
                       min={0}
                       value={task.estimate_points ?? ''}
-                      onChange={(e) => updateField('estimate_points', e.target.value ? Number(e.target.value) : null)}
+                      onChange={e =>
+                        updateField(
+                          'estimate_points',
+                          e.target.value ? Number(e.target.value) : null
+                        )
+                      }
                       onBlur={() => setEditingField(null)}
-                      onKeyDown={(e) => {
+                      onKeyDown={e => {
                         if (e.key === 'Escape') setEditingField(null);
                         if (e.key === 'Enter') setEditingField(null);
                       }}
@@ -281,7 +291,7 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
               >
                 {task.dependencies.length > 0 && (
                   <div className="space-y-1 mb-2">
-                    {task.dependencies.map((dep) => (
+                    {task.dependencies.map(dep => (
                       <div
                         key={dep.id}
                         className="flex items-center gap-2 py-1.5 px-2 rounded bg-[var(--krait-surface-2)] text-[12px] group"
@@ -307,21 +317,27 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
                     <select
                       autoFocus
                       value={depTaskId}
-                      onChange={(e) => setDepTaskId(e.target.value)}
+                      onChange={e => setDepTaskId(e.target.value)}
                       className="w-full bg-[var(--krait-surface-1)] border border-[var(--krait-border)] text-[12px] text-[var(--text-primary)] rounded-[4px] px-2 py-1.5 outline-none"
                     >
                       <option value="">Select task...</option>
-                      {(allTasks?.results ?? []).filter(t => t.id !== drawerTaskId).map((t) => (
-                        <option key={t.id} value={t.id}>{t.title}</option>
-                      ))}
+                      {(allTasks?.results ?? [])
+                        .filter(t => t.id !== drawerTaskId)
+                        .map(t => (
+                          <option key={t.id} value={t.id}>
+                            {t.title}
+                          </option>
+                        ))}
                     </select>
                     <select
                       value={depType}
-                      onChange={(e) => setDepType(e.target.value as TaskLinkType)}
+                      onChange={e => setDepType(e.target.value as TaskLinkType)}
                       className="w-full bg-[var(--krait-surface-1)] border border-[var(--krait-border)] text-[12px] text-[var(--text-primary)] rounded-[4px] px-2 py-1.5 outline-none"
                     >
-                      {LINK_TYPES.map((lt) => (
-                        <option key={lt.value} value={lt.value}>{lt.label}</option>
+                      {LINK_TYPES.map(lt => (
+                        <option key={lt.value} value={lt.value}>
+                          {lt.label}
+                        </option>
                       ))}
                     </select>
                     <button
@@ -329,7 +345,12 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
                         if (!depTaskId) return;
                         addDependency.mutate(
                           { target_task_id: depTaskId, relationship_type: depType },
-                          { onSuccess: () => { setDepTaskId(''); setAddDepOpen(false); } },
+                          {
+                            onSuccess: () => {
+                              setDepTaskId('');
+                              setAddDepOpen(false);
+                            },
+                          }
                         );
                       }}
                       disabled={!depTaskId || addDependency.isPending}
@@ -358,7 +379,7 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
               >
                 {task.repository_links.length > 0 && (
                   <div className="space-y-1 mb-2">
-                    {task.repository_links.map((link) => (
+                    {task.repository_links.map(link => (
                       <div
                         key={link.id}
                         className="flex items-center gap-2 py-1.5 px-2 rounded bg-[var(--krait-surface-2)] text-[12px] group"
@@ -382,19 +403,24 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
                     <select
                       autoFocus
                       value={selectedRepoId}
-                      onChange={(e) => setSelectedRepoId(e.target.value)}
+                      onChange={e => setSelectedRepoId(e.target.value)}
                       className="w-full bg-[var(--krait-surface-1)] border border-[var(--krait-border)] text-[12px] text-[var(--text-primary)] rounded-[4px] px-2 py-1.5 outline-none"
                     >
                       <option value="">Select repository...</option>
-                      {(repos ?? []).map((r) => (
-                        <option key={r.id} value={r.id}>{r.github_repo}</option>
+                      {(repos ?? []).map(r => (
+                        <option key={r.id} value={r.id}>
+                          {r.github_repo}
+                        </option>
                       ))}
                     </select>
                     <button
                       onClick={() => {
                         if (!selectedRepoId) return;
                         linkRepository.mutate(selectedRepoId, {
-                          onSuccess: () => { setSelectedRepoId(''); setAddRepoOpen(false); },
+                          onSuccess: () => {
+                            setSelectedRepoId('');
+                            setAddRepoOpen(false);
+                          },
                         });
                       }}
                       disabled={!selectedRepoId || linkRepository.isPending}
@@ -423,7 +449,7 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
               >
                 {task.knowledge_links.length > 0 && (
                   <div className="space-y-1 mb-2">
-                    {task.knowledge_links.map((link) => (
+                    {task.knowledge_links.map(link => (
                       <div
                         key={link.id}
                         className="flex items-center gap-2 py-1.5 px-2 rounded bg-[var(--krait-surface-2)] text-[12px] group"
@@ -447,19 +473,24 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
                     <select
                       autoFocus
                       value={selectedKnowId}
-                      onChange={(e) => setSelectedKnowId(e.target.value)}
+                      onChange={e => setSelectedKnowId(e.target.value)}
                       className="w-full bg-[var(--krait-surface-1)] border border-[var(--krait-border)] text-[12px] text-[var(--text-primary)] rounded-[4px] px-2 py-1.5 outline-none"
                     >
                       <option value="">Select knowledge space...</option>
-                      {(knowledgeSpaces ?? []).map((k) => (
-                        <option key={k.id} value={k.id}>{k.name}</option>
+                      {(knowledgeSpaces ?? []).map(k => (
+                        <option key={k.id} value={k.id}>
+                          {k.name}
+                        </option>
                       ))}
                     </select>
                     <button
                       onClick={() => {
                         if (!selectedKnowId) return;
                         linkKnowledge.mutate(selectedKnowId, {
-                          onSuccess: () => { setSelectedKnowId(''); setAddKnowOpen(false); },
+                          onSuccess: () => {
+                            setSelectedKnowId('');
+                            setAddKnowOpen(false);
+                          },
                         });
                       }}
                       disabled={!selectedKnowId || linkKnowledge.isPending}
@@ -484,7 +515,9 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
               <div className="pt-4 border-t border-[var(--krait-border)]">
                 {confirmDeleteTask ? (
                   <div className="flex items-center justify-between p-2 rounded bg-[var(--color-error)]/10 border border-[var(--color-error)]/20">
-                    <span className="text-[12px] text-[var(--text-secondary)]">Delete this task?</span>
+                    <span className="text-[12px] text-[var(--text-secondary)]">
+                      Delete this task?
+                    </span>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setConfirmDeleteTask(false)}
@@ -495,7 +528,10 @@ export function TaskDrawer({ workspaceId }: TaskDrawerProps) {
                       <button
                         onClick={() => {
                           deleteTask.mutate(task.id, {
-                            onSuccess: () => { setConfirmDeleteTask(false); closeTaskDrawer(); },
+                            onSuccess: () => {
+                              setConfirmDeleteTask(false);
+                              closeTaskDrawer();
+                            },
                           });
                         }}
                         disabled={deleteTask.isPending}

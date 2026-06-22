@@ -26,36 +26,40 @@ export function LayersPanel({ spaceId }: Props) {
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleDrop = useCallback((e: React.DragEvent, idx: number) => {
-    e.preventDefault();
-    const elementId = e.dataTransfer.getData('text/plain');
-    if (!elementId) return;
+  const handleDrop = useCallback(
+    (e: React.DragEvent, idx: number) => {
+      e.preventDefault();
+      const elementId = e.dataTransfer.getData('text/plain');
+      if (!elementId) return;
 
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const insertBefore = e.clientY < rect.top + rect.height / 2;
-    const dropDisplayIdx = insertBefore ? idx : idx + 1;
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const insertBefore = e.clientY < rect.top + rect.height / 2;
+      const dropDisplayIdx = insertBefore ? idx : idx + 1;
 
-    const store = useKnowledgeStore.getState();
-    const s = store.spaces[spaceId];
-    if (!s) return;
+      const store = useKnowledgeStore.getState();
+      const s = store.spaces[spaceId];
+      if (!s) return;
 
-    const displayList = [...s.elements].sort((a, b) => b.zIndex - a.zIndex);
-    const draggedDisplayIdx = displayList.findIndex(el => el.id === elementId);
-    if (draggedDisplayIdx === -1) return;
+      const displayList = [...s.elements].sort((a, b) => b.zIndex - a.zIndex);
+      const draggedDisplayIdx = displayList.findIndex(el => el.id === elementId);
+      if (draggedDisplayIdx === -1) return;
 
-    store.pushUndoState(spaceId);
+      store.pushUndoState(spaceId);
 
-    const [moved] = displayList.splice(draggedDisplayIdx, 1);
-    const adjustedDropIdx = draggedDisplayIdx < dropDisplayIdx ? dropDisplayIdx - 1 : dropDisplayIdx;
-    displayList.splice(adjustedDropIdx, 0, moved);
+      const [moved] = displayList.splice(draggedDisplayIdx, 1);
+      const adjustedDropIdx =
+        draggedDisplayIdx < dropDisplayIdx ? dropDisplayIdx - 1 : dropDisplayIdx;
+      displayList.splice(adjustedDropIdx, 0, moved);
 
-    displayList.forEach((el, di) => {
-      store.updateElement(spaceId, el.id, { zIndex: displayList.length - di });
-    });
+      displayList.forEach((el, di) => {
+        store.updateElement(spaceId, el.id, { zIndex: displayList.length - di });
+      });
 
-    setDragOverIdx(null);
-    setDraggedId(null);
-  }, [spaceId]);
+      setDragOverIdx(null);
+      setDraggedId(null);
+    },
+    [spaceId]
+  );
 
   const startEditing = (id: string, currentName: string) => {
     setEditingId(id);
@@ -102,24 +106,24 @@ export function LayersPanel({ spaceId }: Props) {
                 )}
                 <div
                   draggable
-                  onDragStart={(e) => {
+                  onDragStart={e => {
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/plain', el.id);
                     setDraggedId(el.id);
                   }}
-                  onDragOver={(e) => {
+                  onDragOver={e => {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'move';
                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                     const insertBefore = e.clientY < rect.top + rect.height / 2;
                     setDragOverIdx(insertBefore ? idx : idx + 1);
                   }}
-                  onDragLeave={(e) => {
+                  onDragLeave={e => {
                     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
                       setDragOverIdx(null);
                     }
                   }}
-                  onDrop={(e) => handleDrop(e, idx)}
+                  onDrop={e => handleDrop(e, idx)}
                   onDragEnd={() => {
                     setDragOverIdx(null);
                     setDraggedId(null);
@@ -164,14 +168,20 @@ export function LayersPanel({ spaceId }: Props) {
                   )}
                   <div className="flex items-center gap-0.5 shrink-0">
                     <button
-                      onClick={e => { e.stopPropagation(); bringForward(spaceId, el.id); }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        bringForward(spaceId, el.id);
+                      }}
                       className="p-0.5 text-text-tertiary hover:text-foreground"
                       title="Bring forward"
                     >
                       <ArrowUp className="w-3 h-3" />
                     </button>
                     <button
-                      onClick={e => { e.stopPropagation(); sendBackward(spaceId, el.id); }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        sendBackward(spaceId, el.id);
+                      }}
                       className="p-0.5 text-text-tertiary hover:text-foreground"
                       title="Send backward"
                     >
@@ -179,13 +189,19 @@ export function LayersPanel({ spaceId }: Props) {
                     </button>
                   </div>
                   <button
-                    onClick={e => { e.stopPropagation(); toggleElementVisibility(spaceId, el.id); }}
+                    onClick={e => {
+                      e.stopPropagation();
+                      toggleElementVisibility(spaceId, el.id);
+                    }}
                     className="p-0.5 text-text-tertiary hover:text-foreground"
                   >
                     {el.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                   </button>
                   <button
-                    onClick={e => { e.stopPropagation(); lockElement(spaceId, el.id, !el.locked); }}
+                    onClick={e => {
+                      e.stopPropagation();
+                      lockElement(spaceId, el.id, !el.locked);
+                    }}
                     className={`p-0.5 ${el.locked ? 'text-venom-yellow' : 'text-text-tertiary hover:text-foreground'}`}
                   >
                     {el.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}

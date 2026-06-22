@@ -22,6 +22,7 @@ class ChatRoom(models.Model):
     last_message_at = models.DateTimeField(null=True, blank=True)
     last_message_content = models.TextField(blank=True, default="")
     last_message_sender_name = models.CharField(max_length=255, blank=True, default="")
+    message_count = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -48,6 +49,7 @@ class ChatRoomParticipant(models.Model):
     user_id = models.UUIDField()
     joined_at = models.DateTimeField(auto_now_add=True)
     left_at = models.DateTimeField(null=True, blank=True)
+    last_read_message_count = models.IntegerField(default=0)
 
     class Meta:
         app_label = "chat"

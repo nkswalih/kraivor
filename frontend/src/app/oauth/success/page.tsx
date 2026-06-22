@@ -45,7 +45,7 @@ export default function OAuthSuccessPage() {
             noState,
             error: isGitHubAppError ? searchParams.get('detail') : null,
           },
-          window.location.origin,
+          window.location.origin
         );
         window.close();
         return;
@@ -90,8 +90,8 @@ export default function OAuthSuccessPage() {
           const ws = page.results?.[0];
           if (ws) {
             slug = ws.slug;
-        useAuthStore.setState({ workspaces: page.results });
-        useAuthStore.getState().setWorkspace(ws.id, ws.slug);
+            useAuthStore.setState({ workspaces: page.results });
+            useAuthStore.getState().setWorkspace(ws.id, ws.slug);
           }
         } catch (wsErr) {
           console.error('Failed to fetch workspaces after OAuth:', wsErr);
@@ -102,7 +102,9 @@ export default function OAuthSuccessPage() {
         setTimeout(() => {
           setLoading(false);
           if (isRepoConnect) {
-            router.replace(workspaceSlug ? `/${workspaceSlug}/repositories` : (slug ? `/${slug}` : '/'));
+            router.replace(
+              workspaceSlug ? `/${workspaceSlug}/repositories` : slug ? `/${slug}` : '/'
+            );
           } else {
             router.replace(slug ? `/${slug}` : '/new-workspace');
           }
@@ -126,7 +128,9 @@ export default function OAuthSuccessPage() {
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full opacity-10"
-        style={{ background: 'radial-gradient(circle, hsl(var(--primary-light)) 0%, transparent 70%)' }}
+        style={{
+          background: 'radial-gradient(circle, hsl(var(--primary-light)) 0%, transparent 70%)',
+        }}
       />
       <div
         aria-hidden="true"
@@ -158,7 +162,13 @@ export default function OAuthSuccessPage() {
             {stage === 'redirecting' && (
               <div className="flex flex-col items-center gap-4 py-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10">
-                  <svg className="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <svg
+                    className="h-5 w-5 text-emerald-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                   </svg>
                 </div>
@@ -170,7 +180,13 @@ export default function OAuthSuccessPage() {
             {stage === 'error' && (
               <div className="flex flex-col items-center gap-4 py-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10">
-                  <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg
+                    className="h-5 w-5 text-red-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </div>

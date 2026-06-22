@@ -2,11 +2,25 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { useComments, useCreateComment, useReplies, useVoteComment, useRemoveCommentVote } from '@/lib/hooks/use-community';
+import {
+  useComments,
+  useCreateComment,
+  useReplies,
+  useVoteComment,
+  useRemoveCommentVote,
+} from '@/lib/hooks/use-community';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useMyProfile } from '@/lib/hooks/use-profiles';
 import { Avatar } from '@/components/profiles/avatar';
-import { MessageSquare, ChevronDown, ChevronRight, ThumbsUp, ThumbsDown, Reply, X } from 'lucide-react';
+import {
+  MessageSquare,
+  ChevronDown,
+  ChevronRight,
+  ThumbsUp,
+  ThumbsDown,
+  Reply,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
 
 function timeAgo(date: string): string {
@@ -21,7 +35,13 @@ function timeAgo(date: string): string {
   return new Date(date).toLocaleDateString();
 }
 
-function CommentVote({ discussionId, comment }: { discussionId: string; comment: { id: string; upvote_count: number; downvote_count: number; user_vote: number | null } }) {
+function CommentVote({
+  discussionId,
+  comment,
+}: {
+  discussionId: string;
+  comment: { id: string; upvote_count: number; downvote_count: number; user_vote: number | null };
+}) {
   const voteMutation = useVoteComment(discussionId, comment.id);
   const removeMutation = useRemoveCommentVote(discussionId, comment.id);
   const isPending = voteMutation.isPending || removeMutation.isPending;
@@ -49,9 +69,15 @@ function CommentVote({ discussionId, comment }: { discussionId: string; comment:
       >
         <ThumbsUp className="w-3.5 h-3.5" />
       </button>
-      <span className={`text-[11px] font-medium min-w-[16px] text-center ${
-        comment.user_vote === 1 ? 'text-primary' : comment.user_vote === -1 ? 'text-destructive' : 'text-muted-foreground'
-      }`}>
+      <span
+        className={`text-[11px] font-medium min-w-[16px] text-center ${
+          comment.user_vote === 1
+            ? 'text-primary'
+            : comment.user_vote === -1
+              ? 'text-destructive'
+              : 'text-muted-foreground'
+        }`}
+      >
         {netScore}
       </span>
       <button
@@ -69,10 +95,20 @@ function CommentVote({ discussionId, comment }: { discussionId: string; comment:
   );
 }
 
-function ReplyForm({ discussionId, parentId, authorUsername, onDone }: { discussionId: string; parentId: string; authorUsername?: string; onDone: () => void }) {
+function ReplyForm({
+  discussionId,
+  parentId,
+  authorUsername,
+  onDone,
+}: {
+  discussionId: string;
+  parentId: string;
+  authorUsername?: string;
+  onDone: () => void;
+}) {
   const createMutation = useCreateComment(discussionId);
   const [body, setBody] = useState(authorUsername ? `@${authorUsername} ` : '');
-  const user = useAuthStore((s) => s.user);
+  const user = useAuthStore(s => s.user);
   const { data: myProfile } = useMyProfile();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -100,7 +136,7 @@ function ReplyForm({ discussionId, parentId, authorUsername, onDone }: { discuss
         ref={textareaRef}
         placeholder="Write a reply..."
         value={body}
-        onChange={(e) => setBody(e.target.value)}
+        onChange={e => setBody(e.target.value)}
         rows={2}
         className="flex-1 bg-background border border-border rounded-md px-2.5 py-1.5 text-[12px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary resize-none"
       />
@@ -126,7 +162,15 @@ function ReplyForm({ discussionId, parentId, authorUsername, onDone }: { discuss
 
 const MAX_REPLY_DEPTH = 3;
 
-function ReplyList({ discussionId, commentId, depth = 0 }: { discussionId: string; commentId: string; depth?: number }) {
+function ReplyList({
+  discussionId,
+  commentId,
+  depth = 0,
+}: {
+  discussionId: string;
+  commentId: string;
+  depth?: number;
+}) {
   const { data: replies } = useReplies(discussionId, commentId);
   const [showReplies, setShowReplies] = useState(false);
 
@@ -146,7 +190,7 @@ function ReplyList({ discussionId, commentId, depth = 0 }: { discussionId: strin
 
       {showReplies && replies && (
         <div className="space-y-2">
-          {replies.map((reply) => (
+          {replies.map(reply => (
             <CommentItem
               key={reply.id}
               discussionId={discussionId}
@@ -160,9 +204,17 @@ function ReplyList({ discussionId, commentId, depth = 0 }: { discussionId: strin
   );
 }
 
-function CommentItem({ discussionId, comment, depth = 0 }: { discussionId: string; comment: any; depth?: number }) {
+function CommentItem({
+  discussionId,
+  comment,
+  depth = 0,
+}: {
+  discussionId: string;
+  comment: any;
+  depth?: number;
+}) {
   const [showReplyForm, setShowReplyForm] = useState(false);
-  const isAuthenticated = useAuthStore((s) => !!s.accessToken);
+  const isAuthenticated = useAuthStore(s => !!s.accessToken);
   const params = useParams();
   const workspace = params?.workspace as string;
 
@@ -170,15 +222,16 @@ function CommentItem({ discussionId, comment, depth = 0 }: { discussionId: strin
     <div className={`${depth > 0 ? 'border-l-2 border-border pl-3' : ''} py-2`}>
       <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-1">
         <Avatar src={comment.author_avatar_url} name={comment.author_display_name} size="sm" />
-        <Link href={`/${workspace}/profile/${comment.author_username}`} className="font-medium text-foreground hover:underline">
+        <Link
+          href={`/${workspace}/profile/${comment.author_username}`}
+          className="font-medium text-foreground hover:underline"
+        >
           {comment.author_display_name}
         </Link>
         <span>·</span>
         <span>{timeAgo(comment.created_at)}</span>
       </div>
-      <div className="text-[13px] text-foreground whitespace-pre-wrap mb-1.5">
-        {comment.body}
-      </div>
+      <div className="text-[13px] text-foreground whitespace-pre-wrap mb-1.5">{comment.body}</div>
       <div className="flex items-center gap-3">
         <CommentVote discussionId={discussionId} comment={comment} />
         {isAuthenticated && (
@@ -215,8 +268,8 @@ export function CommentsSection({ discussionId }: CommentsSectionProps) {
   const { data, isLoading } = useComments(discussionId, { sort });
   const createMutation = useCreateComment(discussionId);
   const [body, setBody] = useState('');
-  const user = useAuthStore((s) => s.user);
-  const isAuthenticated = useAuthStore((s) => !!s.accessToken);
+  const user = useAuthStore(s => s.user);
+  const isAuthenticated = useAuthStore(s => !!s.accessToken);
   const { data: myProfile } = useMyProfile();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -225,7 +278,8 @@ export function CommentsSection({ discussionId }: CommentsSectionProps) {
     await createMutation.mutateAsync({
       body: body.trim(),
       author_username: myProfile?.username ?? user?.email?.split('@')[0] ?? 'anonymous',
-      author_display_name: myProfile?.display_name ?? user?.name ?? user?.email?.split('@')[0] ?? 'Anonymous',
+      author_display_name:
+        myProfile?.display_name ?? user?.name ?? user?.email?.split('@')[0] ?? 'Anonymous',
       author_avatar_url: myProfile?.avatar_url ?? user?.avatar_url ?? '',
     });
     setBody('');
@@ -242,7 +296,9 @@ export function CommentsSection({ discussionId }: CommentsSectionProps) {
           <button
             onClick={() => setSort('newest')}
             className={`text-[11px] font-medium px-2.5 py-1 rounded-md transition-colors ${
-              sort === 'newest' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              sort === 'newest'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             Newest
@@ -250,7 +306,9 @@ export function CommentsSection({ discussionId }: CommentsSectionProps) {
           <button
             onClick={() => setSort('top')}
             className={`text-[11px] font-medium px-2.5 py-1 rounded-md transition-colors ${
-              sort === 'top' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              sort === 'top'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             Top
@@ -263,7 +321,7 @@ export function CommentsSection({ discussionId }: CommentsSectionProps) {
           <textarea
             placeholder="Add a comment..."
             value={body}
-            onChange={(e) => setBody(e.target.value)}
+            onChange={e => setBody(e.target.value)}
             rows={3}
             className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary resize-none"
             required
@@ -280,13 +338,16 @@ export function CommentsSection({ discussionId }: CommentsSectionProps) {
         </form>
       ) : (
         <div className="text-[13px] text-muted-foreground mb-6">
-          <Link href="/auth/signin" className="text-primary hover:underline">Sign in</Link> to leave a comment.
+          <Link href="/auth/signin" className="text-primary hover:underline">
+            Sign in
+          </Link>{' '}
+          to leave a comment.
         </div>
       )}
 
       {isLoading ? (
         <div className="space-y-4">
-          {[1, 2].map((i) => (
+          {[1, 2].map(i => (
             <div key={i} className="animate-pulse">
               <div className="h-3 bg-muted rounded w-1/4 mb-2" />
               <div className="h-8 bg-muted rounded" />
@@ -295,12 +356,8 @@ export function CommentsSection({ discussionId }: CommentsSectionProps) {
         </div>
       ) : (
         <div className="space-y-2">
-          {data?.results.map((comment) => (
-            <CommentItem
-              key={comment.id}
-              discussionId={discussionId}
-              comment={comment}
-            />
+          {data?.results.map(comment => (
+            <CommentItem key={comment.id} discussionId={discussionId} comment={comment} />
           ))}
           {data?.results.length === 0 && (
             <p className="text-[13px] text-muted-foreground text-center py-8">

@@ -65,10 +65,10 @@ export default function SettingsPage() {
                   key={opt.value}
                   onClick={() => setTheme(opt.value)}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-[6px] border transition-colors text-sm font-medium",
+                    'flex items-center gap-2 px-3 py-2 rounded-[6px] border transition-colors text-sm font-medium',
                     isActive
-                      ? "border-primary-light bg-primary-dark/10 text-[#FAFAFA]"
-                      : "border-[#27272A] text-[#A1A1AA] hover:border-[#A1A1AA]/50"
+                      ? 'border-primary-light bg-primary-dark/10 text-[#FAFAFA]'
+                      : 'border-[#27272A] text-[#A1A1AA] hover:border-[#A1A1AA]/50'
                   )}
                 >
                   <Icon className="w-4 h-4" />

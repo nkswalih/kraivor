@@ -47,11 +47,7 @@ export function DiscussionDetail({ discussionId }: DiscussionDetailProps) {
   }
 
   if (error || !discussion) {
-    return (
-      <div className="p-6 text-center text-muted-foreground">
-        Discussion not found.
-      </div>
-    );
+    return <div className="p-6 text-center text-muted-foreground">Discussion not found.</div>;
   }
 
   return (
@@ -73,7 +69,11 @@ export function DiscussionDetail({ discussionId }: DiscussionDetailProps) {
 
           <div className="flex-1">
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-2">
-              <Avatar src={discussion.author_avatar_url} name={discussion.author_display_name} size="sm" />
+              <Avatar
+                src={discussion.author_avatar_url}
+                name={discussion.author_display_name}
+                size="sm"
+              />
               <Link
                 href={`/${discussion.author_username}`}
                 className="font-medium text-foreground hover:underline"
@@ -86,13 +86,11 @@ export function DiscussionDetail({ discussionId }: DiscussionDetailProps) {
               <span>{discussion.comment_count} comments</span>
             </div>
 
-            <h1 className="text-xl font-medium text-foreground mb-4">
-              {discussion.title}
-            </h1>
+            <h1 className="text-xl font-medium text-foreground mb-4">{discussion.title}</h1>
 
             {discussion.tags.length > 0 && (
               <div className="flex items-center gap-2 mb-4 flex-wrap">
-                {discussion.tags.map((tag) => (
+                {discussion.tags.map(tag => (
                   <TagChip key={tag.id} name={tag.name} slug={tag.slug} size="md" />
                 ))}
               </div>

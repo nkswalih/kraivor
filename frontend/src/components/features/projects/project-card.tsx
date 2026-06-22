@@ -6,10 +6,25 @@ import type { Project } from '@/types/domain/projects';
 import { cn } from '@/lib/utils';
 
 const STATUS_BADGE: Record<string, { text: string; className: string }> = {
-  planning:  { text: 'Planning',  className: 'text-[var(--text-secondary)] bg-[var(--krait-surface-3)] border-[var(--krait-border)]' },
-  active:    { text: 'Active',    className: 'text-[var(--venom-yellow)] bg-[var(--venom-glow)] border-[var(--venom-gold)]/30' },
-  completed: { text: 'Completed', className: 'text-[var(--color-success)] bg-[var(--color-success)]/10 border-[var(--color-success)]/20' },
-  archived:  { text: 'Archived',  className: 'text-[var(--text-tertiary)] bg-[var(--krait-surface-2)] border-[var(--krait-border)]' },
+  planning: {
+    text: 'Planning',
+    className:
+      'text-[var(--text-secondary)] bg-[var(--krait-surface-3)] border-[var(--krait-border)]',
+  },
+  active: {
+    text: 'Active',
+    className: 'text-[var(--venom-yellow)] bg-[var(--venom-glow)] border-[var(--venom-gold)]/30',
+  },
+  completed: {
+    text: 'Completed',
+    className:
+      'text-[var(--color-success)] bg-[var(--color-success)]/10 border-[var(--color-success)]/20',
+  },
+  archived: {
+    text: 'Archived',
+    className:
+      'text-[var(--text-tertiary)] bg-[var(--krait-surface-2)] border-[var(--krait-border)]',
+  },
 };
 
 interface ProjectCardProps {
@@ -20,9 +35,7 @@ interface ProjectCardProps {
 export function ProjectCard({ project, workspaceSlug }: ProjectCardProps) {
   const badge = STATUS_BADGE[project.status];
   const progress =
-    project.task_count > 0
-      ? Math.round((project.done_task_count / project.task_count) * 100)
-      : 0;
+    project.task_count > 0 ? Math.round((project.done_task_count / project.task_count) * 100) : 0;
 
   return (
     <Link
@@ -33,19 +46,14 @@ export function ProjectCard({ project, workspaceSlug }: ProjectCardProps) {
         'p-5',
         'hover:border-[var(--krait-border-hi)]',
         'hover:shadow-[var(--shadow-venom)]',
-        'transition-all duration-150',
+        'transition-all duration-150'
       )}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="w-9 h-9 rounded-[6px] bg-[var(--krait-surface-2)] border border-[var(--krait-border)] flex items-center justify-center text-[18px] shrink-0">
           {project.icon || '\uD83D\uDCCB'}
         </div>
-        <span
-          className={cn(
-            'text-[11px] font-medium px-2 py-0.5 rounded border',
-            badge.className,
-          )}
-        >
+        <span className={cn('text-[11px] font-medium px-2 py-0.5 rounded border', badge.className)}>
           {badge.text}
         </span>
       </div>

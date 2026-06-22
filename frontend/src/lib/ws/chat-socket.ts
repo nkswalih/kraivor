@@ -39,7 +39,7 @@ export class ChatSocket {
       this.startHeartbeat();
       this.onConnected?.();
     };
-    this.ws.onmessage = (e) => {
+    this.ws.onmessage = e => {
       try {
         const data: WsServerEvent = JSON.parse(e.data);
         this.onEvent?.(data);
@@ -47,7 +47,7 @@ export class ChatSocket {
         // ignore malformed frames
       }
     };
-    this.ws.onclose = (e) => {
+    this.ws.onclose = e => {
       this.stopHeartbeat();
       if (this.closing) return;
       if ([4001, 4002, 4003].includes(e.code)) {

@@ -3,7 +3,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { useMyProfile, useUpdateProfile, useUploadProfileImage, useCheckUsername } from '@/lib/hooks/use-profiles';
+import {
+  useMyProfile,
+  useUpdateProfile,
+  useUploadProfileImage,
+  useCheckUsername,
+} from '@/lib/hooks/use-profiles';
 import { useAuth } from '@/lib/hooks';
 import { Button } from '@/components/ui/shadcn';
 import { Input } from '@/components/ui/shadcn';
@@ -182,7 +187,7 @@ export default function EditProfilePage() {
             className="relative w-24 h-24 rounded-full overflow-hidden cursor-pointer group"
             onClick={() => avatarInputRef.current?.click()}
           >
-            {(avatarPreview || profile.avatar_url) ? (
+            {avatarPreview || profile.avatar_url ? (
               <img
                 src={avatarPreview || profile.avatar_url}
                 alt=""
@@ -208,11 +213,13 @@ export default function EditProfilePage() {
 
         {/* Display Name */}
         <div>
-          <Label htmlFor="displayName" className="text-[13px] text-muted-foreground">Display name</Label>
+          <Label htmlFor="displayName" className="text-[13px] text-muted-foreground">
+            Display name
+          </Label>
           <Input
             id="displayName"
             value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
+            onChange={e => setDisplayName(e.target.value)}
             placeholder="Your display name"
             className="mt-1"
           />
@@ -220,14 +227,22 @@ export default function EditProfilePage() {
 
         {/* Username */}
         <div>
-          <Label htmlFor="editUsername" className="text-[13px] text-muted-foreground">Username</Label>
+          <Label htmlFor="editUsername" className="text-[13px] text-muted-foreground">
+            Username
+          </Label>
           <div className="relative mt-1">
             <Input
               id="editUsername"
               value={editUsername}
-              onChange={(e) => setEditUsername(e.target.value)}
+              onChange={e => setEditUsername(e.target.value)}
               placeholder="your_username"
-              className={usernameChanged && editUsername.length >= 3 ? (usernameAvailable ? 'pr-10 border-green-500' : 'pr-10 border-red-500') : ''}
+              className={
+                usernameChanged && editUsername.length >= 3
+                  ? usernameAvailable
+                    ? 'pr-10 border-green-500'
+                    : 'pr-10 border-red-500'
+                  : ''
+              }
             />
             {usernameChanged && editUsername.length >= 3 && (
               <span className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -246,11 +261,13 @@ export default function EditProfilePage() {
 
         {/* Bio */}
         <div>
-          <Label htmlFor="bio" className="text-[13px] text-muted-foreground">Bio</Label>
+          <Label htmlFor="bio" className="text-[13px] text-muted-foreground">
+            Bio
+          </Label>
           <textarea
             id="bio"
             value={bio}
-            onChange={(e) => setBio(e.target.value)}
+            onChange={e => setBio(e.target.value)}
             placeholder="Tell us about yourself"
             className="mt-1 flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
             maxLength={1000}
@@ -259,11 +276,13 @@ export default function EditProfilePage() {
 
         {/* Website */}
         <div>
-          <Label htmlFor="websiteUrl" className="text-[13px] text-muted-foreground">Website</Label>
+          <Label htmlFor="websiteUrl" className="text-[13px] text-muted-foreground">
+            Website
+          </Label>
           <Input
             id="websiteUrl"
             value={websiteUrl}
-            onChange={(e) => setWebsiteUrl(e.target.value)}
+            onChange={e => setWebsiteUrl(e.target.value)}
             placeholder="https://example.com"
             className="mt-1"
           />
@@ -271,11 +290,13 @@ export default function EditProfilePage() {
 
         {/* Location */}
         <div>
-          <Label htmlFor="location" className="text-[13px] text-muted-foreground">Location</Label>
+          <Label htmlFor="location" className="text-[13px] text-muted-foreground">
+            Location
+          </Label>
           <Input
             id="location"
             value={location}
-            onChange={(e) => setLocation(e.target.value)}
+            onChange={e => setLocation(e.target.value)}
             placeholder="San Francisco, CA"
             className="mt-1"
           />
@@ -283,11 +304,13 @@ export default function EditProfilePage() {
 
         {/* GitHub */}
         <div>
-          <Label htmlFor="githubUsername" className="text-[13px] text-muted-foreground">GitHub username</Label>
+          <Label htmlFor="githubUsername" className="text-[13px] text-muted-foreground">
+            GitHub username
+          </Label>
           <Input
             id="githubUsername"
             value={githubUsername}
-            onChange={(e) => setGithubUsername(e.target.value)}
+            onChange={e => setGithubUsername(e.target.value)}
             placeholder="username"
             className="mt-1"
           />
@@ -295,11 +318,13 @@ export default function EditProfilePage() {
 
         {/* Twitter */}
         <div>
-          <Label htmlFor="twitterUsername" className="text-[13px] text-muted-foreground">Twitter username</Label>
+          <Label htmlFor="twitterUsername" className="text-[13px] text-muted-foreground">
+            Twitter username
+          </Label>
           <Input
             id="twitterUsername"
             value={twitterUsername}
-            onChange={(e) => setTwitterUsername(e.target.value)}
+            onChange={e => setTwitterUsername(e.target.value)}
             placeholder="username"
             className="mt-1"
           />
@@ -307,11 +332,13 @@ export default function EditProfilePage() {
 
         {/* LinkedIn */}
         <div>
-          <Label htmlFor="linkedinUrl" className="text-[13px] text-muted-foreground">LinkedIn URL</Label>
+          <Label htmlFor="linkedinUrl" className="text-[13px] text-muted-foreground">
+            LinkedIn URL
+          </Label>
           <Input
             id="linkedinUrl"
             value={linkedinUrl}
-            onChange={(e) => setLinkedinUrl(e.target.value)}
+            onChange={e => setLinkedinUrl(e.target.value)}
             placeholder="https://linkedin.com/in/username"
             className="mt-1"
           />
@@ -321,7 +348,9 @@ export default function EditProfilePage() {
         <div className="flex items-center justify-between">
           <div>
             <Label className="text-[13px] text-foreground">Public profile</Label>
-            <p className="text-[12px] text-muted-foreground">Make your profile visible to everyone</p>
+            <p className="text-[12px] text-muted-foreground">
+              Make your profile visible to everyone
+            </p>
           </div>
           <button
             type="button"

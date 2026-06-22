@@ -7,18 +7,13 @@ export const notificationEndpoints = {
     return data.results ?? [];
   },
 
-  get: (id: string) =>
-    coreApi.get<Notification>(`/notifications/${id}/`),
+  get: (id: string) => coreApi.get<Notification>(`/notifications/${id}/`),
 
-  markRead: (id: string) =>
-    coreApi.patch<Notification>(`/notifications/${id}/read/`),
+  markRead: (id: string) => coreApi.patch<Notification>(`/notifications/${id}/read/`),
 
-  dismiss: (id: string) =>
-    coreApi.delete<void>(`/notifications/${id}/`),
+  dismiss: (id: string) => coreApi.delete<void>(`/notifications/${id}/`),
 
-  markAllRead: () =>
-    coreApi.post<MarkAllReadResponse>('/notifications/'),
+  markAllRead: () => coreApi.post<MarkAllReadResponse>('/notifications/'),
 
-  unreadCount: () =>
-    coreApi.get<UnreadCountResponse>('/notifications/unread_count/'),
+  unreadCount: () => coreApi.get<UnreadCountResponse>('/notifications/unread_count/'),
 };

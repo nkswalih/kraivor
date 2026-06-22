@@ -42,23 +42,30 @@ export default function WorkspaceSettingsPage() {
             return (
               <button
                 key={ws.id}
-                onClick={() => { setSelectedId(ws.id); setTab('settings'); }}
+                onClick={() => {
+                  setSelectedId(ws.id);
+                  setTab('settings');
+                }}
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                   active
                     ? 'bg-primary text-white shadow-lg shadow-primary/20'
                     : 'bg-[#111113] border border-[#27272A] text-[#A1A1AA] hover:border-[#6366F1]/40 hover:text-[#FAFAFA]'
                 }`}
               >
-                <div className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                  active ? 'bg-white/20 text-white' : 'bg-[#27272A] text-[#FAFAFA]'
-                }`}>
+                <div
+                  className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                    active ? 'bg-white/20 text-white' : 'bg-[#27272A] text-[#FAFAFA]'
+                  }`}
+                >
                   {ws.name.charAt(0).toUpperCase()}
                 </div>
                 {ws.name}
                 {ws.id === workspaceId && (
-                  <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full ${
-                    active ? 'bg-white/20 text-white' : 'bg-[#6366F1]/10 text-[#6366F1]'
-                  }`}>
+                  <span
+                    className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full ${
+                      active ? 'bg-white/20 text-white' : 'bg-[#6366F1]/10 text-[#6366F1]'
+                    }`}
+                  >
                     Current
                   </span>
                 )}
@@ -110,7 +117,7 @@ function WorkspaceDetail({
   const updateMut = useMutation({
     mutationFn: (payload: { name?: string; description?: string }) =>
       workspaceEndpoints.update(workspace.id, payload),
-    onSuccess: (data) => {
+    onSuccess: data => {
       useAuthStore.getState().updateWorkspaceInStore(workspace.id, {
         name: data.name,
         description: data.description ?? undefined,
@@ -139,9 +146,7 @@ function WorkspaceDetail({
         <button
           onClick={() => onTabChange('team')}
           className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-            tab === 'team'
-              ? 'bg-[#27272A] text-[#FAFAFA]'
-              : 'text-[#A1A1AA] hover:text-[#FAFAFA]'
+            tab === 'team' ? 'bg-[#27272A] text-[#FAFAFA]' : 'text-[#A1A1AA] hover:text-[#FAFAFA]'
           }`}
         >
           <Users className="w-4 h-4" />
@@ -175,14 +180,18 @@ function WorkspaceDetail({
           <div className="mb-8">
             <label className="text-sm text-[#A1A1AA] mb-1.5 block">Workspace URL</label>
             <div className="flex items-center">
-              <span className="bg-[#18181B] border border-[#27272A] border-r-0 rounded-l-xl px-4 py-3 text-sm text-[#A1A1AA]">kraivor.com/</span>
+              <span className="bg-[#18181B] border border-[#27272A] border-r-0 rounded-l-xl px-4 py-3 text-sm text-[#A1A1AA]">
+                kraivor.com/
+              </span>
               <input
                 value={workspace.slug}
                 disabled
                 className="flex-1 bg-[#111113] border border-[#27272A] rounded-r-xl px-4 py-3 text-sm text-[#FAFAFA] opacity-60 cursor-not-allowed"
               />
             </div>
-            <p className="text-[11px] text-[#A1A1AA] mt-1.5">URL is set on creation and cannot be changed.</p>
+            <p className="text-[11px] text-[#A1A1AA] mt-1.5">
+              URL is set on creation and cannot be changed.
+            </p>
           </div>
 
           <div className="flex items-center gap-3 mb-12">
@@ -191,7 +200,11 @@ function WorkspaceDetail({
               disabled={updateMut.isPending || !name.trim() || !hasChanges}
               className="bg-primary hover:bg-primary-light text-white font-medium py-2.5 px-6 rounded-xl transition-colors text-sm disabled:opacity-50 flex items-center gap-2"
             >
-              {updateMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              {updateMut.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Check className="w-4 h-4" />
+              )}
               {updateMut.isPending ? 'Saving...' : 'Save Changes'}
             </button>
             {updateMut.isSuccess && (
@@ -202,9 +215,7 @@ function WorkspaceDetail({
           </div>
 
           {/* Danger Zone */}
-          {isCurrent && (
-            <DangerZone workspaceId={workspace.id} workspaceName={workspace.name} />
-          )}
+          {isCurrent && <DangerZone workspaceId={workspace.id} workspaceName={workspace.name} />}
         </div>
       )}
 
@@ -314,47 +325,59 @@ function TeamSection({
               disabled={!inviteEmail || inviteMut.isPending}
               className="bg-primary hover:bg-primary-light text-white font-medium py-2.5 px-5 rounded-xl transition-colors text-sm disabled:opacity-50 flex items-center gap-1.5 shrink-0"
             >
-              {inviteMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+              {inviteMut.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Mail className="w-4 h-4" />
+              )}
               Invite
             </button>
           </div>
         </div>
       </div>
-      {inviteError && (
-        <p className="text-[12px] text-[#EF4444] -mt-4 mb-4">{inviteError}</p>
-      )}
+      {inviteError && <p className="text-[12px] text-[#EF4444] -mt-4 mb-4">{inviteError}</p>}
 
       {/* ── Pending Invitations ──────────────────────────────────── */}
       {invitationsLoading ? (
-        <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-[#A1A1AA]" /></div>
-      ) : pendingInvitations.length > 0 && (
-        <div className="mb-6">
-          <p className="text-[10px] font-semibold tracking-wider text-[#A1A1AA] uppercase mb-2">
-            Pending Invitations ({pendingInvitations.length})
-          </p>
-          <div className="space-y-0.5">
-            {pendingInvitations.map(inv => (
-              <div key={inv.id} className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#18181B]/40 border border-[#27272A]/40 group">
-                <div className="w-8 h-8 rounded-lg bg-[#27272A] flex items-center justify-center text-sm font-bold text-[#FAFAFA] shrink-0">
-                  {inv.email.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] text-[#FAFAFA] truncate">{inv.email}</p>
-                  <p className="text-[11px] text-[#A1A1AA]">
-                    {inv.role} &middot; Expires {new Date(inv.expires_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <button
-                  onClick={() => { if (confirm(`Revoke invitation for ${inv.email}?`)) revokeInviteMut.mutate(inv.id); }}
-                  disabled={revokeInviteMut.isPending}
-                  className="shrink-0 p-1.5 text-[#A1A1AA] hover:text-[#EF4444] opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
+        <div className="flex justify-center py-4">
+          <Loader2 className="w-4 h-4 animate-spin text-[#A1A1AA]" />
         </div>
+      ) : (
+        pendingInvitations.length > 0 && (
+          <div className="mb-6">
+            <p className="text-[10px] font-semibold tracking-wider text-[#A1A1AA] uppercase mb-2">
+              Pending Invitations ({pendingInvitations.length})
+            </p>
+            <div className="space-y-0.5">
+              {pendingInvitations.map(inv => (
+                <div
+                  key={inv.id}
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#18181B]/40 border border-[#27272A]/40 group"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-[#27272A] flex items-center justify-center text-sm font-bold text-[#FAFAFA] shrink-0">
+                    {inv.email.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] text-[#FAFAFA] truncate">{inv.email}</p>
+                    <p className="text-[11px] text-[#A1A1AA]">
+                      {inv.role} &middot; Expires {new Date(inv.expires_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Revoke invitation for ${inv.email}?`))
+                        revokeInviteMut.mutate(inv.id);
+                    }}
+                    disabled={revokeInviteMut.isPending}
+                    className="shrink-0 p-1.5 text-[#A1A1AA] hover:text-[#EF4444] opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
       )}
 
       {/* Members */}
@@ -362,22 +385,34 @@ function TeamSection({
         Members ({membersList.length})
       </p>
       {membersLoading ? (
-        <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[#A1A1AA]" /></div>
+        <div className="flex justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-[#A1A1AA]" />
+        </div>
       ) : membersList.length === 0 ? (
-        <p className="text-sm text-[#A1A1AA] text-center py-8">No members yet. Invite someone above.</p>
+        <p className="text-sm text-[#A1A1AA] text-center py-8">
+          No members yet. Invite someone above.
+        </p>
       ) : (
         <div className="space-y-0.5">
           {membersList.map(m => {
             const isMe = m.user_id === currentUser?.id;
-            const name = m.user?.name
-              || (isMe && currentUser ? currentUser.name : '')
-              || m.user?.email
-              || m.user_id.slice(0, 8);
+            const name =
+              m.user?.name ||
+              (isMe && currentUser ? currentUser.name : '') ||
+              m.user?.email ||
+              m.user_id.slice(0, 8);
             const initial = name.charAt(0).toUpperCase();
             return (
-              <div key={m.id} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#18181B] transition-colors group">
+              <div
+                key={m.id}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#18181B] transition-colors group"
+              >
                 {m.user?.avatar_url ? (
-                  <img src={m.user.avatar_url} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                  <img
+                    src={m.user.avatar_url}
+                    alt=""
+                    className="w-9 h-9 rounded-lg object-cover shrink-0"
+                  />
                 ) : (
                   <div className="w-9 h-9 rounded-lg bg-[#27272A] flex items-center justify-center text-sm font-bold text-[#FAFAFA] shrink-0">
                     {initial}
@@ -386,7 +421,11 @@ function TeamSection({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-[14px] font-medium text-[#FAFAFA] truncate">{name}</p>
-                    {isMe && <span className="text-[9px] text-primary-light bg-[#6366F1]/10 px-1.5 py-0.5 rounded font-medium">You</span>}
+                    {isMe && (
+                      <span className="text-[9px] text-primary-light bg-[#6366F1]/10 px-1.5 py-0.5 rounded font-medium">
+                        You
+                      </span>
+                    )}
                   </div>
                 </div>
                 <select
@@ -402,7 +441,9 @@ function TeamSection({
                 </select>
                 {!isMe && (
                   <button
-                    onClick={() => { if (confirm(`Remove ${name}?`)) removeMemberMut.mutate(m.user_id); }}
+                    onClick={() => {
+                      if (confirm(`Remove ${name}?`)) removeMemberMut.mutate(m.user_id);
+                    }}
                     className="p-1.5 text-[#A1A1AA] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -419,7 +460,13 @@ function TeamSection({
 
 /* ─── Danger Zone ──────────────────────────────────────────────────── */
 
-function DangerZone({ workspaceId, workspaceName }: { workspaceId: string; workspaceName: string }) {
+function DangerZone({
+  workspaceId,
+  workspaceName,
+}: {
+  workspaceId: string;
+  workspaceName: string;
+}) {
   const [confirmDelete, setConfirmDelete] = useState('');
 
   const deleteMut = useMutation({
@@ -447,7 +494,11 @@ function DangerZone({ workspaceId, workspaceName }: { workspaceId: string; works
           disabled={confirmDelete !== workspaceName || deleteMut.isPending}
           className="bg-[#EF4444] hover:bg-[#DC2626] text-white font-medium py-2.5 px-5 rounded-xl transition-colors text-sm disabled:opacity-50 flex items-center gap-2"
         >
-          {deleteMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+          {deleteMut.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Trash2 className="w-4 h-4" />
+          )}
           {deleteMut.isPending ? 'Deleting...' : 'Delete Workspace'}
         </button>
       </div>

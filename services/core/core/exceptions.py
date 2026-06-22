@@ -1,16 +1,11 @@
 import logging
 import traceback
-
 from django.conf import settings
 from django.core.exceptions import (
     ObjectDoesNotExist,
 )
-from django.core.exceptions import (
-    PermissionDenied as DjangoPermissionDenied,
-)
-from django.core.exceptions import (
-    ValidationError as DjangoValidationError,
-)
+from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import JsonResponse
 from rest_framework import status
 from rest_framework.exceptions import APIException

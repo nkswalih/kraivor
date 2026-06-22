@@ -1,16 +1,30 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
-  GitBranch, MessageSquare, Users, Layers, ArrowRight,
-  Clock, Hash, Sparkles, Activity, BookOpen, Circle,
-  AlertCircle, Plus, Loader2,
+  GitBranch,
+  MessageSquare,
+  Users,
+  Layers,
+  ArrowRight,
+  Clock,
+  Hash,
+  Sparkles,
+  Activity,
+  BookOpen,
+  Circle,
+  AlertCircle,
+  Plus,
+  Loader2,
 } from 'lucide-react';
 import { useDashboard, type DashboardData } from '@/lib/hooks/use-dashboard';
 import { Badge, Skeleton } from '@/components/ui/shadcn';
-import { formatRelativeTime } from '@/lib/utils';
+import { formatRelativeTime, avatarUrl } from '@/lib/utils';
+import { profileEndpoints } from '@/lib/api/endpoints';
 
 /* ─── Stat Card ──────────────────────────────────────────────────── */
 
@@ -35,15 +49,13 @@ function StatCard({
                  hover:border-venom-yellow/40 hover:shadow-venom transition-all duration-[var(--duration-fast)] ease-strike"
     >
       {/* Snake band active indicator */}
-      <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-transparent group-hover:bg-venom-yellow
-                      transition-all duration-[var(--duration-normal)] ease-strike" />
+      <div
+        className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-transparent group-hover:bg-venom-yellow
+                      transition-all duration-[var(--duration-normal)] ease-strike"
+      />
       <div className="flex items-center justify-between mb-3">
         <span className="text-[13px] text-text-secondary">{label}</span>
-        {loading ? (
-          <Skeleton className="h-4 w-4" />
-        ) : (
-          <Icon className={`w-4 h-4 ${color}`} />
-        )}
+        {loading ? <Skeleton className="h-4 w-4" /> : <Icon className={`w-4 h-4 ${color}`} />}
       </div>
       {loading ? (
         <Skeleton className="h-7 w-16" />
@@ -56,7 +68,13 @@ function StatCard({
 
 /* ─── Chat Activity Row ─────────────────────────────────────────── */
 
-function RecentChatActivity({ rooms, loading }: { rooms: DashboardData['rooms']; loading: boolean }) {
+function RecentChatActivity({
+  rooms,
+  loading,
+}: {
+  rooms: DashboardData['rooms'];
+  loading: boolean;
+}) {
   const recent = [...rooms]
     .filter(r => r.last_message_at)
     .sort((a, b) => new Date(b.last_message_at!).getTime() - new Date(a.last_message_at!).getTime())
@@ -119,7 +137,13 @@ function RecentChatActivity({ rooms, loading }: { rooms: DashboardData['rooms'];
 
 /* ─── Repository Row ────────────────────────────────────────────── */
 
-function RecentRepositories({ repos, loading }: { repos: DashboardData['repositories']; loading: boolean }) {
+function RecentRepositories({
+  repos,
+  loading,
+}: {
+  repos: DashboardData['repositories'];
+  loading: boolean;
+}) {
   const recent = repos.slice(0, 3);
 
   if (loading) {
@@ -179,12 +203,27 @@ function RecentRepositories({ repos, loading }: { repos: DashboardData['reposito
 
 /* ─── Active Members ────────────────────────────────────────────── */
 
-function ActiveMembers({ members, workspaceName, loading }: {
+function ActiveMembers({
+  members,
+  workspaceName,
+  loading,
+}: {
   members: DashboardData['members'];
   workspaceName: string;
   loading: boolean;
 }) {
   const displayMembers = members.filter(m => m.status === 'active').slice(0, 6);
+
+  const memberIds = useMemo(() => displayMembers.map(m => m.user_id), [displayMembers]);
+
+  const { data: profilesData } = useQuery({
+    queryKey: ['profiles-by-ids', memberIds],
+    queryFn: () => profileEndpoints.getProfilesByIds(memberIds),
+    enabled: memberIds.length > 0,
+    staleTime: 60_000,
+  });
+
+  const profileMap = useMemo(() => profilesData?.profiles ?? {}, [profilesData]);
 
   if (loading) {
     return (
@@ -214,38 +253,65 @@ function ActiveMembers({ members, workspaceName, loading }: {
 
   return (
     <div className="space-y-0.5">
-      {displayMembers.map((member, i) => (
-        <motion.div
-          key={member.user_id}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.04 }}
-          className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-krait-surface2 transition-colors group"
-        >
-          <div className="relative shrink-0">
-            <div className="w-8 h-8 rounded-full bg-krait-surface3 border border-krait-border flex items-center justify-center text-xs font-medium text-text-primary">
-              {member.user?.name ? member.user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
+      {displayMembers.map((member, i) => {
+        const profile = profileMap[member.user_id];
+        const src =
+          avatarUrl(profile?.avatar_url, profile?.user_avatar_url) ||
+          member.user?.avatar_url ||
+          null;
+
+        return (
+          <motion.div
+            key={member.user_id}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.04 }}
+            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-krait-surface2 transition-colors group"
+          >
+            <div className="relative shrink-0">
+              {src ? (
+                <img
+                  src={src}
+                  alt=""
+                  className="w-8 h-8 rounded-full object-cover border border-krait-border"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-krait-surface3 border border-krait-border flex items-center justify-center text-xs font-medium text-text-primary">
+                  {member.user?.name
+                    ? member.user.name
+                        .split(' ')
+                        .map(n => n[0])
+                        .join('')
+                        .toUpperCase()
+                        .slice(0, 2)
+                    : 'U'}
+                </div>
+              )}
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#22c55e] border-2 border-krait-surface1" />
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#22c55e] border-2 border-krait-surface1" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-medium text-text-primary truncate">
-              {member.user?.name ?? member.user_id.slice(0, 8)}
-            </p>
-            <p className="text-[11px] text-text-tertiary">
-              {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
-            </p>
-          </div>
-          <Badge variant={member.role === 'owner' ? 'venom' : 'default'}>{member.role}</Badge>
-        </motion.div>
-      ))}
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-medium text-text-primary truncate">
+                {profile?.username || profile?.display_name || member.user?.name || 'Member'}
+              </p>
+              <p className="text-[11px] text-text-tertiary">
+                {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+              </p>
+            </div>
+            <Badge variant={member.role === 'owner' ? 'venom' : 'default'}>{member.role}</Badge>
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
 
 /* ─── Knowledge Cards ───────────────────────────────────────────── */
 
-function KnowledgeSpaces({ spaces, loading, workspaceSlug }: {
+function KnowledgeSpaces({
+  spaces,
+  loading,
+  workspaceSlug,
+}: {
   spaces: DashboardData['knowledgeSpaces'];
   loading: boolean;
   workspaceSlug: string;
@@ -267,7 +333,9 @@ function KnowledgeSpaces({ spaces, loading, workspaceSlug }: {
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <BookOpen className="w-8 h-8 text-text-tertiary mb-2" />
         <p className="text-sm text-text-secondary font-medium">No knowledge spaces</p>
-        <p className="text-xs text-text-tertiary mt-1">Create your first space to document your architecture</p>
+        <p className="text-xs text-text-tertiary mt-1">
+          Create your first space to document your architecture
+        </p>
       </div>
     );
   }
@@ -297,7 +365,9 @@ function KnowledgeSpaces({ spaces, loading, workspaceSlug }: {
               {space.name}
             </p>
             {space.description && (
-              <p className="text-[12px] text-text-tertiary mt-1 line-clamp-2">{space.description}</p>
+              <p className="text-[12px] text-text-tertiary mt-1 line-clamp-2">
+                {space.description}
+              </p>
             )}
           </Link>
         </motion.div>
@@ -311,9 +381,14 @@ function KnowledgeSpaces({ spaces, loading, workspaceSlug }: {
 function SectionHeader({ title, href }: { title: string; href?: string }) {
   return (
     <div className="flex items-center justify-between mb-3">
-      <h2 className="text-[13px] font-medium text-text-secondary uppercase tracking-wider">{title}</h2>
+      <h2 className="text-[13px] font-medium text-text-secondary uppercase tracking-wider">
+        {title}
+      </h2>
       {href && (
-        <Link href={href} className="text-[12px] text-venom-yellow hover:text-venom-gold flex items-center gap-1 transition-colors">
+        <Link
+          href={href}
+          className="text-[12px] text-venom-yellow hover:text-venom-gold flex items-center gap-1 transition-colors"
+        >
           View all <ArrowRight className="w-3 h-3" />
         </Link>
       )}
@@ -331,7 +406,9 @@ function DashboardSection({
   className?: string;
 }) {
   return (
-    <div className={`bg-krait-surface1 border border-krait-border rounded-lg p-4 ${className ?? ''}`}>
+    <div
+      className={`bg-krait-surface1 border border-krait-border rounded-lg p-4 ${className ?? ''}`}
+    >
       {children}
     </div>
   );
@@ -372,7 +449,9 @@ export default function DashboardPage() {
   if (error) {
     return (
       <div className="p-8 max-w-[1100px] w-full mx-auto">
-        <DashboardError message={error instanceof Error ? error.message : 'An unexpected error occurred'} />
+        <DashboardError
+          message={error instanceof Error ? error.message : 'An unexpected error occurred'}
+        />
       </div>
     );
   }
@@ -380,17 +459,15 @@ export default function DashboardPage() {
   return (
     <div className="p-8 max-w-[1100px] w-full mx-auto">
       {/* Page header */}
-      <motion.div
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <div className="flex items-center gap-3 mb-1">
           <h1 className="text-xl font-semibold text-text-primary tracking-tight">
             {isLoading ? (
               <Skeleton className="h-6 w-48 inline-block" />
             ) : (
-              <>{Greeting()}, {workspace?.name ?? 'Developer'}.</>
+              <>
+                {Greeting()}, {workspace?.name ?? 'Developer'}.
+              </>
             )}
           </h1>
           {isLoading && <Loader2 className="w-4 h-4 text-venom-yellow animate-spin" />}
@@ -406,10 +483,34 @@ export default function DashboardPage() {
 
       {/* Row 1: Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-        <StatCard icon={GitBranch} label="Repositories" value={stats.repoCount} color="text-venom-yellow" loading={isLoading} />
-        <StatCard icon={Users} label="Members" value={stats.memberCount} color="text-color-info" loading={isLoading} />
-        <StatCard icon={MessageSquare} label="Active Rooms" value={stats.roomCount} color="text-color-success" loading={isLoading} />
-        <StatCard icon={BookOpen} label="Knowledge Spaces" value={stats.knowledgeCount} color="text-venom-amber" loading={isLoading} />
+        <StatCard
+          icon={GitBranch}
+          label="Repositories"
+          value={stats.repoCount}
+          color="text-venom-yellow"
+          loading={isLoading}
+        />
+        <StatCard
+          icon={Users}
+          label="Members"
+          value={stats.memberCount}
+          color="text-color-info"
+          loading={isLoading}
+        />
+        <StatCard
+          icon={MessageSquare}
+          label="Active Rooms"
+          value={stats.roomCount}
+          color="text-color-success"
+          loading={isLoading}
+        />
+        <StatCard
+          icon={BookOpen}
+          label="Knowledge Spaces"
+          value={stats.knowledgeCount}
+          color="text-venom-amber"
+          loading={isLoading}
+        />
       </div>
 
       {/* Row 2: 3-column middle section */}
@@ -426,7 +527,11 @@ export default function DashboardPage() {
 
         <DashboardSection>
           <SectionHeader title="Active Members" />
-          <ActiveMembers members={members} workspaceName={workspace?.name ?? ''} loading={isLoading} />
+          <ActiveMembers
+            members={members}
+            workspaceName={workspace?.name ?? ''}
+            loading={isLoading}
+          />
         </DashboardSection>
       </div>
 
@@ -437,7 +542,11 @@ export default function DashboardPage() {
         transition={{ delay: 0.1 }}
       >
         <SectionHeader title="Knowledge Spaces" href={`/${workspaceSlug}/knowledge`} />
-        <KnowledgeSpaces spaces={knowledgeSpaces} loading={isLoading} workspaceSlug={workspaceSlug} />
+        <KnowledgeSpaces
+          spaces={knowledgeSpaces}
+          loading={isLoading}
+          workspaceSlug={workspaceSlug}
+        />
       </motion.div>
 
       {/* Quick Actions */}

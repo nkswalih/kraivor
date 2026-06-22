@@ -75,7 +75,10 @@ export function WorkspaceSwitcher({ workspaceSlug }: { workspaceSlug: string }) 
           </div>
           <div className="border-t border-[#27272A] py-1">
             <button
-              onClick={() => { setOpen(false); setShowCreate(true); }}
+              onClick={() => {
+                setOpen(false);
+                setShowCreate(true);
+              }}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-venom-yellow hover:bg-krait-surface2 transition-colors"
             >
               <Plus className="w-4 h-4" />
@@ -88,7 +91,7 @@ export function WorkspaceSwitcher({ workspaceSlug }: { workspaceSlug: string }) 
       <CreateWorkspaceDialog
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        onCreated={(slug) => router.push(`/${slug}`)}
+        onCreated={slug => router.push(`/${slug}`)}
       />
     </div>
   );

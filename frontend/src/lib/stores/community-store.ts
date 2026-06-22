@@ -12,13 +12,13 @@ interface CommunityState {
   setCreateDialogOpen: (open: boolean) => void;
 }
 
-export const useCommunityStore = create<CommunityState>((set) => ({
+export const useCommunityStore = create<CommunityState>(set => ({
   activeSort: 'trending' as SortOption,
   activeTag: null,
   searchQuery: '',
   createDialogOpen: false,
-  setActiveSort: (sort) => set({ activeSort: sort }),
-  setActiveTag: (tag) => set({ activeTag: tag }),
-  setSearchQuery: (query) => set({ searchQuery: query }),
-  setCreateDialogOpen: (open) => set({ createDialogOpen: open }),
+  setActiveSort: sort => set({ activeSort: sort }),
+  setActiveTag: tag => set({ activeTag: tag }),
+  setSearchQuery: query => set({ searchQuery: query }),
+  setCreateDialogOpen: open => set({ createDialogOpen: open }),
 }));

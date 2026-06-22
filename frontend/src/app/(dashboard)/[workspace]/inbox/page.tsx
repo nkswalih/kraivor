@@ -2,9 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Bell, Mail, Building2, Users, Hash, Check, Loader2, X,
-} from 'lucide-react';
+import { Bell, Mail, Building2, Users, Hash, Check, Loader2, X } from 'lucide-react';
 import { notificationEndpoints, workspaceEndpoints, chatEndpoints } from '@/lib/api/endpoints';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { formatRelativeTime } from '@/lib/utils';
@@ -59,7 +57,12 @@ export default function InboxPage() {
     for (const ws of allInvitationsData) {
       for (const inv of ws.invitations) {
         if (inv.status === 'pending' && inv.email === user.email) {
-          items.push({ id: inv.id, workspaceName: ws.workspaceName, role: inv.role, token: inv.token });
+          items.push({
+            id: inv.id,
+            workspaceName: ws.workspaceName,
+            role: inv.role,
+            token: inv.token,
+          });
         }
       }
     }
@@ -67,8 +70,12 @@ export default function InboxPage() {
   }, [allInvitationsData, user?.email]);
 
   // Category counts
-  const workspaceNotifCount = notifs.filter(n => n.notification_type?.startsWith('workspace.') && !n.read_at).length;
-  const memberNotifCount = notifs.filter(n => n.notification_type?.includes('member') && !n.read_at).length;
+  const workspaceNotifCount = notifs.filter(
+    n => n.notification_type?.startsWith('workspace.') && !n.read_at
+  ).length;
+  const memberNotifCount = notifs.filter(
+    n => n.notification_type?.includes('member') && !n.read_at
+  ).length;
 
   const TABS: { id: InboxTab; label: string; icon: React.ElementType; count?: number }[] = [
     { id: 'all', label: 'All', icon: Bell, count: unreadCount },
@@ -92,7 +99,10 @@ export default function InboxPage() {
             return (
               <button
                 key={tab.id}
-                onClick={() => { setActiveTab(tab.id); setSelectedId(null); }}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setSelectedId(null);
+                }}
                 className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-[6px] text-[13px] font-medium transition-colors text-left ${
                   active
                     ? 'bg-[#27272A] text-[#FAFAFA]'
@@ -123,10 +133,7 @@ export default function InboxPage() {
           />
         )}
         {activeTab === 'invitations' && (
-          <InvitationsPanel
-            pendingInvites={pendingInvites}
-            queryClient={queryClient}
-          />
+          <InvitationsPanel pendingInvites={pendingInvites} queryClient={queryClient} />
         )}
         {activeTab === 'workspaces' && (
           <WorkspacesPanel
@@ -137,16 +144,9 @@ export default function InboxPage() {
           />
         )}
         {activeTab === 'members' && (
-          <MembersPanel
-            notifications={notifs}
-            workspaceId={workspaceId ?? undefined}
-          />
+          <MembersPanel notifications={notifs} workspaceId={workspaceId ?? undefined} />
         )}
-        {activeTab === 'channels' && (
-          <ChannelsPanel
-            workspaceId={workspaceId ?? undefined}
-          />
-        )}
+        {activeTab === 'channels' && <ChannelsPanel workspaceId={workspaceId ?? undefined} />}
       </main>
     </div>
   );
@@ -159,7 +159,7 @@ export default function InboxPage() {
 function acceptInviteInPanel(
   token: string,
   mut: { mutate: (t: string, opts?: { onSuccess?: () => void }) => void; isPending: boolean },
-  onAcceptSuccess?: () => void,
+  onAcceptSuccess?: () => void
 ) {
   return (
     <button
@@ -173,7 +173,11 @@ function acceptInviteInPanel(
   );
 }
 
-function notificationDetail(n: Notification, onDismiss: (id: string) => void, acceptMut?: { mutate: (t: string) => void; isPending: boolean }) {
+function notificationDetail(
+  n: Notification,
+  onDismiss: (id: string) => void,
+  acceptMut?: { mutate: (t: string) => void; isPending: boolean }
+) {
   const isInvite = n.notification_type === 'workspace.invitation';
   const token = isInvite && n.link ? n.link.replace('/invitations/', '') : '';
   return (
@@ -191,11 +195,14 @@ function notificationDetail(n: Notification, onDismiss: (id: string) => void, ac
         <p className="text-[14px] text-[#D1D5DB] leading-relaxed whitespace-pre-wrap">{n.body}</p>
       )}
       <div className="flex items-center gap-2 pt-2">
-        {isInvite && token && acceptMut && (
-          acceptInviteInPanel(token, acceptMut, () => onDismiss(n.id))
-        )}
+        {isInvite &&
+          token &&
+          acceptMut &&
+          acceptInviteInPanel(token, acceptMut, () => onDismiss(n.id))}
         {n.link && !isInvite && (
-          <a href={n.link} className="text-[12px] text-venom-yellow hover:text-venom-gold">View details</a>
+          <a href={n.link} className="text-[12px] text-venom-yellow hover:text-venom-gold">
+            View details
+          </a>
         )}
         <button
           onClick={() => onDismiss(n.id)}
@@ -266,7 +273,10 @@ function AllPanel({
             return (
               <div
                 key={n.id}
-                onClick={() => { onSelect(n.id); if (!n.read_at) markReadMut.mutate(n.id); }}
+                onClick={() => {
+                  onSelect(n.id);
+                  if (!n.read_at) markReadMut.mutate(n.id);
+                }}
                 className={`w-full flex gap-3 p-3 rounded-lg text-left transition-colors cursor-pointer ${
                   selectedId === n.id
                     ? 'bg-[#27272A]'
@@ -285,7 +295,9 @@ function AllPanel({
                       {formatRelativeTime(n.created_at)}
                     </span>
                   </div>
-                  <p className="text-[12px] text-[#A1A1AA] line-clamp-1 mt-0.5 text-left">{n.body || n.title}</p>
+                  <p className="text-[12px] text-[#A1A1AA] line-clamp-1 mt-0.5 text-left">
+                    {n.body || n.title}
+                  </p>
                 </div>
                 {isInvite && token && (
                   <div onClick={e => e.stopPropagation()}>
@@ -303,7 +315,7 @@ function AllPanel({
           (() => {
             const n = notifications.find(x => x.id === selectedId);
             if (!n) return <p className="text-[#A1A1AA] text-[13px]">Select a notification</p>;
-            return notificationDetail(n, (id) => dismissMut.mutate(id), acceptMut);
+            return notificationDetail(n, id => dismissMut.mutate(id), acceptMut);
           })()
         ) : (
           <div className="flex items-center justify-center h-full">
@@ -343,7 +355,10 @@ function InvitationsPanel({
     <div className="flex-1 overflow-y-auto p-4">
       <div className="space-y-2 max-w-[500px]">
         {pendingInvites.map(inv => (
-          <div key={inv.id} className="flex items-center gap-3 p-3 rounded-lg bg-[#111113] border border-[#27272A]">
+          <div
+            key={inv.id}
+            className="flex items-center gap-3 p-3 rounded-lg bg-[#111113] border border-[#27272A]"
+          >
             <div className="w-9 h-9 rounded-lg bg-[#27272A] flex items-center justify-center text-xs font-bold text-[#FAFAFA] shrink-0">
               {inv.workspaceName.charAt(0).toUpperCase()}
             </div>
@@ -356,7 +371,11 @@ function InvitationsPanel({
               disabled={acceptMut.isPending}
               className="shrink-0 px-3 py-1.5 bg-[#6366F1] hover:bg-[#4F46E5] text-white text-xs font-medium rounded-[6px] transition-colors disabled:opacity-50 flex items-center gap-1"
             >
-              {acceptMut.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              {acceptMut.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Check className="w-3.5 h-3.5" />
+              )}
               Accept
             </button>
           </div>
@@ -383,7 +402,7 @@ function WorkspacesPanel({
 }) {
   const filtered = useMemo(
     () => notifications.filter(n => n.notification_type?.startsWith('workspace.')),
-    [notifications],
+    [notifications]
   );
 
   const markReadMut = useMutation({
@@ -429,7 +448,10 @@ function WorkspacesPanel({
             return (
               <div
                 key={n.id}
-                onClick={() => { onSelect(n.id); if (!n.read_at) markReadMut.mutate(n.id); }}
+                onClick={() => {
+                  onSelect(n.id);
+                  if (!n.read_at) markReadMut.mutate(n.id);
+                }}
                 className={`w-full flex gap-3 p-3 rounded-lg text-left transition-colors cursor-pointer ${
                   selectedId === n.id
                     ? 'bg-[#27272A]'
@@ -448,7 +470,9 @@ function WorkspacesPanel({
                       {formatRelativeTime(n.created_at)}
                     </span>
                   </div>
-                  <p className="text-[12px] text-[#A1A1AA] line-clamp-1 mt-0.5 text-left">{n.body || n.title}</p>
+                  <p className="text-[12px] text-[#A1A1AA] line-clamp-1 mt-0.5 text-left">
+                    {n.body || n.title}
+                  </p>
                 </div>
                 {isInvite && token && (
                   <div onClick={e => e.stopPropagation()}>
@@ -466,7 +490,7 @@ function WorkspacesPanel({
           (() => {
             const n = filtered.find(x => x.id === selectedId);
             if (!n) return <p className="text-[#A1A1AA] text-[13px]">Select a notification</p>;
-            return notificationDetail(n, (id) => dismissMut.mutate(id), acceptMut);
+            return notificationDetail(n, id => dismissMut.mutate(id), acceptMut);
           })()
         ) : (
           <div className="flex items-center justify-center h-full">
@@ -491,7 +515,7 @@ function MembersPanel({
 }) {
   const memberNotifs = useMemo(
     () => notifications.filter(n => n.notification_type?.includes('member')),
-    [notifications],
+    [notifications]
   );
 
   const { data: rooms } = useQuery({
@@ -516,10 +540,15 @@ function MembersPanel({
       <div className="max-w-[500px] space-y-6">
         {memberNotifs.length > 0 && (
           <div>
-            <p className="text-[10px] font-semibold tracking-wider text-[#A1A1AA] uppercase mb-2">Activity</p>
+            <p className="text-[10px] font-semibold tracking-wider text-[#A1A1AA] uppercase mb-2">
+              Activity
+            </p>
             <div className="space-y-1">
               {memberNotifs.map(n => (
-                <div key={n.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${n.read_at ? '' : 'bg-[#6366F1]/5'}`}>
+                <div
+                  key={n.id}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${n.read_at ? '' : 'bg-[#6366F1]/5'}`}
+                >
                   <div className="w-8 h-8 rounded-full bg-[#27272A] flex items-center justify-center text-xs font-bold text-[#FAFAFA] shrink-0">
                     {n.title.charAt(0).toUpperCase()}
                   </div>
@@ -527,7 +556,9 @@ function MembersPanel({
                     <p className="text-[12px] text-[#FAFAFA] truncate">{n.title}</p>
                     <p className="text-[11px] text-[#A1A1AA] line-clamp-1">{n.body}</p>
                   </div>
-                  <span className="text-[10px] text-[#A1A1AA] shrink-0">{formatRelativeTime(n.created_at)}</span>
+                  <span className="text-[10px] text-[#A1A1AA] shrink-0">
+                    {formatRelativeTime(n.created_at)}
+                  </span>
                 </div>
               ))}
             </div>
@@ -536,7 +567,9 @@ function MembersPanel({
 
         {dmRooms.length > 0 && (
           <div>
-            <p className="text-[10px] font-semibold tracking-wider text-[#A1A1AA] uppercase mb-2">Direct Messages</p>
+            <p className="text-[10px] font-semibold tracking-wider text-[#A1A1AA] uppercase mb-2">
+              Direct Messages
+            </p>
             <div className="space-y-1">
               {dmRooms.map(room => (
                 <a
@@ -550,7 +583,9 @@ function MembersPanel({
                   <div className="flex-1 min-w-0">
                     <p className="text-[12px] font-medium text-[#FAFAFA] truncate">{room.name}</p>
                     {room.last_message_at && (
-                      <p className="text-[10px] text-[#A1A1AA]">{formatRelativeTime(room.last_message_at)}</p>
+                      <p className="text-[10px] text-[#A1A1AA]">
+                        {formatRelativeTime(room.last_message_at)}
+                      </p>
                     )}
                   </div>
                 </a>
@@ -629,9 +664,7 @@ function ChannelsPanel({ workspaceId }: { workspaceId?: string }) {
               key={room.id}
               onClick={() => setSelectedRoom(room.id)}
               className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg text-left transition-colors ${
-                selectedRoom === room.id
-                  ? 'bg-[#27272A]'
-                  : 'hover:bg-[#18181B]'
+                selectedRoom === room.id ? 'bg-[#27272A]' : 'hover:bg-[#18181B]'
               }`}
             >
               <div className="w-8 h-8 rounded-lg bg-[#27272A] flex items-center justify-center shrink-0">
@@ -639,9 +672,7 @@ function ChannelsPanel({ workspaceId }: { workspaceId?: string }) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-medium text-[#FAFAFA] truncate">#{room.name}</p>
-                {room.topic && (
-                  <p className="text-[11px] text-[#A1A1AA] truncate">{room.topic}</p>
-                )}
+                {room.topic && <p className="text-[11px] text-[#A1A1AA] truncate">{room.topic}</p>}
               </div>
             </button>
           ))}
@@ -676,10 +707,16 @@ function ChannelsPanel({ workspaceId }: { workspaceId?: string }) {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-[12px] font-medium text-[#FAFAFA]">{msg.sender_name || 'Unknown'}</span>
-                      <span className="text-[10px] text-[#A1A1AA]">{formatRelativeTime(msg.created_at)}</span>
+                      <span className="text-[12px] font-medium text-[#FAFAFA]">
+                        {msg.sender_name || 'Unknown'}
+                      </span>
+                      <span className="text-[10px] text-[#A1A1AA]">
+                        {formatRelativeTime(msg.created_at)}
+                      </span>
                     </div>
-                    <p className="text-[13px] text-[#D1D5DB] mt-0.5 whitespace-pre-wrap break-words">{msg.content}</p>
+                    <p className="text-[13px] text-[#D1D5DB] mt-0.5 whitespace-pre-wrap break-words">
+                      {msg.content}
+                    </p>
                   </div>
                 </div>
               ))}

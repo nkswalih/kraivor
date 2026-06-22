@@ -56,11 +56,19 @@ export function useDashboard() {
     enabled: !!workspaceId,
   });
 
-  const isLoading = workspaceQuery.isLoading || roomsQuery.isLoading ||
-    reposQuery.isLoading || knowledgeQuery.isLoading || membersQuery.isLoading;
+  const isLoading =
+    workspaceQuery.isLoading ||
+    roomsQuery.isLoading ||
+    reposQuery.isLoading ||
+    knowledgeQuery.isLoading ||
+    membersQuery.isLoading;
 
-  const error = workspaceQuery.error || roomsQuery.error ||
-    reposQuery.error || knowledgeQuery.error || membersQuery.error;
+  const error =
+    workspaceQuery.error ||
+    roomsQuery.error ||
+    reposQuery.error ||
+    knowledgeQuery.error ||
+    membersQuery.error;
 
   const workspace = workspaceQuery.data ?? null;
   const rooms = Array.isArray(roomsQuery.data) ? roomsQuery.data : (roomsQuery.data?.results ?? []);

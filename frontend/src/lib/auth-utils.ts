@@ -7,6 +7,6 @@ export const setAuthCookie = () => {
 
 export const clearAuthCookie = () => {
   if (typeof document !== 'undefined') {
-    document.cookie = "kraivor_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+    document.cookie = 'kraivor_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
   }
 };

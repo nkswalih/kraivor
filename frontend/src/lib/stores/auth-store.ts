@@ -12,7 +12,10 @@ interface AuthActions {
   setLoading: (loading: boolean) => void;
   initWorkspace: () => Promise<string | null>;
   setWorkspace: (id: string, slug: string) => void;
-  updateWorkspaceInStore: (id: string, updates: Partial<{ name: string; description: string; slug: string }>) => void;
+  updateWorkspaceInStore: (
+    id: string,
+    updates: Partial<{ name: string; description: string; slug: string }>
+  ) => void;
 }
 
 interface ExtendedAuthState extends AuthState {
@@ -69,7 +72,8 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
     set({ isLoading: true });
     try {
       const page = await workspaceEndpoints.list(20);
-      const savedSlug = typeof window !== 'undefined' ? localStorage.getItem(WORKSPACE_SLUG_KEY) : null;
+      const savedSlug =
+        typeof window !== 'undefined' ? localStorage.getItem(WORKSPACE_SLUG_KEY) : null;
       const target = savedSlug ? page.results?.find((w: any) => w.slug === savedSlug) : null;
       const ws = target ?? page.results?.[0];
       if (ws) {

@@ -1,6 +1,8 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -10,7 +12,8 @@ import {
 } from 'lucide-react';
 import { useDashboard, type DashboardData } from '@/lib/hooks/use-dashboard';
 import { Badge, Skeleton } from '@/components/ui/shadcn';
-import { formatRelativeTime } from '@/lib/utils';
+import { formatRelativeTime, avatarUrl } from '@/lib/utils';
+import { profileEndpoints } from '@/lib/api/endpoints';
 
 /* ─── Stat Card ──────────────────────────────────────────────────── */
 
@@ -186,6 +189,17 @@ function ActiveMembers({ members, workspaceName, loading }: {
 }) {
   const displayMembers = members.filter(m => m.status === 'active').slice(0, 6);
 
+  const memberIds = useMemo(() => displayMembers.map(m => m.user_id), [displayMembers]);
+
+  const { data: profilesData } = useQuery({
+    queryKey: ['profiles-by-ids', memberIds],
+    queryFn: () => profileEndpoints.getProfilesByIds(memberIds),
+    enabled: memberIds.length > 0,
+    staleTime: 60_000,
+  });
+
+  const profileMap = useMemo(() => profilesData?.profiles ?? {}, [profilesData]);
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -214,31 +228,40 @@ function ActiveMembers({ members, workspaceName, loading }: {
 
   return (
     <div className="space-y-0.5">
-      {displayMembers.map((member, i) => (
-        <motion.div
-          key={member.user_id}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.04 }}
-          className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-krait-surface2 transition-colors group"
-        >
-          <div className="relative shrink-0">
-            <div className="w-8 h-8 rounded-full bg-krait-surface3 border border-krait-border flex items-center justify-center text-xs font-medium text-text-primary">
-              {member.user?.name ? member.user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
+      {displayMembers.map((member, i) => {
+        const profile = profileMap[member.user_id];
+        const src = avatarUrl(profile?.avatar_url, profile?.user_avatar_url) || member.user?.avatar_url || null;
+
+        return (
+          <motion.div
+            key={member.user_id}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.04 }}
+            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-krait-surface2 transition-colors group"
+          >
+            <div className="relative shrink-0">
+              {src ? (
+                <img src={src} alt="" className="w-8 h-8 rounded-full object-cover border border-krait-border" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-krait-surface3 border border-krait-border flex items-center justify-center text-xs font-medium text-text-primary">
+                  {member.user?.name ? member.user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
+                </div>
+              )}
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#22c55e] border-2 border-krait-surface1" />
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#22c55e] border-2 border-krait-surface1" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-medium text-text-primary truncate">
-              {member.user?.name ?? member.user_id.slice(0, 8)}
-            </p>
-            <p className="text-[11px] text-text-tertiary">
-              {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
-            </p>
-          </div>
-          <Badge variant={member.role === 'owner' ? 'venom' : 'default'}>{member.role}</Badge>
-        </motion.div>
-      ))}
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-medium text-text-primary truncate">
+                {profile?.username || profile?.display_name || member.user?.name || 'Member'}
+              </p>
+              <p className="text-[11px] text-text-tertiary">
+                {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+              </p>
+            </div>
+            <Badge variant={member.role === 'owner' ? 'venom' : 'default'}>{member.role}</Badge>
+          </motion.div>
+        );
+      })}
     </div>
   );
 }

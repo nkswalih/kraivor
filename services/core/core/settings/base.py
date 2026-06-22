@@ -1,7 +1,7 @@
-import mimetypes
 from pathlib import Path
 
 import environ
+import mimetypes
 
 mimetypes.add_type("text/markdown", ".md", strict=True)
 mimetypes.add_type("text/markdown", ".mdx", strict=True)

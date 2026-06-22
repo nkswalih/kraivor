@@ -1,5 +1,4 @@
 import uuid
-
 from rest_framework import status
 
 from apps.notifications.models import FCMToken, Notification

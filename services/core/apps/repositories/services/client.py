@@ -1,7 +1,6 @@
 import logging
-import uuid
-
 import requests
+import uuid
 from django.conf import settings
 
 from .exceptions import GitHubAPIError, GitHubAuthError

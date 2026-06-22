@@ -1,5 +1,4 @@
 import uuid
-
 from django.db.models import Count, Prefetch, QuerySet
 
 from apps.community.models import Comment, Discussion

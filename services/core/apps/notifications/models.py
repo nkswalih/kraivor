@@ -7,7 +7,6 @@ for Firebase Cloud Messaging push delivery.
 """
 
 import uuid
-
 from django.db import models
 
 

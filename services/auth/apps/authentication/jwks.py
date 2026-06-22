@@ -1,8 +1,8 @@
+from pathlib import Path
+
 import base64
 import hashlib
 import logging
-from pathlib import Path
-
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from django.conf import settings

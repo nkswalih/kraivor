@@ -3,7 +3,6 @@ GitHub OAuth Views
 """
 
 import logging
-
 from django.conf import settings
 from django.shortcuts import redirect
 from drf_spectacular.utils import (

@@ -1,6 +1,5 @@
-import uuid
-
 import pytest
+import uuid
 from django.urls import reverse
 from rest_framework import status
 

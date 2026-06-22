@@ -1,9 +1,9 @@
 from rest_framework import serializers
 
 from apps.knowledge.models import KnowledgeSpace
+from apps.notifications.models import Notification
 from apps.projects.models import Project, Task
 from apps.repositories.models import Repository
-from apps.notifications.models import Notification
 
 
 class SearchResultSerializer(serializers.Serializer):

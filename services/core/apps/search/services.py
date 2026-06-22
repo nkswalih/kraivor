@@ -1,15 +1,11 @@
-import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from functools import lru_cache
-from typing import Any
-from urllib.parse import quote_plus
 
+import logging
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.conf import settings
-from django.db.models import Q, Model
-from django.db.models import Value as V
-from django.db.models.functions import Length
+from django.db.models import Q
+from functools import lru_cache
 
 from apps.knowledge.models import KnowledgeAsset, KnowledgeSpace
 from apps.notifications.models import Notification

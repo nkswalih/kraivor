@@ -1,5 +1,4 @@
 import logging
-
 from profiles.constants import REPUTATION_EVENTS
 from profiles.tasks import apply_reputation_event
 

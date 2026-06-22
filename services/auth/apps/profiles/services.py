@@ -1,5 +1,4 @@
 import logging
-
 from django.db.models import Q
 from profiles.models import Profile, UserFollow
 

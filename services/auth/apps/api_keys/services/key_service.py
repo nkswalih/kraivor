@@ -16,9 +16,9 @@ The raw key surfaces only from create_api_key(), exactly once.
  
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 
+import logging
 from api_keys.models import VALID_SCOPES, APIKey
 from api_keys.selectors.api_key import get_active_key_by_hash, get_user_key_by_id
 from api_keys.services.generator import generate_api_key

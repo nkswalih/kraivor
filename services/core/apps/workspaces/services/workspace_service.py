@@ -1,6 +1,5 @@
 import logging
 import uuid
-
 from django.db import transaction
 from django.utils import timezone
 

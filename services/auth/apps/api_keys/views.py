@@ -11,7 +11,6 @@ DELETE /api/auth/api-keys/<key_id>/  Revoke an API key
 from __future__ import annotations
 
 import logging
-
 from api_keys.authentication.backend import APIKeyAuthentication
 from api_keys.selectors.api_key import get_user_api_keys
 from api_keys.serializers import (

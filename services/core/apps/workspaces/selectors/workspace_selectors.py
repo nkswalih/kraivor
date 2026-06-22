@@ -1,5 +1,4 @@
 import uuid
-
 from django.db.models import Count, Prefetch, Q, QuerySet
 
 from apps.workspaces.models import Workspace, WorkspaceInvitation, WorkspaceMember

@@ -18,15 +18,23 @@ import { cn } from '@/lib/utils';
 import type { Task } from '@/types/domain/projects';
 
 const TABS = [
-  { id: 'overview',  label: 'Overview' },
-  { id: 'board',     label: 'Board' },
-  { id: 'list',      label: 'List' },
-  { id: 'timeline',  label: 'Timeline' },
-  { id: 'insights',  label: 'Insights' },
+  { id: 'overview', label: 'Overview' },
+  { id: 'board', label: 'Board' },
+  { id: 'list', label: 'List' },
+  { id: 'timeline', label: 'Timeline' },
+  { id: 'insights', label: 'Insights' },
 ] as const;
 
 function ProjectTimelineTab({ tasks }: { tasks: Task[] }) {
-  const allStatuses = ['backlog', 'todo', 'in_progress', 'in_review', 'blocked', 'done', 'cancelled'] as const;
+  const allStatuses = [
+    'backlog',
+    'todo',
+    'in_progress',
+    'in_review',
+    'blocked',
+    'done',
+    'cancelled',
+  ] as const;
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -39,11 +47,14 @@ function ProjectTimelineTab({ tasks }: { tasks: Task[] }) {
         {tasks.length === 0 && (
           <p className="text-[13px] text-[var(--text-tertiary)]">No tasks to display.</p>
         )}
-        {tasks.slice(0, 20).map((task) => {
+        {tasks.slice(0, 20).map(task => {
           const idx = allStatuses.indexOf(task.status);
           const leftPct = (idx / allStatuses.length) * 100;
           return (
-            <div key={task.id} className="flex items-center gap-3 py-2 px-3 bg-[var(--krait-surface-1)] border border-[var(--krait-border)] rounded-[6px]">
+            <div
+              key={task.id}
+              className="flex items-center gap-3 py-2 px-3 bg-[var(--krait-surface-1)] border border-[var(--krait-border)] rounded-[6px]"
+            >
               <span className="text-[12px] text-[var(--text-primary)] flex-1 truncate min-w-0">
                 {task.title}
               </span>
@@ -92,10 +103,15 @@ export default function ProjectDetailPage() {
   }, [searchParams, tasksLoading, tasks]);
 
   const {
-    activeTab, setActiveTab,
-    createTaskOpen, createTaskDefaultProjectId, closeCreateTask,
+    activeTab,
+    setActiveTab,
+    createTaskOpen,
+    createTaskDefaultProjectId,
+    closeCreateTask,
     openCreateTask,
-    editProjectOpen, closeEditProject, openEditProject,
+    editProjectOpen,
+    closeEditProject,
+    openEditProject,
   } = useProjectsStore();
 
   if (projectLoading) {
@@ -115,9 +131,7 @@ export default function ProjectDetailPage() {
   }
 
   const progress =
-    project.task_count > 0
-      ? Math.round((project.done_task_count / project.task_count) * 100)
-      : 0;
+    project.task_count > 0 ? Math.round((project.done_task_count / project.task_count) * 100) : 0;
 
   return (
     <div className="flex flex-col h-full">
@@ -176,7 +190,7 @@ export default function ProjectDetailPage() {
         </div>
 
         <div className="flex items-center gap-0.5">
-          {TABS.map((tab) => (
+          {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -184,7 +198,7 @@ export default function ProjectDetailPage() {
                 'px-3.5 py-2.5 text-[13px] font-medium transition-colors border-b-2',
                 activeTab === tab.id
                   ? 'border-[var(--venom-yellow)] text-[var(--text-primary)]'
-                  : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                  : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               )}
             >
               {tab.label}
@@ -194,9 +208,7 @@ export default function ProjectDetailPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto bg-[var(--krait-void)]">
-        {activeTab === 'overview' && (
-          <ProjectOverviewTab project={project} tasks={tasks} />
-        )}
+        {activeTab === 'overview' && <ProjectOverviewTab project={project} tasks={tasks} />}
         {activeTab === 'board' && (
           <ProjectBoardTab
             workspaceId={workspaceId}
@@ -216,9 +228,7 @@ export default function ProjectDetailPage() {
             ))}
           </div>
         )}
-        {activeTab === 'timeline' && (
-          <ProjectTimelineTab tasks={tasks} />
-        )}
+        {activeTab === 'timeline' && <ProjectTimelineTab tasks={tasks} />}
         {activeTab === 'insights' && (
           <ProjectInsightsTab workspaceId={workspaceId} projectId={projectId} />
         )}
@@ -242,9 +252,13 @@ export default function ProjectDetailPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={() => setConfirmDelete(false)} />
           <div className="relative w-full max-w-sm bg-[var(--krait-surface-1)] border border-[var(--krait-border)] rounded-[10px] p-5 shadow-2xl">
-            <h3 className="text-[14px] font-medium text-[var(--text-primary)] mb-2">Delete project?</h3>
+            <h3 className="text-[14px] font-medium text-[var(--text-primary)] mb-2">
+              Delete project?
+            </h3>
             <p className="text-[13px] text-[var(--text-secondary)] mb-5">
-              This will permanently delete <strong className="text-[var(--text-primary)]">{project.name}</strong> and all its tasks. This action cannot be undone.
+              This will permanently delete{' '}
+              <strong className="text-[var(--text-primary)]">{project.name}</strong> and all its
+              tasks. This action cannot be undone.
             </p>
             <div className="flex items-center justify-end gap-2">
               <button

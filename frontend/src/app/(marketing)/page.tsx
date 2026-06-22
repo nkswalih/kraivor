@@ -8,13 +8,22 @@ export default function MarketingPage() {
           Kraivor
         </Link>
         <nav className="flex items-center gap-4">
-          <Link href="/docs" className="text-[13px] text-muted-foreground hover:text-foreground transition-colors">
+          <Link
+            href="/docs"
+            className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+          >
             Docs
           </Link>
-          <Link href="/features" className="text-[13px] text-muted-foreground hover:text-foreground transition-colors">
+          <Link
+            href="/features"
+            className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+          >
             Features
           </Link>
-          <Link href="/pricing" className="text-[13px] text-muted-foreground hover:text-foreground transition-colors">
+          <Link
+            href="/pricing"
+            className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+          >
             Pricing
           </Link>
         </nav>

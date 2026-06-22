@@ -11,7 +11,7 @@ import { TagChip } from '@/components/community/tag-chip';
 import { usePopularTags } from '@/lib/hooks/use-community';
 
 export default function CommunityPage() {
-  const setCreateDialogOpen = useCommunityStore((s) => s.setCreateDialogOpen);
+  const setCreateDialogOpen = useCommunityStore(s => s.setCreateDialogOpen);
   const { data: tags } = usePopularTags(10);
 
   return (
@@ -57,7 +57,7 @@ export default function CommunityPage() {
             Popular Tags
           </h3>
           <div className="flex flex-wrap gap-2">
-            {tags?.results.map((tag) => (
+            {tags?.results.map(tag => (
               <TagChip key={tag.id} name={tag.name} slug={tag.slug} />
             ))}
           </div>
@@ -74,8 +74,8 @@ export default function CommunityPage() {
 }
 
 function ActiveTagFilter() {
-  const activeTag = useCommunityStore((s) => s.activeTag);
-  const setActiveTag = useCommunityStore((s) => s.setActiveTag);
+  const activeTag = useCommunityStore(s => s.activeTag);
+  const setActiveTag = useCommunityStore(s => s.setActiveTag);
 
   if (!activeTag) return null;
 

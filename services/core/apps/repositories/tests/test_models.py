@@ -9,8 +9,9 @@ Covers:
   - unique_together enforcement
 """
 
-import pytest
 import uuid
+
+import pytest
 from django.db import IntegrityError
 
 from apps.repositories.models import Repository

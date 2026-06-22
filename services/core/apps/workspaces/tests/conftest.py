@@ -1,13 +1,13 @@
-from pathlib import Path
-
-import django
 import os
-import pytest
 import sys
 import uuid
+from pathlib import Path
+from unittest.mock import MagicMock
+
+import django
+import pytest
 from django.test import RequestFactory
 from django.utils import timezone
-from unittest.mock import MagicMock
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(BASE_DIR))

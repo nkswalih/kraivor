@@ -19,6 +19,8 @@ Endpoints:
 """
 
 import logging
+from urllib.parse import quote
+
 from django.conf import settings
 from django.shortcuts import redirect
 from drf_spectacular.utils import (
@@ -29,7 +31,6 @@ from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from urllib.parse import quote
 
 from apps.workspaces.permissions import IsAuthenticated
 from apps.workspaces.views import WorkspaceContextMixin

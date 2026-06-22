@@ -1,5 +1,6 @@
 import uuid
 from datetime import timedelta
+
 from django.utils import timezone
 
 from apps.notifications.models import FCMToken, Notification

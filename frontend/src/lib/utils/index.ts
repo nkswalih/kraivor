@@ -86,6 +86,13 @@ export function getInitials(name: string): string {
     .slice(0, 2);
 }
 
+/**
+ * Best available avatar: profile S3 upload > OAuth/GitHub/Google > null
+ */
+export function avatarUrl(src?: string | null, fallbackSrc?: string | null): string | null {
+  return src || fallbackSrc || null;
+}
+
 export function parseJwt(
   token: string
 ): { exp: number; iat: number; [key: string]: unknown } | null {

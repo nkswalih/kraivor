@@ -14,10 +14,10 @@ Token claims:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 import jwt
+from datetime import UTC, datetime, timedelta
 from django.conf import settings
 
 if TYPE_CHECKING:

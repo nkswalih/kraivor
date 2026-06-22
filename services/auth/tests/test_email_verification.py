@@ -11,14 +11,13 @@ Covers:
 
 from __future__ import annotations
 
+import jwt
 import uuid
 from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, patch
-
-import jwt
 from django.conf import settings
 from django.test import TestCase
 from rest_framework.test import APIClient
+from unittest.mock import MagicMock, patch
 from users.models import User
 from users.rate_limiter import RateLimitExceededError, RedisRateLimiter
 from users.verification import (

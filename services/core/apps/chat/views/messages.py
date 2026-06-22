@@ -1,9 +1,9 @@
 import json
+from typing import Any
+
 import logging
 import uuid
 from datetime import UTC, datetime
-from typing import Any
-
 from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiParameter,

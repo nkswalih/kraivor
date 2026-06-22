@@ -14,9 +14,9 @@ Optional GSI for querying by sender:
 Designed to work with both DynamoDB Local (dev) and real AWS DynamoDB (prod).
 """
 
-import logging
 from typing import Any
 
+import logging
 from botocore.exceptions import ClientError
 from django.conf import settings
 from django.core.management.base import BaseCommand

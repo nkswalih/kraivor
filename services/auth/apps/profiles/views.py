@@ -442,8 +442,18 @@ class ProfilesByIdsView(APIView):
     def post(self, request):
         user_ids = request.data.get("user_ids", [])
         if not user_ids:
-            return Response({"profiles": []}, status=status.HTTP_200_OK)
+            return Response({"profiles": {}}, status=status.HTTP_200_OK)
 
         profiles = Profile.objects.filter(user_id__in=user_ids)
-        serializer = ProfileSerializer(profiles, many=True)
-        return Response({"profiles": serializer.data}, status=status.HTTP_200_OK)
+
+        result = {
+            str(p.user_id): {
+                "username": p.username,
+                "display_name": p.display_name,
+                "avatar_url": p.avatar_url or p.user.avatar_url or "",
+                "user_avatar_url": p.user.avatar_url or "",
+            }
+            for p in profiles
+        }
+
+        return Response({"profiles": result}, status=status.HTTP_200_OK)

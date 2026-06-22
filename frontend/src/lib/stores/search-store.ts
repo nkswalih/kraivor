@@ -1,5 +1,9 @@
 import { create } from 'zustand';
-import { searchEndpoints, type SearchResultItem, type SearchResponse } from '@/lib/api/endpoints/search';
+import {
+  searchEndpoints,
+  type SearchResultItem,
+  type SearchResponse,
+} from '@/lib/api/endpoints/search';
 
 interface CacheEntry {
   results: SearchResultItem[];
@@ -44,8 +48,8 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
   scope: 'all',
   cache: new Map(),
 
-  setQuery: (q) => set({ query: q }),
-  setScope: (s) => set({ scope: s }),
+  setQuery: q => set({ query: q }),
+  setScope: s => set({ scope: s }),
 
   clearSearch: () => {
     if (activeController) {
@@ -72,7 +76,13 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
     const cacheKey = `${query}:${workspaceId}:${get().scope}`;
     const cached = get().cache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      set({ results: cached.results, facets: cached.facets, totalResults: cached.total, isLoading: false, error: null });
+      set({
+        results: cached.results,
+        facets: cached.facets,
+        totalResults: cached.total,
+        isLoading: false,
+        error: null,
+      });
       return;
     }
 
@@ -85,7 +95,12 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const data: SearchResponse = await searchEndpoints.search(query, workspaceId, get().scope, signal);
+      const data: SearchResponse = await searchEndpoints.search(
+        query,
+        workspaceId,
+        get().scope,
+        signal
+      );
 
       const cacheMap = get().cache;
       if (cacheMap.size >= MAX_CACHE) {

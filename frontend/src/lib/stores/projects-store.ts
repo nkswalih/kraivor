@@ -35,7 +35,7 @@ interface ProjectsStore {
   setActiveTab: (tab: ProjectTab) => void;
 }
 
-export const useProjectsStore = create<ProjectsStore>((set) => ({
+export const useProjectsStore = create<ProjectsStore>(set => ({
   viewMode: 'grid',
   projectStatusFilter: undefined,
   taskStatusFilter: undefined,
@@ -50,20 +50,18 @@ export const useProjectsStore = create<ProjectsStore>((set) => ({
   editProjectId: undefined,
   activeTab: 'overview',
 
-  setViewMode: (mode) => set({ viewMode: mode }),
-  setProjectStatusFilter: (status) => set({ projectStatusFilter: status }),
-  setTaskStatusFilter: (status) => set({ taskStatusFilter: status }),
-  setTaskPriorityFilter: (priority) => set({ taskPriorityFilter: priority }),
-  setSelectedProjectId: (id) => set({ selectedProjectId: id }),
-  openTaskDrawer: (taskId) => set({ drawerOpen: true, drawerTaskId: taskId }),
+  setViewMode: mode => set({ viewMode: mode }),
+  setProjectStatusFilter: status => set({ projectStatusFilter: status }),
+  setTaskStatusFilter: status => set({ taskStatusFilter: status }),
+  setTaskPriorityFilter: priority => set({ taskPriorityFilter: priority }),
+  setSelectedProjectId: id => set({ selectedProjectId: id }),
+  openTaskDrawer: taskId => set({ drawerOpen: true, drawerTaskId: taskId }),
   closeTaskDrawer: () => set({ drawerOpen: false, drawerTaskId: undefined }),
-  openCreateTask: (projectId) =>
-    set({ createTaskOpen: true, createTaskDefaultProjectId: projectId }),
-  closeCreateTask: () =>
-    set({ createTaskOpen: false, createTaskDefaultProjectId: undefined }),
+  openCreateTask: projectId => set({ createTaskOpen: true, createTaskDefaultProjectId: projectId }),
+  closeCreateTask: () => set({ createTaskOpen: false, createTaskDefaultProjectId: undefined }),
   openCreateProject: () => set({ createProjectOpen: true }),
   closeCreateProject: () => set({ createProjectOpen: false }),
-  openEditProject: (projectId) => set({ editProjectOpen: true, editProjectId: projectId }),
+  openEditProject: projectId => set({ editProjectOpen: true, editProjectId: projectId }),
   closeEditProject: () => set({ editProjectOpen: false, editProjectId: undefined }),
-  setActiveTab: (tab) => set({ activeTab: tab }),
+  setActiveTab: tab => set({ activeTab: tab }),
 }));

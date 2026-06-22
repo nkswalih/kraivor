@@ -172,7 +172,10 @@ export function resolveArrowPoints(d: Partial<ArrowElementData>): [number, numbe
   const ey = (d as Record<string, unknown>).endPoint
     ? ((d as Record<string, unknown>).endPoint as Position).y
     : 0;
-  return [[sx, sy], [ex, ey]];
+  return [
+    [sx, sy],
+    [ex, ey],
+  ];
 }
 
 export interface ShapeElementData {
@@ -229,7 +232,13 @@ export interface KnowledgeSpaceVersionSummary {
 }
 
 export interface KnowledgeWsEvent {
-  type: 'canvas_update' | 'cursor_move' | 'element_lock' | 'user_join' | 'user_leave' | 'version_created';
+  type:
+    | 'canvas_update'
+    | 'cursor_move'
+    | 'element_lock'
+    | 'user_join'
+    | 'user_leave'
+    | 'version_created';
   knowledgeSpaceId: string;
   userId: string;
   data: Record<string, unknown>;

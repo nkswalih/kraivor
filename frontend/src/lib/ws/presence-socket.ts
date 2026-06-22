@@ -38,7 +38,7 @@ export class PresenceSocket {
       this.startHeartbeat();
       this.onConnected?.();
     };
-    this.ws.onclose = (e) => {
+    this.ws.onclose = e => {
       this.stopHeartbeat();
       if ([4001, 4002, 4003].includes(e.code)) {
         this.onAuthError?.(e.code);

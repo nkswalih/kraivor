@@ -35,7 +35,13 @@ interface KnowledgeStore {
   initCanvas: (spaceId: string, existingState?: Partial<CanvasState>) => void;
   destroyCanvas: (spaceId: string) => void;
 
-  addElement: (spaceId: string, type: CanvasElementType, position: Position, size: Size, data?: Record<string, unknown>) => string;
+  addElement: (
+    spaceId: string,
+    type: CanvasElementType,
+    position: Position,
+    size: Size,
+    data?: Record<string, unknown>
+  ) => string;
   updateElement: (spaceId: string, elementId: string, changes: Partial<CanvasElement>) => void;
   removeElement: (spaceId: string, elementId: string) => void;
   moveElement: (spaceId: string, elementId: string, position: Position) => void;
@@ -116,87 +122,97 @@ export const useKnowledgeStore = create<KnowledgeStore>((set, get) => ({
   undoStack: [],
   redoStack: [],
 
-  setActiveSpace: (spaceId) => {
+  setActiveSpace: spaceId => {
     set({ activeSpaceId: spaceId });
   },
 
-  setEditingElementId: (id) => {
+  setEditingElementId: id => {
     set({ editingElementId: id });
   },
 
-  setLastSavedAt: (ts) => {
+  setLastSavedAt: ts => {
     set({ lastSavedAt: ts });
   },
 
   initCanvas: (spaceId, existingState) => {
-    set(produce((state: KnowledgeStore) => {
-      if (!state.spaces[spaceId]) {
-        state.spaces[spaceId] = {
-          ...createDefaultState(),
-          ...existingState,
-        };
-      }
-    }));
+    set(
+      produce((state: KnowledgeStore) => {
+        if (!state.spaces[spaceId]) {
+          state.spaces[spaceId] = {
+            ...createDefaultState(),
+            ...existingState,
+          };
+        }
+      })
+    );
   },
 
-  destroyCanvas: (spaceId) => {
-    set(produce((state: KnowledgeStore) => {
-      delete state.spaces[spaceId];
-      delete state.dirtySpaceIds[spaceId];
-      if (state.activeSpaceId === spaceId) {
-        state.activeSpaceId = null;
-      }
-    }));
+  destroyCanvas: spaceId => {
+    set(
+      produce((state: KnowledgeStore) => {
+        delete state.spaces[spaceId];
+        delete state.dirtySpaceIds[spaceId];
+        if (state.activeSpaceId === spaceId) {
+          state.activeSpaceId = null;
+        }
+      })
+    );
   },
 
   addElement: (spaceId, type, position, size, data) => {
     const id = nanoid();
     const now = new Date().toISOString();
-    set(produce((state: KnowledgeStore) => {
-      const canvas = state.spaces[spaceId];
-      if (!canvas) return;
-      const element: CanvasElement = {
-        id,
-        type,
-        position,
-        size,
-        rotation: 0,
-        zIndex: findHighestZIndex(canvas.elements) + 1,
-        locked: false,
-        visible: true,
-        opacity: 1,
-        data: data ?? {},
-        createdAt: now,
-        updatedAt: now,
-        createdBy: '',
-      };
-      canvas.elements.push(element);
-      canvas.selectedElementIds = [id];
-    }));
+    set(
+      produce((state: KnowledgeStore) => {
+        const canvas = state.spaces[spaceId];
+        if (!canvas) return;
+        const element: CanvasElement = {
+          id,
+          type,
+          position,
+          size,
+          rotation: 0,
+          zIndex: findHighestZIndex(canvas.elements) + 1,
+          locked: false,
+          visible: true,
+          opacity: 1,
+          data: data ?? {},
+          createdAt: now,
+          updatedAt: now,
+          createdBy: '',
+        };
+        canvas.elements.push(element);
+        canvas.selectedElementIds = [id];
+      })
+    );
     get().markDirty(spaceId);
     return id;
   },
 
   updateElement: (spaceId, elementId, changes) => {
-    set(produce((state: KnowledgeStore) => {
-      const canvas = state.spaces[spaceId];
-      if (!canvas) return;
-      const idx = canvas.elements.findIndex(e => e.id === elementId);
-      if (idx === -1) return;
-      Object.assign(canvas.elements[idx], changes, {
-        updatedAt: new Date().toISOString(),
-      });
-    }));
+    set(
+      produce((state: KnowledgeStore) => {
+        const canvas = state.spaces[spaceId];
+        if (!canvas) return;
+        const idx = canvas.elements.findIndex(e => e.id === elementId);
+        if (idx === -1) return;
+        Object.assign(canvas.elements[idx], changes, {
+          updatedAt: new Date().toISOString(),
+        });
+      })
+    );
     get().markDirty(spaceId);
   },
 
   removeElement: (spaceId, elementId) => {
-    set(produce((state: KnowledgeStore) => {
-      const canvas = state.spaces[spaceId];
-      if (!canvas) return;
-      canvas.elements = canvas.elements.filter(e => e.id !== elementId);
-      canvas.selectedElementIds = canvas.selectedElementIds.filter(id => id !== elementId);
-    }));
+    set(
+      produce((state: KnowledgeStore) => {
+        const canvas = state.spaces[spaceId];
+        if (!canvas) return;
+        canvas.elements = canvas.elements.filter(e => e.id !== elementId);
+        canvas.selectedElementIds = canvas.selectedElementIds.filter(id => id !== elementId);
+      })
+    );
     get().markDirty(spaceId);
   },
 
@@ -215,20 +231,22 @@ export const useKnowledgeStore = create<KnowledgeStore>((set, get) => ({
     if (!source) return;
     const id = nanoid();
     const now = new Date().toISOString();
-    set(produce((state: KnowledgeStore) => {
-      const c = state.spaces[spaceId];
-      if (!c) return;
-      const dup: CanvasElement = {
-        ...source,
-        id,
-        position: { x: source.position.x + 30, y: source.position.y + 30 },
-        zIndex: findHighestZIndex(c.elements) + 1,
-        createdAt: now,
-        updatedAt: now,
-      };
-      c.elements.push(dup);
-      c.selectedElementIds = [id];
-    }));
+    set(
+      produce((state: KnowledgeStore) => {
+        const c = state.spaces[spaceId];
+        if (!c) return;
+        const dup: CanvasElement = {
+          ...source,
+          id,
+          position: { x: source.position.x + 30, y: source.position.y + 30 },
+          zIndex: findHighestZIndex(c.elements) + 1,
+          createdAt: now,
+          updatedAt: now,
+        };
+        c.elements.push(dup);
+        c.selectedElementIds = [id];
+      })
+    );
     get().markDirty(spaceId);
   },
 
@@ -248,18 +266,20 @@ export const useKnowledgeStore = create<KnowledgeStore>((set, get) => ({
     get().updateElement(spaceId, elementId, { zIndex });
   },
 
-  deleteSelectedElements: (spaceId) => {
+  deleteSelectedElements: spaceId => {
     const canvas = get().spaces[spaceId];
     if (!canvas) return;
     const ids = canvas.selectedElementIds;
     if (ids.length === 0) return;
     const idSet = new Set(ids);
-    set(produce((state: KnowledgeStore) => {
-      const c = state.spaces[spaceId];
-      if (!c) return;
-      c.elements = c.elements.filter(e => !idSet.has(e.id));
-      c.selectedElementIds = [];
-    }));
+    set(
+      produce((state: KnowledgeStore) => {
+        const c = state.spaces[spaceId];
+        if (!c) return;
+        c.elements = c.elements.filter(e => !idSet.has(e.id));
+        c.selectedElementIds = [];
+      })
+    );
     get().markDirty(spaceId);
   },
 
@@ -283,137 +303,163 @@ export const useKnowledgeStore = create<KnowledgeStore>((set, get) => ({
   },
 
   setSelectedElements: (spaceId, elementIds) => {
-    set(produce((state: KnowledgeStore) => {
-      const canvas = state.spaces[spaceId];
-      if (!canvas) return;
-      canvas.selectedElementIds = elementIds;
-    }));
+    set(
+      produce((state: KnowledgeStore) => {
+        const canvas = state.spaces[spaceId];
+        if (!canvas) return;
+        canvas.selectedElementIds = elementIds;
+      })
+    );
   },
 
-  clearSelection: (spaceId) => {
-    set(produce((state: KnowledgeStore) => {
-      const canvas = state.spaces[spaceId];
-      if (!canvas) return;
-      canvas.selectedElementIds = [];
-    }));
+  clearSelection: spaceId => {
+    set(
+      produce((state: KnowledgeStore) => {
+        const canvas = state.spaces[spaceId];
+        if (!canvas) return;
+        canvas.selectedElementIds = [];
+      })
+    );
   },
 
   setViewport: (spaceId, viewport) => {
-    set(produce((state: KnowledgeStore) => {
-      const canvas = state.spaces[spaceId];
-      if (!canvas) return;
-      canvas.viewport = viewport;
-    }));
+    set(
+      produce((state: KnowledgeStore) => {
+        const canvas = state.spaces[spaceId];
+        if (!canvas) return;
+        canvas.viewport = viewport;
+      })
+    );
   },
 
-  setSelectedTool: (tool) => set({ selectedTool: tool, arrowStart: null }),
-  setSubTool: (tool) => set({ subTool: tool }),
-  setActivePanel: (panel) => set({ activePanel: panel }),
-  setSidebarWidth: (width) => set({ sidebarWidth: width }),
+  setSelectedTool: tool => set({ selectedTool: tool, arrowStart: null }),
+  setSubTool: tool => set({ subTool: tool }),
+  setActivePanel: panel => set({ activePanel: panel }),
+  setSidebarWidth: width => set({ sidebarWidth: width }),
   toggleSidebar: () => set(s => ({ showSidebar: !s.showSidebar })),
   toggleMinimap: () => set(s => ({ showMinimap: !s.showMinimap })),
 
-  toggleGrid: (spaceId) => {
-    set(produce((state: KnowledgeStore) => {
-      const c = state.spaces[spaceId];
-      if (!c) return;
-      c.gridEnabled = !c.gridEnabled;
-    }));
+  toggleGrid: spaceId => {
+    set(
+      produce((state: KnowledgeStore) => {
+        const c = state.spaces[spaceId];
+        if (!c) return;
+        c.gridEnabled = !c.gridEnabled;
+      })
+    );
   },
 
-  toggleSnap: (spaceId) => {
-    set(produce((state: KnowledgeStore) => {
-      const c = state.spaces[spaceId];
-      if (!c) return;
-      c.snapEnabled = !c.snapEnabled;
-    }));
+  toggleSnap: spaceId => {
+    set(
+      produce((state: KnowledgeStore) => {
+        const c = state.spaces[spaceId];
+        if (!c) return;
+        c.snapEnabled = !c.snapEnabled;
+      })
+    );
   },
 
   zoomTo: (spaceId, zoom) => {
-    set(produce((state: KnowledgeStore) => {
-      const c = state.spaces[spaceId];
-      if (!c) return;
-      c.viewport.zoom = Math.max(0.1, Math.min(3, zoom));
-    }));
+    set(
+      produce((state: KnowledgeStore) => {
+        const c = state.spaces[spaceId];
+        if (!c) return;
+        c.viewport.zoom = Math.max(0.1, Math.min(3, zoom));
+      })
+    );
   },
 
-  zoomIn: (spaceId) => {
-    set(produce((state: KnowledgeStore) => {
-      const c = state.spaces[spaceId];
-      if (!c) return;
-      c.viewport.zoom = Math.min(3, c.viewport.zoom * 1.25);
-    }));
+  zoomIn: spaceId => {
+    set(
+      produce((state: KnowledgeStore) => {
+        const c = state.spaces[spaceId];
+        if (!c) return;
+        c.viewport.zoom = Math.min(3, c.viewport.zoom * 1.25);
+      })
+    );
   },
 
-  zoomOut: (spaceId) => {
-    set(produce((state: KnowledgeStore) => {
-      const c = state.spaces[spaceId];
-      if (!c) return;
-      c.viewport.zoom = Math.max(0.1, c.viewport.zoom / 1.25);
-    }));
+  zoomOut: spaceId => {
+    set(
+      produce((state: KnowledgeStore) => {
+        const c = state.spaces[spaceId];
+        if (!c) return;
+        c.viewport.zoom = Math.max(0.1, c.viewport.zoom / 1.25);
+      })
+    );
   },
 
-  pushUndoState: (spaceId) => {
+  pushUndoState: spaceId => {
     const canvas = get().spaces[spaceId];
     if (!canvas) return;
     const snapshot = takeSnapshot(canvas);
-    set(produce((state: KnowledgeStore) => {
-      state.undoStack.push(snapshot);
-      state.redoStack = [];
-    }));
+    set(
+      produce((state: KnowledgeStore) => {
+        state.undoStack.push(snapshot);
+        state.redoStack = [];
+      })
+    );
   },
 
-  undo: (spaceId) => {
+  undo: spaceId => {
     const state = get();
     const canvas = state.spaces[spaceId];
     if (!canvas || state.undoStack.length === 0) return;
     const current = takeSnapshot(canvas);
     const prev = state.undoStack[state.undoStack.length - 1];
-    set(produce((s: KnowledgeStore) => {
-      const c = s.spaces[spaceId];
-      if (!c) return;
-      s.redoStack.push(current);
-      s.undoStack.pop();
-      c.elements = prev.elements;
-    }));
+    set(
+      produce((s: KnowledgeStore) => {
+        const c = s.spaces[spaceId];
+        if (!c) return;
+        s.redoStack.push(current);
+        s.undoStack.pop();
+        c.elements = prev.elements;
+      })
+    );
     get().markDirty(spaceId);
   },
 
-  redo: (spaceId) => {
+  redo: spaceId => {
     const state = get();
     const canvas = state.spaces[spaceId];
     if (!canvas || state.redoStack.length === 0) return;
     const current = takeSnapshot(canvas);
     const next = state.redoStack[state.redoStack.length - 1];
-    set(produce((s: KnowledgeStore) => {
-      const c = s.spaces[spaceId];
-      if (!c) return;
-      s.undoStack.push(current);
-      s.redoStack.pop();
-      c.elements = next.elements;
-    }));
+    set(
+      produce((s: KnowledgeStore) => {
+        const c = s.spaces[spaceId];
+        if (!c) return;
+        s.undoStack.push(current);
+        s.redoStack.pop();
+        c.elements = next.elements;
+      })
+    );
     get().markDirty(spaceId);
   },
 
   setArrowStart: (elementId, point) => set({ arrowStart: { elementId, point } }),
   clearArrowStart: () => set({ arrowStart: null }),
 
-  markDirty: (spaceId) => {
-    set(produce((state: KnowledgeStore) => {
-      state.dirtySpaceIds[spaceId] = true;
-      state.lastSavedAt = null;
-    }));
+  markDirty: spaceId => {
+    set(
+      produce((state: KnowledgeStore) => {
+        state.dirtySpaceIds[spaceId] = true;
+        state.lastSavedAt = null;
+      })
+    );
   },
 
-  markClean: (spaceId) => {
-    set(produce((state: KnowledgeStore) => {
-      delete state.dirtySpaceIds[spaceId];
-    }));
+  markClean: spaceId => {
+    set(
+      produce((state: KnowledgeStore) => {
+        delete state.dirtySpaceIds[spaceId];
+      })
+    );
   },
 
-  setSaving: (saving) => set({ isSaving: saving }),
+  setSaving: saving => set({ isSaving: saving }),
 
-  getCanvasState: (spaceId) => {
+  getCanvasState: spaceId => {
     return get().spaces[spaceId] ?? null;
   },
 }));

@@ -22,20 +22,10 @@ export type TaskType =
   | 'technical_debt'
   | 'incident';
 
-export type TaskLinkType =
-  | 'blocks'
-  | 'blocked_by'
-  | 'duplicates'
-  | 'relates_to'
-  | 'caused_by';
+export type TaskLinkType = 'blocks' | 'blocked_by' | 'duplicates' | 'relates_to' | 'caused_by';
 
 export const TERMINAL_TASK_STATUSES: TaskStatus[] = ['done', 'cancelled'];
-export const ACTIVE_TASK_STATUSES: TaskStatus[] = [
-  'todo',
-  'in_progress',
-  'in_review',
-  'blocked',
-];
+export const ACTIVE_TASK_STATUSES: TaskStatus[] = ['todo', 'in_progress', 'in_review', 'blocked'];
 
 export const KANBAN_COLUMNS: TaskStatus[] = [
   'backlog',

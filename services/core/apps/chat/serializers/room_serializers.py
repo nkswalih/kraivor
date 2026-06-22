@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.chat.models import ChatRoom
+from apps.chat.models import ChatRoom, ChatRoomParticipant
 
 
 class ChatRoomListSerializer(serializers.ModelSerializer):
@@ -11,6 +11,9 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
         read_only=True
     )
     participant_user_ids: serializers.SerializerMethodField = (
+        serializers.SerializerMethodField()
+    )
+    unread_count: serializers.SerializerMethodField = (
         serializers.SerializerMethodField()
     )
 
@@ -28,6 +31,7 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
             "last_message_content",
             "last_message_sender_name",
             "participant_user_ids",
+            "unread_count",
             "created_by",
             "created_at",
             "updated_at",
@@ -45,6 +49,20 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
         if not hasattr(obj, "_participant_ids"):
             return []
         return obj._participant_ids
+
+    def get_unread_count(self, obj: ChatRoom) -> int:
+        request = self.context.get("request")
+        if not request:
+            return 0
+        user_id: str = str(getattr(request, "user_id", ""))
+        # If no participant record exists (e.g. workspace rooms), all messages are unread
+        participant: ChatRoomParticipant | None = (
+            ChatRoomParticipant.objects.filter(room=obj, user_id=user_id).first()
+        )
+        if not participant:
+            return obj.message_count
+        count: int = obj.message_count - participant.last_read_message_count
+        return max(count, 0)
 
 
 class ChatRoomDetailSerializer(serializers.ModelSerializer):

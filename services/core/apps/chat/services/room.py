@@ -142,6 +142,22 @@ class ChatRoomService:
         )
 
     @staticmethod
+    def increment_message_count(room_id: str) -> None:
+        from django.db.models import F
+        ChatRoom.objects.filter(id=room_id).update(message_count=F("message_count") + 1)
+
+    @staticmethod
+    def mark_room_read(room_id: str, user_id: str) -> None:
+        room = ChatRoom.objects.filter(id=room_id).values_list("message_count", flat=True).first()
+        if room is None:
+            return
+        ChatRoomParticipant.objects.update_or_create(
+            room_id=room_id,
+            user_id=user_id,
+            defaults={"last_read_message_count": room},
+        )
+
+    @staticmethod
     @transaction.atomic
     def update_room(
         room_id: str, user_id: str, data: dict[str, Any]

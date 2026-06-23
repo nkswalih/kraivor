@@ -36,8 +36,10 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Found {len(all_author_ids)} unique author(s) to sync...")
 
-        identity_url = getattr(settings, "IDENTITY_SERVICE_URL", "http://identity:8001")
-        endpoint = f"{identity_url}/api/profiles/internal/resolve-by-id/"
+        base = getattr(settings, "IDENTITY_SERVICE_URL", "http://identity:8001/api")
+        if base.endswith("/api"):
+            base = base[:-4]
+        endpoint = f"{base}/api/profiles/internal/resolve-by-id/"
         header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
 
         for author_id in all_author_ids:

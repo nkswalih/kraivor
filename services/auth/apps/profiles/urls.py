@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    CommunityEventWebhookView,
     FollowerListView,
     FollowingListView,
     FollowStatusView,
@@ -25,6 +26,7 @@ urlpatterns = [
     path("top-contributors/", TopContributorsView.as_view(), name="top-contributors"),
     path("by-ids/", ProfilesByIdsView.as_view(), name="profiles-by-ids"),
     path("internal/resolve-by-id/", ResolveProfilesByIdView.as_view(), name="resolve-profiles-by-id"),
+    path("internal/community-event/", CommunityEventWebhookView.as_view(), name="community-event-webhook"),
     path("<str:username>/", ProfileDetailView.as_view(), name="profile-detail"),
     path("<str:username>/follow/", FollowView.as_view(), name="profile-follow"),
     path("<str:username>/follow/status/", FollowStatusView.as_view(), name="follow-status"),

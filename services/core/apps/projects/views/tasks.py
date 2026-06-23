@@ -12,6 +12,8 @@ from core.pagination import StandardPagination
 from ..serializers import (
     TaskCreateSerializer,
     TaskDependencySerializer,
+    TaskKnowledgeLinkSerializer,
+    TaskRepositoryLinkSerializer,
     TaskSerializer,
     TaskStatusUpdateSerializer,
     TaskUpdateSerializer,
@@ -170,4 +172,78 @@ class TaskDependencyDestroyView(WorkspaceContextMixin, APIView):
         self._get_workspace_or_404(workspace_pk)
         task = TaskService.get(task_id=str(task_id), workspace_id=str(workspace_pk))
         TaskService.remove_dependency(task=task, dependency_id=str(dependency_id))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(tags=["Tasks"])
+class TaskRepositoryLinkView(WorkspaceContextMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Link repository to task",
+        request=TaskRepositoryLinkSerializer,
+        responses={201: OpenApiResponse(description="Repository linked")},
+    )
+    def post(self, request: Request, workspace_pk: str, task_id: str) -> Response:
+        self._get_workspace_or_404(workspace_pk)
+        task = TaskService.get(task_id=str(task_id), workspace_id=str(workspace_pk))
+        serializer = TaskRepositoryLinkSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        link = TaskService.add_repository(
+            task=task,
+            repository_id=str(serializer.validated_data["repository_id"]),
+            workspace_id=str(workspace_pk),
+        )
+        return Response({"id": str(link.id)}, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(tags=["Tasks"])
+class TaskRepositoryLinkDestroyView(WorkspaceContextMixin, APIView):
+    @extend_schema(
+        summary="Remove repository link from task",
+        responses={204: OpenApiResponse(description="No content")},
+    )
+    def delete(
+        self, request: Request, workspace_pk: str, task_id: str, link_id: str
+    ) -> Response:
+        self._get_workspace_or_404(workspace_pk)
+        task = TaskService.get(task_id=str(task_id), workspace_id=str(workspace_pk))
+        TaskService.remove_repository(task=task, link_id=str(link_id))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(tags=["Tasks"])
+class TaskKnowledgeLinkView(WorkspaceContextMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Link knowledge space to task",
+        request=TaskKnowledgeLinkSerializer,
+        responses={201: OpenApiResponse(description="Knowledge space linked")},
+    )
+    def post(self, request: Request, workspace_pk: str, task_id: str) -> Response:
+        self._get_workspace_or_404(workspace_pk)
+        task = TaskService.get(task_id=str(task_id), workspace_id=str(workspace_pk))
+        serializer = TaskKnowledgeLinkSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        link = TaskService.add_knowledge(
+            task=task,
+            knowledge_space_id=str(serializer.validated_data["knowledge_space_id"]),
+            workspace_id=str(workspace_pk),
+        )
+        return Response({"id": str(link.id)}, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(tags=["Tasks"])
+class TaskKnowledgeLinkDestroyView(WorkspaceContextMixin, APIView):
+    @extend_schema(
+        summary="Remove knowledge link from task",
+        responses={204: OpenApiResponse(description="No content")},
+    )
+    def delete(
+        self, request: Request, workspace_pk: str, task_id: str, link_id: str
+    ) -> Response:
+        self._get_workspace_or_404(workspace_pk)
+        task = TaskService.get(task_id=str(task_id), workspace_id=str(workspace_pk))
+        TaskService.remove_knowledge(task=task, link_id=str(link_id))
         return Response(status=status.HTTP_204_NO_CONTENT)

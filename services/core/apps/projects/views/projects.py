@@ -20,6 +20,7 @@ from ..serializers import (
     ProjectCreateSerializer,
     ProjectSerializer,
     ProjectUpdateSerializer,
+    TaskSerializer,
 )
 from ..services import AIRecommendationService, ProjectService, TaskService
 
@@ -153,9 +154,7 @@ class ProjectTaskListView(WorkspaceContextMixin, APIView):
         )
         paginator = StandardPagination()
         page = paginator.paginate_queryset(tasks, request)
-        serializer = __import__(
-            "..serializers", fromlist=["TaskSerializer"]
-        ).TaskSerializer(page, many=True)
+        serializer = TaskSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
 
 

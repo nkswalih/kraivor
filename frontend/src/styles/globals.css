@@ -6,29 +6,29 @@
 
 @layer base {
   :root {
-    --background: 240 10% 4%;
-    --foreground: 0 0% 100%;
-    --card: 240 10% 7%;
-    --card-foreground: 0 0% 100%;
-    --popover: 240 10% 4%;
-    --popover-foreground: 0 0% 100%;
+    --background: 0 0% 100%;
+    --foreground: 240 10% 4%;
+    --card: 0 0% 97%;
+    --card-foreground: 240 10% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 4%;
     
-    /* ── Golden Orange Theme ── */
-    --primary: 36 96% 53%;         /* Base Golden Orange */
-    --primary-light: 42 96% 62%;   /* Brighter Gold for highlights */
-    --primary-dark: 28 96% 43%;    /* Deeper Burnt Orange for shadows */
+    /* ── Venom Yellow Theme ── */
+    --primary: 47 78% 59%;         /* #e8c547 */
+    --primary-light: 46 68% 66%;   /* lighter yellow */
+    --primary-dark: 47 68% 47%;    /* #c9a227 (gold) */
 
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 15%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 240 5% 15%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 36 96% 53%;          /* Matching accent to primary */
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 62% 50%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 240 5% 92%;
+    --secondary-foreground: 240 10% 4%;
+    --muted: 240 5% 94%;
+    --muted-foreground: 240 5% 45%;
+    --accent: 47 78% 59%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 5% 15%;
-    --input: 240 5% 15%;
+    --border: 240 5% 88%;
+    --input: 240 5% 88%;
     --ring: var(--primary);
     --radius: 0.5rem;
   }
@@ -41,17 +41,17 @@
     --popover: 240 10% 4%;
     --popover-foreground: 0 0% 100%;
     
-    /* ── Golden Orange Theme ── */
-    --primary: 36 96% 53%;
-    --primary-light: 42 96% 62%;
-    --primary-dark: 28 96% 43%;
+    /* ── Venom Yellow Theme ── */
+    --primary: 47 78% 59%;
+    --primary-light: 46 68% 66%;
+    --primary-dark: 47 68% 47%;
     
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: 240 10% 4%;
     --secondary: 240 5% 15%;
     --secondary-foreground: 0 0% 100%;
     --muted: 240 5% 15%;
     --muted-foreground: 240 5% 65%;
-    --accent: 36 96% 53%;
+    --accent: 47 78% 59%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
@@ -69,7 +69,6 @@
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
     font-feature-settings: 'rlig' 1, 'calt' 1;
-    background-color: #0a0a0f;
   }
 }
 
@@ -192,6 +191,48 @@
 /* ─── KRAIT DESIGN TOKENS ──────────────────────────────────────────── */
 
 :root {
+  /* === KRAIT PALETTE === */
+  --krait-void:        #f5f5f5;
+  --krait-obsidian:    #ffffff;
+  --krait-surface-1:   #fafafa;
+  --krait-surface-2:   #f0f0f0;
+  --krait-surface-3:   #e5e5e5;
+  --krait-surface-4:   #d4d4d4;
+  --krait-border:      #d4d4d4;
+  --krait-border-hi:   #a3a3a3;
+
+  /* === VENOM ACCENTS === */
+  --venom-yellow:      #e8c547;
+  --venom-gold:        #c9a227;
+  --venom-orange:      #d97316;
+  --venom-amber:       #f59e0b;
+  --venom-glow:        rgba(232, 197, 71, 0.08);
+  --venom-glow-md:     rgba(232, 197, 71, 0.15);
+
+  /* === TEXT === */
+  --text-primary:      #0d0d0f;
+  --text-secondary:    #52525b;
+  --text-tertiary:     #a1a1aa;
+  --text-accent:       #e8c547;
+  --text-inverse:      #ffffff;
+
+  /* === SEMANTIC === */
+  --color-success:     #22c55e;
+  --color-error:       #ef4444;
+  --color-warning:     #f59e0b;
+  --color-info:        #3b82f6;
+
+  /* === SHADOWS === */
+  --shadow-venom: 0 0 20px rgba(232,197,71,0.12);
+
+  /* === TRANSITIONS === */
+  --ease-strike:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth:  cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast:   120ms;
+  --duration-normal: 200ms;
+}
+
+.dark {
   /* === KRAIT PALETTE === */
   --krait-void:        #080809;
   --krait-obsidian:    #0d0d0f;

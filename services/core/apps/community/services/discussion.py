@@ -1,11 +1,11 @@
 from datetime import timedelta
 
-from django.db.models import F, Prefetch, QuerySet
+from django.db.models import Count, F, Prefetch, QuerySet
 from django.utils import timezone
 from django.utils.text import slugify
 
 from ..constants import TRENDING_WINDOW_HOURS
-from ..models import Discussion, Tag, Vote
+from ..models import Comment, Discussion, Tag, Vote
 
 logger = __import__("logging").getLogger(__name__)
 
@@ -47,7 +47,9 @@ class DiscussionService:
             qs = qs.order_by("-is_pinned", "-created_at")
         offset = (page - 1) * page_size
         total = qs.count()
-        items = qs[offset : offset + page_size]
+        items = qs[offset : offset + page_size].annotate(
+            _comment_count=Count("comments")
+        )
         return items, total
 
     @staticmethod
@@ -116,7 +118,7 @@ class DiscussionService:
     @staticmethod
     def get_trending(limit: int = 10) -> list[dict]:
         cutoff = timezone.now() - timedelta(hours=TRENDING_WINDOW_HOURS)
-        return list(
+        discussions = list(
             Discussion.objects.filter(created_at__gte=cutoff)
             .order_by("-upvote_count")[:limit]
             .values(
@@ -130,3 +132,14 @@ class DiscussionService:
                 "created_at",
             )
         )
+        ids = [d["id"] for d in discussions]
+        if ids:
+            counts = dict(
+                Comment.objects.filter(discussion_id__in=ids)
+                .values("discussion_id")
+                .annotate(cnt=Count("id"))
+                .values_list("discussion_id", "cnt")
+            )
+            for d in discussions:
+                d["comment_count"] = counts.get(d["id"], 0)
+        return discussions

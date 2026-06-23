@@ -9,11 +9,21 @@ from core.cache import CacheService
 class WorkspaceSelector:
     @staticmethod
     def get_workspace_for_user(
-        workspace_id: uuid.UUID, user_id: uuid.UUID
+        workspace_id: str | uuid.UUID, user_id: uuid.UUID
     ) -> Workspace | None:
+        try:
+            uid = (
+                workspace_id
+                if isinstance(workspace_id, uuid.UUID)
+                else uuid.UUID(str(workspace_id))
+            )
+            filter_kwargs = {"id": uid}
+        except (ValueError, AttributeError):
+            filter_kwargs = {"slug": str(workspace_id)}
+
         return (
             Workspace.objects.filter(
-                id=workspace_id,
+                **filter_kwargs,
                 members__user_id=user_id,
                 members__deleted_at__isnull=True,
             )

@@ -561,7 +561,7 @@ export default function DashboardPage() {
           <Link
             href={`/${workspaceSlug}/analysis`}
             className="flex items-center gap-2.5 px-4 py-3 rounded-lg
-                       btn-shimmer text-text-inverse text-[13px] font-semibold
+                       btn-shimmer text-primary-foreground text-[13px] font-semibold
                        transition-all duration-[var(--duration-fast)] ease-strike active:scale-[0.98]"
           >
             <Sparkles className="w-4 h-4" />

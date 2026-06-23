@@ -2,12 +2,11 @@
 
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { MessageSquare, Share2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { MessageSquare } from 'lucide-react';
 import { TagChip } from './tag-chip';
 import { UpvoteButton } from './upvote-button';
+import { ShareDialog } from './share-dialog';
 import { Avatar } from '@/components/profiles/avatar';
-import { copyToClipboard } from '@/lib/utils';
 import type { Discussion } from '@/types/domain/community';
 
 function timeAgo(date: string): string {
@@ -30,17 +29,6 @@ export function DiscussionCard({ discussion }: DiscussionCardProps) {
   const router = useRouter();
   const params = useParams();
   const workspace = params?.workspace as string;
-
-  const handleShare = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const url = `${window.location.origin}/${workspace}/community/${discussion.id}`;
-    const ok = await copyToClipboard(url);
-    if (ok) {
-      toast.success('Link copied to clipboard');
-    } else {
-      toast.error('Failed to copy link');
-    }
-  };
 
   return (
     <div
@@ -93,12 +81,9 @@ export function DiscussionCard({ discussion }: DiscussionCardProps) {
             <span className="flex items-center gap-1.5 hover:text-foreground transition-colors">
               <MessageSquare className="w-4 h-4" /> {discussion.comment_count}
             </span>
-            <button
-              onClick={handleShare}
-              className="flex items-center gap-1.5 hover:text-foreground transition-colors"
-            >
-              <Share2 className="w-4 h-4" /> Share
-            </button>
+            <span onClick={e => e.stopPropagation()}>
+              <ShareDialog discussionId={discussion.id} title={discussion.title} />
+            </span>
           </div>
         </div>
       </div>

@@ -289,8 +289,16 @@ class AuthApi {
   async getApiKeys(): Promise<
     Array<{ id: string; name: string; prefix: string; created_at: string; last_used_at?: string }>
   > {
+    type AK = { id: string; name: string; prefix: string; created_at: string; last_used_at?: string };
     try {
-      return await apiClient.get(API_ENDPOINTS.AUTH.API_KEYS);
+      const data = await apiClient.get<unknown>(API_ENDPOINTS.AUTH.API_KEYS);
+      if (Array.isArray(data)) return data as AK[];
+      if (data && typeof data === 'object') {
+        const obj = data as Record<string, unknown>;
+        if (Array.isArray(obj.keys)) return obj.keys as AK[];
+        if (Array.isArray(obj.results)) return obj.results as AK[];
+      }
+      return [];
     } catch (error) {
       throw handleApiError(error);
     }

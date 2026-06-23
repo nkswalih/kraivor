@@ -1,5 +1,3 @@
-import uuid
-
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
@@ -80,12 +78,7 @@ class WorkspaceDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def _get_workspace_or_404(self, pk: str, user_id: str) -> Workspace:
-        try:
-            workspace_id = pk if isinstance(pk, uuid.UUID) else uuid.UUID(str(pk))
-        except (ValueError, AttributeError):
-            raise NotFound("Workspace not found.") from None
-
-        workspace = WorkspaceSelector.get_workspace_for_user(workspace_id, user_id)
+        workspace = WorkspaceSelector.get_workspace_for_user(pk, user_id)
         if not workspace:
             raise NotFound("Workspace not found.")
         return workspace

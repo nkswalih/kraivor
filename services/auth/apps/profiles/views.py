@@ -3,6 +3,7 @@ import uuid
 
 from django.conf import settings
 from django.core.files.storage import default_storage
+from django.db.models import F
 from django.utils import timezone
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -13,6 +14,7 @@ from profiles.constants import (
     ALLOWED_IMAGE_TYPES,
     AVATAR_MAX_BYTES,
     BANNER_MAX_BYTES,
+    REPUTATION_EVENTS,
 )
 from profiles.events import publish_profile_updated
 from profiles.models import Profile
@@ -457,3 +459,64 @@ class ProfilesByIdsView(APIView):
         }
 
         return Response({"profiles": result}, status=status.HTTP_200_OK)
+
+
+class CommunityEventWebhookView(APIView):
+    """
+    POST /api/profiles/internal/community-event/
+
+    Internal endpoint. Processes community events to update profile counters.
+    Used by core service to sync discussion_count and reputation_score.
+
+    Request:
+      {"event_type": "discussion.created", "author_id": "uuid"}
+
+    Security:
+      - Requires X-Internal-Request header
+    """
+
+    permission_classes = []
+
+    @extend_schema(
+        summary="Process community event (internal)",
+        description="Internal endpoint. Processes community events to update profile counters.",
+        tags=["Profiles"],
+        responses={200: OpenApiResponse(description="Event processed")},
+    )
+    def post(self, request):  # pragma: no cover
+        internal_header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
+        if request.headers.get(internal_header) != "1":
+            return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+
+        event_type = request.data.get("event_type")
+        author_id = request.data.get("author_id")
+        if not event_type or not author_id:
+            return Response({"error": "event_type and author_id are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            author_uuid = uuid.UUID(author_id)
+        except (ValueError, TypeError):
+            return Response({"error": "Invalid author_id"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if event_type == "discussion.created":
+            Profile.objects.filter(user_id=author_uuid).update(
+                discussion_count=F("discussion_count") + 1,
+            )
+        elif event_type == "discussion.deleted":
+            Profile.objects.filter(user_id=author_uuid, discussion_count__gt=0).update(
+                discussion_count=F("discussion_count") - 1,
+            )
+        elif event_type == "backfill.user_stats":
+            stats = request.data.get("data", {})
+            Profile.objects.filter(user_id=author_uuid).update(
+                discussion_count=stats.get("discussion_count", 0),
+                reputation_score=stats.get("reputation_score", 0),
+            )
+
+        delta = REPUTATION_EVENTS.get(event_type)
+        if delta:
+            Profile.objects.filter(user_id=author_uuid).update(
+                reputation_score=F("reputation_score") + delta
+            )
+
+        return Response({"processed": True})

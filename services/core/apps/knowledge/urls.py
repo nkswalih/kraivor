@@ -9,7 +9,7 @@ from .views import (
 
 urlpatterns = [
     path(
-        "workspaces/<uuid:workspace_pk>/knowledge/",
+        "workspaces/<str:workspace_pk>/knowledge/",
         KnowledgeSpaceListView.as_view(),
         name="workspace-knowledge-list",
     ),

@@ -41,7 +41,7 @@ function MemberRow({
     avatarUrl(profile?.avatar_url, profile?.user_avatar_url) || member.user?.avatar_url || null;
 
   return (
-    <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-[4px] hover:bg-white/[0.04] transition-colors group">
+    <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-[4px] hover:bg-krait-surface1/40 transition-colors group">
       {src ? (
         <img
           src={src}
@@ -49,13 +49,13 @@ function MemberRow({
           className="w-7 h-7 rounded-[4px] border border-gray-800 object-cover shrink-0"
         />
       ) : (
-        <div className="w-7 h-7 rounded-[4px] bg-[#27272A] flex items-center justify-center text-[11px] font-bold text-[#FAFAFA] shrink-0">
+        <div className="w-7 h-7 rounded-[4px] bg-krait-surface3 flex items-center justify-center text-[11px] font-bold text-text-primary shrink-0">
           {name.charAt(0).toUpperCase()}
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-medium text-[#FAFAFA] truncate">{name}</p>
-        <p className="text-[11px] text-[#A1A1AA] truncate">
+        <p className="text-[13px] font-medium text-text-primary truncate">{name}</p>
+        <p className="text-[11px] text-text-secondary truncate">
           {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
         </p>
       </div>
@@ -90,10 +90,10 @@ export function MembersPanel({ workspaceId, onlineUserIds }: MembersPanelProps) 
   const isLoading = membersLoading;
 
   return (
-    <div className="w-[220px] bg-[#111113] border-l border-[#27272A] flex flex-col shrink-0 select-none overflow-y-auto">
-      <div className="h-[49px] flex items-center gap-2 px-4 border-b border-[#27272A] shrink-0">
+    <div className="w-[220px] bg-krait-obsidian border-l border-krait-border flex flex-col shrink-0 select-none overflow-y-auto">
+      <div className="h-[49px] flex items-center gap-2 px-4 border-b border-krait-border shrink-0">
         <Users className="w-4 h-4 text-text-tertiary" />
-        <span className="text-[13px] font-semibold text-[#FAFAFA]">Members</span>
+        <span className="text-[13px] font-semibold text-text-primary">Members</span>
         <span className="text-[11px] text-text-tertiary ml-auto">{membersList.length}</span>
       </div>
 

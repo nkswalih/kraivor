@@ -122,23 +122,10 @@ class GitHubRepoSearchView(WorkspaceContextMixin, APIView):
     @extend_schema(summary="Search GitHub repositories")
     def get(self, request: Request, workspace_pk: str | None = None) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
-        query = request.query_params.get("q", "").strip()
-        if not query:
-            return Response(
-                {"detail": "Query parameter 'q' is required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        installation = GitHubAppInstallationService.get_workspace_installation(
-            workspace_id=workspace.id
-        )
-        if not installation:
-            return Response(
-                {"detail": "No GitHub App installation found for this workspace."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        repos = GitHubAppInstallationService.search_repositories(
-            installation=installation, query=query
-        )
+        query = request.query_params.get("search") or request.query_params.get("q", "")
+        query = query.strip()
+        service = GitHubAppInstallationService()
+        repos = service.list_available_repos(workspace=workspace, search=query)
         return Response(
-            {"results": InstallationRepoItemSerializer(repos, many=True).data}
+            InstallationRepoItemSerializer(repos, many=True).data
         )

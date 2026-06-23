@@ -21,9 +21,9 @@ export default function ChatPage() {
   return (
     <div className="flex flex-1 min-h-0 w-full bg-background">
       <ChannelSidebar workspaceId={workspaceId} workspaceSlug={workspaceSlug} />
-      <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-[#0A0A0B]">
+      <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-krait-void">
         <MessageSquare className="w-10 h-10 text-text-tertiary mb-3" />
-        <h3 className="text-base font-medium text-[#FAFAFA] mb-1">Choose a conversation</h3>
+        <h3 className="text-base font-medium text-text-primary mb-1">Choose a conversation</h3>
         <p className="text-[13px] text-text-tertiary max-w-xs">
           Select a channel or direct message from the sidebar to start chatting.
         </p>

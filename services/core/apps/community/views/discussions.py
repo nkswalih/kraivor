@@ -25,9 +25,15 @@ from ..services import DiscussionService, VoteService
 logger = logging.getLogger(__name__)
 
 
+def _identity_endpoint(path: str) -> str:
+    base = getattr(settings, "IDENTITY_SERVICE_URL", "http://identity:8001/api")
+    if base.endswith("/api"):
+        base = base[:-4]
+    return f"{base}/api{path}"
+
+
 def _resolve_profile(user_id: str) -> dict:
-    identity_url = getattr(settings, "IDENTITY_SERVICE_URL", "http://identity:8001")
-    endpoint = f"{identity_url}/api/profiles/internal/resolve-by-id/"
+    endpoint = _identity_endpoint("/profiles/internal/resolve-by-id/")
     try:
         resp = requests.post(
             endpoint,
@@ -43,6 +49,29 @@ def _resolve_profile(user_id: str) -> dict:
     except requests.exceptions.RequestException:
         logger.warning("profile_resolve.failed", extra={"user_id": user_id})
     return {}
+
+
+def _sync_profile_counters(event_type: str, author_id: str) -> None:
+    endpoint = _identity_endpoint("/profiles/internal/community-event/")
+    try:
+        resp = requests.post(
+            endpoint,
+            json={"event_type": event_type, "author_id": author_id},
+            headers={
+                getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"): "1"
+            },
+            timeout=5,
+        )
+        if resp.status_code != 200:
+            logger.warning(
+                "profile_sync.failed",
+                extra={"event_type": event_type, "author_id": author_id, "status": resp.status_code},
+            )
+    except requests.exceptions.RequestException as exc:
+        logger.warning(
+            "profile_sync.error",
+            extra={"event_type": event_type, "author_id": author_id, "error": str(exc)},
+        )
 
 
 @extend_schema(tags=["Community"])
@@ -95,6 +124,7 @@ class DiscussionListView(APIView):
             ),
         )
         publish_discussion_created(discussion, request.user_id)
+        _sync_profile_counters("discussion.created", str(discussion.author_id))
         return Response(
             DiscussionDetailSerializer(discussion, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
@@ -161,6 +191,7 @@ class DiscussionDetailView(APIView):
             )
         DiscussionService.soft_delete(discussion, request.user_id)
         publish_discussion_deleted(str(discussion.id), str(discussion.author_id))
+        _sync_profile_counters("discussion.deleted", str(discussion.author_id))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -185,6 +216,8 @@ class DiscussionVoteView(APIView):
         vote, action = VoteService.vote_discussion(discussion, request.user_id, value)
         if action != "no_change":
             publish_discussion_upvoted(discussion, request.user_id)
+            event_type = "discussion.upvoted" if value == 1 else "discussion.downvoted"
+            _sync_profile_counters(event_type, str(discussion.author_id))
         return Response({"value": vote.value, "action": action})
 
     @extend_schema(

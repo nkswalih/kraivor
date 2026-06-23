@@ -73,7 +73,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
 
   return (
     <aside
-      className={`${collapsed ? 'w-[60px]' : 'w-[240px]'} flex-shrink-0 flex flex-col bg-[#111113] border-r border-[#27272A] h-full select-none transition-all duration-200`}
+      className={`${collapsed ? 'w-[60px]' : 'w-[240px]'} flex-shrink-0 flex flex-col bg-krait-obsidian border-r border-krait-border h-full select-none transition-all duration-200`}
     >
       {/* Main Navigation */}
       <div className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
@@ -92,12 +92,12 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
                 'flex items-center rounded-[6px] transition-colors text-[13px] font-medium',
                 collapsed ? 'justify-center px-0 py-2 relative' : 'gap-2.5 px-2.5 py-1.5',
                 isActive
-                  ? 'bg-[#18181B] text-[#FAFAFA]'
-                  : 'text-[#A1A1AA] hover:bg-[#18181B]/50 hover:text-[#FAFAFA]'
+                  ? 'bg-krait-surface1 text-text-primary'
+                  : 'text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary'
               )}
             >
               <item.icon
-                className={cn('w-4 h-4 shrink-0', isActive ? 'text-[#FAFAFA]' : 'text-[#A1A1AA]')}
+                className={cn('w-4 h-4 shrink-0', isActive ? 'text-text-primary' : 'text-text-secondary')}
               />
               <span className={collapsed ? 'hidden' : ''}>{item.name}</span>
 
@@ -114,16 +114,16 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
           );
         })}
 
-        <div className="my-3 border-t border-[#27272A]" />
+        <div className="my-3 border-t border-krait-border" />
       </div>
 
       {/* Bottom Section */}
-      <div className="p-2 border-t border-[#27272A] space-y-0.5">
+      <div className="p-2 border-t border-krait-border space-y-0.5">
         <Link
           href={`/${workspaceSlug}/settings/workspace`}
           title={collapsed ? 'Workspaces' : undefined}
           className={cn(
-            'flex items-center rounded-[6px] text-[#A1A1AA] hover:bg-[#18181B]/50 hover:text-[#FAFAFA] transition-colors text-[13px] font-medium',
+            'flex items-center rounded-[6px] text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary transition-colors text-[13px] font-medium',
             collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-2.5 py-1.5'
           )}
         >
@@ -135,7 +135,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
           href={`/${workspaceSlug}/inbox`}
           title={collapsed ? 'Inbox' : undefined}
           className={cn(
-            'flex items-center rounded-[6px] text-[#A1A1AA] hover:bg-[#18181B]/50 hover:text-[#FAFAFA] transition-colors text-[13px] font-medium',
+            'flex items-center rounded-[6px] text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary transition-colors text-[13px] font-medium',
             collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-2.5 py-1.5'
           )}
         >
@@ -148,7 +148,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
           href={`/${workspaceSlug}/settings`}
           title={collapsed ? 'Settings' : undefined}
           className={cn(
-            'flex items-center rounded-[6px] text-[#A1A1AA] hover:bg-[#18181B]/50 hover:text-[#FAFAFA] transition-colors text-[13px] font-medium',
+            'flex items-center rounded-[6px] text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary transition-colors text-[13px] font-medium',
             collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-2.5 py-1.5'
           )}
         >
@@ -157,7 +157,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
         </Link>
 
         {/* Separator */}
-        {!collapsed && <div className="mt-2 pt-2 border-t border-[#27272A]" />}
+        {!collapsed && <div className="mt-2 pt-2 border-t border-krait-border" />}
 
         {/* User Profile Block */}
         <div className={collapsed ? '' : 'mt-2'}>
@@ -167,7 +167,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
             }}
             title={collapsed ? profile?.display_name || user?.name || 'Profile' : undefined}
             className={cn(
-              'w-full flex items-center rounded-[6px] hover:bg-[#18181B] transition-colors group text-left',
+              'w-full flex items-center rounded-[6px] hover:bg-krait-surface1 transition-colors group text-left',
               collapsed ? 'justify-center py-2' : 'gap-3 px-2 py-1.5'
             )}
           >
@@ -176,14 +176,14 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
                 src={bestAvatar}
                 alt={user?.name || 'User'}
                 className={cn(
-                  'shrink-0 object-cover border border-[#27272A]',
+                  'shrink-0 object-cover border border-krait-border',
                   collapsed ? 'w-8 h-8 rounded-full' : 'w-8 h-8 rounded-[4px]'
                 )}
               />
             ) : (
               <div
                 className={cn(
-                  'bg-[#27272A] border border-[#27272A] flex items-center justify-center text-[11px] font-medium text-[#FAFAFA] shrink-0',
+                  'bg-krait-surface3 border border-krait-border flex items-center justify-center text-[11px] font-medium text-text-primary shrink-0',
                   collapsed ? 'w-8 h-8 rounded-full' : 'w-8 h-8 rounded-[4px]'
                 )}
               >
@@ -194,10 +194,10 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
             {!collapsed && (
               <>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-medium text-[#FAFAFA] truncate leading-tight">
+                  <p className="text-[13px] font-medium text-text-primary truncate leading-tight">
                     {profile?.display_name || user?.name || 'Loading...'}
                   </p>
-                  <p className="text-[11px] text-[#A1A1AA] truncate leading-tight mt-0.5">
+                  <p className="text-[11px] text-text-secondary truncate leading-tight mt-0.5">
                     {user?.email || ''}
                   </p>
                 </div>
@@ -228,7 +228,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
         {/* Toggle Collapse Button */}
         <button
           onClick={toggleCollapse}
-          className="w-full flex items-center justify-center py-2 rounded-[6px] text-[#A1A1AA] hover:bg-[#18181B]/50 hover:text-[#FAFAFA] transition-colors"
+          className="w-full flex items-center justify-center py-2 rounded-[6px] text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary transition-colors"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? (

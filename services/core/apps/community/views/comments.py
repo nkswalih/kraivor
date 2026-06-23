@@ -10,7 +10,7 @@ from ..events import publish_comment_created
 from ..permissions import IsAuthenticatedOrReadOnly
 from ..serializers import CommentSerializer, CreateCommentSerializer
 from ..services import CommentService, DiscussionService, VoteService
-from .discussions import _resolve_profile
+from .discussions import _resolve_profile, _sync_profile_counters
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +71,7 @@ class CommentListView(APIView):
             ),
         )
         publish_comment_created(comment, request.user_id)
+        _sync_profile_counters("comment.created", str(comment.author_id))
         return Response(
             CommentSerializer(comment, context={"request": request}).data,
             status=status.HTTP_201_CREATED,

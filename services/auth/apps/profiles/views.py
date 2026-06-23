@@ -498,15 +498,14 @@ class CommunityEventWebhookView(APIView):
         except (ValueError, TypeError):
             return Response({"error": "Invalid author_id"}, status=status.HTTP_400_BAD_REQUEST)
 
-        updated = False
         if event_type == "discussion.created":
-            updated = Profile.objects.filter(user_id=author_uuid).update(
+            Profile.objects.filter(user_id=author_uuid).update(
                 discussion_count=F("discussion_count") + 1,
-            ) > 0
+            )
         elif event_type == "discussion.deleted":
-            updated = Profile.objects.filter(user_id=author_uuid, discussion_count__gt=0).update(
+            Profile.objects.filter(user_id=author_uuid, discussion_count__gt=0).update(
                 discussion_count=F("discussion_count") - 1,
-            ) > 0
+            )
         elif event_type == "backfill.user_stats":
             stats = request.data.get("data", {})
             Profile.objects.filter(user_id=author_uuid).update(

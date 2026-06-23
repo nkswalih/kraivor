@@ -8,54 +8,78 @@ from apps.projects.views import (
     TaskDependencyDestroyView,
     TaskDependencyView,
     TaskDetailView,
+    TaskKnowledgeLinkDestroyView,
+    TaskKnowledgeLinkView,
     TaskListView,
+    TaskRepositoryLinkDestroyView,
+    TaskRepositoryLinkView,
     TaskStatusUpdateView,
 )
 
 urlpatterns = [
     path(
-        "workspaces/<uuid:workspace_pk>/projects/",
+        "workspaces/<str:workspace_pk>/projects/",
         ProjectListView.as_view(),
         name="project-list-create",
     ),
     path(
-        "workspaces/<uuid:workspace_pk>/projects/<uuid:project_id>/",
+        "workspaces/<str:workspace_pk>/projects/<uuid:project_id>/",
         ProjectDetailView.as_view(),
         name="project-detail",
     ),
     path(
-        "workspaces/<uuid:workspace_pk>/projects/<uuid:project_id>/tasks/",
+        "workspaces/<str:workspace_pk>/projects/<uuid:project_id>/tasks/",
         ProjectTaskListView.as_view(),
         name="project-task-list",
     ),
     path(
-        "workspaces/<uuid:workspace_pk>/projects/<uuid:project_id>/ai/recommendations/",
+        "workspaces/<str:workspace_pk>/projects/<uuid:project_id>/ai/recommendations/",
         ProjectAIRecommendationsView.as_view(),
         name="project-ai-recommendations",
     ),
     path(
-        "workspaces/<uuid:workspace_pk>/tasks/",
+        "workspaces/<str:workspace_pk>/tasks/",
         TaskListView.as_view(),
         name="task-list-create",
     ),
     path(
-        "workspaces/<uuid:workspace_pk>/tasks/<uuid:task_id>/",
+        "workspaces/<str:workspace_pk>/tasks/<uuid:task_id>/",
         TaskDetailView.as_view(),
         name="task-detail",
     ),
     path(
-        "workspaces/<uuid:workspace_pk>/tasks/<uuid:task_id>/status/",
+        "workspaces/<str:workspace_pk>/tasks/<uuid:task_id>/status/",
         TaskStatusUpdateView.as_view(),
         name="task-status-update",
     ),
     path(
-        "workspaces/<uuid:workspace_pk>/tasks/<uuid:task_id>/dependencies/",
+        "workspaces/<str:workspace_pk>/tasks/<uuid:task_id>/dependencies/",
         TaskDependencyView.as_view(),
         name="task-dependency-create",
     ),
     path(
-        "workspaces/<uuid:workspace_pk>/tasks/<uuid:task_id>/dependencies/<uuid:dependency_id>/",
+        "workspaces/<str:workspace_pk>/tasks/<uuid:task_id>/dependencies/<uuid:dependency_id>/",
         TaskDependencyDestroyView.as_view(),
         name="task-dependency-destroy",
+    ),
+    path(
+        "workspaces/<str:workspace_pk>/tasks/<uuid:task_id>/repositories/",
+        TaskRepositoryLinkView.as_view(),
+        name="task-repository-link-create",
+    ),
+    path(
+        "workspaces/<str:workspace_pk>/tasks/<uuid:task_id>/repositories/<uuid:link_id>/",
+        TaskRepositoryLinkDestroyView.as_view(),
+        name="task-repository-link-destroy",
+    ),
+    path(
+        "workspaces/<str:workspace_pk>/tasks/<uuid:task_id>/knowledge/",
+        TaskKnowledgeLinkView.as_view(),
+        name="task-knowledge-link-create",
+    ),
+    path(
+        "workspaces/<str:workspace_pk>/tasks/<uuid:task_id>/knowledge/<uuid:link_id>/",
+        TaskKnowledgeLinkDestroyView.as_view(),
+        name="task-knowledge-link-destroy",
     ),
 ]

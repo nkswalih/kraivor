@@ -195,8 +195,8 @@ export default function ChatRoomPage() {
     return (
       <div className="flex flex-1 min-h-0 w-full bg-background">
         <SkeletonChatSidebar />
-        <div className="flex-1 flex flex-col bg-[#0A0A0B]">
-          <div className="h-[49px] border-b border-[#27272A] px-4 flex items-center gap-2">
+        <div className="flex-1 flex flex-col bg-krait-void">
+          <div className="h-[49px] border-b border-krait-border px-4 flex items-center gap-2">
             <SkeletonBlock className="w-5 h-5 rounded" />
             <SkeletonLine className="w-32" />
           </div>
@@ -218,15 +218,15 @@ export default function ChatRoomPage() {
         currentRoomId={roomId}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 bg-[#0A0A0B]">
+      <div className="flex-1 flex flex-col min-w-0 bg-krait-void">
         {/* Chat Header */}
-        <div className="h-[49px] border-b border-[#27272A] flex items-center px-4 shrink-0 bg-[#0A0A0B]">
+        <div className="h-[49px] border-b border-krait-border flex items-center px-4 shrink-0 bg-krait-void">
           <Hash className="w-5 h-5 text-text-tertiary mr-2 shrink-0" />
-          <h2 className="font-semibold text-[15px] text-[#FAFAFA] truncate">
+          <h2 className="font-semibold text-[15px] text-text-primary truncate">
             {room?.name ?? '...'}
           </h2>
           {room?.topic && (
-            <span className="text-[13px] text-text-tertiary ml-3 pl-3 border-l border-[#27272A] truncate hidden lg:inline">
+            <span className="text-[13px] text-text-tertiary ml-3 pl-3 border-l border-krait-border truncate hidden lg:inline">
               {room.topic}
             </span>
           )}
@@ -246,10 +246,10 @@ export default function ChatRoomPage() {
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-8">
-              <div className="w-12 h-12 rounded-2xl bg-[#27272A] flex items-center justify-center mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-krait-surface3 flex items-center justify-center mb-4">
                 <Hash className="w-6 h-6 text-text-tertiary" />
               </div>
-              <h3 className="text-[17px] font-semibold text-[#FAFAFA] mb-1">
+              <h3 className="text-[17px] font-semibold text-text-primary mb-1">
                 Welcome to #{room?.name ?? 'channel'}
               </h3>
               <p className="text-[14px] text-text-tertiary max-w-md">
@@ -272,12 +272,12 @@ export default function ChatRoomPage() {
                 return (
                   <div
                     key={msg.message_id}
-                    className="group relative px-4 py-0.5 hover:bg-white/[0.02]"
+                    className="group relative px-4 py-0.5 hover:bg-krait-surface1/20"
                   >
                     {/* Time separator */}
                     {timeGap > 600000 && prev && (
                       <div className="flex items-center gap-3 py-2">
-                        <div className="flex-1 h-px bg-[#27272A]" />
+                        <div className="flex-1 h-px bg-krait-border" />
                         <span className="text-[11px] text-text-tertiary shrink-0">
                           {new Date(msg.created_at).toLocaleDateString(undefined, {
                             month: 'short',
@@ -285,7 +285,7 @@ export default function ChatRoomPage() {
                             year: 'numeric',
                           })}
                         </span>
-                        <div className="flex-1 h-px bg-[#27272A]" />
+                        <div className="flex-1 h-px bg-krait-border" />
                       </div>
                     )}
 
@@ -299,10 +299,10 @@ export default function ChatRoomPage() {
                             <img
                               src={src}
                               alt={msg.sender_name}
-                              className="w-9 h-9 rounded-full object-cover shrink-0 mt-0.5 bg-[#27272A]"
+                              className="w-9 h-9 rounded-full object-cover shrink-0 mt-0.5 bg-krait-surface3"
                             />
                           ) : (
-                            <div className="w-9 h-9 rounded-full bg-[#27272A] flex items-center justify-center text-[13px] font-bold text-[#FAFAFA] shrink-0 mt-0.5">
+                            <div className="w-9 h-9 rounded-full bg-krait-surface3 flex items-center justify-center text-[13px] font-bold text-text-primary shrink-0 mt-0.5">
                               {msg.sender_name?.charAt(0)?.toUpperCase() ?? '?'}
                             </div>
                           );
@@ -315,7 +315,7 @@ export default function ChatRoomPage() {
                         {/* Header row */}
                         {showHeader && (
                           <div className="flex items-baseline gap-2 mb-0.5">
-                            <span className="font-semibold text-[15px] text-[#FAFAFA] hover:underline cursor-pointer">
+                            <span className="font-semibold text-[15px] text-text-primary hover:underline cursor-pointer">
                               {msg.sender_name}
                             </span>
                             <span className="text-[11px] text-text-tertiary">
@@ -330,7 +330,7 @@ export default function ChatRoomPage() {
                             <input
                               value={editContent}
                               onChange={e => setEditContent(e.target.value)}
-                              className="flex-1 px-3 py-1.5 bg-[#0A0A0B] border border-[#27272A] rounded text-[14px] text-[#FAFAFA] focus:outline-none focus:border-venom-yellow/50"
+                              className="flex-1 px-3 py-1.5 bg-krait-void border border-krait-border rounded text-[14px] text-text-primary focus:outline-none focus:border-venom-yellow/50"
                               autoFocus
                               onKeyDown={e => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -362,13 +362,13 @@ export default function ChatRoomPage() {
                                 setEditingMsg(null);
                                 setEditContent('');
                               }}
-                              className="p-1 text-text-tertiary hover:text-[#FAFAFA]"
+                              className="p-1 text-text-tertiary hover:text-text-primary"
                             >
                               <X className="w-4 h-4" />
                             </button>
                           </div>
                         ) : (
-                          <p className="text-[14px] text-[#D1D5DB] leading-relaxed whitespace-pre-wrap break-words">
+                          <p className="text-[14px] text-text-primary leading-relaxed whitespace-pre-wrap break-words">
                             {msg.content}
                             {msg.edited_at && (
                               <span className="text-[11px] text-text-tertiary ml-1">(edited)</span>
@@ -378,7 +378,7 @@ export default function ChatRoomPage() {
 
                         {/* Hover actions */}
                         {!isEditing && (
-                          <div className="absolute right-2 top-0 -translate-y-1/2 hidden group-hover:flex items-center gap-0.5 bg-[#1C1C1F] border border-[#27272A] rounded-lg shadow-md">
+                          <div className="absolute right-2 top-0 -translate-y-1/2 hidden group-hover:flex items-center gap-0.5 bg-krait-surface2 border border-krait-border rounded-lg shadow-md">
                             {isOwn && (
                               <>
                                 <button
@@ -386,7 +386,7 @@ export default function ChatRoomPage() {
                                     setEditingMsg(msg.message_id);
                                     setEditContent(msg.content);
                                   }}
-                                  className="p-1.5 text-text-tertiary hover:text-[#FAFAFA] transition-colors"
+                                  className="p-1.5 text-text-tertiary hover:text-text-primary transition-colors"
                                   title="Edit"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />
@@ -422,7 +422,7 @@ export default function ChatRoomPage() {
                   scrollToBottom();
                   shouldAutoScroll.current = true;
                 }}
-                className="bg-[#27272A] border border-[#3A3A3D] rounded-full px-3 py-1.5 text-[12px] text-[#FAFAFA] hover:bg-[#3A3A3D] shadow-lg flex items-center gap-1.5 transition-colors"
+                className="bg-krait-surface3 border border-krait-borderHi rounded-full px-3 py-1.5 text-[12px] text-text-primary hover:bg-krait-borderHi shadow-lg flex items-center gap-1.5 transition-colors"
               >
                 <ChevronDown className="w-3.5 h-3.5" /> New messages
               </button>
@@ -434,7 +434,7 @@ export default function ChatRoomPage() {
 
         {/* Input Area */}
         <div className="px-4 pb-4 pt-2 shrink-0">
-          <div className="bg-[#1C1C1F] border border-[#3A3A3D] rounded-lg overflow-hidden focus-within:border-[#5A5A5D] transition-colors">
+          <div className="bg-krait-surface2 border border-krait-borderHi rounded-lg overflow-hidden focus-within:border-krait-borderHi transition-colors">
             <textarea
               ref={inputRef}
               value={input}
@@ -442,7 +442,7 @@ export default function ChatRoomPage() {
               onKeyDown={handleKeyDown}
               placeholder={`Message #${room?.name ?? 'channel'}`}
               rows={1}
-              className="w-full bg-transparent border-none text-[14px] text-[#D1D5DB] placeholder:text-text-tertiary resize-none px-3 py-2.5 focus:outline-none max-h-[200px]"
+              className="w-full bg-transparent border-none text-[14px] text-text-primary placeholder:text-text-tertiary resize-none px-3 py-2.5 focus:outline-none max-h-[200px]"
             />
             <div className="flex items-center justify-between px-3 pb-1.5">
               <span className="text-[11px] text-text-tertiary">Shift + Enter for new line</span>

@@ -34,7 +34,7 @@ export function WorkspaceGuard({ children }: { children: ReactNode }) {
 
   if (showCreate) {
     return (
-      <div className="flex h-screen w-full bg-[#0A0A0B] items-center justify-center">
+      <div className="flex h-screen w-full bg-krait-void items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 rounded-xl bg-venom-yellow/10 flex items-center justify-center mx-auto mb-4">
             <svg
@@ -51,7 +51,7 @@ export function WorkspaceGuard({ children }: { children: ReactNode }) {
               />
             </svg>
           </div>
-          <h1 className="text-xl font-semibold text-[#FAFAFA] mb-2">Welcome to Kraivor</h1>
+          <h1 className="text-xl font-semibold text-text-primary mb-2">Welcome to Kraivor</h1>
           <p className="text-[14px] text-text-secondary mb-8 max-w-sm">
             You don&apos;t have any workspaces yet. Create one to get started.
           </p>
@@ -65,7 +65,7 @@ export function WorkspaceGuard({ children }: { children: ReactNode }) {
             </button>
             <button
               onClick={handleSkip}
-              className="text-[13px] text-text-secondary hover:text-[#FAFAFA] transition-colors"
+              className="text-[13px] text-text-secondary hover:text-text-primary transition-colors"
             >
               Skip for now
             </button>

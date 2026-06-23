@@ -83,17 +83,17 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
 
   if (isLoading) {
     return (
-      <div className="w-[260px] bg-[#111113] border-r border-[#27272A] flex items-center justify-center shrink-0">
+      <div className="w-[260px] bg-krait-obsidian border-r border-krait-border flex items-center justify-center shrink-0">
         <Loader2 className="w-5 h-5 text-venom-yellow animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="w-[260px] bg-[#111113] border-r border-[#27272A] flex flex-col shrink-0 select-none">
+    <div className="w-[260px] bg-krait-obsidian border-r border-krait-border flex flex-col shrink-0 select-none">
       {/* Header */}
-      <div className="h-[48px] flex items-center justify-between px-4 border-b border-[#27272A] shrink-0 shadow-sm">
-        <span className="text-[15px] font-bold text-[#FAFAFA] tracking-tight">Chat</span>
+      <div className="h-[48px] flex items-center justify-between px-4 border-b border-krait-border shrink-0 shadow-sm">
+        <span className="text-[15px] font-bold text-text-primary tracking-tight">Chat</span>
       </div>
 
       {/* Lists Container */}
@@ -106,7 +106,7 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
             </span>
             <button
               onClick={() => setShowCreate(true)}
-              className="text-text-tertiary hover:text-[#FAFAFA] transition-colors p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              className="text-text-tertiary hover:text-text-primary transition-colors p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               title="Create channel"
             >
               <Plus className="w-4 h-4" />
@@ -125,13 +125,13 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
                 return (
                   <div
                     key={room.id}
-                    className="flex items-center gap-1.5 px-2 py-1.5 mx-2 bg-[#0A0A0B] border border-[#6366F1] rounded-md shadow-sm"
+                    className="flex items-center gap-1.5 px-2 py-1.5 mx-2 bg-krait-void border border-venom-yellow/50 rounded-md shadow-sm"
                   >
                     <Hash className="w-5 h-5 shrink-0 text-text-tertiary opacity-70" />
                     <input
                       value={editName}
                       onChange={e => setEditName(e.target.value)}
-                      className="flex-1 bg-transparent text-[14px] font-medium text-[#FAFAFA] focus:outline-none min-w-0"
+                      className="flex-1 bg-transparent text-[14px] font-medium text-text-primary focus:outline-none min-w-0"
                       autoFocus
                       onKeyDown={e => {
                         if (e.key === 'Enter') {
@@ -154,7 +154,7 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
                       </button>
                       <button
                         onClick={() => setEditingId(null)}
-                        className="p-1 text-text-tertiary hover:text-[#FAFAFA] rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                        className="p-1 text-text-tertiary hover:text-text-primary rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -168,8 +168,8 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
                   key={room.id}
                   className={`group flex items-center mx-2 rounded-md transition-colors ${
                     active
-                      ? 'bg-[#27272A] text-[#FAFAFA]'
-                      : 'text-text-secondary hover:bg-white/[0.04] hover:text-[#FAFAFA]'
+                      ? 'bg-krait-surface3 text-text-primary'
+                      : 'text-text-secondary hover:bg-krait-surface1/40 hover:text-text-primary'
                   }`}
                 >
                   <Link
@@ -190,7 +190,7 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
                         setEditingId(room.id);
                         setEditName(room.name);
                       }}
-                      className="p-1.5 text-text-tertiary hover:text-[#FAFAFA] transition-colors rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 bg-[#111113] group-hover:bg-transparent"
+                      className="p-1.5 text-text-tertiary hover:text-text-primary transition-colors rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 bg-krait-obsidian group-hover:bg-transparent"
                       title="Rename"
                     >
                       <Edit3 className="w-4 h-4" />
@@ -200,7 +200,7 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
                         e.preventDefault();
                         if (confirm(`Archive #${room.name}?`)) deleteMut.mutate(room.id);
                       }}
-                      className="p-1.5 text-text-tertiary hover:text-red-400 transition-colors rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 bg-[#111113] group-hover:bg-transparent"
+                      className="p-1.5 text-text-tertiary hover:text-red-400 transition-colors rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 bg-krait-obsidian group-hover:bg-transparent"
                       title="Archive"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -234,11 +234,11 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
                   key={room.id}
                   href={`/${workspaceSlug}/chat/${room.id}`}
                   className={`flex items-start gap-2.5 mx-2 px-2 py-2 rounded-md transition-colors ${
-                    active ? 'bg-[#27272A]' : 'hover:bg-white/[0.04]'
+                     active ? 'bg-krait-surface3' : 'hover:bg-krait-surface1/40'
                   }`}
                 >
                   {/* Avatar */}
-                  <div className="w-8 h-8 rounded-full bg-[#27272A] flex items-center justify-center text-[13px] font-bold text-[#FAFAFA] shrink-0 overflow-hidden">
+                  <div className="w-8 h-8 rounded-full bg-krait-surface3 flex items-center justify-center text-[13px] font-bold text-text-primary shrink-0 overflow-hidden">
                     {bestAvatar ? (
                       <img src={bestAvatar} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -249,7 +249,7 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
                   {/* Content */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-[14px] font-medium text-[#FAFAFA]">
+                      <span className="truncate text-[14px] font-medium text-text-primary">
                         {displayName}
                       </span>
                       {room.last_message_at && (

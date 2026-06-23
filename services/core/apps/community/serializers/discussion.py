@@ -7,6 +7,7 @@ from .tag import TagSerializer
 class DiscussionListSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     user_vote = serializers.SerializerMethodField()
+    comment_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Discussion
@@ -44,6 +45,12 @@ class DiscussionListSerializer(serializers.ModelSerializer):
             return vote.value if vote else None
         except Exception:
             return None
+
+    def get_comment_count(self, obj) -> int:
+        val = getattr(obj, "_comment_count", None)
+        if val is not None:
+            return val
+        return obj.comment_count
 
 
 class DiscussionDetailSerializer(DiscussionListSerializer):

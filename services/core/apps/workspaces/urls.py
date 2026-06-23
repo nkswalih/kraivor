@@ -13,30 +13,30 @@ from .views import (
 urlpatterns = [
     path("workspaces/", WorkspaceListView.as_view(), name="workspace-list"),
     path(
-        "workspaces/<uuid:pk>/", WorkspaceDetailView.as_view(), name="workspace-detail"
+        "workspaces/<str:pk>/", WorkspaceDetailView.as_view(), name="workspace-detail"
     ),
     path(
-        "workspaces/<uuid:workspace_pk>/members/",
+        "workspaces/<str:workspace_pk>/members/",
         MemberListCreateView.as_view(),
         name="workspace-member-list",
     ),
     path(
-        "workspaces/<uuid:workspace_pk>/members/invite/",
+        "workspaces/<str:workspace_pk>/members/invite/",
         MemberListCreateView.as_view(),
         name="workspace-member-invite",
     ),
     path(
-        "workspaces/<uuid:workspace_pk>/members/<uuid:pk>/",
+        "workspaces/<str:workspace_pk>/members/<uuid:pk>/",
         MemberDetailView.as_view(),
         name="workspace-member-detail",
     ),
     path(
-        "workspaces/<uuid:workspace_pk>/invitations/",
+        "workspaces/<str:workspace_pk>/invitations/",
         InvitationListAdminView.as_view(),
         name="workspace-invitation-list",
     ),
     path(
-        "workspaces/<uuid:workspace_pk>/invitations/<uuid:invitation_id>/",
+        "workspaces/<str:workspace_pk>/invitations/<uuid:invitation_id>/",
         InvitationRevokeView.as_view(),
         name="workspace-invitation-revoke",
     ),

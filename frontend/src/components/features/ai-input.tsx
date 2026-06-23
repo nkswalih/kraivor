@@ -80,7 +80,7 @@ export function AiInput({
 
         {/* Main input container — flat top where it touches banner, bottom-outer corners rounded */}
         <div
-          className={`bg-[#18181C] border border-[#27272A] focus-within:border-[#3A3A3D] transition-colors ${
+          className={`bg-krait-surface2 border border-krait-border focus-within:border-krait-borderHi transition-colors ${
             showBanner ? 'rounded-b-2xl border-t-0' : 'rounded-2xl'
           }`}
         >
@@ -93,7 +93,7 @@ export function AiInput({
               placeholder="Do anything with AI..."
               rows={1}
               disabled={isStreaming}
-              className="w-full bg-transparent border-none text-[14px] text-[#d1d5db] placeholder:text-[#5e5e72] resize-none focus:outline-none py-0 leading-relaxed disabled:opacity-50"
+              className="w-full bg-transparent border-none text-[14px] text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none py-0 leading-relaxed disabled:opacity-50"
             />
           </div>
 
@@ -104,14 +104,14 @@ export function AiInput({
               <button
                 type="button"
                 disabled={isStreaming}
-                className="text-[#5e5e72] hover:text-[#9898a6] transition-colors disabled:opacity-30"
+                className="text-text-tertiary hover:text-text-secondary transition-colors disabled:opacity-30"
               >
                 <Plus className="w-4 h-4" strokeWidth={1.8} />
               </button>
               <button
                 type="button"
                 disabled={isStreaming}
-                className="text-[#5e5e72] hover:text-[#9898a6] transition-colors disabled:opacity-30"
+                className="text-text-tertiary hover:text-text-secondary transition-colors disabled:opacity-30"
               >
                 <SlidersHorizontal className="w-4 h-4" strokeWidth={1.8} />
               </button>
@@ -122,14 +122,14 @@ export function AiInput({
               <button
                 type="button"
                 onClick={() => setShowModelSelector(v => !v)}
-                className="flex items-center gap-1.5 px-2 py-1 bg-[#1f1f24] border border-[#2c2c33] rounded-md hover:border-[#3d3d47] transition-colors"
+                className="flex items-center gap-1.5 px-2 py-1 bg-krait-surface3 border border-krait-border rounded-md hover:border-krait-borderHi transition-colors"
               >
                 <span className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
                   {getModelIcon(selectedModel)}
                 </span>
-                <span className="text-[12px] font-medium text-[#9898a6]">{selectedModel}</span>
-                <div className="w-4 h-4 rounded-full border border-[#3d3d47] flex items-center justify-center ml-0.5">
-                  <ArrowUp className="w-2.5 h-2.5 text-[#5e5e72]" strokeWidth={2.5} />
+                <span className="text-[12px] font-medium text-text-secondary">{selectedModel}</span>
+                <div className="w-4 h-4 rounded-full border border-krait-borderHi flex items-center justify-center ml-0.5">
+                  <ArrowUp className="w-2.5 h-2.5 text-text-tertiary" strokeWidth={2.5} />
                 </div>
               </button>
             </div>

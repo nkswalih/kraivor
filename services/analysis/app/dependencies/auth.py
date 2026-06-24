@@ -1,13 +1,17 @@
+import time
+
 import httpx
 import jwt
-import logging
-import time
+import structlog
 from fastapi import HTTPException, Request
 from pydantic import BaseModel
 
-from app.config import settings
+from app.core.config import get_settings
 
-logger = logging.getLogger(__name__)
+
+settings = get_settings()
+
+logger = structlog.get_logger(__name__)
 
 
 class JWTPayload(BaseModel):
@@ -26,11 +30,11 @@ def _get_jwks() -> dict:
     global _jwks_cache, _jwks_cache_time
     now = time.time()
 
-    if _jwks_cache and (now - _jwks_cache_time) < settings.jwt_jwks_cache_ttl:
+    if _jwks_cache and (now - _jwks_cache_time) < settings.jwt.jwks_cache_ttl:
         return _jwks_cache
 
     try:
-        response = httpx.get(settings.identity_jwks_url, timeout=10)
+        response = httpx.get(str(settings.jwt.jwks_url), timeout=10)
         response.raise_for_status()
         _jwks_cache = response.json()
         _jwks_cache_time = now
@@ -50,10 +54,10 @@ def _verify_token(token: str) -> dict:
     payload = jwt.decode(
         token,
         jwk,
-        algorithms=[settings.jwt_algorithm],
-        audience=settings.jwt_audience,
-        issuer=settings.jwt_issuer,
-        options={'verify_exp': settings.jwt_verify_expiration}
+        algorithms=[settings.jwt.algorithm],
+        audience=settings.jwt.audience,
+        issuer=settings.jwt.issuer,
+        options={'verify_exp': settings.jwt.verify_expiration}
     )
     return payload
 
@@ -63,7 +67,7 @@ def get_current_user(request: Request) -> JWTPayload:
     FastAPI dependency that verifies JWT token and returns the payload.
     """
     # Skip JWT verification for internal requests (from gateway)
-    if request.headers.get(settings.internal_request_header):
+    if request.headers.get(settings.jwt.internal_request_header):
         return JWTPayload(
             sub=request.headers.get("X-User-ID", ""),
             email=request.headers.get("X-Email", ""),

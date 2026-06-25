@@ -16,6 +16,7 @@ from app.application.analysis.handler import (
 )
 from app.application.analysis.queries import GetJobStatusQuery, ListJobsQuery
 from app.core.logging import get_logger
+from app.dependencies.auth import JWTPayload, get_current_user
 from app.infrastructure.db.unit_of_work import UnitOfWork
 from app.infrastructure.messaging.producer import EventProducer
 
@@ -29,6 +30,7 @@ async def start_analysis(
     body: StartAnalysisRequest,
     uow: UnitOfWork = Depends(get_uow),
     producer: EventProducer = Depends(get_producer),
+    _user: JWTPayload = Depends(get_current_user),
 ) -> JobStatusResponse:
     cmd = StartAnalysisCommand(
         repo_url=body.repo_url,
@@ -51,6 +53,7 @@ async def start_analysis(
 async def get_job(
     job_id: UUID,
     uow: UnitOfWork = Depends(get_uow),
+    _user: JWTPayload = Depends(get_current_user),
 ) -> JobStatusResponse:
     query = GetJobStatusQuery(job_id=job_id)
     job = await get_job_status(query, uow)
@@ -75,6 +78,7 @@ async def list_jobs_endpoint(
     page: int = 1,
     page_size: int = 20,
     uow: UnitOfWork = Depends(get_uow),
+    _user: JWTPayload = Depends(get_current_user),
 ) -> JobListResponse:
     query = ListJobsQuery(page=page, page_size=page_size)
     result = await list_jobs(query, uow)

@@ -17,6 +17,7 @@ from app.application.analysis.queries import (
     ListFindingsQuery,
 )
 from app.core.logging import get_logger
+from app.dependencies.auth import JWTPayload, get_current_user
 from app.infrastructure.db.unit_of_work import UnitOfWork
 
 logger = get_logger(__name__)
@@ -32,6 +33,7 @@ async def list_findings_endpoint(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     uow: UnitOfWork = Depends(get_uow),
+    _user: JWTPayload = Depends(get_current_user),
 ) -> FindingsListResponse:
     query = ListFindingsQuery(
         job_id=job_id,
@@ -53,6 +55,7 @@ async def list_findings_endpoint(
 async def findings_summary(
     job_id: UUID = Query(..., description="Job ID"),
     uow: UnitOfWork = Depends(get_uow),
+    _user: JWTPayload = Depends(get_current_user),
 ) -> FindingsSummaryResponse:
     query = GetFindingsSummaryQuery(job_id=job_id)
     result = await get_findings_summary(query, uow)

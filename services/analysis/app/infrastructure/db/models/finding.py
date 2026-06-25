@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import Boolean, Float, Integer, SmallInteger, String, Text
+from sqlalchemy import Boolean, Float, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

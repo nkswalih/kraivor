@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, func
@@ -15,14 +15,14 @@ class TimestampMixin:
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         default=None,
-        onupdate=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(UTC),
         server_onupdate=func.now(),
         nullable=True,
     )
@@ -36,7 +36,7 @@ class SoftDeleteMixin:
     )
 
 
-def UUIDColumn() -> UUID:
+def UUIDColumn() -> UUID:  # noqa: N802
     """Generate a UUID primary key column."""
     return mapped_column(
         PG_UUID(as_uuid=True),

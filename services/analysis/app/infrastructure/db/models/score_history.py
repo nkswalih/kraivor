@@ -5,7 +5,7 @@ from sqlalchemy import DateTime, Integer, SmallInteger, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.infrastructure.db.base import Base, UUIDColumn
+from app.infrastructure.db.base import Base
 
 
 class ScoreHistoryModel(Base):

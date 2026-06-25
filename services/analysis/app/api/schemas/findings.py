@@ -1,5 +1,3 @@
-from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -15,9 +13,9 @@ class FindingResponse(BaseModel):
     description: str = ""
     recommendation: str = ""
     enterprise_pattern: str = ""
-    file_path: Optional[str] = None
-    line_start: Optional[int] = None
-    line_end: Optional[int] = None
+    file_path: str | None = None
+    line_start: int | None = None
+    line_end: int | None = None
     code_snippet: str = ""
     score_impact: float = 0.0
     rpm_impact: int = 0

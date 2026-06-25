@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -24,13 +23,13 @@ class JobStatusResponse(BaseModel):
     progress_pct: float = 0.0
     progress_message: str = ""
     total_findings: int = 0
-    total_files: Optional[int] = None
-    total_lines: Optional[int] = None
-    overall_score: Optional[float] = None
-    error_message: Optional[str] = None
+    total_files: int | None = None
+    total_lines: int | None = None
+    overall_score: float | None = None
+    error_message: str | None = None
     created_at: datetime
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
 
 
 class JobListResponse(BaseModel):

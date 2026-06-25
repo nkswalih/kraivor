@@ -63,7 +63,7 @@ async def health_check() -> HealthResponse:
         )
 
     overall = "ok"
-    for name, dep in deps.items():
+    for _name, dep in deps.items():
         if dep.status == "unhealthy":
             overall = "degraded"
 

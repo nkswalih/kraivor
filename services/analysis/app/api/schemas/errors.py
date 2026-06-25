@@ -1,4 +1,3 @@
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -9,12 +8,12 @@ class ErrorFindingResponse(BaseModel):
     error_type: str
     severity: str
     title: str
-    description: Optional[str] = None
+    description: str | None = None
     file_path: str
-    line_start: Optional[int] = None
-    line_end: Optional[int] = None
-    code_snippet: Optional[str] = None
-    recommendation: Optional[str] = None
+    line_start: int | None = None
+    line_end: int | None = None
+    code_snippet: str | None = None
+    recommendation: str | None = None
 
 
 class ErrorFindingListResponse(BaseModel):

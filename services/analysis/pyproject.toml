@@ -31,6 +31,10 @@ dev = [
     "debugpy>=1.8.0",
     "ruff>=0.5.0",
     "mypy>=1.10.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=5.0.0",
+    "pytest-mock>=3.14.0",
     "httptools>=0.6.0",
 ]
 prod = [
@@ -84,7 +88,13 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "C4", "ISC", "ICN", "RUF"]
-ignore = ["E501"]
+ignore = [
+    "E501",
+    "B008",   # FastAPI Depends/Query in arg defaults is idiomatic
+    "B904",   # Celery self.retry(exc=exc) is the correct pattern
+    "RUF012", # Mutable class defaults for SQLAlchemy/Pydantic models
+    "E402",   # Module-level import after settings.get_settings() pattern
+]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["N803"]

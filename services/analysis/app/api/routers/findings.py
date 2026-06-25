@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, Query
 
 from app.api.dependencies.services import get_uow
 from app.api.schemas.findings import (
+    FindingResponse,
     FindingsListResponse,
     FindingsSummaryResponse,
-    FindingResponse,
 )
 from app.application.analysis.handler import (
     get_findings_summary,

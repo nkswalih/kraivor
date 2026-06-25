@@ -1,6 +1,6 @@
 from collections.abc import AsyncGenerator
 
-from fastapi import Depends, Request
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.database import get_db

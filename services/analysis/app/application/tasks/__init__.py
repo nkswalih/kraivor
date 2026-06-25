@@ -10,12 +10,12 @@ from app.application.tasks.scanner import (
 )
 
 __all__ = [
-    "task_start_analysis",
+    "run_full_analysis",
     "task_clone",
+    "task_finalize",
     "task_parse",
     "task_rules",
     "task_save_findings",
     "task_score",
-    "task_finalize",
-    "run_full_analysis",
+    "task_start_analysis",
 ]

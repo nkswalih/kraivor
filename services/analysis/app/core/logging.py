@@ -1,11 +1,9 @@
 import logging
 import sys
-from pathlib import Path
 
 import structlog
 
 from app.core.config import get_settings
-
 
 settings = get_settings()
 

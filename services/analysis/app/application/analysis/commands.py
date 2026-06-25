@@ -11,6 +11,7 @@ class StartAnalysisCommand:
     repo_url: str
     branch: str = "main"
     deep_scan: bool = False
+    depth: int = 1
     simulate_users: list[int] | None = None
 
 

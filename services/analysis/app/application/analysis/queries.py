@@ -23,7 +23,8 @@ class GetFindingsSummaryQuery:
 
 @dataclass(kw_only=True)
 class GetReportQuery:
-    job_id: UUID
+    report_id: UUID | None = None
+    job_id: UUID | None = None
 
 
 @dataclass(kw_only=True)

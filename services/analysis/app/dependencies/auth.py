@@ -8,7 +8,6 @@ from pydantic import BaseModel
 
 from app.core.config import get_settings
 
-
 settings = get_settings()
 
 logger = structlog.get_logger(__name__)

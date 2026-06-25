@@ -95,3 +95,65 @@ ALL_PACKAGE_JSON_SIGNATURES: dict[str, DetectedTechnology] = _merge_dicts(
 ALL_PYTHON_SIGNATURES: dict[str, DetectedTechnology] = PYTHON_FRAMEWORKS
 
 ALL_GO_SIGNATURES: dict[str, DetectedTechnology] = GO_FRAMEWORKS
+
+# ── C# / .NET ─────────────────────────────────────────────────────────────────
+
+CSHARP_FRAMEWORKS: dict[str, DetectedTechnology] = {
+    "microsoft.aspnetcore.app": DetectedTechnology(name="ASP.NET Core", category="framework", detected_from="*.csproj"),
+    "microsoft.aspnetcore.mvc": DetectedTechnology(name="ASP.NET Core MVC", category="framework", detected_from="*.csproj"),
+    "microsoft.entityframeworkcore": DetectedTechnology(name="Entity Framework Core", category="framework", detected_from="*.csproj"),
+    "microsoft.entityframeworkcore.sqlserver": DetectedTechnology(name="EF Core SQL Server", category="tool", detected_from="*.csproj"),
+    "microsoft.entityframeworkcore.postgresql": DetectedTechnology(name="EF Core PostgreSQL", category="tool", detected_from="*.csproj"),
+    "microsoft.entityframeworkcore.inmemory": DetectedTechnology(name="EF Core InMemory", category="tool", detected_from="*.csproj"),
+    "dapper": DetectedTechnology(name="Dapper", category="tool", detected_from="*.csproj"),
+    "nhibernate": DetectedTechnology(name="NHibernate", category="framework", detected_from="*.csproj"),
+    "automapper": DetectedTechnology(name="AutoMapper", category="tool", detected_from="*.csproj"),
+    "fluentvalidation": DetectedTechnology(name="FluentValidation", category="tool", detected_from="*.csproj"),
+    "serilog": DetectedTechnology(name="Serilog", category="tool", detected_from="*.csproj"),
+    "nlog": DetectedTechnology(name="NLog", category="tool", detected_from="*.csproj"),
+    "swashbuckle.aspnetcore": DetectedTechnology(name="Swashbuckle (Swagger)", category="tool", detected_from="*.csproj"),
+    "nspec": DetectedTechnology(name="NSpec", category="tool", detected_from="*.csproj"),
+    "xunit": DetectedTechnology(name="xUnit", category="tool", detected_from="*.csproj"),
+    "nunit": DetectedTechnology(name="NUnit", category="tool", detected_from="*.csproj"),
+    "moq": DetectedTechnology(name="Moq", category="tool", detected_from="*.csproj"),
+    "masstransit": DetectedTechnology(name="MassTransit", category="framework", detected_from="*.csproj"),
+    "hangfire": DetectedTechnology(name="Hangfire", category="framework", detected_from="*.csproj"),
+    "signalr": DetectedTechnology(name="SignalR", category="framework", detected_from="*.csproj"),
+    "grpc.aspnetcore": DetectedTechnology(name="gRPC .NET", category="framework", detected_from="*.csproj"),
+    "hotchocolate": DetectedTechnology(name="HotChocolate (GraphQL)", category="framework", detected_from="*.csproj"),
+    "microsoft.aspnetcore.identity": DetectedTechnology(name="ASP.NET Core Identity", category="framework", detected_from="*.csproj"),
+    "microsoft.aspnetcore.authentication.jwtbearer": DetectedTechnology(name="JWT Bearer", category="tool", detected_from="*.csproj"),
+}
+
+ALL_CSHARP_SIGNATURES: dict[str, DetectedTechnology] = CSHARP_FRAMEWORKS
+
+# ── Java ──────────────────────────────────────────────────────────────────────
+
+JAVA_FRAMEWORKS: dict[str, DetectedTechnology] = {
+    "org.springframework.boot": DetectedTechnology(name="Spring Boot", category="framework", detected_from="pom.xml|build.gradle"),
+    "org.springframework": DetectedTechnology(name="Spring Framework", category="framework", detected_from="pom.xml|build.gradle"),
+    "org.springframework.security": DetectedTechnology(name="Spring Security", category="framework", detected_from="pom.xml|build.gradle"),
+    "org.springframework.data:spring-data-jpa": DetectedTechnology(name="Spring Data JPA", category="framework", detected_from="pom.xml|build.gradle"),
+    "org.hibernate.orm:hibernate-core": DetectedTechnology(name="Hibernate ORM", category="framework", detected_from="pom.xml|build.gradle"),
+    "com.zaxxer.hikaricp": DetectedTechnology(name="HikariCP", category="tool", detected_from="pom.xml|build.gradle"),
+    "com.fasterxml.jackson.core": DetectedTechnology(name="Jackson", category="tool", detected_from="pom.xml|build.gradle"),
+    "org.mybatis": DetectedTechnology(name="MyBatis", category="framework", detected_from="pom.xml|build.gradle"),
+    "org.apache.struts": DetectedTechnology(name="Apache Struts", category="framework", detected_from="pom.xml|build.gradle"),
+    "jakarta.persistence": DetectedTechnology(name="Jakarta Persistence (JPA)", category="framework", detected_from="pom.xml|build.gradle"),
+    "jakarta.validation": DetectedTechnology(name="Jakarta Validation", category="tool", detected_from="pom.xml|build.gradle"),
+    "org.projectlombok": DetectedTechnology(name="Lombok", category="tool", detected_from="pom.xml|build.gradle"),
+    "org.mapstruct": DetectedTechnology(name="MapStruct", category="tool", detected_from="pom.xml|build.gradle"),
+    "org.apache.kafka": DetectedTechnology(name="Kafka Client", category="infra", detected_from="pom.xml|build.gradle"),
+    "org.springdoc": DetectedTechnology(name="SpringDoc (Swagger)", category="tool", detected_from="pom.xml|build.gradle"),
+    "io.swagger": DetectedTechnology(name="Swagger", category="tool", detected_from="pom.xml|build.gradle"),
+    "org.junit.jupiter": DetectedTechnology(name="JUnit 5", category="tool", detected_from="pom.xml|build.gradle"),
+    "org.mockito": DetectedTechnology(name="Mockito", category="tool", detected_from="pom.xml|build.gradle"),
+    "io.micrometer": DetectedTechnology(name="Micrometer", category="tool", detected_from="pom.xml|build.gradle"),
+    "org.flywaydb": DetectedTechnology(name="Flyway", category="tool", detected_from="pom.xml|build.gradle"),
+    "org.liquibase": DetectedTechnology(name="Liquibase", category="tool", detected_from="pom.xml|build.gradle"),
+    "com.google.guava": DetectedTechnology(name="Guava", category="tool", detected_from="pom.xml|build.gradle"),
+    "ch.qos.logback": DetectedTechnology(name="Logback", category="tool", detected_from="pom.xml|build.gradle"),
+    "org.apache.logging.log4j": DetectedTechnology(name="Log4j", category="tool", detected_from="pom.xml|build.gradle"),
+}
+
+ALL_JAVA_SIGNATURES: dict[str, DetectedTechnology] = JAVA_FRAMEWORKS

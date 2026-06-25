@@ -57,16 +57,16 @@ class SecurityNoAuthRule(BaseRule):
                             f"{method} {path}"
                         ),
                         description=(
-                            f"This endpoint requires no authentication. "
-                            f"Any user can access it without credentials."
+                            "This endpoint requires no authentication. "
+                            "Any user can access it without credentials."
                         ),
                         file_path=file_path,
                         line_start=route.get("line_start"),
                         line_end=route.get("line_end"),
                         code_snippet=route.get("snippet", ""),
                         recommendation=(
-                            f"Add @login_required or equivalent "
-                            f"authentication decorator"
+                            "Add @login_required or equivalent "
+                            "authentication decorator"
                         ),
                         enterprise_pattern=(
                             "Defense in depth — authenticate at "
@@ -143,9 +143,9 @@ class SecurityHardcodedSecretRule(BaseRule):
                                 severity=self.severity,
                                 title="Hardcoded secret detected",
                                 description=(
-                                    f"High-entropy string found — "
-                                    f"potential API key, password, "
-                                    f"or secret token"
+                                    "High-entropy string found — "
+                                    "potential API key, password, "
+                                    "or secret token"
                                 ),
                                 file_path=file_path,
                                 line_start=line_num,

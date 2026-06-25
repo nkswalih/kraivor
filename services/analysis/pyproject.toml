@@ -23,6 +23,7 @@ dependencies = [
     "opentelemetry-api>=1.25.0",
     "opentelemetry-sdk>=1.25.0",
     "opentelemetry-instrumentation-fastapi>=0.50b0",
+    "pyjwt>=2.8.0",
 ]
 
 [project.optional-dependencies]

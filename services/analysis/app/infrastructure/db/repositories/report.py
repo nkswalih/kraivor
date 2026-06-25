@@ -1,13 +1,13 @@
+import json
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.contracts.repository_provider import AbstractReportRepository
 from app.domain.entities.report import Report
 from app.domain.entities.score import Score
 from app.infrastructure.db.models.analysis_job import AnalysisJobModel
-from app.infrastructure.db.models.enterprise_guide import EnterpriseGuideModel
 
 
 class ReportRepository(AbstractReportRepository):
@@ -17,9 +17,26 @@ class ReportRepository(AbstractReportRepository):
         self._session = session
 
     async def save(self, report: Report) -> None:
-        # Reports are derived from analysis_jobs and enterprise_guides
-        # We save via the job and guide models
-        pass
+        stmt = (
+            update(AnalysisJobModel)
+            .where(AnalysisJobModel.id == report.job_id)
+            .values(
+                total_files=report.total_files_analyzed,
+                duration_seconds=report.duration_seconds,
+                overall_score=report.scores.overall if report.scores else None,
+                performance_score=report.scores.performance if report.scores else None,
+                security_score=report.scores.security if report.scores else None,
+                reliability_score=report.scores.reliability if report.scores else None,
+                maintainability_score=report.scores.maintainability if report.scores else None,
+                devops_score=report.scores.devops if report.scores else None,
+                critical_count=report.scores.critical_count if report.scores else 0,
+                high_count=report.scores.high_count if report.scores else 0,
+                medium_count=report.scores.medium_count if report.scores else 0,
+                low_count=report.scores.low_count if report.scores else 0,
+                total_findings=report.scores.findings_count if report.scores else 0,
+            )
+        )
+        await self._session.execute(stmt)
 
     async def get_by_job(self, job_id: UUID) -> Report | None:
         stmt = select(AnalysisJobModel).where(AnalysisJobModel.id == job_id)

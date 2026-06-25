@@ -18,13 +18,11 @@ from app.application.analysis.handler import (
     handle_start_analysis,
 )
 from app.application.tasks.runner import run_async
-from app.core.constants import Severity
 from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
+from app.domain.entities.score import Score
 from app.domain.rules.base import RuleViolation
 from app.domain.rules.registry import create_default_registry
-from app.domain.entities.score import Score
-from app.infrastructure.cache.redis import RedisCache
 from app.infrastructure.db.unit_of_work import UnitOfWork
 from app.infrastructure.git.repository_fetcher import RepositoryFetcher
 from app.infrastructure.messaging.producer import EventProducer
@@ -135,7 +133,7 @@ def task_parse(self, prev_result: dict) -> dict:
 @shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
 def task_rules(self, prev_result: dict) -> dict:
     job_id = prev_result["job_id"]
-    repo_path = prev_result["repo_path"]
+    prev_result["repo_path"]
     files = prev_result["files"]
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="rules")
     parser = _get_parser()
@@ -197,7 +195,6 @@ def task_save_findings(self, prev_result: dict) -> dict:
             findings = await handle_save_findings(cmd, uow, violations, job)
             await uow.commit()
 
-            from app.domain.rules.base import RuleViolation
 
             rule_violations = [
                 {

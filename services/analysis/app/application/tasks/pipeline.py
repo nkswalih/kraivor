@@ -5,9 +5,9 @@ Each stage calls the same handler functions used by individual tasks,
 but shares state in-memory instead of passing through the chain.
 """
 
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from celery import chain, shared_task
+from celery import shared_task
 
 from app.application.analysis.commands import (
     ProcessStageCommand,
@@ -29,7 +29,6 @@ from app.application.analysis.handler import (
     handle_start_analysis,
 )
 from app.application.tasks.runner import run_async
-from app.core.constants import Severity
 from app.core.logging import get_logger
 from app.domain.rules.base import RuleViolation
 from app.domain.rules.registry import create_default_registry

@@ -9,7 +9,7 @@ logger = get_logger(__name__)
 T = TypeVar("T")
 
 
-def run_async(coro: Coroutine[Any, Any, T]) -> T:
+def run_async[T](coro: Coroutine[Any, Any, T]) -> T:
     """Run an async coroutine synchronously within a Celery task.
 
     Creates a fresh event loop to avoid conflicts with Celery's
@@ -21,8 +21,6 @@ def run_async(coro: Coroutine[Any, Any, T]) -> T:
         loop = None
 
     if loop is not None and loop.is_running():
-        import asyncio
-
         future = asyncio.run_coroutine_threadsafe(coro, loop)
         return future.result()
 

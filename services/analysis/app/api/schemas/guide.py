@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -8,11 +8,11 @@ from pydantic import BaseModel
 class EnterpriseGuideResponse(BaseModel):
     id: UUID
     job_id: UUID
-    executive_summary: Optional[str] = None
-    critical_issues: Optional[list] = None
-    high_issues: Optional[list] = None
-    medium_issues: Optional[list] = None
-    architecture_review: Optional[dict[str, Any]] = None
-    capacity_analysis: Optional[dict[str, Any]] = None
-    migration_path: Optional[list] = None
-    generated_at: Optional[datetime] = None
+    executive_summary: str | None = None
+    critical_issues: list | None = None
+    high_issues: list | None = None
+    medium_issues: list | None = None
+    architecture_review: dict[str, Any] | None = None
+    capacity_analysis: dict[str, Any] | None = None
+    migration_path: list | None = None
+    generated_at: datetime | None = None

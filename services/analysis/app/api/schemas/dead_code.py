@@ -1,4 +1,3 @@
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -9,10 +8,10 @@ class DeadCodeFindingResponse(BaseModel):
     code_type: str
     name: str
     file_path: str
-    line_start: Optional[int] = None
-    line_end: Optional[int] = None
-    context: Optional[str] = None
-    evidence: Optional[str] = None
+    line_start: int | None = None
+    line_end: int | None = None
+    context: str | None = None
+    evidence: str | None = None
     confidence: float = 0.0
 
 

@@ -16,7 +16,7 @@ from app.application.analysis.handler import (
 )
 from app.application.analysis.queries import GetJobStatusQuery, ListJobsQuery
 from app.application.tasks.pipeline import run_full_analysis
-from app.core.constants import JobStatus, TriggerType
+from app.core.constants import TriggerType
 from app.core.logging import get_logger
 from app.dependencies.auth import JWTPayload, get_current_user
 from app.infrastructure.db.unit_of_work import UnitOfWork

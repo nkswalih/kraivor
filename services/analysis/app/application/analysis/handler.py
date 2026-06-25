@@ -36,6 +36,11 @@ from app.infrastructure.db.unit_of_work import UnitOfWork
 from app.infrastructure.git.repository_fetcher import RepositoryFetcher
 from app.infrastructure.messaging.producer import EventProducer
 from app.infrastructure.parsers.base import ChainedParser
+from app.workers.dead_code.detector import DeadCodeDetector, DeadCodeFinding
+from app.workers.errors.scanner import ErrorScanner, ErrorFinding
+from app.workers.perf.rpm_calculator import RPMCalculator, PerformanceMetrics
+from app.workers.perf.load_sim import ProductionSimulator
+from app.workers.enterprise_guide import EnterpriseGuideGenerator
 
 logger = get_logger(__name__)
 
@@ -446,6 +451,249 @@ async def handle_analysis_failure(
         "analysis_failed",
         job_id=str(job_id), stage=stage, error=error_message,
     )
+
+
+async def handle_stage_dead_code(
+    cmd: ProcessStageCommand,
+    uow: UnitOfWork,
+    producer: EventProducer,
+    parsed_files: list[ParsedFile],
+) -> list[DeadCodeFinding]:
+    job = await uow.jobs.get_by_id(cmd.job_id)
+    if not job:
+        raise NotFoundError(f"Job {cmd.job_id} not found")
+
+    await uow.jobs.update_status(
+        cmd.job_id, JobStatus.DEAD_CODE, progress_pct=80,
+        progress_message="Checking for dead code...",
+    )
+    await producer.publish(AnalysisProgressed(
+        job_id=cmd.job_id, status=JobStatus.DEAD_CODE, progress_pct=80,
+    ))
+
+    detector = DeadCodeDetector(parsed_files)
+    dead_code_results = await detector.detect_all()
+
+    if dead_code_results:
+        entries = [r.to_dict() for r in dead_code_results]
+        for e in entries:
+            e["job_id"] = cmd.job_id
+            e["repo_id"] = job["repo_id"]
+            e["workspace_id"] = job["workspace_id"]
+        await uow.dead_code.save_many(entries)
+        logger.info(
+            "dead_code_saved", count=len(entries), job_id=str(cmd.job_id),
+        )
+
+    await uow.jobs.update_status(
+        cmd.job_id, JobStatus.DEAD_CODE, progress_pct=83,
+        progress_message=f"Found {len(dead_code_results)} dead code instances",
+    )
+
+    return dead_code_results
+
+
+async def handle_stage_errors(
+    cmd: ProcessStageCommand,
+    uow: UnitOfWork,
+    producer: EventProducer,
+    parsed_files: list[ParsedFile],
+) -> list[ErrorFinding]:
+    job = await uow.jobs.get_by_id(cmd.job_id)
+    if not job:
+        raise NotFoundError(f"Job {cmd.job_id} not found")
+
+    await uow.jobs.update_status(
+        cmd.job_id, JobStatus.ERRORS, progress_pct=85,
+        progress_message="Analyzing error patterns...",
+    )
+    await producer.publish(AnalysisProgressed(
+        job_id=cmd.job_id, status=JobStatus.ERRORS, progress_pct=85,
+    ))
+
+    scanner = ErrorScanner(parsed_files)
+    error_results = await scanner.scan_all()
+
+    if error_results:
+        entries = [r.to_dict() for r in error_results]
+        for e in entries:
+            e["job_id"] = cmd.job_id
+            e["repo_id"] = job["repo_id"]
+            e["workspace_id"] = job["workspace_id"]
+        await uow.error_findings.save_many(entries)
+        logger.info(
+            "errors_saved", count=len(entries), job_id=str(cmd.job_id),
+        )
+
+    await uow.jobs.update_status(
+        cmd.job_id, JobStatus.ERRORS, progress_pct=86,
+        progress_message=f"Found {len(error_results)} error patterns",
+    )
+
+    return error_results
+
+
+async def handle_stage_perf(
+    cmd: ProcessStageCommand,
+    uow: UnitOfWork,
+    producer: EventProducer,
+    parsed_files: list[ParsedFile],
+) -> PerformanceMetrics | None:
+    job = await uow.jobs.get_by_id(cmd.job_id)
+    if not job:
+        raise NotFoundError(f"Job {cmd.job_id} not found")
+
+    await uow.jobs.update_status(
+        cmd.job_id, JobStatus.PERF, progress_pct=88,
+        progress_message="Analyzing performance characteristics...",
+    )
+    await producer.publish(AnalysisProgressed(
+        job_id=cmd.job_id, status=JobStatus.PERF, progress_pct=88,
+    ))
+
+    try:
+        calculator = RPMCalculator(parsed_files)
+        perf_metrics = await calculator.calculate()
+
+        if perf_metrics.endpoints:
+            entries = [em.to_dict() for em in perf_metrics.endpoints]
+            for e in entries:
+                e["job_id"] = cmd.job_id
+                e["repo_id"] = job["repo_id"]
+                e["workspace_id"] = job["workspace_id"]
+            await uow.performance_metrics.save_many(entries)
+            logger.info(
+                "perf_metrics_saved", count=len(entries), job_id=str(cmd.job_id),
+            )
+
+        await uow.jobs.update_status(
+            cmd.job_id, JobStatus.PERF, progress_pct=90,
+            progress_message=f"Estimated RPM: {perf_metrics.overall_rpm}, "
+            f"breaks at {perf_metrics.breaks_at_concurrent_users} users",
+        )
+
+        return perf_metrics
+    except Exception:
+        logger.warning("perf_analysis_failed", job_id=str(cmd.job_id))
+        await uow.jobs.update_status(
+            cmd.job_id, JobStatus.PERF, progress_pct=90,
+            progress_message="Performance analysis skipped due to error",
+        )
+        return None
+
+
+async def handle_stage_simulation(
+    cmd: ProcessStageCommand,
+    uow: UnitOfWork,
+    producer: EventProducer,
+    perf_metrics: PerformanceMetrics | None,
+) -> list[dict]:
+    job = await uow.jobs.get_by_id(cmd.job_id)
+    if not job:
+        raise NotFoundError(f"Job {cmd.job_id} not found")
+
+    await uow.jobs.update_status(
+        cmd.job_id, JobStatus.SIMULATION, progress_pct=92,
+        progress_message="Running load simulation...",
+    )
+    await producer.publish(AnalysisProgressed(
+        job_id=cmd.job_id, status=JobStatus.SIMULATION, progress_pct=92,
+    ))
+
+    if not perf_metrics:
+        await uow.jobs.update_status(
+            cmd.job_id, JobStatus.SIMULATION, progress_pct=93,
+            progress_message="Simulation skipped (no performance data)",
+        )
+        return []
+
+    try:
+        simulator = ProductionSimulator()
+        sim_results = await simulator.simulate(perf_metrics)
+
+        if sim_results:
+            entries = [r.to_dict() for r in sim_results]
+            for e in entries:
+                e["job_id"] = cmd.job_id
+                e["repo_id"] = job["repo_id"]
+                e["workspace_id"] = job["workspace_id"]
+            await uow.simulation_results.save_many(entries)
+            statuses = [s.status for s in sim_results]
+            logger.info(
+                "simulation_complete",
+                job_id=str(cmd.job_id), statuses=statuses,
+            )
+
+        await uow.jobs.update_status(
+            cmd.job_id, JobStatus.SIMULATION, progress_pct=93,
+            progress_message=f"Simulated {len(sim_results)} load levels",
+        )
+
+        return [r.to_dict() for r in sim_results]
+    except Exception:
+        logger.warning("simulation_failed", job_id=str(cmd.job_id))
+        return []
+
+
+async def handle_stage_guide_gen(
+    cmd: ProcessStageCommand,
+    uow: UnitOfWork,
+    producer: EventProducer,
+    violations: list[RuleViolation],
+    score: Score,
+    perf_metrics: PerformanceMetrics | None = None,
+    simulation_results: list[dict] | None = None,
+    dead_code_results: list[DeadCodeFinding] | None = None,
+    error_results: list[ErrorFinding] | None = None,
+) -> dict | None:
+    job = await uow.jobs.get_by_id(cmd.job_id)
+    if not job:
+        raise NotFoundError(f"Job {cmd.job_id} not found")
+
+    await uow.jobs.update_status(
+        cmd.job_id, JobStatus.GUIDE_GEN, progress_pct=95,
+        progress_message="Generating enterprise guide...",
+    )
+    await producer.publish(AnalysisProgressed(
+        job_id=cmd.job_id, status=JobStatus.GUIDE_GEN, progress_pct=95,
+    ))
+
+    try:
+        from app.workers.perf.load_sim import SimulationResult as SimRes
+
+        sim_objects: list[SimRes] = []
+        if simulation_results:
+            sim_objects = [SimRes(**s) for s in simulation_results]
+
+        generator = EnterpriseGuideGenerator()
+        guide = await generator.generate(
+            findings=violations,
+            scores=score,
+            perf_metrics=perf_metrics,
+            simulation=sim_objects,
+            dead_code=dead_code_results,
+            errors=error_results,
+        )
+
+        guide_dict = guide.to_dict()
+        guide_dict["job_id"] = cmd.job_id
+        guide_dict["repo_id"] = job["repo_id"]
+        guide_dict["workspace_id"] = job["workspace_id"]
+
+        await uow.enterprise_guides.save(guide_dict)
+        logger.info("enterprise_guide_saved", job_id=str(cmd.job_id))
+
+        await uow.jobs.update_status(
+            cmd.job_id, JobStatus.GUIDE_GEN, progress_pct=97,
+            progress_message="Enterprise guide generated",
+        )
+
+        return guide_dict
+    except Exception as exc:
+        logger.warning(
+            "guide_gen_failed", job_id=str(cmd.job_id), error=str(exc),
+        )
+        return None
 
 
 async def get_job_status(

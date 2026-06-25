@@ -17,9 +17,15 @@ from app.application.analysis.handler import (
     handle_analysis_failure,
     handle_save_findings,
     handle_stage_clone,
+    handle_stage_dead_code,
+    handle_stage_errors,
     handle_stage_finalize,
+    handle_stage_guide_gen,
     handle_stage_parse,
+    handle_stage_perf,
+    handle_stage_rules,
     handle_stage_score,
+    handle_stage_simulation,
     handle_start_analysis,
 )
 from app.application.tasks.runner import run_async
@@ -31,10 +37,16 @@ from app.infrastructure.db.unit_of_work import UnitOfWork
 from app.infrastructure.git.repository_fetcher import RepositoryFetcher
 from app.infrastructure.messaging.producer import EventProducer
 from app.infrastructure.parsers.base import ChainedParser
+from app.infrastructure.parsers.csharp_parser import CSharpParser
+from app.infrastructure.parsers.elixir_parser import ElixirParser
 from app.infrastructure.parsers.go_parser import GoParser
-from app.infrastructure.parsers.js_parser import JavaScriptParser
+from app.infrastructure.parsers.java_parser import JavaParser
+from app.infrastructure.parsers.kotlin_parser import KotlinParser
+from app.infrastructure.parsers.mern_parser import MernParser
+from app.infrastructure.parsers.php_parser import PhpParser
 from app.infrastructure.parsers.python_parser import PythonParser
-from app.infrastructure.parsers.ts_parser import TypeScriptParser
+from app.infrastructure.parsers.ruby_parser import RubyParser
+from app.infrastructure.parsers.rust_parser import RustParser
 from app.infrastructure.scorer import ProductionReadinessScorer
 from app.infrastructure.storage.s3 import S3Storage
 
@@ -50,9 +62,15 @@ def _get_parser() -> ChainedParser:
     if _PARSER is None:
         p = ChainedParser()
         p.register(PythonParser())
-        p.register(JavaScriptParser())
-        p.register(TypeScriptParser())
+        p.register(MernParser())
         p.register(GoParser())
+        p.register(CSharpParser())
+        p.register(JavaParser())
+        p.register(PhpParser())
+        p.register(RubyParser())
+        p.register(RustParser())
+        p.register(KotlinParser())
+        p.register(ElixirParser())
         _PARSER = p
     return _PARSER
 
@@ -104,6 +122,11 @@ def _run_pipeline(cmd: StartAnalysisCommand, state: dict) -> None:
     _stage_rules(state)
     _stage_save_findings(state)
     _stage_score(state)
+    _stage_dead_code(state)
+    _stage_errors(state)
+    _stage_perf(state)
+    _stage_simulation(state)
+    _stage_guide_gen(state)
     _stage_finalize(state)
 
 
@@ -262,6 +285,129 @@ def _stage_score(state: dict) -> None:
         "pipeline_stage_complete",
         stage="score", job_id=str(job_id),
         score=state["score"].overall if state.get("score") else None,
+    )
+
+
+def _stage_dead_code(state: dict) -> None:
+    state["_last_stage"] = "dead_code"
+    job_id = state["job_id"]
+    parsed_files = state.get("_parsed_files", [])
+    cmd = ProcessStageCommand(job_id=job_id, stage="dead_code")
+
+    async def _run():
+        async with UnitOfWork() as uow:
+            producer = EventProducer()
+            results = await handle_stage_dead_code(
+                cmd, uow, producer, parsed_files,
+            )
+            await uow.commit()
+            state["dead_code_results"] = results
+
+    run_async(_run())
+    logger.info(
+        "pipeline_stage_complete",
+        stage="dead_code", job_id=str(job_id),
+        count=len(state.get("dead_code_results", [])),
+    )
+
+
+def _stage_errors(state: dict) -> None:
+    state["_last_stage"] = "errors"
+    job_id = state["job_id"]
+    parsed_files = state.get("_parsed_files", [])
+    cmd = ProcessStageCommand(job_id=job_id, stage="errors")
+
+    async def _run():
+        async with UnitOfWork() as uow:
+            producer = EventProducer()
+            results = await handle_stage_errors(
+                cmd, uow, producer, parsed_files,
+            )
+            await uow.commit()
+            state["error_results"] = results
+
+    run_async(_run())
+    logger.info(
+        "pipeline_stage_complete",
+        stage="errors", job_id=str(job_id),
+        count=len(state.get("error_results", [])),
+    )
+
+
+def _stage_perf(state: dict) -> None:
+    state["_last_stage"] = "perf"
+    job_id = state["job_id"]
+    parsed_files = state.get("_parsed_files", [])
+    cmd = ProcessStageCommand(job_id=job_id, stage="perf")
+
+    async def _run():
+        async with UnitOfWork() as uow:
+            producer = EventProducer()
+            metrics = await handle_stage_perf(
+                cmd, uow, producer, parsed_files,
+            )
+            await uow.commit()
+            state["perf_metrics"] = metrics
+
+    run_async(_run())
+    logger.info(
+        "pipeline_stage_complete",
+        stage="perf", job_id=str(job_id),
+        rpm=state["perf_metrics"].overall_rpm if state.get("perf_metrics") else None,
+    )
+
+
+def _stage_simulation(state: dict) -> None:
+    state["_last_stage"] = "simulation"
+    job_id = state["job_id"]
+    perf_metrics = state.get("perf_metrics")
+    cmd = ProcessStageCommand(job_id=job_id, stage="simulation")
+
+    async def _run():
+        async with UnitOfWork() as uow:
+            producer = EventProducer()
+            results = await handle_stage_simulation(
+                cmd, uow, producer, perf_metrics,
+            )
+            await uow.commit()
+            state["simulation_results"] = results
+
+    run_async(_run())
+    logger.info(
+        "pipeline_stage_complete",
+        stage="simulation", job_id=str(job_id),
+        count=len(state.get("simulation_results", [])),
+    )
+
+
+def _stage_guide_gen(state: dict) -> None:
+    state["_last_stage"] = "guide_gen"
+    job_id = state["job_id"]
+    violations = state.get("_violations", [])
+    score = state.get("score")
+    perf_metrics = state.get("perf_metrics")
+    simulation_results = state.get("simulation_results")
+    dead_code_results = state.get("dead_code_results")
+    error_results = state.get("error_results")
+    cmd = ProcessStageCommand(job_id=job_id, stage="guide_gen")
+
+    async def _run():
+        async with UnitOfWork() as uow:
+            producer = EventProducer()
+            guide = await handle_stage_guide_gen(
+                cmd, uow, producer, violations, score,
+                perf_metrics=perf_metrics,
+                simulation_results=simulation_results,
+                dead_code_results=dead_code_results,
+                error_results=error_results,
+            )
+            await uow.commit()
+            state["enterprise_guide"] = guide
+
+    run_async(_run())
+    logger.info(
+        "pipeline_stage_complete",
+        stage="guide_gen", job_id=str(job_id),
     )
 
 

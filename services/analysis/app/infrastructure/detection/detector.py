@@ -1,4 +1,3 @@
-import os
 import re
 from pathlib import Path
 
@@ -14,7 +13,7 @@ from app.infrastructure.detection.config_reader import (
     read_requirements_txt,
     read_toml,
 )
-from app.infrastructure.detection.models import DetectionResult, DetectedTechnology
+from app.infrastructure.detection.models import DetectedTechnology, DetectionResult
 from app.infrastructure.detection.signatures import (
     ALL_CSHARP_SIGNATURES,
     ALL_GO_SIGNATURES,
@@ -279,13 +278,7 @@ class FrameworkDetector:
                 artifact_id = parts[1] if len(parts) > 1 else dep_key
 
                 for sig_name, tech in ALL_JAVA_SIGNATURES.items():
-                    if sig_name in dep_key or dep_key.startswith(sig_name):
-                        resolved = self._clone_with_version(tech, dep_version)
-                        self._categorize(result, resolved)
-                    elif sig_name == artifact_id or sig_name.endswith("." + artifact_id):
-                        resolved = self._clone_with_version(tech, dep_version)
-                        self._categorize(result, resolved)
-                    elif sig_name in group_id:
+                    if sig_name in dep_key or dep_key.startswith(sig_name) or sig_name == artifact_id or sig_name.endswith("." + artifact_id) or sig_name in group_id:
                         resolved = self._clone_with_version(tech, dep_version)
                         self._categorize(result, resolved)
 
@@ -363,12 +356,11 @@ class FrameworkDetector:
             ]
 
             for keywords, tech in db_signals:
-                if any(kw in lower for kw in keywords):
-                    if not any(t.name == tech.name for t in result.databases + result.infra):
-                        if tech.category == "database":
-                            result.databases.append(tech)
-                        else:
-                            result.infra.append(tech)
+                if any(kw in lower for kw in keywords) and not any(t.name == tech.name for t in result.databases + result.infra):
+                    if tech.category == "database":
+                        result.databases.append(tech)
+                    else:
+                        result.infra.append(tech)
 
     @staticmethod
     def _extract_dep_names(deps: list[str]) -> list[str]:

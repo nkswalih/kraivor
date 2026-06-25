@@ -1,9 +1,7 @@
 import os
-from collections.abc import AsyncGenerator
 from typing import Any
 
 import pytest
-from pytest import FixtureRequest
 
 # Set required env vars before any imports
 if "ANALYSIS_DATABASE__URL" not in os.environ:

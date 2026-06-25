@@ -2,7 +2,11 @@ from typing import Any
 
 import pytest
 
-from app.domain.rules.devops import DevopsCIConfigRule, DevopsDockerfileRule, DevopsEnvFileRule
+from app.domain.rules.devops import (
+    DevopsCIConfigRule,
+    DevopsDockerfileRule,
+    DevopsEnvFileRule,
+)
 from app.domain.rules.quality import QualityHighComplexityRule, QualityLongFunctionRule
 from app.domain.rules.registry import RuleRegistry, create_default_registry
 from app.domain.rules.security import SecurityHardcodedSecretRule, SecurityNoAuthRule

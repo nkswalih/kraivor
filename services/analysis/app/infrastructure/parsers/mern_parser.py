@@ -268,7 +268,7 @@ class MernParser(AbstractParser):
             parsed.exports.extend(names)
         for match in self._EXPORT_DECL.finditer(content):
             parsed.exports.append(match.group(2))
-        for match in self._EXPORT_MODULE.finditer(content):
+        for _match in self._EXPORT_MODULE.finditer(content):
             parsed.exports.append("module.exports")
         for match in self._EXPORT_NAMED_ASSIGN.finditer(content):
             parsed.exports.append(match.group(1))

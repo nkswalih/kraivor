@@ -1,4 +1,3 @@
-import math
 
 from app.core.constants import SimulationStatus
 from app.core.logging import get_logger
@@ -121,10 +120,7 @@ class ProductionSimulator:
         return int(sum(em.p50_latency_ms for em in metrics.endpoints) / len(metrics.endpoints))
 
     def _calculate_available_capacity(self, metrics: PerformanceMetrics) -> int:
-        if metrics.bottlenecks:
-            base = max(4 - len(metrics.bottlenecks), 1)
-        else:
-            base = 4
+        base = max(4 - len(metrics.bottlenecks), 1) if metrics.bottlenecks else 4
         return base
 
     def _find_active_bottlenecks(

@@ -1,6 +1,5 @@
 from app.core.config import get_settings
 
-
 settings = get_settings()
 from app.core.logging import get_logger
 from app.domain.events import DomainEvent

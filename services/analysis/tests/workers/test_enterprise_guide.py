@@ -1,13 +1,12 @@
-import pytest
 
-from app.core.constants import Category, Severity, Tiers
+from app.core.constants import Category, Severity
 from app.domain.entities.score import Score
 from app.domain.rules.base import RuleViolation
 from app.workers.dead_code.detector import DeadCodeFinding
+from app.workers.enterprise_guide import EnterpriseGuide, EnterpriseGuideGenerator
 from app.workers.errors.scanner import ErrorFinding
 from app.workers.perf.load_sim import SimulationResult
-from app.workers.perf.rpm_calculator import PerformanceMetrics, EndpointMetric
-from app.workers.enterprise_guide import EnterpriseGuide, EnterpriseGuideGenerator
+from app.workers.perf.rpm_calculator import PerformanceMetrics
 
 
 def _make_violation(

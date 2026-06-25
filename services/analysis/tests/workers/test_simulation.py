@@ -1,8 +1,7 @@
-import pytest
 
 from app.core.constants import SimulationStatus
 from app.workers.perf.load_sim import ProductionSimulator
-from app.workers.perf.rpm_calculator import PerformanceMetrics, EndpointMetric
+from app.workers.perf.rpm_calculator import EndpointMetric, PerformanceMetrics
 
 
 class TestProductionSimulator:

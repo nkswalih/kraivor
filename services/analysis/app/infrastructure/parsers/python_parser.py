@@ -1,6 +1,5 @@
 import ast
 import re
-from typing import Any
 
 from app.domain.contracts.parser import (
     AbstractParser,
@@ -66,10 +65,7 @@ class PythonParser(AbstractParser):
         )
 
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
-                parsed.functions.append(self._parse_function(node, content))
-                parsed.function_calls.extend(self._extract_calls(node))
-            elif isinstance(node, ast.AsyncFunctionDef):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 parsed.functions.append(self._parse_function(node, content))
                 parsed.function_calls.extend(self._extract_calls(node))
             elif isinstance(node, ast.ClassDef):
@@ -107,7 +103,7 @@ class PythonParser(AbstractParser):
         lines = content.split("\n")
         start = max(0, node.lineno - 1)
         end = min(len(lines), node.end_lineno or node.lineno)
-        snippet = "\n".join(lines[start:end])
+        "\n".join(lines[start:end])
 
         return ParsedFunction(
             name=node.name,
@@ -237,10 +233,7 @@ class PythonParser(AbstractParser):
 
     @staticmethod
     def _has_return(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
-        for child in ast.walk(node):
-            if isinstance(child, ast.Return):
-                return True
-        return False
+        return any(isinstance(child, ast.Return) for child in ast.walk(node))
 
     @staticmethod
     def _decorator_name(node: ast.AST) -> str:

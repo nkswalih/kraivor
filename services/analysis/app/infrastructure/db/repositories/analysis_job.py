@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select, func, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.contracts.repository_provider import AbstractJobRepository

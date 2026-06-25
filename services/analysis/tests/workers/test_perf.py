@@ -1,4 +1,3 @@
-import pytest
 
 from app.domain.contracts.parser import ParsedFile, ParsedRoute
 from app.workers.perf.rpm_calculator import RPMCalculator

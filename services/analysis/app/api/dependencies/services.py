@@ -11,13 +11,15 @@ from app.infrastructure.storage.s3 import S3Storage
 
 
 async def get_uow(
-    session: AsyncSession = Depends(get_db),
+    session:AsyncSession = Depends(get_db),
 ) -> AsyncGenerator[UnitOfWork, None]:
     uow = UnitOfWork(session)
     try:
         yield uow
     finally:
-        pass
+        if uow.session.is_active:
+            await uow.rollback()
+        await uow.session.close()
 
 
 async def get_producer() -> EventProducer:

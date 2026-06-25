@@ -57,19 +57,26 @@ class JobRepository(AbstractJobRepository):
 
     async def list_by_workspace(
         self, workspace_id: UUID, limit: int = 10, offset: int = 0
-    ) -> list[dict]:
-        stmt = (
-            select(AnalysisJobModel)
-            .where(
-                AnalysisJobModel.workspace_id == workspace_id,
-                AnalysisJobModel.deleted_at.is_(None),
-            )
-            .order_by(AnalysisJobModel.created_at.desc())
-            .offset(offset)
-            .limit(limit)
+    ) -> tuple[list[dict], int]:
+        base = select(AnalysisJobModel).where(
+            AnalysisJobModel.workspace_id == workspace_id,
+            AnalysisJobModel.deleted_at.is_(None),
+        )
+        count_stmt = select(func.count()).select_from(base.subquery())
+        count_result = await self._session.execute(count_stmt)
+        total = count_result.scalar() or 0
+
+        stmt = base.order_by(AnalysisJobModel.created_at.desc()).offset(offset).limit(limit)
+        result = await self._session.execute(stmt)
+        return [self._to_dict(m) for m in result.scalars().all()], total
+
+    async def count_by_workspace(self, workspace_id: UUID) -> int:
+        stmt = select(func.count()).select_from(AnalysisJobModel).where(
+            AnalysisJobModel.workspace_id == workspace_id,
+            AnalysisJobModel.deleted_at.is_(None),
         )
         result = await self._session.execute(stmt)
-        return [self._to_dict(m) for m in result.scalars().all()]
+        return result.scalar() or 0
 
     @staticmethod
     def _to_dict(model: AnalysisJobModel) -> dict:

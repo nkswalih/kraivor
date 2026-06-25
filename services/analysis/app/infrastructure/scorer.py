@@ -36,7 +36,7 @@ class ProductionReadinessScorer(AbstractScorer):
                 "devops": settings.scoring.devops_weight,
             }
 
-        category_scores: dict[str, float] = {cat: 100.0 for cat in self.CATEGORY_ORDER}
+        category_scores: dict[str, float] = dict.fromkeys(self.CATEGORY_ORDER, 100.0)
         severity_counts: dict[str, int] = {s.value: 0 for s in Severity}
         total_findings = len(violations)
 

@@ -6,7 +6,6 @@ from typing import Any
 
 from app.core.config import get_settings
 
-
 settings = get_settings()
 from app.core.logging import get_logger
 from app.infrastructure.cache.redis import RedisCache
@@ -134,7 +133,7 @@ class RepositoryFetcher:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            stdout, stderr = await asyncio.wait_for(
+            _stdout, stderr = await asyncio.wait_for(
                 proc.communicate(),
                 timeout=settings.git.clone_timeout,
             )
@@ -146,14 +145,14 @@ class RepositoryFetcher:
             logger.info("repository_cloned", url=clone_url, branch=branch, dest=dest)
             return dest
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             msg = f"Git clone timed out after {settings.git.clone_timeout}s"
             raise RuntimeError(msg) from None
 
     async def detect_languages(self, repo_path: str) -> list[str]:
         """Detect programming languages in the repository based on file extensions."""
         detected: set[str] = set()
-        for root, dirs, files in os.walk(repo_path):
+        for _root, dirs, files in os.walk(repo_path):
             dirs[:] = [d for d in dirs if d not in _EXCLUDED_DIRS]
             for file in files:
                 ext = Path(file).suffix.lower()
@@ -243,7 +242,7 @@ class RepositoryFetcher:
                         )
                         continue
 
-                    with open(full_path, "r", encoding="utf-8", errors="replace") as f:
+                    with open(full_path, encoding="utf-8", errors="replace") as f:
                         content = f.read()
 
                     files.append(

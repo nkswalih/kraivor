@@ -1,5 +1,4 @@
 import re
-from collections.abc import Sequence
 
 from app.core.constants import DeadCodeType
 from app.core.logging import get_logger
@@ -209,7 +208,7 @@ class DeadCodeDetector:
                     ))
 
     def _detect_unreachable_code(self) -> None:
-        unreachable_patterns = [
+        [
             re.compile(r'return\s+.*\n\s+(?!return|raise|pass|$)'),
         ]
         for pf in self.parsed_files:
@@ -217,8 +216,7 @@ class DeadCodeDetector:
             lines = content.split("\n")
             for i, line in enumerate(lines, 1):
                 stripped = line.strip()
-                if stripped.startswith("return") or stripped.startswith("raise"):
-                    if i < len(lines):
+                if (stripped.startswith("return") or stripped.startswith("raise")) and i < len(lines):
                         next_line = lines[i]
                         next_stripped = next_line.strip()
                         indent_match = re.match(r'^(\s*)', line)

@@ -1,4 +1,3 @@
-import pytest
 
 from app.domain.contracts.parser import ParsedFile, ParsedFunction, ParsedImport
 from app.workers.dead_code.detector import DeadCodeDetector

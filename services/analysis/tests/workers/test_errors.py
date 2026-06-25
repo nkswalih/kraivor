@@ -1,4 +1,3 @@
-import pytest
 
 from app.domain.contracts.parser import ParsedFile
 from app.workers.errors.scanner import ErrorScanner

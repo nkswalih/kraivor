@@ -173,7 +173,7 @@ class ElixirParser(AbstractParser):
             if stripped == "end":
                 depth -= 1
                 if depth == 0:
-                    return start_pos + sum(len(l) + 1 for l in lines[:i + 1])
+                    return start_pos + sum(len(line) + 1 for line in lines[:i + 1])
         return start_pos + len(content) - 1
 
     @staticmethod

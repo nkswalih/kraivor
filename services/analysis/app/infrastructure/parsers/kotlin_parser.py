@@ -122,7 +122,7 @@ class KotlinParser(AbstractParser):
 
     def _extract_functions(self, content: str, parsed: ParsedFile) -> None:
         for match in self._FUNCTION_DECL.finditer(content):
-            name, params = match.group(1), match.group(2)
+            name, _params = match.group(1), match.group(2)
             line_start = content[: match.start()].count("\n") + 1
 
             body_start = content.find("{", match.end())

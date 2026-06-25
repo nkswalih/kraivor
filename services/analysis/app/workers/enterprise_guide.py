@@ -118,7 +118,7 @@ class EnterpriseGuideGenerator:
                     self._estimate_fix_effort_from_title(err.title),
                 ))
 
-        for severity, title, file_ref, sev, desc, rec, ep, effort in all_entries:
+        for _severity, title, file_ref, sev, desc, rec, ep, effort in all_entries:
             entry = {
                 "title": title,
                 "file": file_ref,

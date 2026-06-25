@@ -1,4 +1,3 @@
-import io
 from typing import Any
 
 import boto3
@@ -6,7 +5,6 @@ from botocore.config import Config
 from botocore.exceptions import ClientError
 
 from app.core.config import get_settings
-
 
 settings = get_settings()
 from app.core.logging import get_logger

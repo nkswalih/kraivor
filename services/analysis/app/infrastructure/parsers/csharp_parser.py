@@ -151,7 +151,7 @@ class CSharpParser(AbstractParser):
 
     def _extract_methods(self, content: str, parsed: ParsedFile) -> None:
         for match in self._METHOD_DECL.finditer(content):
-            return_type, name, params = match.group(1), match.group(2), match.group(3)
+            _return_type, name, params = match.group(1), match.group(2), match.group(3)
             line_start = content[: match.start()].count("\n") + 1
 
             body_start = content.find("{", match.start())

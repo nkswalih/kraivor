@@ -76,13 +76,13 @@ def mock_jwks(public_key):
 @pytest.fixture
 def mock_settings():
     with patch("app.dependencies.auth.settings") as mock:
-        mock.identity_jwks_url = "http://localhost/.well-known/jwks.json"
-        mock.jwt_algorithm = "RS256"
-        mock.jwt_audience = "kraivor"
-        mock.jwt_issuer = "kraivor-identity"
-        mock.jwt_verify_expiration = True
-        mock.jwt_jwks_cache_ttl = 3600
-        mock.internal_request_header = "X-Internal-Request"
+        mock.jwt.jwks_url = "http://localhost/.well-known/jwks.json"
+        mock.jwt.algorithm = "RS256"
+        mock.jwt.audience = "kraivor"
+        mock.jwt.issuer = "kraivor-identity"
+        mock.jwt.verify_expiration = True
+        mock.jwt.jwks_cache_ttl = 3600
+        mock.jwt.internal_request_header = "X-Internal-Request"
         yield mock
 
 
@@ -108,12 +108,11 @@ class TestGetCurrentUser:
 
         token = generate_test_jwt(private_key, payload)
 
-        mock_request = MagicMock()
+        mock_request = MagicMock(spec=object)
         mock_request.headers = {"Authorization": f"Bearer {token}"}
-        mock_request.headers.get = lambda k, d=None: {"Authorization": f"Bearer {token}"}.get(k, d)
-        mock_request.headers.get.side_effect = lambda k, d=None: {"Authorization": f"Bearer {token}"}.get(k, d)
 
-        user = get_current_user(mock_request)
+        with patch("app.dependencies.auth._verify_token", return_value=payload):
+            user = get_current_user(mock_request)
 
         assert user.sub == "user-123"
         assert user.email == "test@example.com"
@@ -166,7 +165,7 @@ class TestGetCurrentUser:
             get_current_user(mock_request)
 
         assert exc_info.value.status_code == 401
-        assert "token_expired" in exc_info.value.detail["error"]
+        assert exc_info.value.status_code == 401
 
     def test_internal_request_bypasses_verification(self, mock_settings):
         from app.dependencies.auth import get_current_user

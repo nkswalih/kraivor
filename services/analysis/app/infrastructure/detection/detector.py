@@ -6,15 +6,19 @@ from app.core.logging import get_logger
 from app.infrastructure.detection.config_reader import (
     detect_ci_platform,
     read_cargo_toml,
+    read_csproj,
     read_gemfile,
     read_go_mod,
     read_json,
+    read_pom_xml,
     read_requirements_txt,
     read_toml,
 )
 from app.infrastructure.detection.models import DetectionResult, DetectedTechnology
 from app.infrastructure.detection.signatures import (
+    ALL_CSHARP_SIGNATURES,
     ALL_GO_SIGNATURES,
+    ALL_JAVA_SIGNATURES,
     ALL_PACKAGE_JSON_SIGNATURES,
     ALL_PYTHON_SIGNATURES,
     INFRA_SIGNALS,
@@ -82,6 +86,8 @@ class FrameworkDetector:
             self._detect_from_go_mod(result)
             self._detect_from_cargo_toml(result)
             self._detect_from_gemfile(result)
+            self._detect_from_csproj_files(repo_path, result)
+            self._detect_from_pom_xml_files(repo_path, result)
             self._detect_infra_files(repo_path, result)
             self._detect_ci(repo_path, result)
         except Exception:
@@ -246,6 +252,42 @@ class FrameworkDetector:
                 result.frameworks.append(
                     DetectedTechnology(name="Sinatra", category="framework", detected_from="Gemfile")
                 )
+
+    def _detect_from_csproj_files(self, repo_path: str, result: DetectionResult) -> None:
+        root = Path(repo_path)
+        for csproj_file in root.rglob("*.csproj"):
+            deps = read_csproj(str(csproj_file))
+            if not deps:
+                continue
+
+            for dep_name, dep_version in deps.items():
+                for sig_name, tech in ALL_CSHARP_SIGNATURES.items():
+                    if sig_name in dep_name or dep_name == sig_name:
+                        resolved = self._clone_with_version(tech, dep_version)
+                        self._categorize(result, resolved)
+
+    def _detect_from_pom_xml_files(self, repo_path: str, result: DetectionResult) -> None:
+        root = Path(repo_path)
+        for pom_file in root.rglob("pom.xml"):
+            deps = read_pom_xml(str(pom_file))
+            if not deps:
+                continue
+
+            for dep_key, dep_version in deps.items():
+                parts = dep_key.split(":", 1)
+                group_id = parts[0] if parts else dep_key
+                artifact_id = parts[1] if len(parts) > 1 else dep_key
+
+                for sig_name, tech in ALL_JAVA_SIGNATURES.items():
+                    if sig_name in dep_key or dep_key.startswith(sig_name):
+                        resolved = self._clone_with_version(tech, dep_version)
+                        self._categorize(result, resolved)
+                    elif sig_name == artifact_id or sig_name.endswith("." + artifact_id):
+                        resolved = self._clone_with_version(tech, dep_version)
+                        self._categorize(result, resolved)
+                    elif sig_name in group_id:
+                        resolved = self._clone_with_version(tech, dep_version)
+                        self._categorize(result, resolved)
 
     def _detect_infra_files(self, repo_path: str, result: DetectionResult) -> None:
         root = Path(repo_path)

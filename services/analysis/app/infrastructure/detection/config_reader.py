@@ -158,3 +158,59 @@ def detect_ci_platform(repo_path: str) -> str | None:
         if os.path.isfile(os.path.join(repo_path, filename)):
             return name
     return None
+
+
+def read_csproj(file_path: str) -> dict[str, str | None] | None:
+    """Parse a .csproj file for PackageReference items."""
+    try:
+        import xml.etree.ElementTree as ET
+        tree = ET.parse(file_path)
+        root = tree.getroot()
+    except (FileNotFoundError, ET.ParseError, PermissionError, ImportError):
+        return None
+
+    ns = {"ns": "http://schemas.microsoft.com/developer/msbuild/2003"}
+    deps: dict[str, str | None] = {}
+
+    has_ns = root.tag.startswith("{http://schemas.microsoft.com/developer/msbuild/2003}")
+    tag = "{http://schemas.microsoft.com/developer/msbuild/2003}PackageReference" if has_ns else "PackageReference"
+
+    for ref in root.iter(tag):
+        name = ref.get("Include")
+        if not name:
+            continue
+        version = None
+        ver_attr = ref.get("Version")
+        if ver_attr:
+            version = ver_attr
+        elif has_ns:
+            ver_elem = ref.find("ns:Version", ns)
+            if ver_elem is not None and ver_elem.text:
+                version = ver_elem.text
+        deps[name.lower()] = version
+
+    return deps
+
+
+def read_pom_xml(file_path: str) -> dict[str, str | None] | None:
+    """Parse a Maven pom.xml for dependencies."""
+    try:
+        import xml.etree.ElementTree as ET
+        tree = ET.parse(file_path)
+        root = tree.getroot()
+    except (FileNotFoundError, ET.ParseError, PermissionError, ImportError):
+        return None
+
+    ns = {"ns": "http://maven.apache.org/POM/4.0.0"}
+    deps: dict[str, str | None] = {}
+
+    for dep in root.iter("{http://maven.apache.org/POM/4.0.0}dependency"):
+        group_id = dep.find("ns:groupId", ns)
+        artifact_id = dep.find("ns:artifactId", ns)
+        if group_id is not None and group_id.text and artifact_id is not None and artifact_id.text:
+            key = f"{group_id.text.strip()}:{artifact_id.text.strip()}"
+            version_elem = dep.find("ns:version", ns)
+            version = version_elem.text.strip() if version_elem is not None and version_elem.text else None
+            deps[key.lower()] = version
+
+    return deps

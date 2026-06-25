@@ -18,6 +18,7 @@ from app.application.analysis.queries import (
 )
 from app.core.logging import get_logger
 from app.dependencies.auth import JWTPayload, get_current_user
+from app.domain.entities.finding import Finding
 from app.infrastructure.db.unit_of_work import UnitOfWork
 
 logger = get_logger(__name__)
@@ -39,13 +40,13 @@ async def list_findings_endpoint(
         job_id=job_id,
         severity=severity,
         category=category,
-        page=page,
-        page_size=page_size,
+        limit=page_size,
+        offset=(page - 1) * page_size,
     )
-    result = await list_findings(query, uow)
+    findings, total = await list_findings(query, uow)
     return FindingsListResponse(
-        findings=[FindingResponse(**f) for f in result["findings"]],
-        total=result["total"],
+        findings=[_finding_to_response(f) for f in findings],
+        total=total,
         page=page,
         page_size=page_size,
     )
@@ -59,9 +60,33 @@ async def findings_summary(
 ) -> FindingsSummaryResponse:
     query = GetFindingsSummaryQuery(job_id=job_id)
     result = await get_findings_summary(query, uow)
+    by_severity = result.get("by_severity", {})
+    by_category = result.get("by_category", {})
+    total = sum(by_severity.values())
     return FindingsSummaryResponse(
         job_id=str(job_id),
-        total=result["total"],
-        by_severity=result["by_severity"],
-        by_category=result["by_category"],
+        total=total,
+        by_severity=by_severity,
+        by_category=by_category,
+    )
+
+
+def _finding_to_response(f: Finding) -> FindingResponse:
+    return FindingResponse(
+        id=f.id,
+        job_id=f.job_id,
+        rule_id=f.rule_id,
+        category=str(f.category),
+        severity=str(f.severity),
+        title=f.title,
+        description=f.description or "",
+        recommendation=f.recommendation or "",
+        enterprise_pattern=f.enterprise_pattern or "",
+        file_path=f.file_path or None,
+        line_start=f.line_start,
+        line_end=f.line_end,
+        code_snippet=f.code_snippet or "",
+        score_impact=f.score_impact or 0.0,
+        rpm_impact=f.rpm_impact or 0,
+        is_ai_enriched=f.is_ai_enriched,
     )

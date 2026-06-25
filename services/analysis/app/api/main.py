@@ -10,10 +10,15 @@ from app.api.middleware.error_handler import (
 )
 from app.api.middleware.logging import RequestLoggingMiddleware
 from app.api.routers import (
+    dead_code_router,
+    enterprise_guide_router,
+    error_findings_router,
     findings_router,
     health_router,
     jobs_router,
+    performance_metrics_router,
     reports_router,
+    simulation_results_router,
 )
 from app.core.config import get_settings
 from app.core.exceptions import NotFoundError
@@ -51,6 +56,11 @@ def create_app() -> FastAPI:
     app.include_router(jobs_router)
     app.include_router(findings_router)
     app.include_router(reports_router)
+    app.include_router(dead_code_router)
+    app.include_router(error_findings_router)
+    app.include_router(performance_metrics_router)
+    app.include_router(simulation_results_router)
+    app.include_router(enterprise_guide_router)
 
     app.add_exception_handler(NotFoundError, not_found_handler)
     app.add_exception_handler(Exception, generic_exception_handler)

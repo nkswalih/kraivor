@@ -86,12 +86,17 @@ def run_full_analysis(self, cmd_dict: dict) -> dict:
 
     Args:
         cmd_dict: Serialized StartAnalysisCommand fields.
+                   May include 'job_id' if the job was already created
+                   by the API router.
 
     Returns:
         Dict with job_id and report summary.
     """
+    job_id_str = cmd_dict.pop("job_id", None)
     cmd = StartAnalysisCommand(**cmd_dict)
     state: dict = {}
+    if job_id_str:
+        state["job_id"] = UUID(job_id_str)
 
     try:
         _run_pipeline(cmd, state)
@@ -136,7 +141,17 @@ def _stage_start(cmd: StartAnalysisCommand, state: dict) -> None:
     async def _run():
         async with UnitOfWork() as uow:
             producer = EventProducer()
-            job_id = await handle_start_analysis(cmd, uow, producer)
+
+            # If job_id was already created by the API router, use it
+            if "job_id" in state:
+                job_id = state["job_id"]
+            else:
+                job_id = await handle_start_analysis(cmd, uow, producer)
+
+            await uow.jobs.update_status(
+                job_id, "cloning", progress_pct=10,
+                progress_message="Starting analysis pipeline...",
+            )
             await uow.commit()
             state["job_id"] = job_id
 

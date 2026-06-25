@@ -48,7 +48,7 @@ logger = get_logger(__name__)
 async def handle_start_analysis(
     cmd: StartAnalysisCommand,
     uow: UnitOfWork,
-    producer: EventProducer,
+    producer: EventProducer | None = None,
 ) -> UUID:
     job_id = uuid4()
     settings = get_settings()
@@ -69,16 +69,17 @@ async def handle_start_analysis(
         "total_findings": 0,
     })
 
-    event = AnalysisRequested(
-        job_id=job_id,
-        repo_id=cmd.repo_id,
-        workspace_id=cmd.workspace_id,
-        triggered_by=cmd.triggered_by,
-        trigger_type=cmd.trigger_type,
-        branch=cmd.branch,
-        deep_scan=cmd.deep_scan,
-    )
-    await producer.publish(event)
+    if producer:
+        event = AnalysisRequested(
+            job_id=job_id,
+            repo_id=cmd.repo_id,
+            workspace_id=cmd.workspace_id,
+            triggered_by=cmd.triggered_by,
+            trigger_type=cmd.trigger_type,
+            branch=cmd.branch,
+            deep_scan=cmd.deep_scan,
+        )
+        await producer.publish(event)
 
     logger.info("analysis_started", job_id=str(job_id), repo_id=str(cmd.repo_id))
     return job_id
@@ -744,10 +745,10 @@ async def list_jobs(
     uow: UnitOfWork,
 ) -> dict:
     if query.repo_id:
-        jobs = await uow.jobs.list_by_repo(
+        jobs, total = await uow.jobs.list_by_repo(
             query.repo_id, limit=query.limit, offset=query.offset,
         )
-        return {"jobs": jobs, "total": len(jobs)}
+        return {"jobs": jobs, "total": total}
     if query.workspace_id:
         jobs, total = await uow.jobs.list_by_workspace(
             query.workspace_id, limit=query.limit, offset=query.offset,

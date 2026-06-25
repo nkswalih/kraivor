@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from app.application.analysis.commands import (
@@ -14,7 +14,7 @@ from app.application.analysis.queries import (
     ListJobsQuery,
 )
 from app.core.config import get_settings
-from app.core.constants import Category, JobStatus, Severity
+from app.core.constants import JobStatus, Severity
 from app.core.exceptions import NotFoundError
 from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
@@ -31,16 +31,15 @@ from app.domain.events import (
 )
 from app.domain.rules.base import RuleViolation
 from app.domain.rules.registry import RuleRegistry
-from app.infrastructure.cache.redis import RedisCache
 from app.infrastructure.db.unit_of_work import UnitOfWork
 from app.infrastructure.git.repository_fetcher import RepositoryFetcher
 from app.infrastructure.messaging.producer import EventProducer
 from app.infrastructure.parsers.base import ChainedParser
 from app.workers.dead_code.detector import DeadCodeDetector, DeadCodeFinding
-from app.workers.errors.scanner import ErrorScanner, ErrorFinding
-from app.workers.perf.rpm_calculator import RPMCalculator, PerformanceMetrics
-from app.workers.perf.load_sim import ProductionSimulator
 from app.workers.enterprise_guide import EnterpriseGuideGenerator
+from app.workers.errors.scanner import ErrorFinding, ErrorScanner
+from app.workers.perf.load_sim import ProductionSimulator
+from app.workers.perf.rpm_calculator import PerformanceMetrics, RPMCalculator
 
 logger = get_logger(__name__)
 
@@ -219,7 +218,7 @@ async def handle_stage_rules(
                     file=pf.path, job_id=str(cmd.job_id),
                 )
 
-    severity_counts = {s: 0 for s in Severity}
+    severity_counts = dict.fromkeys(Severity, 0)
     for v in violations:
         if v.severity in severity_counts:
             severity_counts[v.severity] += 1
@@ -350,7 +349,7 @@ async def handle_stage_finalize(
     total_lines: int,
     duration_seconds: int,
 ) -> Report:
-    settings = get_settings()
+    get_settings()
 
     report = Report(
         job_id=cmd.job_id,
@@ -380,7 +379,7 @@ async def handle_stage_finalize(
 
     await uow.reports.save(report)
 
-    severity_counts = {s: 0 for s in Severity}
+    severity_counts = dict.fromkeys(Severity, 0)
     for f in findings:
         if f.severity in severity_counts:
             severity_counts[f.severity] += 1
@@ -400,7 +399,7 @@ async def handle_stage_finalize(
         medium_count=severity_counts.get(Severity.MEDIUM, 0),
         low_count=severity_counts.get(Severity.LOW, 0),
         duration_seconds=duration_seconds,
-        completed_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(UTC),
     )
 
     await producer.publish(AnalysisCompleted(

@@ -111,13 +111,18 @@ class SecurityHardcodedSecretRule(BaseRule):
     ]
 
     _SECRET_PATTERNS: list[re.Pattern] = [
-        re.compile(r'([""\'"])(api[_-]?key)\1\s*[:=]\s*([""\'"])([^""\'"]+)\3', re.IGNORECASE),
-        re.compile(r'([""\'"])password\1\s*[:=]\s*([""\'"])([^""\'"]+)\2', re.IGNORECASE),
-        re.compile(r'([""\'"])secret\1\s*[:=]\s*([""\'"])([^""\'"]+)\2', re.IGNORECASE),
-        re.compile(r'([""\'"])token\1\s*[:=]\s*([""\'"])([^""\'"]+)\2', re.IGNORECASE),
-        re.compile(r'([""\'"])(access[_-]?key|secret[_-]?key)\1\s*[:=]\s*([""\'"])([^""\'"]+)\3', re.IGNORECASE),
+        re.compile(r'(["\'])(api[_-]?key)\1\s*[:=]\s*(["\'])([^"\']+)\3', re.IGNORECASE),
+        re.compile(r'(["\'])password\1\s*[:=]\s*(["\'])([^"\']+)\2', re.IGNORECASE),
+        re.compile(r'(["\'])secret\1\s*[:=]\s*(["\'])([^"\']+)\2', re.IGNORECASE),
+        re.compile(r'(["\'])token\1\s*[:=]\s*(["\'])([^"\']+)\2', re.IGNORECASE),
+        re.compile(r'(["\'])(access[_-]?key|secret[_-]?key)\1\s*[:=]\s*(["\'])([^"\']+)\3', re.IGNORECASE),
+        re.compile(r'\b(api[_-]?key)\s*=\s*(["\'])([^"\']+)\2', re.IGNORECASE),
+        re.compile(r'\bpassword\s*=\s*(["\'])([^"\']+)\1', re.IGNORECASE),
+        re.compile(r'\b(secret)\s*=\s*(["\'])([^"\']+)\2', re.IGNORECASE),
+        re.compile(r'\b(token)\s*=\s*(["\'])([^"\']+)\2', re.IGNORECASE),
+        re.compile(r'\b(access[_-]?key|secret[_-]?key)\s*=\s*(["\'])([^"\']+)\2', re.IGNORECASE),
     ]
-    _ENTROPY_THRESHOLD: float = 4.5
+    _ENTROPY_THRESHOLD: float = 3.0
 
     async def analyze(
         self, file_path: str, content: str, ast_data: dict[str, Any]
@@ -129,7 +134,7 @@ class SecurityHardcodedSecretRule(BaseRule):
             for pattern in self._SECRET_PATTERNS:
                 match = pattern.search(line)
                 if match:
-                    value = match.group(4) if match.lastindex and match.lastindex >= 4 else match.group(0)
+                    value = match.group(match.lastindex) if match.lastindex else match.group(0)
                     if self._entropy(value) > self._ENTROPY_THRESHOLD:
                         violations.append(
                             RuleViolation(

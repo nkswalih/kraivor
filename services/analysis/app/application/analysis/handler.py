@@ -732,19 +732,60 @@ async def get_report(
     query: GetReportQuery,
     uow: UnitOfWork,
 ) -> Report | None:
-    return await uow.reports.get_by_job(query.job_id)
+    if query.report_id:
+        return await uow.reports.get_by_job(query.report_id)
+    if query.job_id:
+        return await uow.reports.get_by_job(query.job_id)
+    return None
 
 
 async def list_jobs(
     query: ListJobsQuery,
     uow: UnitOfWork,
-) -> list[dict]:
+) -> dict:
     if query.repo_id:
-        return await uow.jobs.list_by_repo(
+        jobs = await uow.jobs.list_by_repo(
             query.repo_id, limit=query.limit, offset=query.offset,
         )
+        return {"jobs": jobs, "total": len(jobs)}
     if query.workspace_id:
-        return await uow.jobs.list_by_workspace(
+        jobs, total = await uow.jobs.list_by_workspace(
             query.workspace_id, limit=query.limit, offset=query.offset,
         )
-    return []
+        return {"jobs": jobs, "total": total}
+    return {"jobs": [], "total": 0}
+
+
+async def get_dead_code(
+    job_id: UUID,
+    uow: UnitOfWork,
+) -> list[dict]:
+    return await uow.dead_code.get_by_job(job_id)
+
+
+async def get_error_findings(
+    job_id: UUID,
+    uow: UnitOfWork,
+) -> list[dict]:
+    return await uow.error_findings.get_by_job(job_id)
+
+
+async def get_performance_metrics(
+    job_id: UUID,
+    uow: UnitOfWork,
+) -> list[dict]:
+    return await uow.performance_metrics.get_by_job(job_id)
+
+
+async def get_simulation_results(
+    job_id: UUID,
+    uow: UnitOfWork,
+) -> list[dict]:
+    return await uow.simulation_results.get_by_job(job_id)
+
+
+async def get_enterprise_guide(
+    job_id: UUID,
+    uow: UnitOfWork,
+) -> dict | None:
+    return await uow.enterprise_guides.get_by_job(job_id)

@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-
 from app.core.constants import SCORE_TIER_THRESHOLDS, Tiers
 
 

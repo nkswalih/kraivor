@@ -1,7 +1,6 @@
 import pytest
-from httpx import ASGITransport, AsyncClient
-
 from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 
 from app.api.main import create_app
 

@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import Integer, String, Text
+from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,7 +13,7 @@ class ErrorFindingModel(Base):
 
     id: Mapped[UUID] = UUIDColumn()
     job_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), nullable=False, index=True
+        PG_UUID(as_uuid=True), ForeignKey("analysis.analysis_jobs.id"), nullable=False, index=True
     )
     repo_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True), nullable=False, index=True

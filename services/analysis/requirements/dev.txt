@@ -22,9 +22,11 @@ typing-extensions>=4.9
 
 # Testing
 pytest>=8.0
+pytest-asyncio>=0.24
 pytest-cov>=5.0
 pytest-mock>=3.12
 pytest-xdist>=3.5
+aiosqlite>=0.20
 factory-boy>=3.3
 faker>=22.0
 

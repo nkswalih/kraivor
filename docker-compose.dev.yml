@@ -110,6 +110,7 @@ services:
     depends_on:
     - identity
     - core
+    - analysis
     restart: unless-stopped
 
 
@@ -320,6 +321,44 @@ services:
     volumes:
       - ./services/core:/app
     restart: unless-stopped
+
+  # ── Analysis Service ──────────────────────────────────────────────────────
+
+  analysis:
+    build:
+      context: ./services/analysis
+      dockerfile: Dockerfile.dev
+    container_name: kraivor-analysis-dev
+    env_file:
+      - .env
+    environment:
+      ANALYSIS_DATABASE__URL: postgresql+asyncpg://${POSTGRES_USER:-kraivor}:${POSTGRES_PASSWORD:-kraivor}@postgres:5432/${POSTGRES_DB:-kraivor}
+      ANALYSIS_REDIS__URL: redis://redis:6379/0
+      ANALYSIS_CELERY__BROKER__URL: redis://redis:6379/1
+      ANALYSIS_CELERY__RESULT__BACKEND: redis://redis:6379/1
+      ANALYSIS_KAFKA__BOOTSTRAP__SERVERS: kafka:9094
+      ANALYSIS_IDENTITY__JWKS__URL: http://identity:8001/.well-known/jwks.json
+      ANALYSIS_S3__ENDPOINT__URL: http://minio:9000
+      UV_LINK_MODE: copy
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./services/analysis:/app
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    command: >
+      sh -c "
+        until pg_isready -h postgres -U ${POSTGRES_USER:-kraivor}; do sleep 1; done &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
+      "
 
 volumes:
   postgres_data_dev:

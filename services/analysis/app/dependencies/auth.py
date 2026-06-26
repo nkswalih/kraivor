@@ -1,36 +1,39 @@
+import time
+
 import httpx
 import jwt
-import logging
-import time
+import structlog
 from fastapi import HTTPException, Request
 from pydantic import BaseModel
 
-from app.config import settings
+from app.core.config import get_settings
 
-logger = logging.getLogger(__name__)
+settings = get_settings()
+
+logger = structlog.get_logger(__name__)
 
 
 class JWTPayload(BaseModel):
     sub: str
     email: str
     workspace_ids: list[str] = []
-    roles: dict = {}
+    roles: dict[str, object] = {}
 
 
-_jwks_cache: dict | None = None
+_jwks_cache: dict[str, object] | None = None
 _jwks_cache_time: float = 0
 
 
-def _get_jwks() -> dict:
+def _get_jwks() -> dict[str, object]:
     """Get JWKS from Identity Service with caching."""
     global _jwks_cache, _jwks_cache_time
     now = time.time()
 
-    if _jwks_cache and (now - _jwks_cache_time) < settings.jwt_jwks_cache_ttl:
+    if _jwks_cache and (now - _jwks_cache_time) < settings.jwt.jwks_cache_ttl:
         return _jwks_cache
 
     try:
-        response = httpx.get(settings.identity_jwks_url, timeout=10)
+        response = httpx.get(str(settings.jwt.jwks_url), timeout=10)
         response.raise_for_status()
         _jwks_cache = response.json()
         _jwks_cache_time = now
@@ -42,18 +45,18 @@ def _get_jwks() -> dict:
         raise HTTPException(status_code=503, detail="JWKS unavailable") from e
 
 
-def _verify_token(token: str) -> dict:
+def _verify_token(token: str) -> dict[str, object]:
     """Verify JWT token using JWKS from Identity Service."""
     jwks = _get_jwks()
-    jwk = jwks['keys'][0]
+    jwk = jwks['keys'][0]  # type: ignore[index]
 
     payload = jwt.decode(
         token,
         jwk,
-        algorithms=[settings.jwt_algorithm],
-        audience=settings.jwt_audience,
-        issuer=settings.jwt_issuer,
-        options={'verify_exp': settings.jwt_verify_expiration}
+        algorithms=[settings.jwt.algorithm],
+        audience=settings.jwt.audience,
+        issuer=settings.jwt.issuer,
+        options={'verify_exp': settings.jwt.verify_expiration}
     )
     return payload
 
@@ -63,7 +66,7 @@ def get_current_user(request: Request) -> JWTPayload:
     FastAPI dependency that verifies JWT token and returns the payload.
     """
     # Skip JWT verification for internal requests (from gateway)
-    if request.headers.get(settings.internal_request_header):
+    if request.headers.get(settings.jwt.internal_request_header):
         return JWTPayload(
             sub=request.headers.get("X-User-ID", ""),
             email=request.headers.get("X-Email", ""),
@@ -85,10 +88,10 @@ def get_current_user(request: Request) -> JWTPayload:
     try:
         payload = _verify_token(token)
         return JWTPayload(
-            sub=payload.get("sub", ""),
-            email=payload.get("email", ""),
-            workspace_ids=payload.get("workspace_ids", []),
-            roles=payload.get("roles", {})
+            sub=payload.get("sub", ""),  # type: ignore[arg-type]
+            email=payload.get("email", ""),  # type: ignore[arg-type]
+            workspace_ids=payload.get("workspace_ids", []),  # type: ignore[arg-type]
+            roles=payload.get("roles", {})  # type: ignore[arg-type]
         )
     except jwt.ExpiredSignatureError:
         raise HTTPException(
@@ -109,7 +112,7 @@ def get_current_user(request: Request) -> JWTPayload:
         ) from e
 
 
-def invalidate_jwks_cache():
+def invalidate_jwks_cache() -> None:
     """Clear the JWKS cache."""
     global _jwks_cache, _jwks_cache_time
     _jwks_cache = None

@@ -61,7 +61,7 @@ jobs:
             ${{ runner.os }}-uv-
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --group dev
 
       - name: Create test keys
         run: |
@@ -120,7 +120,7 @@ jobs:
         run: pip install uv
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --group dev
 
       - name: Run ruff
         run: uv run ruff check apps/ tests/
@@ -169,7 +169,7 @@ jobs:
             ${{ runner.os }}-uv-
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --group dev
 
       - name: Run ruff
         run: >
@@ -181,6 +181,63 @@ jobs:
           uv run pytest apps/workspaces/tests/ apps/repositories/tests/
           apps/notifications/tests/ --ds=core.settings.test --color=yes
           --tb=short --maxfail=3 -q
+
+  analysis-lint:
+    name: Analysis Service Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/analysis
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python pin 3.14
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Lint with ruff
+        run: uv run ruff check app/ tests/
+
+      - name: Type check with mypy
+        run: uv run mypy app/ tests/
+
+  analysis-test:
+    name: Analysis Service Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/analysis
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python pin 3.14
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run tests
+        run: uv run pytest tests/ -v --tb=short --cov=app --cov-report=term-missing
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          directory: services/analysis
+          fail_ci_if_error: false
 
   security-checks:
     name: Security
@@ -202,7 +259,7 @@ jobs:
         run: pip install uv
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --group dev
 
       - name: Create test keys
         run: |

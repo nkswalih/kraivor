@@ -48,9 +48,9 @@ function useDebounce<T>(value: T, delay = 400): T {
 
 function extractError(err: unknown): { detail: string; code?: string } {
   if (!err || typeof err !== 'object') return { detail: '' };
-  const data = (err as any)?.response?.data ?? {};
+  const data = err && typeof err === 'object' && 'response' in err ? (err as { response: { data?: { detail?: string; code?: string } } }).response?.data : {};
   return {
-    detail: data?.detail ?? (err as any)?.message ?? '',
+    detail: data?.detail ?? (err instanceof Error ? err.message : ''),
     code: data?.code,
   };
 }
@@ -153,6 +153,7 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
     queryKey: ['github-repos', workspaceId, debouncedSearch],
     queryFn: async () => {
       const result = await repositoryEndpoints.listGithubRepos(workspaceId!, debouncedSearch);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return result as any;
     },
     enabled: !!workspaceId && open,
@@ -195,7 +196,11 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
   const hasInstallations = installations.length > 0;
 
   const connectErrMsg =
-    (connectError as any)?.response?.data?.detail ?? (connectError as any)?.message;
+    connectError && typeof connectError === 'object' && 'response' in connectError
+      ? (connectError as { response: { data?: { detail?: string } } }).response?.data?.detail
+      : connectError instanceof Error
+        ? connectError.message
+        : null;
 
   const otherErrMsg =
     !githubNotConnected && reposError
@@ -331,7 +336,7 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
             <div className="space-y-1.5">
               <p className="text-[14px] font-semibold text-[#FAFAFA]">Authorize GitHub access</p>
               <p className="text-[12px] text-text-tertiary max-w-xs leading-relaxed">
-                Kraivor needs access to your GitHub repositories. You'll be redirected to GitHub to
+                Kraivor needs access to your GitHub repositories. You&apos;ll be redirected to GitHub to
                 grant access — choose all repositories or select specific ones.
               </p>
             </div>
@@ -363,7 +368,7 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
             </button>
 
             <p className="text-[10px] text-text-tertiary">
-              You'll be redirected to GitHub. After granting access you'll return here
+              You&apos;ll be redirected to GitHub. After granting access you&apos;ll return here
               automatically.
             </p>
           </div>

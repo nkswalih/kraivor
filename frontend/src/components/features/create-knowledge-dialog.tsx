@@ -28,8 +28,8 @@ export function CreateKnowledgeDialog({ open, onClose }: CreateKnowledgeDialogPr
       setError('');
       onClose();
     },
-    onError: (err: any) => {
-      setError(err?.message || 'Failed to create knowledge space');
+    onError: (err: unknown) => {
+      setError(err instanceof Error ? err.message : 'Failed to create knowledge space');
     },
   });
 

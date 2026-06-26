@@ -112,7 +112,7 @@ export function InboxPopover() {
                 <p className="text-[12px] text-text-tertiary py-2 text-center">No notifications</p>
               ) : (
                 <div className="space-y-0.5">
-                  {recent.map((n: any) => {
+                  {recent.map((n) => {
                     const isInvite = n.notification_type === 'workspace.invitation';
                     // Extract token from link like "/invitations/{token}"
                     const token = isInvite && n.link ? n.link.replace('/invitations/', '') : '';

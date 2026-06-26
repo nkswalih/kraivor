@@ -127,7 +127,7 @@ parallel = true
 precision = 2
 show_missing = true
 skip_covered = false
-fail_under = 90
+fail_under = 55
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

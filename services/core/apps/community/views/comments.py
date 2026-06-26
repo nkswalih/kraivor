@@ -15,11 +15,11 @@ from .discussions import _resolve_profile, _sync_profile_counters
 logger = logging.getLogger(__name__)
 
 
-@extend_schema(tags=["Community"])
 class CommentListView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     @extend_schema(
+        tags=["Community"],
         summary="List comments",
         responses={200: OpenApiResponse(description="Paginated comment list")},
     )
@@ -44,6 +44,7 @@ class CommentListView(APIView):
         )
 
     @extend_schema(
+        tags=["Community"],
         summary="Create comment",
         request=CreateCommentSerializer,
         responses={201: CommentSerializer},
@@ -78,11 +79,11 @@ class CommentListView(APIView):
         )
 
 
-@extend_schema(tags=["Community"])
 class CommentRepliesView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     @extend_schema(
+        tags=["Community"],
         summary="List comment replies", responses={200: CommentSerializer(many=True)}
     )
     def get(self, request: Request, discussion_id: str, comment_id: str) -> Response:
@@ -92,9 +93,9 @@ class CommentRepliesView(APIView):
         )
 
 
-@extend_schema(tags=["Community"])
 class CommentVoteView(APIView):
     @extend_schema(
+        tags=["Community"],
         summary="Vote on comment",
         responses={200: OpenApiResponse(description="Vote recorded")},
     )
@@ -114,6 +115,7 @@ class CommentVoteView(APIView):
         return Response({"value": vote.value, "action": action})
 
     @extend_schema(
+        tags=["Community"],
         summary="Remove comment vote",
         responses={204: OpenApiResponse(description="No content")},
     )

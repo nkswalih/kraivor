@@ -3,10 +3,8 @@ from pathlib import Path
 from typing import Literal
 
 from pydantic import (
-    AnyUrl,
     BaseModel,
     Field,
-    RedisDsn,
     SecretStr,
     model_validator,
 )

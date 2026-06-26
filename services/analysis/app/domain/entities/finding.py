@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-
 from uuid import UUID, uuid4
 
 from app.core.constants import Category, Severity

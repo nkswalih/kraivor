@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
 
-
 @dataclass(kw_only=True)
 class ParsedFunction:
     name: str

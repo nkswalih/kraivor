@@ -24,14 +24,11 @@ from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
 from app.domain.entities.finding import Finding
 from app.domain.entities.score import Score
-from app.workers.perf.rpm_calculator import PerformanceMetrics
 from app.domain.rules.base import RuleViolation
 from app.domain.rules.registry import create_default_registry
 from app.infrastructure.db.unit_of_work import UnitOfWork
 from app.infrastructure.git.repository_fetcher import RepositoryFetcher
 from app.infrastructure.messaging.producer import EventProducer
-from app.workers.dead_code.detector import DeadCodeFinding
-from app.workers.errors.scanner import ErrorFinding
 from app.infrastructure.parsers.base import ChainedParser
 from app.infrastructure.parsers.csharp_parser import CSharpParser
 from app.infrastructure.parsers.elixir_parser import ElixirParser
@@ -44,6 +41,9 @@ from app.infrastructure.parsers.python_parser import PythonParser
 from app.infrastructure.parsers.ruby_parser import RubyParser
 from app.infrastructure.parsers.rust_parser import RustParser
 from app.infrastructure.storage.s3 import S3Storage
+from app.workers.dead_code.detector import DeadCodeFinding
+from app.workers.errors.scanner import ErrorFinding
+from app.workers.perf.rpm_calculator import PerformanceMetrics
 
 logger = get_logger(__name__)
 

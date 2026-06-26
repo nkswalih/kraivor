@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
-
 from app.core.constants import Category, Severity
 
 

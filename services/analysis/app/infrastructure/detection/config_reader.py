@@ -1,7 +1,6 @@
 import json
 import os
 import re
-from typing import Any
 
 
 def read_json(file_path: str) -> dict[str, object] | None:

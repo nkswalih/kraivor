@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-
 from uuid import UUID
 
 from app.domain.entities.finding import Finding

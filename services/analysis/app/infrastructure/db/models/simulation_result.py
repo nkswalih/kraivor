@@ -27,8 +27,8 @@ class SimulationResultModel(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     overall_rpm: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error_rate_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
-    endpoints_analysis: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    bottlenecks: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    endpoints_analysis: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    bottlenecks: Mapped[list[object] | None] = mapped_column(JSONB, nullable=True)
 
     # Relationship
     job = relationship("AnalysisJobModel", back_populates="simulation_results")

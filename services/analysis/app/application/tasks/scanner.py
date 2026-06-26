@@ -1,6 +1,7 @@
+from typing import cast
 from uuid import UUID
 
-from celery import shared_task
+from celery import Task, shared_task
 
 from app.application.analysis.commands import ProcessStageCommand
 from app.application.analysis.handler import (
@@ -18,14 +19,19 @@ from app.application.analysis.handler import (
     handle_start_analysis,
 )
 from app.application.tasks.runner import run_async
+from app.core.constants import Category, Severity
 from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
+from app.domain.entities.finding import Finding
 from app.domain.entities.score import Score
+from app.workers.perf.rpm_calculator import PerformanceMetrics
 from app.domain.rules.base import RuleViolation
 from app.domain.rules.registry import create_default_registry
 from app.infrastructure.db.unit_of_work import UnitOfWork
 from app.infrastructure.git.repository_fetcher import RepositoryFetcher
 from app.infrastructure.messaging.producer import EventProducer
+from app.workers.dead_code.detector import DeadCodeFinding
+from app.workers.errors.scanner import ErrorFinding
 from app.infrastructure.parsers.base import ChainedParser
 from app.infrastructure.parsers.csharp_parser import CSharpParser
 from app.infrastructure.parsers.elixir_parser import ElixirParser
@@ -63,13 +69,13 @@ def _get_parser() -> ChainedParser:
     return _PARSER
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
-def task_start_analysis(self, cmd_dict: dict) -> str:
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
+def task_start_analysis(self: Task, cmd_dict: dict[str, object]) -> str:
     from app.application.analysis.commands import StartAnalysisCommand
 
-    cmd = StartAnalysisCommand(**cmd_dict)
+    cmd = StartAnalysisCommand(**cmd_dict)  # type: ignore[arg-type]
 
-    async def _run():
+    async def _run() -> str:
         async with UnitOfWork() as uow:
             producer = EventProducer()
             job_id = await handle_start_analysis(cmd, uow, producer)
@@ -83,11 +89,11 @@ def task_start_analysis(self, cmd_dict: dict) -> str:
         raise self.retry(exc=exc)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
-def task_clone(self, job_id: str) -> dict:
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
+def task_clone(self: Task, job_id: str) -> dict[str, object]:
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="clone")
 
-    async def _run():
+    async def _run() -> dict[str, object]:
         async with UnitOfWork() as uow:
             producer = EventProducer()
             fetcher = RepositoryFetcher()
@@ -104,15 +110,15 @@ def task_clone(self, job_id: str) -> dict:
         raise self.retry(exc=exc)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
-def task_parse(self, prev_result: dict) -> dict:
-    job_id = prev_result["job_id"]
-    repo_path = prev_result["repo_path"]
-    files = prev_result["files"]
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
+def task_parse(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+    job_id = cast(str, prev_result["job_id"])
+    repo_path = cast(str, prev_result["repo_path"])
+    files = cast(list[dict[str, object]], prev_result["files"])
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="parse")
     parser = _get_parser()
 
-    async def _run():
+    async def _run() -> list[dict[str, object]]:
         async with UnitOfWork() as uow:
             producer = EventProducer()
             metadata = await handle_stage_parse(
@@ -130,19 +136,19 @@ def task_parse(self, prev_result: dict) -> dict:
         raise self.retry(exc=exc)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
-def task_rules(self, prev_result: dict) -> dict:
-    job_id = prev_result["job_id"]
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
+def task_rules(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+    job_id = cast(str, prev_result["job_id"])
     prev_result["repo_path"]
-    files = prev_result["files"]
+    files = cast(list[dict[str, object]], prev_result["files"])
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="rules")
     parser = _get_parser()
 
-    async def _run():
+    async def _run() -> tuple[list[ParsedFile], list[dict[str, str | int | float | None]]]:
         async with UnitOfWork() as uow:
             parsed_files = []
             for f in files:
-                pf = await parser.parse(f["path"], f["content"])
+                pf = await parser.parse(cast(str, f["path"]), cast(str, f["content"]))
                 parsed_files.append(pf)
 
             producer = EventProducer()
@@ -162,17 +168,17 @@ def task_rules(self, prev_result: dict) -> dict:
         raise self.retry(exc=exc)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
-def task_save_findings(self, prev_result: dict) -> dict:
-    job_id = prev_result["job_id"]
-    parsed_files = prev_result.get("_parsed_files", [])
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
+def task_save_findings(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+    job_id = cast(str, prev_result["job_id"])
+    parsed_files = cast(list[ParsedFile], prev_result.get("_parsed_files", []))
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="save_findings")
 
-    async def _run():
+    async def _run() -> tuple[list[dict[str, object]], list[Finding]]:
         async with UnitOfWork() as uow:
             job = await uow.jobs.get_by_id(cmd.job_id)
             if not job:
-                return []
+                return [], []
 
             violations = []
             for pf in parsed_files:
@@ -211,7 +217,7 @@ def task_save_findings(self, prev_result: dict) -> dict:
                 }
                 for v in violations
             ]
-            return rule_violations, findings
+            return cast(list[dict[str, object]], rule_violations), findings
 
     try:
         rule_violations, findings = run_async(_run())
@@ -223,26 +229,26 @@ def task_save_findings(self, prev_result: dict) -> dict:
         raise self.retry(exc=exc)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
-def task_score(self, prev_result: dict) -> dict:
-    job_id = prev_result["job_id"]
-    rule_violations = prev_result.get("rule_violations", [])
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
+def task_score(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+    job_id = cast(str, prev_result["job_id"])
+    rule_violations = cast(list[dict[str, object]], prev_result.get("rule_violations", []))
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="score")
 
     from app.domain.rules.base import RuleViolation as RuleV
 
     violations = [
         RuleV(
-            rule_id=v["rule_id"],
-            category=v["category"],
-            severity=v["severity"],
-            title=v["title"],
-            file_path=v["file_path"],
-            line_start=v["line_start"],
-            line_end=v["line_end"],
-            score_impact=v["score_impact"],
-            rpm_impact=v["rpm_impact"],
-            breaks_at_users=v["breaks_at_users"],
+            rule_id=cast(str, v["rule_id"]),
+            category=cast(Category, v["category"]),
+            severity=cast(Severity, v["severity"]),
+            title=cast(str, v["title"]),
+            file_path=cast(str, v["file_path"]),
+            line_start=cast(int | None, v["line_start"]),
+            line_end=cast(int | None, v["line_end"]),
+            score_impact=cast(float, v["score_impact"]),
+            rpm_impact=cast(int, v["rpm_impact"]),
+            breaks_at_users=cast(int | None, v["breaks_at_users"]),
         )
         for v in rule_violations
     ]
@@ -251,7 +257,7 @@ def task_score(self, prev_result: dict) -> dict:
 
     scorer = ProductionReadinessScorer()
 
-    async def _run():
+    async def _run() -> Score:
         async with UnitOfWork() as uow:
             producer = EventProducer()
             score = await handle_stage_score(cmd, scorer, uow, producer, violations)
@@ -268,18 +274,19 @@ def task_score(self, prev_result: dict) -> dict:
         raise self.retry(exc=exc)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
-def task_finalize(self, prev_result: dict) -> dict:
-    job_id = prev_result["job_id"]
-    score = prev_result.get("_score_obj")
-    findings = prev_result.get("_findings", [])
-    languages = prev_result.get("languages", [])
-    total_files = prev_result.get("total_files", 0)
-    total_lines = prev_result.get("total_lines", 0)
-    duration_seconds = prev_result.get("duration_seconds", 0)
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
+def task_finalize(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+    job_id = cast(str, prev_result["job_id"])
+    score_raw = prev_result.get("_score_obj")
+    score = cast(Score, score_raw) if score_raw is not None else Score(overall=0)
+    findings = cast(list[Finding], prev_result.get("_findings", []))
+    languages = cast(list[str], prev_result.get("languages", []))
+    total_files = cast(int, prev_result.get("total_files", 0))
+    total_lines = cast(int, prev_result.get("total_lines", 0))
+    duration_seconds = cast(int, prev_result.get("duration_seconds", 0))
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="finalize")
 
-    async def _run():
+    async def _run() -> dict[str, object]:
         async with UnitOfWork() as uow:
             job = await uow.jobs.get_by_id(cmd.job_id)
             if not job:
@@ -301,13 +308,13 @@ def task_finalize(self, prev_result: dict) -> dict:
         raise self.retry(exc=exc)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
-def task_dead_code(self, prev_result: dict) -> dict:
-    job_id = prev_result["job_id"]
-    parsed_files: list[ParsedFile] = prev_result.get("_parsed_files", [])
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
+def task_dead_code(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+    job_id = cast(str, prev_result["job_id"])
+    parsed_files = cast(list[ParsedFile], prev_result.get("_parsed_files", []))
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="dead_code")
 
-    async def _run():
+    async def _run() -> list[DeadCodeFinding]:
         async with UnitOfWork() as uow:
             producer = EventProducer()
             results = await handle_stage_dead_code(cmd, uow, producer, parsed_files)
@@ -323,13 +330,13 @@ def task_dead_code(self, prev_result: dict) -> dict:
         raise self.retry(exc=exc)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
-def task_errors(self, prev_result: dict) -> dict:
-    job_id = prev_result["job_id"]
-    parsed_files: list[ParsedFile] = prev_result.get("_parsed_files", [])
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
+def task_errors(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+    job_id = cast(str, prev_result["job_id"])
+    parsed_files = cast(list[ParsedFile], prev_result.get("_parsed_files", []))
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="errors")
 
-    async def _run():
+    async def _run() -> list[ErrorFinding]:
         async with UnitOfWork() as uow:
             producer = EventProducer()
             results = await handle_stage_errors(cmd, uow, producer, parsed_files)
@@ -345,13 +352,13 @@ def task_errors(self, prev_result: dict) -> dict:
         raise self.retry(exc=exc)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
-def task_perf(self, prev_result: dict) -> dict:
-    job_id = prev_result["job_id"]
-    parsed_files: list[ParsedFile] = prev_result.get("_parsed_files", [])
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
+def task_perf(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+    job_id = cast(str, prev_result["job_id"])
+    parsed_files = cast(list[ParsedFile], prev_result.get("_parsed_files", []))
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="perf")
 
-    async def _run():
+    async def _run() -> PerformanceMetrics | None:
         async with UnitOfWork() as uow:
             producer = EventProducer()
             metrics = await handle_stage_perf(cmd, uow, producer, parsed_files)
@@ -367,13 +374,14 @@ def task_perf(self, prev_result: dict) -> dict:
         raise self.retry(exc=exc)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
-def task_simulation(self, prev_result: dict) -> dict:
-    job_id = prev_result["job_id"]
-    perf_metrics = prev_result.get("perf_metrics")
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
+def task_simulation(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+    job_id = cast(str, prev_result["job_id"])
+    perf_metrics_raw = prev_result.get("perf_metrics")
+    perf_metrics = cast(PerformanceMetrics, perf_metrics_raw) if perf_metrics_raw is not None else None
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="simulation")
 
-    async def _run():
+    async def _run() -> list[dict[str, object]]:
         async with UnitOfWork() as uow:
             producer = EventProducer()
             results = await handle_stage_simulation(cmd, uow, producer, perf_metrics)
@@ -389,37 +397,41 @@ def task_simulation(self, prev_result: dict) -> dict:
         raise self.retry(exc=exc)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
-def task_guide_gen(self, prev_result: dict) -> dict:
-    job_id = prev_result["job_id"]
-    violations_raw = prev_result.get("rule_violations", [])
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
+def task_guide_gen(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+    job_id = cast(str, prev_result["job_id"])
+    violations_raw = cast(list[dict[str, object]], prev_result.get("rule_violations", []))
     score_raw = prev_result.get("score")
-    perf_metrics = prev_result.get("perf_metrics")
-    simulation_results = prev_result.get("simulation_results")
-    dead_code_results = prev_result.get("dead_code_results")
-    error_results = prev_result.get("error_results")
+    perf_metrics_raw = prev_result.get("perf_metrics")
+    simulation_results_raw = prev_result.get("simulation_results")
+    dead_code_results_raw = prev_result.get("dead_code_results")
+    error_results_raw = prev_result.get("error_results")
 
     violations = [
         RuleViolation(
-            rule_id=v["rule_id"],
-            category=v["category"],
-            severity=v["severity"],
-            title=v["title"],
-            file_path=v["file_path"],
-            line_start=v["line_start"],
-            line_end=v["line_end"],
-            score_impact=v["score_impact"],
-            rpm_impact=v["rpm_impact"],
-            breaks_at_users=v["breaks_at_users"],
+            rule_id=cast(str, v["rule_id"]),
+            category=cast(Category, v["category"]),
+            severity=cast(Severity, v["severity"]),
+            title=cast(str, v["title"]),
+            file_path=cast(str, v["file_path"]),
+            line_start=cast(int | None, v["line_start"]),
+            line_end=cast(int | None, v["line_end"]),
+            score_impact=cast(float, v["score_impact"]),
+            rpm_impact=cast(int, v["rpm_impact"]),
+            breaks_at_users=cast(int | None, v["breaks_at_users"]),
         )
         for v in violations_raw
     ]
 
-    score = Score(**score_raw) if score_raw else Score(overall=100)
+    score = Score(**score_raw) if score_raw else Score(overall=100)  # type: ignore[arg-type]
+    perf_metrics = cast(PerformanceMetrics, perf_metrics_raw) if perf_metrics_raw is not None else None
+    simulation_results = cast(list[dict[str, object]], simulation_results_raw) if simulation_results_raw is not None else None
+    dead_code_results = cast(list[DeadCodeFinding], dead_code_results_raw) if dead_code_results_raw is not None else None
+    error_results = cast(list[ErrorFinding], error_results_raw) if error_results_raw is not None else None
 
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="guide_gen")
 
-    async def _run():
+    async def _run() -> dict[str, object] | None:
         async with UnitOfWork() as uow:
             producer = EventProducer()
             guide = await handle_stage_guide_gen(

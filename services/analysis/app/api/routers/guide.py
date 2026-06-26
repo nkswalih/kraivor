@@ -23,4 +23,4 @@ async def get_guide(
     guide = await get_enterprise_guide(job_id, uow)
     if not guide:
         raise HTTPException(status_code=404, detail="Enterprise guide not found")
-    return EnterpriseGuideResponse(**guide)
+    return EnterpriseGuideResponse(**guide)  # type: ignore[arg-type]

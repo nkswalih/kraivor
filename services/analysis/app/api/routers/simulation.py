@@ -25,6 +25,6 @@ async def list_simulation_results(
 ) -> SimulationResultListResponse:
     results = await get_simulation_results(job_id, uow)
     return SimulationResultListResponse(
-        results=[SimulationResultResponse(**r) for r in results],
+        results=[SimulationResultResponse(**r) for r in results],  # type: ignore[arg-type]
         total=len(results),
     )

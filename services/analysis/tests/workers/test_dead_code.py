@@ -1,17 +1,23 @@
 
-from app.domain.contracts.parser import ParsedFile, ParsedFunction, ParsedImport
+from app.domain.contracts.parser import (
+    ParsedClass,
+    ParsedFile,
+    ParsedFunction,
+    ParsedImport,
+    ParsedRoute,
+)
 from app.workers.dead_code.detector import DeadCodeDetector
 
 
 def _make_pf(
     path: str,
     content: str = "",
-    functions: list | None = None,
-    imports: list | None = None,
-    function_calls: list | None = None,
-    exports: list | None = None,
-    classes: list | None = None,
-    routes: list | None = None,
+    functions: list[ParsedFunction] | None = None,
+    imports: list[ParsedImport] | None = None,
+    function_calls: list[str] | None = None,
+    exports: list[str] | None = None,
+    classes: list[ParsedClass] | None = None,
+    routes: list[ParsedRoute] | None = None,
 ) -> ParsedFile:
     return ParsedFile(
         path=path,
@@ -35,7 +41,7 @@ class TestDeadCodeDetector:
             content="import os\nimport sys\n\ndef hello():\n    print('hello')\n",
             imports=[ParsedImport(name="os", line=1), ParsedImport(name="sys", line=2)],
             functions=[ParsedFunction(name="hello", line_start=4, line_end=5, calls=["print"])],
-            function_calls=[{"name": "print"}],
+            function_calls=["print"],
         )
         detector = DeadCodeDetector([pf])
         results = await detector.detect_all()
@@ -50,7 +56,7 @@ class TestDeadCodeDetector:
             content="import os\n\nprint(os.getcwd())\n",
             imports=[ParsedImport(name="os", line=1)],
             functions=[],
-            function_calls=[{"name": "print"}],
+            function_calls=["print"],
         )
         detector = DeadCodeDetector([pf])
         results = await detector.detect_all()
@@ -65,7 +71,7 @@ class TestDeadCodeDetector:
                 ParsedFunction(name="helper", line_start=1, line_end=2),
                 ParsedFunction(name="used", line_start=4, line_end=5),
             ],
-            function_calls=[{"name": "used"}],
+            function_calls=["used"],
         )
         detector = DeadCodeDetector([pf])
         results = await detector.detect_all()

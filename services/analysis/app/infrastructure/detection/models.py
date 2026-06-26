@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Any
 
 
 @dataclass(kw_only=True)
@@ -26,7 +25,7 @@ class DetectionResult:
     tools: list[DetectedTechnology] = field(default_factory=list)
     infra: list[DetectedTechnology] = field(default_factory=list)
     languages: list[DetectedTechnology] = field(default_factory=list)
-    config_files: dict[str, dict[str, Any]] = field(default_factory=dict)
+    config_files: dict[str, dict[str, str]] = field(default_factory=dict)
 
     def all_technologies(self) -> list[DetectedTechnology]:
         return (
@@ -40,8 +39,8 @@ class DetectionResult:
     def has_framework(self, name: str) -> bool:
         return any(f.name == name for f in self.frameworks)
 
-    def to_dict(self) -> dict[str, Any]:
-        def _ser(items: list[DetectedTechnology]) -> list[dict[str, Any]]:
+    def to_dict(self) -> dict[str, object]:
+        def _ser(items: list[DetectedTechnology]) -> list[dict[str, str | float | None]]:
             return [
                 {
                     "name": t.name,

@@ -26,7 +26,7 @@ class PythonParser(AbstractParser):
     supported_extensions: list[str] = [".py", ".pyi", ".pyx"]
 
     # FastAPI/Flask/Django route decorator patterns
-    _ROUTE_DECORATOR_PATTERNS: list[re.Pattern] = [
+    _ROUTE_DECORATOR_PATTERNS: list[re.Pattern[str]] = [
         re.compile(r"@(?:app|router|bp)\.(?:get|post|put|delete|patch|options)\(['\"]"),
         re.compile(r"@route\(['\"]"),
         re.compile(r"@(?:app|router|bp)\.route\(['\"]"),

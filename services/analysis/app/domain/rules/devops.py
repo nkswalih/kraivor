@@ -1,4 +1,4 @@
-from typing import Any
+
 
 from app.core.constants import Category, Severity
 from app.domain.rules.base import BaseRule, RuleViolation
@@ -16,7 +16,7 @@ class DevopsDockerfileRule(BaseRule):
     _checked: bool = False
 
     async def analyze(
-        self, file_path: str, content: str, ast_data: dict[str, Any]
+        self, file_path: str, content: str, ast_data: dict[str, object]
     ) -> list[RuleViolation]:
         # This rule is project-level, not file-level.
         # It's triggered once via special handling in the rule runner.
@@ -34,7 +34,7 @@ class DevopsEnvFileRule(BaseRule):
     file_patterns: list[str] = ["*"]
 
     async def analyze(
-        self, file_path: str, content: str, ast_data: dict[str, Any]
+        self, file_path: str, content: str, ast_data: dict[str, object]
     ) -> list[RuleViolation]:
         return []
 
@@ -61,6 +61,6 @@ class DevopsCIConfigRule(BaseRule):
     }
 
     async def analyze(
-        self, file_path: str, content: str, ast_data: dict[str, Any]
+        self, file_path: str, content: str, ast_data: dict[str, object]
     ) -> list[RuleViolation]:
         return []

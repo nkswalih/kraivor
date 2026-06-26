@@ -1,5 +1,6 @@
 import json
 from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID, uuid4
 
 from app.application.analysis.commands import (
@@ -89,7 +90,7 @@ async def handle_stage_clone(
     uow: UnitOfWork,
     fetcher: RepositoryFetcher,
     producer: EventProducer,
-) -> dict:
+) -> dict[str, object]:
     job = await uow.jobs.get_by_id(cmd.job_id)
     if not job:
         raise NotFoundError(f"Job {cmd.job_id} not found")
@@ -103,8 +104,8 @@ async def handle_stage_clone(
     ))
 
     repo_path = await fetcher.clone(
-        clone_url=job["repo_url"],
-        branch=job["branch"],
+        clone_url=cast(str, job["repo_url"]),
+        branch=cast(str, job["branch"]),
         depth=1,
     )
     languages = await fetcher.detect_languages(repo_path)
@@ -140,8 +141,8 @@ async def handle_stage_parse(
     uow: UnitOfWork,
     producer: EventProducer,
     repo_path: str,
-    files: list[dict],
-) -> list[dict]:
+    files: list[dict[str, object]],
+) -> list[dict[str, object]]:
     await uow.jobs.update_status(
         cmd.job_id, JobStatus.PARSING, progress_pct=25,
         progress_message=f"Parsing {len(files)} files...",
@@ -154,7 +155,7 @@ async def handle_stage_parse(
     errors = 0
     for f in files:
         try:
-            pf = await parser.parse(f["path"], f["content"])
+            pf = await parser.parse(cast(str, f["path"]), cast(str, f["content"]))
             parsed.append(pf)
         except Exception:
             errors += 1
@@ -188,7 +189,7 @@ async def handle_stage_rules(
     uow: UnitOfWork,
     producer: EventProducer,
     parsed_files: list[ParsedFile],
-) -> list[dict]:
+) -> list[dict[str, str | int | float | None]]:
     await uow.jobs.update_status(
         cmd.job_id, JobStatus.RULES, progress_pct=50,
         progress_message="Running domain rules...",
@@ -256,13 +257,13 @@ async def handle_save_findings(
     cmd: ProcessStageCommand,
     uow: UnitOfWork,
     violations: list[RuleViolation],
-    job: dict,
+    job: dict[str, object],
 ) -> list[Finding]:
     findings = [
         Finding(
             job_id=cmd.job_id,
-            repo_id=job["repo_id"],
-            workspace_id=job["workspace_id"],
+            repo_id=UUID(cast(str, job["repo_id"])),
+            workspace_id=UUID(cast(str, job["workspace_id"])),
             rule_id=v.rule_id,
             category=v.category,
             severity=v.severity,
@@ -341,7 +342,7 @@ async def handle_stage_finalize(
     uow: UnitOfWork,
     producer: EventProducer,
     storage: AbstractStorage,
-    job: dict,
+    job: dict[str, object],
     score: Score,
     findings: list[Finding],
     languages: list[str],
@@ -353,9 +354,9 @@ async def handle_stage_finalize(
 
     report = Report(
         job_id=cmd.job_id,
-        repo_id=job["repo_id"],
-        workspace_id=job["workspace_id"],
-        branch=job["branch"],
+        repo_id=UUID(cast(str, job["repo_id"])),
+        workspace_id=UUID(cast(str, job["workspace_id"])),
+        branch=cast(str, job["branch"]),
         languages_detected=languages,
         total_files_analyzed=total_files,
         total_lines_of_code=total_lines,
@@ -404,8 +405,8 @@ async def handle_stage_finalize(
 
     await producer.publish(AnalysisCompleted(
         job_id=cmd.job_id,
-        repo_id=job["repo_id"],
-        workspace_id=job["workspace_id"],
+        repo_id=UUID(cast(str, job["repo_id"])),
+        workspace_id=UUID(cast(str, job["workspace_id"])),
         overall_score=score.overall,
         findings_count=len(findings),
         duration_seconds=duration_seconds,
@@ -442,7 +443,7 @@ async def handle_analysis_failure(
 
     await producer.publish(AnalysisFailed(
         job_id=job_id,
-        repo_id=job["repo_id"] if job else UUID(int=0),
+        repo_id=UUID(cast(str, job["repo_id"])) if job else UUID(int=0),
         error_message=error_message,
         stage=stage,
     ))
@@ -587,7 +588,7 @@ async def handle_stage_simulation(
     uow: UnitOfWork,
     producer: EventProducer,
     perf_metrics: PerformanceMetrics | None,
-) -> list[dict]:
+) -> list[dict[str, object]]:
     job = await uow.jobs.get_by_id(cmd.job_id)
     if not job:
         raise NotFoundError(f"Job {cmd.job_id} not found")
@@ -642,10 +643,10 @@ async def handle_stage_guide_gen(
     violations: list[RuleViolation],
     score: Score,
     perf_metrics: PerformanceMetrics | None = None,
-    simulation_results: list[dict] | None = None,
+    simulation_results: list[dict[str, object]] | None = None,
     dead_code_results: list[DeadCodeFinding] | None = None,
     error_results: list[ErrorFinding] | None = None,
-) -> dict | None:
+) -> dict[str, object] | None:
     job = await uow.jobs.get_by_id(cmd.job_id)
     if not job:
         raise NotFoundError(f"Job {cmd.job_id} not found")
@@ -663,7 +664,7 @@ async def handle_stage_guide_gen(
 
         sim_objects: list[SimRes] = []
         if simulation_results:
-            sim_objects = [SimRes(**s) for s in simulation_results]
+            sim_objects = [SimRes(**s) for s in simulation_results]  # type: ignore[arg-type]
 
         generator = EnterpriseGuideGenerator()
         guide = await generator.generate(
@@ -699,7 +700,7 @@ async def handle_stage_guide_gen(
 async def get_job_status(
     query: GetJobStatusQuery,
     uow: UnitOfWork,
-) -> dict | None:
+) -> dict[str, object] | None:
     return await uow.jobs.get_by_id(query.job_id)
 
 
@@ -719,7 +720,7 @@ async def list_findings(
 async def get_findings_summary(
     query: GetFindingsSummaryQuery,
     uow: UnitOfWork,
-) -> dict:
+) -> dict[str, object]:
     by_severity = await uow.findings.count_by_severity(query.job_id)
     by_category = await uow.findings.count_by_category(query.job_id)
     return {
@@ -742,7 +743,7 @@ async def get_report(
 async def list_jobs(
     query: ListJobsQuery,
     uow: UnitOfWork,
-) -> dict:
+) -> dict[str, object]:
     if query.repo_id:
         jobs, total = await uow.jobs.list_by_repo(
             query.repo_id, limit=query.limit, offset=query.offset,
@@ -759,33 +760,33 @@ async def list_jobs(
 async def get_dead_code(
     job_id: UUID,
     uow: UnitOfWork,
-) -> list[dict]:
+) -> list[dict[str, object]]:
     return await uow.dead_code.get_by_job(job_id)
 
 
 async def get_error_findings(
     job_id: UUID,
     uow: UnitOfWork,
-) -> list[dict]:
+) -> list[dict[str, object]]:
     return await uow.error_findings.get_by_job(job_id)
 
 
 async def get_performance_metrics(
     job_id: UUID,
     uow: UnitOfWork,
-) -> list[dict]:
+) -> list[dict[str, object]]:
     return await uow.performance_metrics.get_by_job(job_id)
 
 
 async def get_simulation_results(
     job_id: UUID,
     uow: UnitOfWork,
-) -> list[dict]:
+) -> list[dict[str, object]]:
     return await uow.simulation_results.get_by_job(job_id)
 
 
 async def get_enterprise_guide(
     job_id: UUID,
     uow: UnitOfWork,
-) -> dict | None:
+) -> dict[str, object] | None:
     return await uow.enterprise_guides.get_by_job(job_id)

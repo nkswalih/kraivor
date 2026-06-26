@@ -26,7 +26,7 @@ class S3Storage(AbstractStorage):
             read_timeout=30,
         )
 
-        client_kwargs: dict[str, Any] = {
+        client_kwargs: dict[str, Any] = {  # type: ignore[explicit-any]
             "service_name": "s3",
             "config": config,
             "aws_access_key_id": settings.s3.access_key_id,
@@ -61,7 +61,7 @@ class S3Storage(AbstractStorage):
         try:
             response = self._client.get_object(Bucket=self._bucket, Key=key)
             data = response["Body"].read()
-            return data
+            return data  # type: ignore[no-any-return]
         except ClientError as e:
             logger.error("storage_download_failed", key=key, error=str(e))
             raise
@@ -90,7 +90,7 @@ class S3Storage(AbstractStorage):
                 Params={"Bucket": self._bucket, "Key": key},
                 ExpiresIn=expiration,
             )
-            return url
+            return url  # type: ignore[no-any-return]
         except ClientError as e:
             logger.error("storage_presigned_url_failed", key=key, error=str(e))
             raise

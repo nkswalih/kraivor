@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+
 from uuid import UUID, uuid4
 
 
@@ -15,7 +15,7 @@ class DomainEvent:
     event_type: str = ""
     version: int = 1
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "event_id": str(self.event_id),
             "event_type": self.event_type,
@@ -35,7 +35,7 @@ class AnalysisRequested(DomainEvent):
     branch: str
     deep_scan: bool
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, object]:
         base = super().to_dict()
         base.update(
             {
@@ -59,7 +59,7 @@ class AnalysisProgressed(DomainEvent):
     progress_pct: int
     message: str = ""
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, object]:
         base = super().to_dict()
         base.update(
             {
@@ -82,7 +82,7 @@ class AnalysisCompleted(DomainEvent):
     findings_count: int
     duration_seconds: int | None = None
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, object]:
         base = super().to_dict()
         base.update(
             {
@@ -105,7 +105,7 @@ class AnalysisFailed(DomainEvent):
     error_message: str
     stage: str = ""
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, object]:
         base = super().to_dict()
         base.update(
             {

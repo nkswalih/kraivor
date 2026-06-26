@@ -17,14 +17,14 @@ class JWTPayload(BaseModel):
     sub: str
     email: str
     workspace_ids: list[str] = []
-    roles: dict = {}
+    roles: dict[str, object] = {}
 
 
-_jwks_cache: dict | None = None
+_jwks_cache: dict[str, object] | None = None
 _jwks_cache_time: float = 0
 
 
-def _get_jwks() -> dict:
+def _get_jwks() -> dict[str, object]:
     """Get JWKS from Identity Service with caching."""
     global _jwks_cache, _jwks_cache_time
     now = time.time()
@@ -45,10 +45,10 @@ def _get_jwks() -> dict:
         raise HTTPException(status_code=503, detail="JWKS unavailable") from e
 
 
-def _verify_token(token: str) -> dict:
+def _verify_token(token: str) -> dict[str, object]:
     """Verify JWT token using JWKS from Identity Service."""
     jwks = _get_jwks()
-    jwk = jwks['keys'][0]
+    jwk = jwks['keys'][0]  # type: ignore[index]
 
     payload = jwt.decode(
         token,
@@ -88,10 +88,10 @@ def get_current_user(request: Request) -> JWTPayload:
     try:
         payload = _verify_token(token)
         return JWTPayload(
-            sub=payload.get("sub", ""),
-            email=payload.get("email", ""),
-            workspace_ids=payload.get("workspace_ids", []),
-            roles=payload.get("roles", {})
+            sub=payload.get("sub", ""),  # type: ignore[arg-type]
+            email=payload.get("email", ""),  # type: ignore[arg-type]
+            workspace_ids=payload.get("workspace_ids", []),  # type: ignore[arg-type]
+            roles=payload.get("roles", {})  # type: ignore[arg-type]
         )
     except jwt.ExpiredSignatureError:
         raise HTTPException(
@@ -112,7 +112,7 @@ def get_current_user(request: Request) -> JWTPayload:
         ) from e
 
 
-def invalidate_jwks_cache():
+def invalidate_jwks_cache() -> None:
     """Clear the JWKS cache."""
     global _jwks_cache, _jwks_cache_time
     _jwks_cache = None

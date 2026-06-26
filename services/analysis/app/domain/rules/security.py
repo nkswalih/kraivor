@@ -1,6 +1,6 @@
 import math
 import re
-from typing import Any
+from typing import cast
 
 from app.core.constants import Category, Severity
 from app.domain.rules.base import BaseRule, RuleViolation
@@ -36,10 +36,10 @@ class SecurityNoAuthRule(BaseRule):
     }
 
     async def analyze(
-        self, file_path: str, content: str, ast_data: dict[str, Any]
+        self, file_path: str, content: str, ast_data: dict[str, object]
     ) -> list[RuleViolation]:
         violations: list[RuleViolation] = []
-        routes = ast_data.get("routes", [])
+        routes: list[dict[str, object]] = cast(list[dict[str, object]], ast_data.get("routes", []))
 
         for route in routes:
             if not route.get("has_auth"):
@@ -61,9 +61,9 @@ class SecurityNoAuthRule(BaseRule):
                             "Any user can access it without credentials."
                         ),
                         file_path=file_path,
-                        line_start=route.get("line_start"),
-                        line_end=route.get("line_end"),
-                        code_snippet=route.get("snippet", ""),
+                        line_start=cast(int | None, route.get("line_start")),
+                        line_end=cast(int | None, route.get("line_end")),
+                        code_snippet=cast(str, route.get("snippet", "")),
                         recommendation=(
                             "Add @login_required or equivalent "
                             "authentication decorator"
@@ -110,7 +110,7 @@ class SecurityHardcodedSecretRule(BaseRule):
         "*.config",
     ]
 
-    _SECRET_PATTERNS: list[re.Pattern] = [
+    _SECRET_PATTERNS: list[re.Pattern[str]] = [
         re.compile(r'(["\'])(api[_-]?key)\1\s*[:=]\s*(["\'])([^"\']+)\3', re.IGNORECASE),
         re.compile(r'(["\'])password\1\s*[:=]\s*(["\'])([^"\']+)\2', re.IGNORECASE),
         re.compile(r'(["\'])secret\1\s*[:=]\s*(["\'])([^"\']+)\2', re.IGNORECASE),
@@ -125,7 +125,7 @@ class SecurityHardcodedSecretRule(BaseRule):
     _ENTROPY_THRESHOLD: float = 3.0
 
     async def analyze(
-        self, file_path: str, content: str, ast_data: dict[str, Any]
+        self, file_path: str, content: str, ast_data: dict[str, object]
     ) -> list[RuleViolation]:
         violations: list[RuleViolation] = []
         lines = content.split("\n")

@@ -1,5 +1,4 @@
 import os
-from typing import Any
 
 import pytest
 
@@ -12,7 +11,7 @@ if "ANALYSIS_DATABASE__URL" not in os.environ:
 
 
 @pytest.fixture
-def sample_python_functions() -> list[dict[str, Any]]:
+def sample_python_functions() -> list[dict[str, object]]:
     return [
         {"name": "simple_func", "line_start": 1, "line_end": 3, "snippet": "def simple_func():\n    pass\n", "complexity": 1},
         {"name": "complex_func", "line_start": 10, "line_end": 35, "snippet": "def complex_func():\n    if a:\n        for b in c:\n            while d:\n                if e:\n                    pass\n", "complexity": 5},
@@ -21,7 +20,7 @@ def sample_python_functions() -> list[dict[str, Any]]:
 
 
 @pytest.fixture
-def sample_routes() -> list[dict[str, Any]]:
+def sample_routes() -> list[dict[str, object]]:
     return [
         {"path": "/api/public", "method": "GET", "has_auth": False, "line_start": 1, "snippet": 'app.get("/api/public")'},
         {"path": "/api/secure", "method": "GET", "has_auth": True, "line_start": 5, "snippet": '@login_required\napp.get("/api/secure")'},
@@ -30,7 +29,7 @@ def sample_routes() -> list[dict[str, Any]]:
 
 
 @pytest.fixture
-def sample_ast_data(sample_python_functions: list[dict[str, Any]], sample_routes: list[dict[str, Any]]) -> dict[str, Any]:
+def sample_ast_data(sample_python_functions: list[dict[str, object]], sample_routes: list[dict[str, object]]) -> dict[str, object]:
     return {
         "functions": sample_python_functions,
         "routes": sample_routes,

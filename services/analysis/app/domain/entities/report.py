@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+
 from uuid import UUID
 
 from app.domain.entities.finding import Finding
@@ -28,7 +28,7 @@ class Report:
     )
     s3_key: str = ""
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "metadata": {
                 "job_id": str(self.job_id),

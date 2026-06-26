@@ -9,7 +9,7 @@ logger = get_logger(__name__)
 T = TypeVar("T")
 
 
-def run_async[T](coro: Coroutine[Any, Any, T]) -> T:
+def run_async[T](coro: Coroutine[Any, Any, T]) -> T:  # type: ignore[explicit-any]
     """Run an async coroutine synchronously within a Celery task.
 
     Creates a fresh event loop to avoid conflicts with Celery's

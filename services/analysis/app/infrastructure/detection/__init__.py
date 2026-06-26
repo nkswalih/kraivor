@@ -1,8 +1,8 @@
+from app.infrastructure.detection.detector import FrameworkDetector
 from app.infrastructure.detection.models import DetectedTechnology, DetectionResult
 
 
-def get_detector():
-    from app.infrastructure.detection.detector import FrameworkDetector
+def get_detector() -> FrameworkDetector:
     return FrameworkDetector()
 
 

@@ -28,7 +28,7 @@ class DeadCodeFinding:
         self.evidence = evidence
         self.confidence = confidence
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         return {
             "job_id": None,
             "repo_id": None,

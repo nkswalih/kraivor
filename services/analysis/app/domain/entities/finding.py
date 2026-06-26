@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any
+
 from uuid import UUID, uuid4
 
 from app.core.constants import Category, Severity
@@ -39,9 +39,9 @@ class Finding:
     breaks_at_users: int | None = None
 
     is_ai_enriched: bool = False
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, object] = field(default_factory=dict)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "id": str(self.id),
             "job_id": str(self.job_id),

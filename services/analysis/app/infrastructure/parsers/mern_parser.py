@@ -345,8 +345,8 @@ class MernParser(AbstractParser):
     # ========== MERN: Mongoose ==========
 
     def _extract_mongoose(self, content: str, parsed: ParsedFile) -> None:
-        schemas: list[dict] = []
-        models: list[dict] = []
+        schemas: list[dict[str, object]] = []
+        models: list[dict[str, object]] = []
 
         for match in self._MONGOOSE_SCHEMA.finditer(content):
             schema_name = match.group(1)
@@ -394,8 +394,8 @@ class MernParser(AbstractParser):
     _FIELD_DEF_COMPLEX = re.compile(r"^\s*(\w+)\s*:\s*\{", re.MULTILINE)
     _FIELD_DEF_ARRAY = re.compile(r"^\s*(\w+)\s*:\s*\[")
 
-    def _parse_mongoose_fields(self, body: str) -> list[dict]:
-        fields: list[dict] = []
+    def _parse_mongoose_fields(self, body: str) -> list[dict[str, object]]:
+        fields: list[dict[str, object]] = []
         seen: set[str] = set()
 
         for match in self._FIELD_DEF_SIMPLE.finditer(body):
@@ -414,7 +414,7 @@ class MernParser(AbstractParser):
             field_body = body[field_start + 1 : field_end]
 
             ftype = "Mixed"
-            constraints: dict = {}
+            constraints: dict[str, object] = {}
             type_match = re.search(r"type\s*:\s*(String|Number|Date|Boolean|Mixed|Buffer|ObjectId|Decimal128|BigInt|Map|Schema\.Types\.\w+|mongoose\.Schema\.Types\.\w+)", field_body)
             if type_match:
                 ftype = type_match.group(1)

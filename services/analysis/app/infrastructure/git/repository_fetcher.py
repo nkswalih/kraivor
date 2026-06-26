@@ -163,9 +163,9 @@ class RepositoryFetcher:
                         detected.add(lang)
         return sorted(detected)
 
-    async def build_file_tree(self, repo_path: str) -> dict[str, list[dict]]:
+    async def build_file_tree(self, repo_path: str) -> dict[str, list[dict[str, object]]]:
         """Build a structured file tree grouped by language."""
-        tree: dict[str, list[dict]] = {}
+        tree: dict[str, list[dict[str, object]]] = {}
         for root, dirs, files in os.walk(repo_path):
             dirs[:] = [d for d in dirs if d not in _EXCLUDED_DIRS]
             rel_root = os.path.relpath(root, repo_path)
@@ -212,12 +212,12 @@ class RepositoryFetcher:
 
     async def get_source_files(
         self, repo_path: str
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, object]]:
         """Get all source files with their content.
 
         Returns list of dicts with: path, language, content, size_bytes
         """
-        files: list[dict[str, Any]] = []
+        files: list[dict[str, object]] = []
         for root, dirs, _ in os.walk(repo_path):
             dirs[:] = [d for d in dirs if d not in _EXCLUDED_DIRS]
             for file in _:

@@ -25,6 +25,6 @@ async def list_performance_metrics(
 ) -> PerformanceMetricListResponse:
     metrics = await get_performance_metrics(job_id, uow)
     return PerformanceMetricListResponse(
-        metrics=[PerformanceMetricResponse(**m) for m in metrics],
+        metrics=[PerformanceMetricResponse(**m) for m in metrics],  # type: ignore[arg-type]
         total=len(metrics),
     )

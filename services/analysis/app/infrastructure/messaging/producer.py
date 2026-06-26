@@ -3,6 +3,7 @@ from app.core.config import get_settings
 settings = get_settings()
 from app.core.logging import get_logger
 from app.domain.events import DomainEvent
+from app.infrastructure.cache.redis import RedisCache
 
 logger = get_logger(__name__)
 
@@ -14,7 +15,7 @@ class EventProducer:
     added by implementing the same interface.
     """
 
-    def __init__(self, redis_client=None) -> None:
+    def __init__(self, redis_client: RedisCache | None = None) -> None:
         self._redis = redis_client
         self._kafka_producer = None
 

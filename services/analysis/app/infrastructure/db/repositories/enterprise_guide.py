@@ -10,12 +10,12 @@ class EnterpriseGuideRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def save(self, guide: dict) -> None:
+    async def save(self, guide: dict[str, object]) -> None:
         model = EnterpriseGuideModel(**guide)
         self._session.add(model)
         await self._session.flush()
 
-    async def get_by_job(self, job_id: UUID) -> dict | None:
+    async def get_by_job(self, job_id: UUID) -> dict[str, object] | None:
         stmt = select(EnterpriseGuideModel).where(
             EnterpriseGuideModel.job_id == job_id
         )

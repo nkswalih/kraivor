@@ -1,4 +1,4 @@
-from typing import Any
+
 
 from app.core.constants import Severity, Tiers
 from app.core.logging import get_logger
@@ -15,14 +15,14 @@ logger = get_logger(__name__)
 class EnterpriseGuide:
     def __init__(self) -> None:
         self.executive_summary: str = ""
-        self.critical_issues: list[dict] = []
-        self.high_issues: list[dict] = []
-        self.medium_issues: list[dict] = []
-        self.architecture_review: dict | None = None
-        self.capacity_analysis: dict | None = None
-        self.migration_path: list[dict] = []
+        self.critical_issues: list[dict[str, object]] = []
+        self.high_issues: list[dict[str, object]] = []
+        self.medium_issues: list[dict[str, object]] = []
+        self.architecture_review: dict[str, object] | None = None
+        self.capacity_analysis: dict[str, object] | None = None
+        self.migration_path: list[dict[str, object]] = []
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         return {
             "executive_summary": self.executive_summary,
             "critical_issues": self.critical_issues,
@@ -81,7 +81,7 @@ class EnterpriseGuideGenerator:
         dead_code: list[DeadCodeFinding] | None,
         errors: list[ErrorFinding] | None,
     ) -> None:
-        all_entries: list[tuple[Any, ...]] = []
+        all_entries: list[tuple[object, ...]] = []
         for f in findings:
             entry = (
                 f.title,
@@ -165,7 +165,7 @@ class EnterpriseGuideGenerator:
         if not perf_metrics:
             guide.capacity_analysis = {"status": "not_available"}
             return
-        capacity: dict = {
+        capacity: dict[str, object] = {
             "estimated_rpm": perf_metrics.overall_rpm,
             "breaks_at_concurrent_users": perf_metrics.breaks_at_concurrent_users,
             "bottlenecks": perf_metrics.bottlenecks,
@@ -188,7 +188,7 @@ class EnterpriseGuideGenerator:
         findings: list[RuleViolation],
         perf_metrics: PerformanceMetrics | None,
     ) -> None:
-        steps: list[dict] = []
+        steps: list[dict[str, object]] = []
         for f in findings:
             if str(f.severity) not in ("critical", "high"):
                 continue
@@ -205,7 +205,7 @@ class EnterpriseGuideGenerator:
                 "fix_snippet": f.recommendation,
                 "priority_score": priority_score,
             })
-        steps.sort(key=lambda s: s["priority_score"], reverse=True)
+        steps.sort(key=lambda s: s["priority_score"], reverse=True)  # type: ignore[arg-type, return-value]
         for i, step in enumerate(steps, 1):
             step["step"] = i
             del step["priority_score"]

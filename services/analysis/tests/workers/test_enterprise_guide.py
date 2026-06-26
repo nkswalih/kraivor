@@ -97,7 +97,7 @@ class TestEnterpriseGuideGenerator:
         generator = EnterpriseGuideGenerator()
         guide = await generator.generate(findings=findings, scores=score)
         assert len(guide.migration_path) == 2
-        assert guide.migration_path[0]["step"] < guide.migration_path[1]["step"]
+        assert guide.migration_path[0]["step"] < guide.migration_path[1]["step"]  # type: ignore[operator]
 
     async def test_dead_code_included_in_issues(self) -> None:
         dead_code = [

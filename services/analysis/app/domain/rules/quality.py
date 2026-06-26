@@ -1,5 +1,5 @@
 import re
-from typing import Any
+from typing import cast
 
 from app.core.constants import Category, Severity
 from app.domain.rules.base import BaseRule, RuleViolation
@@ -23,10 +23,10 @@ class QualityHighComplexityRule(BaseRule):
     _HIGH_COMPLEXITY_THRESHOLD: int = 30
 
     async def analyze(
-        self, file_path: str, content: str, ast_data: dict[str, Any]
+        self, file_path: str, content: str, ast_data: dict[str, object]
     ) -> list[RuleViolation]:
         violations: list[RuleViolation] = []
-        functions = ast_data.get("functions", [])
+        functions: list[dict[str, object]] = cast(list[dict[str, object]], ast_data.get("functions", []))
 
         for func in functions:
             complexity = self._calculate_complexity(func)
@@ -48,9 +48,9 @@ class QualityHighComplexityRule(BaseRule):
                             f"considered untestable."
                         ),
                         file_path=file_path,
-                        line_start=func.get("line_start"),
-                        line_end=func.get("line_end"),
-                        code_snippet=func.get("snippet", ""),
+                        line_start=cast(int | None, func.get("line_start")),
+                        line_end=cast(int | None, func.get("line_end")),
+                        code_snippet=cast(str, func.get("snippet", "")),
                         recommendation=(
                             "Break into smaller functions. "
                             "Extract conditional logic into separate "
@@ -66,10 +66,10 @@ class QualityHighComplexityRule(BaseRule):
                 )
         return violations
 
-    def _calculate_complexity(self, func: dict) -> int:
+    def _calculate_complexity(self, func: dict[str, object]) -> int:
         """Calculate McCabe cyclomatic complexity from AST data."""
         complexity = 1
-        code = func.get("snippet", func.get("code", ""))
+        code: str = cast(str, func.get("snippet", func.get("code", "")))
         if not code:
             return complexity
 
@@ -103,14 +103,14 @@ class QualityLongFunctionRule(BaseRule):
     _HIGH_LINES: int = 100
 
     async def analyze(
-        self, file_path: str, content: str, ast_data: dict[str, Any]
+        self, file_path: str, content: str, ast_data: dict[str, object]
     ) -> list[RuleViolation]:
         violations: list[RuleViolation] = []
-        functions = ast_data.get("functions", [])
+        functions: list[dict[str, object]] = cast(list[dict[str, object]], ast_data.get("functions", []))
 
         for func in functions:
-            start = func.get("line_start", 0)
-            end = func.get("line_end", 0)
+            start: int = cast(int, func.get("line_start", 0))
+            end: int = cast(int, func.get("line_end", 0))
             line_count = end - start + 1
 
             if line_count > self._MAX_LINES:
@@ -122,16 +122,16 @@ class QualityLongFunctionRule(BaseRule):
                         severity=Severity.MEDIUM if over_limit else Severity.LOW,
                         title=(
                             f"Long function ({line_count} lines) "
-                            f"in {func.get('name', 'unknown')}"
+                            f"in {cast(str, func.get('name', 'unknown'))}"
                         ),
                         description=(
                             f"Function is {line_count} lines long. "
                             f"Maximum recommended is {self._MAX_LINES}."
                         ),
                         file_path=file_path,
-                        line_start=func.get("line_start"),
-                        line_end=func.get("line_end"),
-                        code_snippet=func.get("snippet", ""),
+                        line_start=cast(int | None, func.get("line_start")),
+                        line_end=cast(int | None, func.get("line_end")),
+                        code_snippet=cast(str, func.get("snippet", "")),
                         recommendation=(
                             "Split into smaller helper functions. "
                             "Each function should be readable without scrolling."

@@ -1,4 +1,4 @@
-from typing import Any
+
 
 
 class DomainError(Exception):
@@ -8,7 +8,7 @@ class DomainError(Exception):
         self,
         message: str = "Domain error occurred",
         code: str = "domain_error",
-        details: dict[str, Any] | None = None,
+        details: dict[str, object] | None = None,
     ) -> None:
         self.message = message
         self.code = code
@@ -20,7 +20,7 @@ class InvalidFindingError(DomainError):
     def __init__(
         self,
         message: str = "Invalid finding data",
-        details: dict[str, Any] | None = None,
+        details: dict[str, object] | None = None,
     ) -> None:
         super().__init__(message=message, code="invalid_finding", details=details)
 
@@ -29,7 +29,7 @@ class InvalidScoreError(DomainError):
     def __init__(
         self,
         message: str = "Invalid score calculation",
-        details: dict[str, Any] | None = None,
+        details: dict[str, object] | None = None,
     ) -> None:
         super().__init__(message=message, code="invalid_score", details=details)
 
@@ -39,7 +39,7 @@ class RuleExecutionError(DomainError):
         self,
         message: str = "Rule execution failed",
         rule_id: str = "",
-        details: dict[str, Any] | None = None,
+        details: dict[str, object] | None = None,
     ) -> None:
         detail = {"rule_id": rule_id, **(details or {})}
         super().__init__(
@@ -53,7 +53,7 @@ class ParserError(DomainError):
         message: str = "Code parsing failed",
         language: str = "",
         file_path: str = "",
-        details: dict[str, Any] | None = None,
+        details: dict[str, object] | None = None,
     ) -> None:
         detail = {
             "language": language,

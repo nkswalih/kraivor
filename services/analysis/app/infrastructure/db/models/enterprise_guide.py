@@ -25,12 +25,12 @@ class EnterpriseGuideModel(Base):
     )
 
     executive_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-    critical_issues: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    high_issues: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    medium_issues: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    architecture_review: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    capacity_analysis: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    migration_path: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    critical_issues: Mapped[list[object] | None] = mapped_column(JSONB, nullable=True)
+    high_issues: Mapped[list[object] | None] = mapped_column(JSONB, nullable=True)
+    medium_issues: Mapped[list[object] | None] = mapped_column(JSONB, nullable=True)
+    architecture_review: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    capacity_analysis: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    migration_path: Mapped[list[object] | None] = mapped_column(JSONB, nullable=True)
 
     generated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

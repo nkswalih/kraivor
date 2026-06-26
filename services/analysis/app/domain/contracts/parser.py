@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any
+
 
 
 @dataclass(kw_only=True)
@@ -14,7 +14,7 @@ class ParsedFunction:
     calls: list[str] = field(default_factory=list)
     has_return: bool = False
     has_yield: bool = False
-    ast_node: Any = None
+    ast_node: object = None
 
 
 @dataclass(kw_only=True)
@@ -47,7 +47,7 @@ class ParsedClass:
     methods: list[str] = field(default_factory=list)
     decorators: list[str] = field(default_factory=list)
     docstring: str = ""
-    ast_node: Any = None
+    ast_node: object = None
 
 
 @dataclass(kw_only=True)
@@ -66,7 +66,7 @@ class ParsedFile:
     exports: list[str] = field(default_factory=list)
 
     errors: list[str] = field(default_factory=list)
-    ast_data: dict[str, Any] = field(default_factory=dict)
+    ast_data: dict[str, object] = field(default_factory=dict)
 
 
 class AbstractParser(ABC):

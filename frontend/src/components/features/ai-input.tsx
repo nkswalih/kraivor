@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 import { Plus, SlidersHorizontal, Sparkles, ArrowUp, ArrowUpCircle } from 'lucide-react';
 import { ModelSelector, getModelIcon } from '@/components/features/model-selector';
@@ -68,12 +69,12 @@ export function AiInput({
             <ArrowUpCircle className="w-4 h-4 text-blue-400 shrink-0" strokeWidth={1.8} />
             <span className="text-[13px] text-[#f2f2f3]">
               You&rsquo;ve run out of free AI responses.{' '}
-              <a
+              <Link
                 href="/pricing"
                 className="text-blue-400 font-medium hover:text-blue-300 underline underline-offset-2 transition-colors"
               >
                 Upgrade Kraivor AI
-              </a>
+              </Link>
             </span>
           </div>
         )}

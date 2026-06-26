@@ -31,8 +31,8 @@ export function CreateWorkspaceDialog({ open, onClose, onCreated }: CreateWorksp
         router.push(`/${slug}`);
       }
     },
-    onError: (err: any) => {
-      setError(err?.message || 'Failed to create workspace');
+    onError: (err: unknown) => {
+      setError(err instanceof Error ? err.message : 'Failed to create workspace');
     },
   });
 

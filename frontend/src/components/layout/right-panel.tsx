@@ -22,7 +22,7 @@ export function RightPanel() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <div className="bg-krait-surface1 border border-krait-border p-3 rounded-[6px]">
           <p className="text-[13px] text-text-secondary leading-relaxed">
-            I'm analyzing the <span className="text-venom-yellow">Authentication System</span>{' '}
+            I&apos;m analyzing the <span className="text-venom-yellow">Authentication System</span>{' '}
             architecture you currently have open. How can I help you improve it?
           </p>
         </div>

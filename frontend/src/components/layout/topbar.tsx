@@ -38,7 +38,7 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
   const wsRef = useRef<HTMLDivElement>(null);
 
   const workspace = useMemo(
-    () => workspaces.find((w: any) => w.slug === workspaceSlug),
+    () => workspaces.find((w: { slug: string }) => w.slug === workspaceSlug),
     [workspaces, workspaceSlug]
   );
 
@@ -96,7 +96,7 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
                 {workspaces.length === 0 && (
                   <p className="px-3 py-2 text-[12px] text-text-tertiary">No workspaces</p>
                 )}
-                {(workspaces as any[]).map((ws: any) => (
+                {(workspaces as Array<{ id: string; slug: string; name: string }>).map((ws) => (
                   <button
                     key={ws.id}
                     onClick={() => {

@@ -61,7 +61,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           if (slugFromUrl && !isPublicRoute(pathname) && !isAuthRedirectRoute(pathname)) {
             const state = useAuthStore.getState();
             if (state.workspaceSlug !== slugFromUrl && state.workspaces.length > 0) {
-              const ws = state.workspaces.find((w: any) => w.slug === slugFromUrl);
+              const ws = state.workspaces.find((w: { slug: string }) => w.slug === slugFromUrl);
               if (ws) {
                 state.setWorkspace(ws.id, ws.slug);
               }

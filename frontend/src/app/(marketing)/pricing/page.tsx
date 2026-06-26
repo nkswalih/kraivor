@@ -196,7 +196,7 @@ export default function PricingPage() {
               Pricing Plans
             </h1>
             <p className="text-xl text-slate-400 mb-10">
-              Choose the plan that fits your team's needs. Scale your intelligence, pay for what you
+              Choose the plan that fits your team&apos;s needs. Scale your intelligence, pay for what you
               use.
             </p>
 

@@ -46,7 +46,8 @@ class RedisCache:
     async def get(self, key: str) -> str | None:
         if self._client is None:
             return None
-        return await self._client.get(key)
+        result = await self._client.get(key)
+        return result.decode() if isinstance(result, bytes) else result
 
     async def set(
         self, key: str, value: str, ttl: int | None = None
@@ -93,7 +94,8 @@ class RedisCache:
     ) -> list[str]:
         if self._client is None:
             return []
-        return await self._client.lrange(key, start, end)
+        result = await self._client.lrange(key, start, end)
+        return [r.decode() if isinstance(r, bytes) else r for r in result]
 
     @property
     def client(self) -> aioredis.Redis | None:

@@ -28,14 +28,14 @@ class DatabaseSettings(BaseModel):
 
 
 class RedisSettings(BaseModel):
-    url: RedisDsn = "redis://localhost:6379/0"
+    url: str = "redis://localhost:6379/0"
     socket_timeout: int = Field(default=5, ge=1)
     retry_on_timeout: bool = True
 
 
 class CelerySettings(BaseModel):
-    broker_url: RedisDsn = "redis://localhost:6379/1"
-    result_backend: RedisDsn = "redis://localhost:6379/2"
+    broker_url: str = "redis://localhost:6379/1"
+    result_backend: str = "redis://localhost:6379/2"
     task_acks_late: bool = True
     worker_prefetch_multiplier: int = Field(default=1, ge=1)
     worker_concurrency: int = Field(default=2, ge=1)
@@ -53,7 +53,7 @@ class S3Settings(BaseModel):
 
 
 class JWTSettings(BaseModel):
-    jwks_url: AnyUrl = "http://identity:8001/.well-known/jwks.json"
+    jwks_url: str = "http://identity:8001/.well-known/jwks.json"
     algorithm: Literal[
         "RS256", "RS384", "RS512",
         "ES256", "ES384", "ES512",
@@ -116,7 +116,7 @@ class KafkaSettings(BaseModel):
 
 class OTelSettings(BaseModel):
     service_name: str = "analysis-service"
-    exporter_otlp_endpoint: AnyUrl = "http://otel-collector:4318"
+    exporter_otlp_endpoint: str = "http://otel-collector:4318"
     traces_sampler: Literal[
         "always_on", "always_off", "parent_based", "trace_id_ratio"
     ] = "always_on"
@@ -163,4 +163,4 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    return Settings()
+    return Settings()  # type: ignore[call-arg]

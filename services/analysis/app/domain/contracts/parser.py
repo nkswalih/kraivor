@@ -62,7 +62,7 @@ class ParsedFile:
     classes: list[ParsedClass] = field(default_factory=list)
     routes: list[ParsedRoute] = field(default_factory=list)
     imports: list[ParsedImport] = field(default_factory=list)
-    function_calls: list[dict] = field(default_factory=list)
+    function_calls: list[str] = field(default_factory=list)
     exports: list[str] = field(default_factory=list)
 
     errors: list[str] = field(default_factory=list)

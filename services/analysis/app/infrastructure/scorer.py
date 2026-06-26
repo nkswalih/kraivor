@@ -67,7 +67,7 @@ class ProductionReadinessScorer(AbstractScorer):
         overall = max(0, min(100, round(overall)))
 
         return Score(
-            overall=overall,
+            overall=overall,  # type: ignore[arg-type]
             performance=max(0, min(100, round(category_scores["performance"]))),
             security=max(0, min(100, round(category_scores["security"]))),
             reliability=max(0, min(100, round(category_scores["reliability"]))),

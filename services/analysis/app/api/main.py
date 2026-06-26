@@ -62,7 +62,7 @@ def create_app() -> FastAPI:
     app.include_router(simulation_results_router)
     app.include_router(enterprise_guide_router)
 
-    app.add_exception_handler(NotFoundError, not_found_handler)
+    app.add_exception_handler(NotFoundError, not_found_handler)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, generic_exception_handler)
 
     return app

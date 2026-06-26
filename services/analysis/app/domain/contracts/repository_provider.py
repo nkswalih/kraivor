@@ -26,13 +26,13 @@ class AbstractJobRepository(ABC):
     @abstractmethod
     async def list_by_repo(
         self, repo_id: UUID, limit: int = 10, offset: int = 0
-    ) -> list[dict]:
+    ) -> tuple[list[dict], int]:
         ...
 
     @abstractmethod
     async def list_by_workspace(
         self, workspace_id: UUID, limit: int = 10, offset: int = 0
-    ) -> list[dict]:
+    ) -> tuple[list[dict], int]:
         ...
 
 

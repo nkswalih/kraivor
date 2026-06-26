@@ -89,5 +89,5 @@ class ReportRepository(AbstractReportRepository):
             workspace_id=job.workspace_id,
             branch=job.branch,
             duration_seconds=job.duration_seconds,
-            completed_at=job.completed_at,
+            completed_at=job.completed_at,  # type: ignore[arg-type]
         )

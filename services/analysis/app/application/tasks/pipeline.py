@@ -102,7 +102,7 @@ def run_full_analysis(self, cmd_dict: dict) -> dict:
         return {
             "job_id": str(state["job_id"]),
             "status": "completed",
-            "overall_score": state.get("score").overall
+            "overall_score": state.get("score").overall  # type: ignore[union-attr]
             if state.get("score")
             else None,
             "findings_count": len(state.get("findings", [])),

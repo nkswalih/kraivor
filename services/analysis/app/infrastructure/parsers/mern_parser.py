@@ -290,7 +290,7 @@ class MernParser(AbstractParser):
     def _extract_interfaces(self, content: str, parsed: ParsedFile) -> None:
         for match in self._INTERFACE_DECL.finditer(content):
             name = match.group(1)
-            bases = []
+            bases: list[str] = []
             if match.group(2):
                 bases.extend(b.strip() for b in match.group(2).split(","))
             line_start = content[: match.start()].count("\n") + 1

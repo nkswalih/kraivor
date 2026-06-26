@@ -75,7 +75,7 @@ class FindingRepository(AbstractFindingRepository):
         count_result = await self._session.execute(count_stmt)
         total = count_result.scalar() or 0
 
-        stmt = stmt.order_by(FindingModel.created_at.desc()).offset(offset).limit(limit)
+        stmt = stmt.order_by(FindingModel.created_at.desc()).offset(offset).limit(limit)  # type: ignore[attr-defined]
 
         result = await self._session.execute(stmt)
         findings = [self._to_domain(m) for m in result.scalars().all()]
@@ -88,7 +88,7 @@ class FindingRepository(AbstractFindingRepository):
             .group_by(FindingModel.severity)
         )
         result = await self._session.execute(stmt)
-        return dict(result.all())
+        return dict(result.all())  # type: ignore[arg-type]
 
     async def count_by_category(self, job_id: UUID) -> dict[str, int]:
         stmt = (
@@ -97,7 +97,7 @@ class FindingRepository(AbstractFindingRepository):
             .group_by(FindingModel.category)
         )
         result = await self._session.execute(stmt)
-        return dict(result.all())
+        return dict(result.all())  # type: ignore[arg-type]
 
     @staticmethod
     def _to_model(finding: Finding) -> FindingModel:

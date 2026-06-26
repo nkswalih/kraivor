@@ -92,8 +92,8 @@ function MembersContent({
       queryClient.invalidateQueries({ queryKey: ['invitations', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['members', workspaceId] });
     },
-    onError: (err: any) => {
-      setInviteError(err?.response?.data?.message || err?.message || 'Invitation failed');
+    onError: (err: unknown) => {
+      setInviteError(err instanceof Error ? err.message : 'Invitation failed');
     },
   });
 

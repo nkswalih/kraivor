@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Sparkles, Zap, Shield, GitBranch } from 'lucide-react';
 
 export function UpgradeCard({ show }: { show: boolean }) {
@@ -27,13 +28,13 @@ export function UpgradeCard({ show }: { show: boolean }) {
               </li>
             ))}
           </ul>
-          <a
+          <Link
             href="/pricing"
             className="inline-flex items-center gap-1 mt-3 text-[13px] text-venom-yellow font-medium hover:text-venom-amber transition-colors"
           >
             Learn more
             <span className="text-[15px] leading-none">&rarr;</span>
-          </a>
+          </Link>
         </div>
       </div>
     </div>

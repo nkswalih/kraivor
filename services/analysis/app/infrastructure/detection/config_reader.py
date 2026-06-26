@@ -4,15 +4,15 @@ import re
 from typing import Any
 
 
-def read_json(file_path: str) -> dict[str, Any] | None:
+def read_json(file_path: str) -> dict[str, object] | None:
     try:
         with open(file_path, encoding="utf-8") as f:
-            return json.load(f)
+            return json.load(f)  # type: ignore[no-any-return]
     except (FileNotFoundError, json.JSONDecodeError, PermissionError):
         return None
 
 
-def read_toml(file_path: str) -> dict[str, Any] | None:
+def read_toml(file_path: str) -> dict[str, object] | None:
     try:
         import tomllib
     except ImportError:

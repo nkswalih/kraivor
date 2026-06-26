@@ -22,6 +22,6 @@ async def list_error_findings(
 ) -> ErrorFindingListResponse:
     findings = await get_error_findings(job_id, uow)
     return ErrorFindingListResponse(
-        findings=[ErrorFindingResponse(**f) for f in findings],
+        findings=[ErrorFindingResponse(**f) for f in findings],  # type: ignore[arg-type]
         total=len(findings),
     )

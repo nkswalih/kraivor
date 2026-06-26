@@ -20,9 +20,9 @@ class EndpointMetric:
     p99_latency_ms: int
     max_concurrent_users: int
     bottlenecks: list[str] = field(default_factory=list)
-    deductions: list[dict] = field(default_factory=list)
+    deductions: list[dict[str, object]] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         return {
             "metric_type": "endpoint",
             "endpoint": self.endpoint,

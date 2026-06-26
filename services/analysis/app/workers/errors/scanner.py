@@ -30,7 +30,7 @@ class ErrorFinding:
         self.code_snippet = code_snippet
         self.recommendation = recommendation
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         return {
             "job_id": None,
             "repo_id": None,

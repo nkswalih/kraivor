@@ -10,13 +10,13 @@ class PerformanceMetricRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def save_many(self, entries: list[dict]) -> int:
+    async def save_many(self, entries: list[dict[str, object]]) -> int:
         models = [PerformanceMetricModel(**e) for e in entries]
         self._session.add_all(models)
         await self._session.flush()
         return len(models)
 
-    async def get_by_job(self, job_id: UUID) -> list[dict]:
+    async def get_by_job(self, job_id: UUID) -> list[dict[str, object]]:
         stmt = select(PerformanceMetricModel).where(
             PerformanceMetricModel.job_id == job_id
         )

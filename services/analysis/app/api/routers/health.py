@@ -74,5 +74,5 @@ async def health_check() -> HealthResponse:
 
 
 @router.get("/health/ready")
-async def readiness_check() -> dict:
+async def readiness_check() -> dict[str, object]:
     return {"status": "ready"}

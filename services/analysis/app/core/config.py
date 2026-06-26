@@ -86,7 +86,7 @@ class ScoringSettings(BaseModel):
     devops_weight: float = Field(default=0.15, ge=0, le=1)
 
     @model_validator(mode="after")
-    def _weights_must_sum_to_one(self):
+    def _weights_must_sum_to_one(self) -> "ScoringSettings":
         total = (
             self.performance_weight
             + self.security_weight

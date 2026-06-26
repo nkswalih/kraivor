@@ -14,7 +14,7 @@ class SimulationResult:
         overall_rpm: int,
         error_rate_pct: float,
         bottlenecks: list[str] | None = None,
-        endpoints_analysis: list[dict] | None = None,
+        endpoints_analysis: list[dict[str, object]] | None = None,
     ) -> None:
         self.concurrent_users = concurrent_users
         self.status = status
@@ -24,7 +24,7 @@ class SimulationResult:
         self.endpoints_analysis = endpoints_analysis or []
         self.exact_breakpoint: int | None = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         return {
             "concurrent_users": self.concurrent_users,
             "status": self.status,

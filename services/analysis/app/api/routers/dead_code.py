@@ -22,6 +22,6 @@ async def list_dead_code(
 ) -> DeadCodeListResponse:
     findings = await get_dead_code(job_id, uow)
     return DeadCodeListResponse(
-        findings=[DeadCodeFindingResponse(**f) for f in findings],
+        findings=[DeadCodeFindingResponse(**f) for f in findings],  # type: ignore[arg-type]
         total=len(findings),
     )

@@ -13,13 +13,13 @@ class JobRepository(AbstractJobRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def create(self, job_data: dict) -> dict:
+    async def create(self, job_data: dict[str, object]) -> dict[str, object]:
         model = AnalysisJobModel(**job_data)
         self._session.add(model)
         await self._session.flush()
         return self._to_dict(model)
 
-    async def get_by_id(self, job_id: UUID) -> dict | None:
+    async def get_by_id(self, job_id: UUID) -> dict[str, object] | None:
         stmt = select(AnalysisJobModel).where(
             AnalysisJobModel.id == job_id,
             AnalysisJobModel.deleted_at.is_(None),
@@ -29,7 +29,7 @@ class JobRepository(AbstractJobRepository):
         return self._to_dict(model) if model else None
 
     async def update_status(
-        self, job_id: UUID, status: str, progress_pct: int = 0, **kwargs
+        self, job_id: UUID, status: str, progress_pct: int = 0, **kwargs: object
     ) -> None:
         values = {"status": status, "progress_pct": progress_pct, **kwargs}
         stmt = (
@@ -41,7 +41,7 @@ class JobRepository(AbstractJobRepository):
 
     async def list_by_repo(
         self, repo_id: UUID, limit: int = 10, offset: int = 0
-    ) -> tuple[list[dict], int]:
+    ) -> tuple[list[dict[str, object]], int]:
         base = select(AnalysisJobModel).where(
             AnalysisJobModel.repo_id == repo_id,
             AnalysisJobModel.deleted_at.is_(None),
@@ -56,7 +56,7 @@ class JobRepository(AbstractJobRepository):
 
     async def list_by_workspace(
         self, workspace_id: UUID, limit: int = 10, offset: int = 0
-    ) -> tuple[list[dict], int]:
+    ) -> tuple[list[dict[str, object]], int]:
         base = select(AnalysisJobModel).where(
             AnalysisJobModel.workspace_id == workspace_id,
             AnalysisJobModel.deleted_at.is_(None),
@@ -78,7 +78,7 @@ class JobRepository(AbstractJobRepository):
         return result.scalar() or 0
 
     @staticmethod
-    def _to_dict(model: AnalysisJobModel) -> dict:
+    def _to_dict(model: AnalysisJobModel) -> dict[str, object]:
         return {
             "id": model.id,
             "repo_id": model.repo_id,

@@ -4,7 +4,11 @@ Each mapping links a dependency name found in a config file
 to a DetectedTechnology descriptor.
 """
 
+from typing import TypeVar
+
 from app.infrastructure.detection.models import DetectedTechnology
+
+T = TypeVar("T")
 
 # ── Python ──────────────────────────────────────────────────────────────────
 
@@ -81,8 +85,8 @@ INFRA_SIGNALS: dict[str, DetectedTechnology] = {
 
 # ── Aggregated lookups ─────────────────────────────────────────────────────
 
-def _merge_dicts(*dicts: dict) -> dict:
-    result: dict = {}
+def _merge_dicts(*dicts: dict[str, T]) -> dict[str, T]:
+    result: dict[str, T] = {}
     for d in dicts:
         result.update(d)
     return result

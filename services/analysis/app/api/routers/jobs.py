@@ -1,3 +1,5 @@
+from datetime import datetime
+from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -87,30 +89,31 @@ async def list_jobs_endpoint(
         offset=(page - 1) * page_size,
     )
     result = await list_jobs(query, uow)
+    jobs_list = cast(list[dict[str, object]], result["jobs"])
     return JobListResponse(
-        jobs=[_job_to_response(j) for j in result["jobs"]],
-        total=result["total"],
+        jobs=[_job_to_response(j) for j in jobs_list],
+        total=cast(int, result["total"]),
         page=page,
         page_size=page_size,
     )
 
 
-def _job_to_response(job: dict) -> JobStatusResponse:
+def _job_to_response(job: dict[str, object]) -> JobStatusResponse:
     return JobStatusResponse(
         job_id=str(job["id"]),
-        repo_id=job["repo_id"],
-        workspace_id=job["workspace_id"],
-        status=job["status"],
-        repo_url=job["repo_url"],
-        branch=job["branch"],
-        progress_pct=float(job["progress_pct"]),
-        progress_message=job["progress_message"] or "",
-        total_findings=job["total_findings"],
-        total_files=job.get("total_files"),
-        total_lines=job.get("total_lines"),
-        overall_score=job.get("overall_score"),
-        error_message=job.get("error_message"),
-        created_at=job["created_at"],
-        started_at=job.get("started_at"),
-        completed_at=job.get("completed_at"),
+        repo_id=UUID(cast(str, job["repo_id"])),
+        workspace_id=UUID(cast(str, job["workspace_id"])),
+        status=cast(str, job["status"]),
+        repo_url=cast(str, job["repo_url"]),
+        branch=cast(str, job["branch"]),
+        progress_pct=float(cast((str | int | float), job["progress_pct"])),
+        progress_message=cast(str, job["progress_message"]) or "",
+        total_findings=cast(int, job["total_findings"]),
+        total_files=cast(int | None, job.get("total_files")),
+        total_lines=cast(int | None, job.get("total_lines")),
+        overall_score=cast(float | None, job.get("overall_score")),
+        error_message=cast(str | None, job.get("error_message")),
+        created_at=cast(datetime, job["created_at"]),
+        started_at=cast(datetime | None, job.get("started_at")),
+        completed_at=cast(datetime | None, job.get("completed_at")),
     )

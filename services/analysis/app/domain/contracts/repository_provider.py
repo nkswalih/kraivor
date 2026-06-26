@@ -10,29 +10,29 @@ class AbstractJobRepository(ABC):
     """Contract for analysis job persistence."""
 
     @abstractmethod
-    async def create(self, job_data: dict) -> dict:
+    async def create(self, job_data: dict[str, object]) -> dict[str, object]:
         ...
 
     @abstractmethod
-    async def get_by_id(self, job_id: UUID) -> dict | None:
+    async def get_by_id(self, job_id: UUID) -> dict[str, object] | None:
         ...
 
     @abstractmethod
     async def update_status(
-        self, job_id: UUID, status: str, progress_pct: int = 0, **kwargs
+        self, job_id: UUID, status: str, progress_pct: int = 0, **kwargs: object
     ) -> None:
         ...
 
     @abstractmethod
     async def list_by_repo(
         self, repo_id: UUID, limit: int = 10, offset: int = 0
-    ) -> tuple[list[dict], int]:
+    ) -> tuple[list[dict[str, object]], int]:
         ...
 
     @abstractmethod
     async def list_by_workspace(
         self, workspace_id: UUID, limit: int = 10, offset: int = 0
-    ) -> tuple[list[dict], int]:
+    ) -> tuple[list[dict[str, object]], int]:
         ...
 
 

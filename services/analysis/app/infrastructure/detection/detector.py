@@ -72,7 +72,7 @@ class FrameworkDetector:
     ]
 
     def __init__(self) -> None:
-        self._parsed_configs: dict[str, dict] = {}
+        self._parsed_configs: dict[str, dict[str, object]] = {}
 
     async def detect(self, repo_path: str) -> DetectionResult:
         result = DetectionResult()
@@ -105,7 +105,7 @@ class FrameworkDetector:
 
         pkg_json = root / "package.json"
         if pkg_json.exists():
-            data = read_json(str(pkg_json))
+            data: dict[str, object] | None = read_json(str(pkg_json))
             if data:
                 self._parsed_configs["package.json"] = data
 
@@ -117,25 +117,25 @@ class FrameworkDetector:
 
         req_txt = root / "requirements.txt"
         if req_txt.exists():
-            data = read_requirements_txt(str(req_txt))
+            data = read_requirements_txt(str(req_txt))  # type: ignore[assignment]
             if data:
                 self._parsed_configs["requirements.txt"] = data
 
         go_mod = root / "go.mod"
         if go_mod.exists():
-            data = read_go_mod(str(go_mod))
+            data = read_go_mod(str(go_mod))  # type: ignore[assignment]
             if data:
                 self._parsed_configs["go.mod"] = data
 
         cargo = root / "Cargo.toml"
         if cargo.exists():
-            data = read_cargo_toml(str(cargo))
+            data = read_cargo_toml(str(cargo))  # type: ignore[assignment]
             if data:
                 self._parsed_configs["Cargo.toml"] = data
 
         gemfile = root / "Gemfile"
         if gemfile.exists():
-            data = read_gemfile(str(gemfile))
+            data = read_gemfile(str(gemfile))  # type: ignore[assignment]
             if data:
                 self._parsed_configs["Gemfile"] = data
 
@@ -145,8 +145,8 @@ class FrameworkDetector:
             return
 
         deps = {
-            **{k.lower(): v for k, v in data.get("dependencies", {}).items()},
-            **{k.lower(): v for k, v in data.get("devDependencies", {}).items()},
+            **{k.lower(): v for k, v in data.get("dependencies", {}).items()},  # type: ignore[attr-defined]
+            **{k.lower(): v for k, v in data.get("devDependencies", {}).items()},  # type: ignore[attr-defined]
         }
 
         for dep_name, dep_version in deps.items():
@@ -156,8 +156,8 @@ class FrameworkDetector:
                     self._categorize(result, resolved)
 
         result.config_files["package.json"] = {
-            "name": data.get("name", ""),
-            "version": data.get("version", ""),
+            "name": data.get("name", ""),  # type: ignore[dict-item]
+            "version": data.get("version", ""),  # type: ignore[dict-item]
         }
 
     def _detect_from_pyproject_toml(self, result: DetectionResult) -> None:
@@ -209,7 +209,7 @@ class FrameworkDetector:
             for sig_name, tech in ALL_GO_SIGNATURES.items():
                 if sig_name in dep_path or dep_path.startswith(sig_name):
                     version = deps[dep_path]
-                    resolved = self._clone_with_version(tech, version)
+                    resolved = self._clone_with_version(tech, version)  # type: ignore[arg-type]
                     self._categorize(result, resolved)
 
     def _detect_from_cargo_toml(self, result: DetectionResult) -> None:

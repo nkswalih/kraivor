@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any
+
 
 from app.core.constants import SCORE_TIER_THRESHOLDS, Tiers
 
@@ -42,7 +42,7 @@ class Score:
     def tier(self) -> Tiers:
         return self._tier
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "overall": self.overall,
             "performance": self.performance,

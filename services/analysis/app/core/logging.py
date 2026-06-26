@@ -66,4 +66,4 @@ def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
     Returns:
         A structlog BoundLogger instance.
     """
-    return structlog.get_logger(name or settings.otel.service_name)
+    return structlog.get_logger(name or settings.otel.service_name)  # type: ignore[no-any-return]

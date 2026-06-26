@@ -1,3 +1,4 @@
+from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
@@ -60,8 +61,8 @@ async def findings_summary(
 ) -> FindingsSummaryResponse:
     query = GetFindingsSummaryQuery(job_id=job_id)
     result = await get_findings_summary(query, uow)
-    by_severity = result.get("by_severity", {})
-    by_category = result.get("by_category", {})
+    by_severity = cast(dict[str, int], result.get("by_severity", {}))
+    by_category = cast(dict[str, int], result.get("by_category", {}))
     total = sum(by_severity.values())
     return FindingsSummaryResponse(
         job_id=str(job_id),

@@ -3,7 +3,7 @@ from app.domain.contracts.parser import ParsedFile, ParsedRoute
 from app.workers.perf.rpm_calculator import RPMCalculator
 
 
-def _make_pf(path: str, content: str = "", routes: list | None = None) -> ParsedFile:
+def _make_pf(path: str, content: str = "", routes: list[ParsedRoute] | None = None) -> ParsedFile:
     return ParsedFile(
         path=path,
         language="python",

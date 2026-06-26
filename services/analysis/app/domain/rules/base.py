@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any
+
 
 from app.core.constants import Category, Severity
 
@@ -27,7 +27,7 @@ class RuleViolation:
     score_impact: float = 0.0
     rpm_impact: int = 0
     breaks_at_users: int | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, object] = field(default_factory=dict)
 
 
 class BaseRule(ABC):
@@ -50,7 +50,7 @@ class BaseRule(ABC):
 
     @abstractmethod
     async def analyze(
-        self, file_path: str, content: str, ast_data: dict[str, Any]
+        self, file_path: str, content: str, ast_data: dict[str, object]
     ) -> list[RuleViolation]:
         """Analyze a single file and return violations.
 

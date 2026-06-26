@@ -58,14 +58,37 @@ ensure_newline_before_comments = true
 known_first_party = ["app", "workers", "tests"]
 
 [tool.mypy]
+strict = true
 python_version = "3.12"
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
+warn_return_any = true
 ignore_missing_imports = true
 show_error_codes = true
 pretty = true
+disallow_any_explicit = true
+disallow_subclassing_any = true
+
+[[tool.mypy.overrides]]
+module = [
+    "app.api.schemas.*",
+    "app.core.config",
+    "app.dependencies.auth",
+    "app.api.routers.health",
+]
+disallow_any_explicit = false
+
+[[tool.mypy.overrides]]
+module = [
+    "app.domain.entities.*",
+    "app.domain.rules.*",
+]
+no_implicit_reexport = false
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
 
 [tool.ruff]
 line-length = 88

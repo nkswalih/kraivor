@@ -1,5 +1,3 @@
-from typing import Any
-
 import pytest
 
 from app.domain.rules.devops import (
@@ -82,7 +80,7 @@ class TestQualityHighComplexityRule:
         ({"name": "low", "line_start": 1, "line_end": 2, "snippet": "def low(): pass", "complexity": 5}, 0),
         ({"name": "high", "line_start": 1, "line_end": 20, "snippet": "def high():\n" + "\n".join([f"    if a{i}: pass" for i in range(16)]), "complexity": 16}, 1),
     ])
-    async def test_complexity_threshold(self, func_data: dict[str, Any], expected_violations: int) -> None:
+    async def test_complexity_threshold(self, func_data: dict[str, object], expected_violations: int) -> None:
         rule = QualityHighComplexityRule()
         result = await rule.analyze("test.py", "", {"functions": [func_data]})
         assert len(result) == expected_violations

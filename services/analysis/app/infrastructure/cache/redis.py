@@ -31,7 +31,8 @@ class RedisCache:
                 retry_on_timeout=settings.redis.retry_on_timeout,
                 decode_responses=True,
             )
-            await self._client.ping()
+            assert self._client is not None
+            await self._client.ping()  # type: ignore[misc]
             logger.info("redis_connected")
         except Exception as e:
             logger.error("redis_connection_failed", error=str(e))
@@ -67,34 +68,34 @@ class RedisCache:
     async def exists(self, key: str) -> bool:
         if self._client is None:
             return False
-        return await self._client.exists(key) > 0
+        return await self._client.exists(key) > 0  # type: ignore[no-any-return]
 
     async def incr(self, key: str) -> int:
         if self._client is None:
             return 0
-        return await self._client.incr(key)
+        return await self._client.incr(key)  # type: ignore[no-any-return]
 
     async def expire(self, key: str, ttl: int) -> bool:
         if self._client is None:
             return False
-        return await self._client.expire(key, ttl)
+        return await self._client.expire(key, ttl)  # type: ignore[no-any-return]
 
     async def publish(self, channel: str, message: str) -> int:
         if self._client is None:
             return 0
-        return await self._client.publish(channel, message)
+        return await self._client.publish(channel, message)  # type: ignore[no-any-return]
 
     async def lpush(self, key: str, *values: str) -> int:
         if self._client is None:
             return 0
-        return await self._client.lpush(key, *values)
+        return await self._client.lpush(key, *values)  # type: ignore[no-any-return,misc]
 
     async def lrange(
         self, key: str, start: int = 0, end: int = -1
     ) -> list[str]:
         if self._client is None:
             return []
-        result = await self._client.lrange(key, start, end)
+        result = await self._client.lrange(key, start, end)  # type: ignore[misc]
         return [r.decode() if isinstance(r, bytes) else r for r in result]
 
     @property

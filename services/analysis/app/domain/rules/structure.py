@@ -1,4 +1,4 @@
-from typing import Any
+
 
 from app.core.constants import Category, Severity
 from app.domain.rules.base import BaseRule, RuleViolation
@@ -16,7 +16,7 @@ class StructureDeepNestingRule(BaseRule):
     _MAX_DEPTH: int = 4
 
     async def analyze(
-        self, file_path: str, content: str, ast_data: dict[str, Any]
+        self, file_path: str, content: str, ast_data: dict[str, object]
     ) -> list[RuleViolation]:
         violations: list[RuleViolation] = []
         depth = file_path.count("/")

@@ -51,6 +51,7 @@ class UnitOfWork:
     async def __aenter__(self) -> "UnitOfWork":
         if self._session is None:
             self._session = async_session_factory()
+        assert self._session is not None
         self.jobs = JobRepository(self._session)
         self.findings = FindingRepository(self._session)
         self.reports = ReportRepository(self._session)
@@ -67,24 +68,27 @@ class UnitOfWork:
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
-        exc_tb: Any,
+        exc_tb: type[BaseException] | None,
     ) -> None:
+        assert self._session is not None
         try:
             if exc_type is None:
-                await self._session.commit()  # type: ignore[union-attr]
+                await self._session.commit()
             else:
-                await self._session.rollback()  # type: ignore[union-attr]
+                await self._session.rollback()
         finally:
             if not self._external_session:
-                await self._session.close()  # type: ignore[union-attr]
+                await self._session.close()
 
     async def commit(self) -> None:
         """Explicitly commit the current transaction."""
-        await self._session.commit()  # type: ignore[union-attr]
+        assert self._session is not None
+        await self._session.commit()
 
     async def rollback(self) -> None:
         """Rollback the current transaction."""
-        await self._session.rollback()  # type: ignore[union-attr]
+        assert self._session is not None
+        await self._session.rollback()
 
     @property
     def session(self) -> AsyncSession:

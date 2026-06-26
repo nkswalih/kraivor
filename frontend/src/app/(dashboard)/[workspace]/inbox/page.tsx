@@ -700,7 +700,7 @@ function ChannelsPanel({ workspaceId }: { workspaceId?: string }) {
             </div>
           ) : (
             <div className="space-y-3">
-              {messages.slice(0, 20).map((msg: any) => (
+              {messages.slice(0, 20).map((msg: { message_id: string; id: string; sender_name: string; created_at: string; content: string; read_at?: string | null; link?: string; notification_type?: string }) => (
                 <div key={msg.message_id || msg.id} className="flex gap-3">
                   <div className="w-8 h-8 rounded-full bg-[#27272A] flex items-center justify-center text-xs font-bold text-[#FAFAFA] shrink-0">
                     {(msg.sender_name || 'U').charAt(0).toUpperCase()}

@@ -61,7 +61,7 @@ jobs:
             ${{ runner.os }}-uv-
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --group dev
 
       - name: Create test keys
         run: |
@@ -120,7 +120,7 @@ jobs:
         run: pip install uv
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --group dev
 
       - name: Run ruff
         run: uv run ruff check apps/ tests/
@@ -169,7 +169,7 @@ jobs:
             ${{ runner.os }}-uv-
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --group dev
 
       - name: Run ruff
         run: >
@@ -259,7 +259,7 @@ jobs:
         run: pip install uv
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --group dev
 
       - name: Create test keys
         run: |

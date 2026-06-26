@@ -51,7 +51,7 @@ ENV UV_LINK_MODE=copy \
 COPY pyproject.toml uv.lock /app/
 
 # Install all dependencies including dev group
-RUN uv sync --frozen --group dev
+RUN uv sync --frozen --extra dev
 
 # =============================================================================
 # APPLICATION SOURCE

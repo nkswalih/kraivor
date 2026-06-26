@@ -74,11 +74,11 @@ def _sync_profile_counters(event_type: str, author_id: str) -> None:
         )
 
 
-@extend_schema(tags=["Community"])
 class DiscussionListView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     @extend_schema(
+        tags=["Community"],
         summary="List discussions",
         responses={200: OpenApiResponse(description="Paginated discussion list")},
     )
@@ -103,6 +103,7 @@ class DiscussionListView(APIView):
         )
 
     @extend_schema(
+        tags=["Community"],
         summary="Create discussion",
         request=CreateDiscussionSerializer,
         responses={201: DiscussionDetailSerializer},
@@ -131,11 +132,11 @@ class DiscussionListView(APIView):
         )
 
 
-@extend_schema(tags=["Community"])
 class DiscussionDetailView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     @extend_schema(
+        tags=["Community"],
         summary="Get discussion", responses={200: DiscussionDetailSerializer}
     )
     def get(self, request: Request, discussion_id: str) -> Response:
@@ -149,6 +150,7 @@ class DiscussionDetailView(APIView):
         )
 
     @extend_schema(
+        tags=["Community"],
         summary="Update discussion",
         request=UpdateDiscussionSerializer,
         responses={200: DiscussionDetailSerializer},
@@ -176,6 +178,7 @@ class DiscussionDetailView(APIView):
         )
 
     @extend_schema(
+        tags=["Community"],
         summary="Delete discussion",
         responses={204: OpenApiResponse(description="No content")},
     )
@@ -195,9 +198,9 @@ class DiscussionDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@extend_schema(tags=["Community"])
 class DiscussionVoteView(APIView):
     @extend_schema(
+        tags=["Community"],
         summary="Vote on discussion",
         responses={200: OpenApiResponse(description="Vote recorded")},
     )
@@ -221,6 +224,7 @@ class DiscussionVoteView(APIView):
         return Response({"value": vote.value, "action": action})
 
     @extend_schema(
+        tags=["Community"],
         summary="Remove discussion vote",
         responses={204: OpenApiResponse(description="No content")},
     )
@@ -234,11 +238,11 @@ class DiscussionVoteView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@extend_schema(tags=["Community"])
 class TrendingDiscussionsView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     @extend_schema(
+        tags=["Community"],
         summary="Get trending discussions",
         responses={200: OpenApiResponse(description="Trending discussions")},
     )

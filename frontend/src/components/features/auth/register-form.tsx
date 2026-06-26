@@ -177,8 +177,8 @@ export function RegisterForm() {
           setIsOAuthLoading(false);
         }
       }
-    } catch (error: any) {
-      setServerError(error.message || `Could not connect to ${provider}.`);
+    } catch (error: unknown) {
+      setServerError(error instanceof Error ? error.message : `Could not connect to ${provider}.`);
       setIsOAuthLoading(false);
     }
   };

@@ -30,13 +30,15 @@ export function VerifyEmailForm() {
         setStatus('success');
         setMessage('Email verified successfully! Redirecting to login...');
         setTimeout(() => router.push(ROUTES.LOGIN), 2000);
-      } catch (err: any) {
-        if (err?.errorCode === 'token_expired') {
+      } catch (err: unknown) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((err as any)?.errorCode === 'token_expired') {
           setStatus('expired');
           setMessage('Your verification link has expired.');
         } else {
           setStatus('error');
-          setMessage(err?.message || 'Invalid verification token.');
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          setMessage((err as any)?.message || 'Invalid verification token.');
         }
       }
     };

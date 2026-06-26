@@ -163,8 +163,8 @@ export function LoginForm() {
                 setServerError(null);
                 await authApi.sendOTP({ email });
                 setStep('OTP_ENTER');
-              } catch (err: any) {
-                setServerError(err.message || 'Failed to send code.');
+              } catch (err: unknown) {
+                setServerError(err instanceof Error ? err.message : 'Failed to send code.');
               } finally {
                 setIsLoading(false);
               }
@@ -213,16 +213,16 @@ export function LoginForm() {
     SUB-COMPONENTS
 ────────────────────────────────────────────────────────────────── */
 
-function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: any) {
+function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: { onSuccess: (email: string, methods: string[]) => void; setGlobalError: (msg: string | null) => void; isLoading: boolean; setIsLoading: (v: boolean) => void }) {
   const schema = z.object({ email: z.string().email('Invalid email address') });
   const {
     register,
     handleSubmit,
     setError: setFieldError,
     formState: { errors },
-  } = useForm({ resolver: zodResolver(schema) });
+  } = useForm<{ email: string }>({ resolver: zodResolver(schema) });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: { email: string }) => {
     setGlobalError(null);
     setIsLoading(true);
     try {
@@ -246,8 +246,9 @@ function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: an
       } else {
         setFieldError('email', { type: 'manual', message: 'No login methods available.' });
       }
-    } catch (err: any) {
-      const errorData = err.response?.data || err;
+    } catch (err: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errorData = (err as any).response?.data || err;
       if (errorData?.user_exists === false) {
         setFieldError('email', { type: 'manual', message: 'Account not found. Please register.' });
       } else if (errorData?.email_verified === false) {
@@ -285,8 +286,8 @@ function IdentifyStep({ onSuccess, setGlobalError, isLoading, setIsLoading }: an
           setIsLoading(false);
         }
       }
-    } catch (err: any) {
-      setGlobalError(err.message || `Could not connect to ${provider}.`);
+    } catch (err: unknown) {
+      setGlobalError(err instanceof Error ? err.message : `Could not connect to ${provider}.`);
       setIsLoading(false);
     }
   };
@@ -376,7 +377,14 @@ function ChooseMethodStep({
   onSelectOtp,
   isLoading,
   onBack,
-}: any) {
+}: {
+  methods?: string[];
+  email: string;
+  onSelectPassword: () => void;
+  onSelectOtp: () => Promise<void>;
+  isLoading: boolean;
+  onBack: () => void;
+}) {
   const maskEmail = (email: string) => {
     const [localPart, domain] = email.split('@');
     if (!localPart || !domain) return email;
@@ -415,7 +423,7 @@ function ChooseMethodStep({
             <h3 className="text-sm font-medium text-white group-hover:text-[hsl(var(--primary-light))] transition-colors">
               Send a code
             </h3>
-            <p className="text-xs text-slate-400 mt-1">We'll send a code to {masked}</p>
+            <p className="text-xs text-slate-400 mt-1">We&apos;ll send a code to {masked}</p>
           </div>
           {isLoading ? (
             <span className="text-xs text-slate-400">Sending...</span>
@@ -437,23 +445,29 @@ function ChooseMethodStep({
   );
 }
 
-function PasswordStep({ email, onSuccess, setError, onBack, onReset }: any) {
+function PasswordStep({ email, onSuccess, setError, onBack, onReset }: {
+  email: string;
+  onSuccess: (mfaRequired?: boolean) => void;
+  setError: (msg: string | null) => void;
+  onBack: () => void;
+  onReset: () => void;
+}) {
   const [show, setShow] = useState(false);
   const {
     register,
     handleSubmit,
     formState: { isSubmitting },
-  } = useForm({
+  } = useForm<{ password: string }>({
     resolver: zodResolver(z.object({ password: z.string().min(1, 'Password required') })),
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: { password: string }) => {
     setError(null);
     try {
       const { mfaRequired } = await authApi.login({ email, password: data.password });
       onSuccess(mfaRequired);
-    } catch (err: any) {
-      setError(err.message || 'Invalid password. Please try again.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Invalid password. Please try again.');
     }
   };
 
@@ -533,7 +547,12 @@ function PasswordStep({ email, onSuccess, setError, onBack, onReset }: any) {
   );
 }
 
-function OtpStep({ email, onSuccess, setError, onBack }: any) {
+function OtpStep({ email, onSuccess, setError, onBack }: {
+  email: string;
+  onSuccess: () => void;
+  setError: (msg: string | null) => void;
+  onBack: () => void;
+}) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isVerifying, setIsVerifying] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -566,8 +585,8 @@ function OtpStep({ email, onSuccess, setError, onBack }: any) {
     try {
       await authApi.verifyOTP({ email, otp_code: code });
       onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Invalid or expired code.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Invalid or expired code.');
     } finally {
       setIsVerifying(false);
     }
@@ -596,7 +615,7 @@ function OtpStep({ email, onSuccess, setError, onBack }: any) {
     <div className="animate-fade-up space-y-6">
       <p className="text-sm text-slate-300 text-center">
         If <span className="font-medium text-white">{masked}</span> matches the email address on
-        your account, we'll send you a code.
+        your account, we&apos;ll send you a code.
       </p>
 
       <div className="flex justify-center gap-2" onPaste={handlePaste}>
@@ -656,7 +675,7 @@ function OtpStep({ email, onSuccess, setError, onBack }: any) {
           onClick={handleResend}
           className="text-sm text-slate-400 hover:text-white transition-colors"
         >
-          Didn't receive it?{' '}
+          Didn&apos;t receive it?{' '}
           <span className="text-[hsl(var(--primary-light))] hover:underline">Resend code</span>
         </button>
         <button

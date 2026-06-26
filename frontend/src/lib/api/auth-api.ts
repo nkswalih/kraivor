@@ -73,6 +73,7 @@ class AuthApi {
       return { mfaRequired: false };
     } catch (error) {
       useAuthStore.getState().setLoading(false);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((error as any).mfaRequired) throw error;
       throw handleApiError(error);
     }
@@ -206,10 +207,12 @@ class AuthApi {
   async verifyEmail(payload: VerifyEmailPayload): Promise<void> {
     try {
       await apiClient.post(API_ENDPOINTS.AUTH.VERIFY_EMAIL, payload);
-    } catch (error: any) {
+    } catch (error: unknown) {
       const apiError = handleApiError(error);
-      if (error?.response?.data?.error_code) {
-        (apiError as any).errorCode = error.response.data.error_code;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((error as any)?.response?.data?.error_code) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (apiError as any).errorCode = (error as any).response.data.error_code;
       }
       throw apiError;
     }

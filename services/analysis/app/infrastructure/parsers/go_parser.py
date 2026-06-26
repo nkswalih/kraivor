@@ -133,9 +133,9 @@ class GoParser(AbstractParser):
     def _extract_imports(self, content: str, parsed: ParsedFile) -> None:
         for match in self._IMPORT_SINGLE.finditer(content):
             source = match.group(1)
-            line = content[: match.start()].count("\n") + 1
+            import_line = content[: match.start()].count("\n") + 1
             parsed.imports.append(
-                ParsedImport(name="", source=source, line=line, is_from=False)
+                ParsedImport(name="", source=source, line=import_line, is_from=False)
             )
 
         in_import_block = False

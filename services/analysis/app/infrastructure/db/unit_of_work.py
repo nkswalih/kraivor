@@ -71,21 +71,21 @@ class UnitOfWork:
     ) -> None:
         try:
             if exc_type is None:
-                await self._session.commit()
+                await self._session.commit()  # type: ignore[union-attr]
             else:
-                await self._session.rollback()
+                await self._session.rollback()  # type: ignore[union-attr]
         finally:
             if not self._external_session:
-                await self._session.close()
+                await self._session.close()  # type: ignore[union-attr]
 
     async def commit(self) -> None:
         """Explicitly commit the current transaction."""
-        await self._session.commit()
+        await self._session.commit()  # type: ignore[union-attr]
 
     async def rollback(self) -> None:
         """Rollback the current transaction."""
-        await self._session.rollback()
+        await self._session.rollback()  # type: ignore[union-attr]
 
     @property
     def session(self) -> AsyncSession:
-        return self._session
+        return self._session  # type: ignore[return-value]

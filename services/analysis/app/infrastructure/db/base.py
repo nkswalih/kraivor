@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, MappedColumn, mapped_column
 
 
 class Base(DeclarativeBase):
@@ -36,7 +36,7 @@ class SoftDeleteMixin:
     )
 
 
-def UUIDColumn() -> UUID:  # noqa: N802
+def UUIDColumn() -> MappedColumn[UUID]:  # noqa: N802
     """Generate a UUID primary key column."""
     return mapped_column(
         PG_UUID(as_uuid=True),

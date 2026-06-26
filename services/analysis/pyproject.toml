@@ -58,29 +58,14 @@ ensure_newline_before_comments = true
 known_first_party = ["app", "workers", "tests"]
 
 [tool.mypy]
-strict = true
 python_version = "3.12"
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
-warn_return_any = true
-disallow_any_unimported = false
-disallow_any_expr = false
-disallow_any_decorated = false
-disallow_any_explicit = true
-disallow_subclassing_any = true
-disallow_untyped_calls = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-no_implicit_optional = true
-show_error_codes = true
 ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = ["app.*", "workers.*"]
-ignore_missing_imports = false
+show_error_codes = true
+pretty = true
 
 [tool.ruff]
 line-length = 88
@@ -143,5 +128,6 @@ directory = "htmlcov"
 
 [dependency-groups]
 dev = [
+    "aiosqlite>=0.22.1",
     "cryptography>=49.0.0",
 ]

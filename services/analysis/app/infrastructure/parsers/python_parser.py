@@ -124,7 +124,7 @@ class PythonParser(AbstractParser):
         for base in node.bases:
             if isinstance(base, ast.Name):
                 bases.append(base.id)
-            elif isinstance(base, ast.Attribute):
+            elif isinstance(base, ast.Attribute) and isinstance(base.value, ast.Name):
                 bases.append(f"{base.value.id}.{base.attr}")
 
         methods = []

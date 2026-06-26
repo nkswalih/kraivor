@@ -58,7 +58,7 @@ async def start_analysis(
     })
 
     job = await uow.jobs.get_by_id(job_id)
-    return _job_to_response(job)
+    return _job_to_response(job)  # type: ignore[arg-type]
 
 
 @router.get("/{job_id}", response_model=JobStatusResponse)

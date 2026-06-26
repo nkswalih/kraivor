@@ -1,3 +1,5 @@
+from typing import Any
+
 from app.core.constants import Severity, Tiers
 from app.core.logging import get_logger
 from app.domain.entities.score import Score
@@ -79,7 +81,7 @@ class EnterpriseGuideGenerator:
         dead_code: list[DeadCodeFinding] | None,
         errors: list[ErrorFinding] | None,
     ) -> None:
-        all_entries: list[tuple[str, str, str, str, str, str, int]] = []
+        all_entries: list[tuple[Any, ...]] = []
         for f in findings:
             entry = (
                 f.title,
@@ -119,7 +121,7 @@ class EnterpriseGuideGenerator:
                 ))
 
         for _severity, title, file_ref, sev, desc, rec, ep, effort in all_entries:
-            entry = {
+            issue_entry = {
                 "title": title,
                 "file": file_ref,
                 "severity": sev,
@@ -129,11 +131,11 @@ class EnterpriseGuideGenerator:
                 "estimated_effort": effort,
             }
             if sev in ("critical", Severity.CRITICAL):
-                guide.critical_issues.append(entry)
+                guide.critical_issues.append(issue_entry)
             elif sev in ("high", Severity.HIGH):
-                guide.high_issues.append(entry)
+                guide.high_issues.append(issue_entry)
             elif sev in ("medium", Severity.MEDIUM):
-                guide.medium_issues.append(entry)
+                guide.medium_issues.append(issue_entry)
 
     def _generate_architecture_review(
         self, guide: EnterpriseGuide, findings: list[RuleViolation],

@@ -72,7 +72,7 @@ class InstallationStateManager:
         else:
             logger.warning(
                 "install_state.no_redis",
-                extra={"message": "Redis unavailable; state management disabled."},
+                extra={"detail": "Redis unavailable; state management disabled."},
             )
 
         return state
@@ -223,7 +223,7 @@ class GitHubAppInstallationService:
                 "installation_id": installation_id,
                 "workspace_id": str(workspace_id),
                 "account_login": account.get("login"),
-                "created": created,
+                "was_created": created,
             },
         )
 

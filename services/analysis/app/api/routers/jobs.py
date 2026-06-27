@@ -101,8 +101,8 @@ async def list_jobs_endpoint(
 def _job_to_response(job: dict[str, object]) -> JobStatusResponse:
     return JobStatusResponse(
         job_id=str(job["id"]),
-        repo_id=UUID(cast(str, job["repo_id"])),
-        workspace_id=UUID(cast(str, job["workspace_id"])),
+        repo_id=job["repo_id"],
+        workspace_id=job["workspace_id"],
         status=cast(str, job["status"]),
         repo_url=cast(str, job["repo_url"]),
         branch=cast(str, job["branch"]),

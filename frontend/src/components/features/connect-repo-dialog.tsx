@@ -48,9 +48,12 @@ function useDebounce<T>(value: T, delay = 400): T {
 
 function extractError(err: unknown): { detail: string; code?: string } {
   if (!err || typeof err !== 'object') return { detail: '' };
-  const data = err && typeof err === 'object' && 'response' in err ? (err as { response: { data?: { detail?: string; code?: string } } }).response?.data : {};
+  if ('code' in err && 'message' in err && !('response' in err)) {
+    return { detail: (err as { message: string }).message, code: (err as { code?: string }).code };
+  }
+  const data = (err as { response?: { data?: { detail?: string; code?: string } } }).response?.data ?? {};
   return {
-    detail: data?.detail ?? (err instanceof Error ? err.message : ''),
+    detail: data?.detail ?? (err instanceof Error ? (err as Error).message : ''),
     code: data?.code,
   };
 }
@@ -103,12 +106,16 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
         queryClient.invalidateQueries({ queryKey: ['github-installations', workspaceId] });
         queryClient.invalidateQueries({ queryKey: ['github-repos', workspaceId] });
         queryClient.invalidateQueries({ queryKey: ['repos', workspaceId] });
+
+        popupRef.current?.close();
       }
 
       if (type === 'github-app-install-error') {
         clearInterval(pollIntervalRef.current);
         setAwaitingPopup(false);
         console.error('[ConnectRepoDialog] GitHub App install error:', event.data.error);
+
+        popupRef.current?.close();
       }
     };
 
@@ -194,6 +201,8 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
   const githubNotConnected = isGitHubAuthError(reposError);
   const githubNotConfigured = reposErrorCode === 'github_app_not_configured';
   const hasInstallations = installations.length > 0;
+
+  const needsGitHubSetup = githubNotConnected || (!hasInstallations && !installationsLoading && !githubNotConfigured);
 
   const connectErrMsg =
     connectError && typeof connectError === 'object' && 'response' in connectError
@@ -326,7 +335,7 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
               </p>
             </div>
           </div>
-        ) : githubNotConnected ? (
+        ) : needsGitHubSetup ? (
           // ── GitHub App not installed (admin only — non-admins get 200 []) ─
           <div className="flex flex-col items-center justify-center py-10 px-8 text-center gap-5">
             <div className="w-14 h-14 rounded-full bg-[#1E1E21] border border-[#27272A] flex items-center justify-center">
@@ -557,7 +566,7 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
               ? 'Waiting for GitHub authorization...'
               : githubNotConfigured
                 ? 'GitHub integration not configured'
-                : githubNotConnected
+                : needsGitHubSetup
                   ? 'GitHub authorization required'
                   : !canAdmin
                     ? connectedSet.size > 0

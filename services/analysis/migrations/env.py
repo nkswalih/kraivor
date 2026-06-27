@@ -1,30 +1,31 @@
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from app.core.config import settings
-from app.infrastructure.db.base import Base
+from alembic import context
+from app.core.config import get_settings
 
+settings = get_settings()
 # Import all models so Base.metadata is populated
-import app.infrastructure.db.models.analysis_job  # noqa: F401
-import app.infrastructure.db.models.finding  # noqa: F401
-import app.infrastructure.db.models.dead_code  # noqa: F401
-import app.infrastructure.db.models.error_finding  # noqa: F401
-import app.infrastructure.db.models.performance_metric  # noqa: F401
+import app.infrastructure.db.models.analysis_job
+import app.infrastructure.db.models.dead_code
+import app.infrastructure.db.models.enterprise_guide
+import app.infrastructure.db.models.error_finding
+import app.infrastructure.db.models.file_analysis
+import app.infrastructure.db.models.finding
+import app.infrastructure.db.models.performance_metric
+import app.infrastructure.db.models.score_history
 import app.infrastructure.db.models.simulation_result  # noqa: F401
-import app.infrastructure.db.models.score_history  # noqa: F401
-import app.infrastructure.db.models.enterprise_guide  # noqa: F401
-import app.infrastructure.db.models.file_analysis  # noqa: F401
+from app.infrastructure.db.base import Base
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", settings.database.url)
+config.set_main_option("sqlalchemy.url", settings.database.url.get_secret_value())
 
 target_metadata = Base.metadata
 

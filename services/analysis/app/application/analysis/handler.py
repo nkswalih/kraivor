@@ -423,7 +423,7 @@ async def handle_stage_finalize(
         medium_count=severity_counts.get(Severity.MEDIUM, 0),
         low_count=severity_counts.get(Severity.LOW, 0),
         duration_seconds=duration_seconds,
-        completed_at=datetime.now(UTC),
+        completed_at=datetime.now(UTC).replace(tzinfo=None),
     )
 
     await producer.publish(AnalysisCompleted(

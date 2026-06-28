@@ -170,11 +170,11 @@ async def run_full_analysis(cmd_dict: dict[str, object]) -> dict[str, object]:
         raise
 
     score_raw = state.get("score")
-    score_dict = cast(dict[str, object], score_raw) if score_raw is not None else None
+    overall_score = score_raw.overall if isinstance(score_raw, Score) else None
     return {
         "job_id": str(cast(UUID, state["job_id"])),
         "status": "completed",
-        "overall_score": score_dict.get("overall") if score_dict is not None else None,
+        "overall_score": overall_score,
         "findings_count": len(cast(list[object], state.get("findings", []))),
     }
 

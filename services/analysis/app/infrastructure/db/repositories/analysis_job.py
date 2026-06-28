@@ -92,6 +92,8 @@ class JobRepository(AbstractJobRepository):
             "status": model.status,
             "progress_pct": model.progress_pct,
             "progress_message": model.progress_message,
+            "total_files": model.total_files,
+            "total_lines": model.total_lines,
             "total_findings": model.total_findings,
             "critical_count": model.critical_count,
             "high_count": model.high_count,

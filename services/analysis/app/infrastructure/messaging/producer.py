@@ -19,9 +19,20 @@ class EventProducer:
         self._redis = redis_client
         self._kafka_producer = None
 
+    async def _ensure_redis(self) -> None:
+        if self._redis is None:
+            try:
+                cache = RedisCache()
+                await cache.connect()
+                self._redis = cache
+            except Exception:
+                logger.warning("redis_not_available, events will be dropped")
+
     async def publish(self, event: DomainEvent) -> None:
         """Publish a domain event to the message broker."""
         event_data = event.to_dict()
+
+        await self._ensure_redis()
 
         # Publish to Redis
         if self._redis:

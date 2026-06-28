@@ -1,3 +1,4 @@
+import asyncio
 import json
 from datetime import UTC, datetime
 from typing import cast
@@ -99,14 +100,17 @@ async def handle_stage_clone(
         cmd.job_id, JobStatus.CLONING, progress_pct=10,
         progress_message="Cloning repository...",
     )
+
     await producer.publish(AnalysisProgressed(
         job_id=cmd.job_id, status=JobStatus.CLONING, progress_pct=10,
     ))
 
+    token = get_settings().git.token.get_secret_value() if get_settings().git.token else ""
     repo_path = await fetcher.clone(
         clone_url=cast(str, job["repo_url"]),
         branch=cast(str, job["branch"]),
         depth=1,
+        github_token=token,
     )
     languages = await fetcher.detect_languages(repo_path)
     files = await fetcher.get_source_files(repo_path)
@@ -116,6 +120,13 @@ async def handle_stage_clone(
 
     detector = FrameworkDetector()
     detection = await detector.detect(repo_path)
+
+    await uow.jobs.update_status(
+        cmd.job_id, JobStatus.CLONING, progress_pct=10,
+        progress_message=f"Found {len(files)} files across {len(languages)} languages",
+        total_files=len(files),
+        total_lines=loc,
+    )
 
     result = {
         "repo_path": repo_path,
@@ -135,6 +146,22 @@ async def handle_stage_clone(
     return result
 
 
+async def _push_progress(job_id: UUID, status: str, pct: int, message: str) -> None:
+    from app.infrastructure.db.session import async_session_factory
+    from sqlalchemy import update
+
+    from app.infrastructure.db.models.analysis_job import AnalysisJobModel
+
+    async with async_session_factory() as session:
+        stmt = (
+            update(AnalysisJobModel)
+            .where(AnalysisJobModel.id == job_id)
+            .values(status=status, progress_pct=pct, progress_message=message)
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+
 async def handle_stage_parse(
     cmd: ProcessStageCommand,
     parser: ChainedParser,
@@ -142,24 +169,24 @@ async def handle_stage_parse(
     producer: EventProducer,
     repo_path: str,
     files: list[dict[str, object]],
-) -> list[dict[str, object]]:
-    await uow.jobs.update_status(
-        cmd.job_id, JobStatus.PARSING, progress_pct=25,
-        progress_message=f"Parsing {len(files)} files...",
-    )
-    await producer.publish(AnalysisProgressed(
-        job_id=cmd.job_id, status=JobStatus.PARSING, progress_pct=25,
-    ))
-
+) -> tuple[list[dict[str, object]], list[ParsedFile]]:
     parsed: list[ParsedFile] = []
     errors = 0
-    for f in files:
+    total = len(files)
+    for i, f in enumerate(files):
         try:
             pf = await parser.parse(cast(str, f["path"]), cast(str, f["content"]))
             parsed.append(pf)
         except Exception:
             errors += 1
             logger.warning("parse_failed", path=f["path"], job_id=str(cmd.job_id))
+
+        if (i + 1) % 5 == 0 or i == total - 1:
+            pct = 25 + int(35 * (i + 1) / total)
+            await _push_progress(
+                cmd.job_id, JobStatus.PARSING, pct,
+                f"Parsing files... ({i + 1}/{total})",
+            )
 
     if errors:
         logger.warning(
@@ -180,7 +207,12 @@ async def handle_stage_parse(
         for p in parsed
     ]
 
-    return metadata
+    await _push_progress(
+        cmd.job_id, JobStatus.PARSING, 60,
+        f"Parsed {len(parsed)} files ({errors} errors)" if errors else f"Parsed {len(parsed)} files",
+    )
+
+    return metadata, parsed
 
 
 async def handle_stage_rules(
@@ -189,17 +221,10 @@ async def handle_stage_rules(
     uow: UnitOfWork,
     producer: EventProducer,
     parsed_files: list[ParsedFile],
-) -> list[dict[str, str | int | float | None]]:
-    await uow.jobs.update_status(
-        cmd.job_id, JobStatus.RULES, progress_pct=50,
-        progress_message="Running domain rules...",
-    )
-    await producer.publish(AnalysisProgressed(
-        job_id=cmd.job_id, status=JobStatus.RULES, progress_pct=50,
-    ))
-
+) -> tuple[list[dict[str, object]], list[RuleViolation]]:
     violations: list[RuleViolation] = []
-    for pf in parsed_files:
+    total = len(parsed_files)
+    for i, pf in enumerate(parsed_files):
         ast_data = pf.ast_data
         ast_data["functions"] = pf.functions
         ast_data["classes"] = pf.classes
@@ -218,6 +243,12 @@ async def handle_stage_rules(
                     "rule_failed", rule_id=rule.rule_id,
                     file=pf.path, job_id=str(cmd.job_id),
                 )
+
+        if (i + 1) % 5 == 0 or i == total - 1:
+            await _push_progress(
+                cmd.job_id, JobStatus.RULES, 50 + int(10 * (i + 1) / total),
+                f"Analyzing {pf.path.split('/')[-1]}... ({i + 1}/{total})",
+            )
 
     severity_counts = dict.fromkeys(Severity, 0)
     for v in violations:
@@ -250,7 +281,7 @@ async def handle_stage_rules(
         for v in violations
     ]
 
-    return summary
+    return summary, violations
 
 
 async def handle_save_findings(
@@ -262,8 +293,8 @@ async def handle_save_findings(
     findings = [
         Finding(
             job_id=cmd.job_id,
-            repo_id=UUID(cast(str, job["repo_id"])),
-            workspace_id=UUID(cast(str, job["workspace_id"])),
+            repo_id=job["repo_id"],
+            workspace_id=job["workspace_id"],
             rule_id=v.rule_id,
             category=v.category,
             severity=v.severity,
@@ -296,14 +327,6 @@ async def handle_stage_score(
     producer: EventProducer,
     violations: list[RuleViolation],
 ) -> Score:
-    await uow.jobs.update_status(
-        cmd.job_id, JobStatus.SCORING, progress_pct=85,
-        progress_message="Calculating score...",
-    )
-    await producer.publish(AnalysisProgressed(
-        job_id=cmd.job_id, status=JobStatus.SCORING, progress_pct=85,
-    ))
-
     scorer_violations = [
         Violation(
             rule_id=v.rule_id,
@@ -354,8 +377,8 @@ async def handle_stage_finalize(
 
     report = Report(
         job_id=cmd.job_id,
-        repo_id=UUID(cast(str, job["repo_id"])),
-        workspace_id=UUID(cast(str, job["workspace_id"])),
+        repo_id=job["repo_id"],
+        workspace_id=job["workspace_id"],
         branch=cast(str, job["branch"]),
         languages_detected=languages,
         total_files_analyzed=total_files,
@@ -405,8 +428,8 @@ async def handle_stage_finalize(
 
     await producer.publish(AnalysisCompleted(
         job_id=cmd.job_id,
-        repo_id=UUID(cast(str, job["repo_id"])),
-        workspace_id=UUID(cast(str, job["workspace_id"])),
+        repo_id=job["repo_id"],
+        workspace_id=job["workspace_id"],
         overall_score=score.overall,
         findings_count=len(findings),
         duration_seconds=duration_seconds,
@@ -441,12 +464,18 @@ async def handle_analysis_failure(
             error_message=error_message,
         )
 
-    await producer.publish(AnalysisFailed(
-        job_id=job_id,
-        repo_id=UUID(cast(str, job["repo_id"])) if job else UUID(int=0),
-        error_message=error_message,
-        stage=stage,
-    ))
+    try:
+        await asyncio.wait_for(
+            producer.publish(AnalysisFailed(
+                job_id=job_id,
+                repo_id=job["repo_id"] if job else UUID(int=0),
+                error_message=error_message,
+                stage=stage,
+            )),
+            timeout=5,
+        )
+    except Exception:
+        logger.warning("analysis_failed_publish_failed", job_id=str(job_id))
 
     logger.error(
         "analysis_failed",
@@ -463,14 +492,6 @@ async def handle_stage_dead_code(
     job = await uow.jobs.get_by_id(cmd.job_id)
     if not job:
         raise NotFoundError(f"Job {cmd.job_id} not found")
-
-    await uow.jobs.update_status(
-        cmd.job_id, JobStatus.DEAD_CODE, progress_pct=80,
-        progress_message="Checking for dead code...",
-    )
-    await producer.publish(AnalysisProgressed(
-        job_id=cmd.job_id, status=JobStatus.DEAD_CODE, progress_pct=80,
-    ))
 
     detector = DeadCodeDetector(parsed_files)
     dead_code_results = await detector.detect_all()
@@ -504,14 +525,6 @@ async def handle_stage_errors(
     if not job:
         raise NotFoundError(f"Job {cmd.job_id} not found")
 
-    await uow.jobs.update_status(
-        cmd.job_id, JobStatus.ERRORS, progress_pct=85,
-        progress_message="Analyzing error patterns...",
-    )
-    await producer.publish(AnalysisProgressed(
-        job_id=cmd.job_id, status=JobStatus.ERRORS, progress_pct=85,
-    ))
-
     scanner = ErrorScanner(parsed_files)
     error_results = await scanner.scan_all()
 
@@ -543,14 +556,6 @@ async def handle_stage_perf(
     job = await uow.jobs.get_by_id(cmd.job_id)
     if not job:
         raise NotFoundError(f"Job {cmd.job_id} not found")
-
-    await uow.jobs.update_status(
-        cmd.job_id, JobStatus.PERF, progress_pct=88,
-        progress_message="Analyzing performance characteristics...",
-    )
-    await producer.publish(AnalysisProgressed(
-        job_id=cmd.job_id, status=JobStatus.PERF, progress_pct=88,
-    ))
 
     try:
         calculator = RPMCalculator(parsed_files)
@@ -592,14 +597,6 @@ async def handle_stage_simulation(
     job = await uow.jobs.get_by_id(cmd.job_id)
     if not job:
         raise NotFoundError(f"Job {cmd.job_id} not found")
-
-    await uow.jobs.update_status(
-        cmd.job_id, JobStatus.SIMULATION, progress_pct=92,
-        progress_message="Running load simulation...",
-    )
-    await producer.publish(AnalysisProgressed(
-        job_id=cmd.job_id, status=JobStatus.SIMULATION, progress_pct=92,
-    ))
 
     if not perf_metrics:
         await uow.jobs.update_status(
@@ -650,14 +647,6 @@ async def handle_stage_guide_gen(
     job = await uow.jobs.get_by_id(cmd.job_id)
     if not job:
         raise NotFoundError(f"Job {cmd.job_id} not found")
-
-    await uow.jobs.update_status(
-        cmd.job_id, JobStatus.GUIDE_GEN, progress_pct=95,
-        progress_message="Generating enterprise guide...",
-    )
-    await producer.publish(AnalysisProgressed(
-        job_id=cmd.job_id, status=JobStatus.GUIDE_GEN, progress_pct=95,
-    ))
 
     try:
         from app.workers.perf.load_sim import SimulationResult as SimRes

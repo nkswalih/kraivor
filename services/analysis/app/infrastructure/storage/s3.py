@@ -99,7 +99,7 @@ class S3Storage(AbstractStorage):
         try:
             keys: list[str] = []
             paginator = self._client.get_paginator("list_objects_v2")
-            async for page in paginator.paginate(
+            for page in paginator.paginate(
                 Bucket=self._bucket, Prefix=prefix
             ):
                 if "Contents" in page:

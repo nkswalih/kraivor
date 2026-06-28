@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from typing import cast
 from uuid import UUID
@@ -13,6 +14,7 @@ from app.api.schemas.jobs import (
 from app.application.analysis.commands import StartAnalysisCommand
 from app.application.analysis.handler import (
     get_job_status,
+    handle_analysis_failure,
     handle_start_analysis,
     list_jobs,
 )
@@ -22,13 +24,43 @@ from app.core.constants import TriggerType
 from app.core.logging import get_logger
 from app.dependencies.auth import JWTPayload, get_current_user
 from app.infrastructure.db.unit_of_work import UnitOfWork
+from app.infrastructure.messaging.producer import EventProducer
 
 logger = get_logger(__name__)
+
+async def _run_analysis_safe(cmd_dict: dict[str, object]) -> None:
+    """Run the full analysis pipeline and catch any silent task exceptions.
+
+    `asyncio.create_task` silently drops unhandled exceptions.
+    This wrapper ensures any failure is logged and, as a last resort,
+    marks the job as failed in the database so it doesn't stay stuck
+    in 'queued' forever.
+    """
+    try:
+        await run_full_analysis(cmd_dict)
+    except Exception:
+        logger.exception("analysis_task_crashed")
+        job_id = cmd_dict.get("job_id")
+        if job_id:
+            try:
+                async with UnitOfWork() as uow:
+                    producer = EventProducer()
+                    await handle_analysis_failure(
+                        UUID(cast(str, job_id)),
+                        "init",
+                        "Background task crashed before pipeline started",
+                        uow,
+                        producer,
+                    )
+                    await uow.commit()
+            except Exception:
+                logger.exception("last_resort_failure_update_failed")
+
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 
 
-@router.post("/", response_model=JobStatusResponse, status_code=201)
+@router.post("", response_model=JobStatusResponse, status_code=201)
 async def start_analysis(
     body: StartAnalysisRequest,
     uow: UnitOfWork = Depends(get_uow),
@@ -47,7 +79,7 @@ async def start_analysis(
     job_id = await handle_start_analysis(cmd, uow)
     await uow.commit()
 
-    run_full_analysis.delay({
+    asyncio.create_task(_run_analysis_safe({
         "job_id": str(job_id),
         "repo_id": str(body.repo_id),
         "workspace_id": str(body.workspace_id),
@@ -57,7 +89,7 @@ async def start_analysis(
         "branch": body.branch,
         "deep_scan": body.deep_scan,
         "depth": body.depth,
-    })
+    }))
 
     job = await uow.jobs.get_by_id(job_id)
     return _job_to_response(job)  # type: ignore[arg-type]
@@ -76,7 +108,7 @@ async def get_job(
     return _job_to_response(job)
 
 
-@router.get("/", response_model=JobListResponse)
+@router.get("", response_model=JobListResponse)
 async def list_jobs_endpoint(
     page: int = 1,
     page_size: int = 20,

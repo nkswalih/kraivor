@@ -83,6 +83,21 @@ class ReportRepository(AbstractReportRepository):
         return report, score
 
     def _build_report(self, job: AnalysisJobModel) -> Report:
+        score = None
+        if job.overall_score is not None:
+            score = Score(
+                overall=job.overall_score,
+                performance=job.performance_score or 100,
+                security=job.security_score or 100,
+                reliability=job.reliability_score or 100,
+                maintainability=job.maintainability_score or 100,
+                devops=job.devops_score or 100,
+                findings_count=job.total_findings,
+                critical_count=job.critical_count,
+                high_count=job.high_count,
+                medium_count=job.medium_count,
+                low_count=job.low_count,
+            )
         return Report(
             job_id=job.id,
             repo_id=job.repo_id,
@@ -90,4 +105,7 @@ class ReportRepository(AbstractReportRepository):
             branch=job.branch,
             duration_seconds=job.duration_seconds,
             completed_at=job.completed_at,  # type: ignore[arg-type]
+            scores=score,
+            total_files_analyzed=job.total_files or 0,
+            total_lines_of_code=job.total_lines or 0,
         )

@@ -14,7 +14,7 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1/dead-code", tags=["dead-code"])
 
 
-@router.get("/", response_model=DeadCodeListResponse)
+@router.get("", response_model=DeadCodeListResponse)
 async def list_dead_code(
     job_id: UUID = Query(..., description="Job ID"),
     uow: UnitOfWork = Depends(get_uow),

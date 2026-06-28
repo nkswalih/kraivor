@@ -31,16 +31,6 @@ class RedisSettings(BaseModel):
     retry_on_timeout: bool = True
 
 
-class CelerySettings(BaseModel):
-    broker_url: str = "redis://localhost:6379/1"
-    result_backend: str = "redis://localhost:6379/2"
-    task_acks_late: bool = True
-    worker_prefetch_multiplier: int = Field(default=1, ge=1)
-    worker_concurrency: int = Field(default=2, ge=1)
-    task_soft_time_limit: int = Field(default=600, ge=1)
-    task_time_limit: int = Field(default=660, ge=1)
-
-
 class S3Settings(BaseModel):
     endpoint_url: str | None = None
     access_key_id: str = ""
@@ -65,7 +55,7 @@ class JWTSettings(BaseModel):
 
 class GitSettings(BaseModel):
     clone_depth: int = Field(default=1, ge=1)
-    clone_timeout: int = Field(default=300, ge=1)
+    clone_timeout: int = Field(default=120, ge=1)
     token: SecretStr = SecretStr("")
 
 
@@ -146,7 +136,6 @@ class Settings(BaseSettings):
     service: ServiceSettings = ServiceSettings()
     database: DatabaseSettings
     redis: RedisSettings = RedisSettings()
-    celery: CelerySettings = CelerySettings()
     s3: S3Settings = S3Settings()
     jwt: JWTSettings = JWTSettings()
     git: GitSettings = GitSettings()

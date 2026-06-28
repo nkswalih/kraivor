@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
+from app.infrastructure.cache.redis import RedisCache
 from app.infrastructure.db.session import get_db_session
 
 logger = structlog.get_logger(__name__)
@@ -58,6 +59,38 @@ async def health_check() -> HealthResponse:
         )
     except Exception as e:
         deps["identity"] = DependencyHealth(
+            status="degraded",
+            error=str(e),
+        )
+
+    start = time.monotonic()
+    try:
+        cache = RedisCache()
+        await cache.connect()
+        await cache.client.ping() if cache.client else None  # type: ignore[func-returns-value]
+        await cache.close()
+        deps["redis"] = DependencyHealth(
+            status="healthy",
+            latency_ms=round((time.monotonic() - start) * 1000, 2),
+        )
+    except Exception as e:
+        deps["redis"] = DependencyHealth(
+            status="degraded",
+            error=str(e),
+        )
+
+    start = time.monotonic()
+    try:
+        from app.infrastructure.storage.s3 import S3Storage
+
+        storage = S3Storage()
+        await storage.exists("health-check")
+        deps["s3"] = DependencyHealth(
+            status="healthy",
+            latency_ms=round((time.monotonic() - start) * 1000, 2),
+        )
+    except Exception as e:
+        deps["s3"] = DependencyHealth(
             status="degraded",
             error=str(e),
         )

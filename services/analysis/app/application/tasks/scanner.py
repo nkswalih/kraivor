@@ -1,9 +1,7 @@
 from typing import cast
 from uuid import UUID
 
-from celery import Task, shared_task
-
-from app.application.analysis.commands import ProcessStageCommand
+from app.application.analysis.commands import ProcessStageCommand, StartAnalysisCommand
 from app.application.analysis.handler import (
     handle_save_findings,
     handle_stage_clone,
@@ -18,7 +16,6 @@ from app.application.analysis.handler import (
     handle_stage_simulation,
     handle_start_analysis,
 )
-from app.application.tasks.runner import run_async
 from app.core.constants import Category, Severity
 from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
@@ -40,6 +37,7 @@ from app.infrastructure.parsers.php_parser import PhpParser
 from app.infrastructure.parsers.python_parser import PythonParser
 from app.infrastructure.parsers.ruby_parser import RubyParser
 from app.infrastructure.parsers.rust_parser import RustParser
+from app.infrastructure.scorer import ProductionReadinessScorer
 from app.infrastructure.storage.s3 import S3Storage
 from app.workers.dead_code.detector import DeadCodeFinding
 from app.workers.errors.scanner import ErrorFinding
@@ -69,168 +67,121 @@ def _get_parser() -> ChainedParser:
     return _PARSER
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
-def task_start_analysis(self: Task, cmd_dict: dict[str, object]) -> str:
-    from app.application.analysis.commands import StartAnalysisCommand
-
+async def task_start_analysis(cmd_dict: dict[str, object]) -> str:
     cmd = StartAnalysisCommand(**cmd_dict)  # type: ignore[arg-type]
 
-    async def _run() -> str:
-        async with UnitOfWork() as uow:
-            producer = EventProducer()
-            job_id = await handle_start_analysis(cmd, uow, producer)
-            await uow.commit()
-            return str(job_id)
-
-    try:
-        return run_async(_run())
-    except Exception as exc:
-        logger.error("task_start_analysis_failed", error=str(exc))
-        raise self.retry(exc=exc)
+    async with UnitOfWork() as uow:
+        producer = EventProducer()
+        job_id = await handle_start_analysis(cmd, uow, producer)
+        await uow.commit()
+        return str(job_id)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
-def task_clone(self: Task, job_id: str) -> dict[str, object]:
+async def task_clone(job_id: str) -> dict[str, object]:
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="clone")
 
-    async def _run() -> dict[str, object]:
-        async with UnitOfWork() as uow:
-            producer = EventProducer()
-            fetcher = RepositoryFetcher()
-            result = await handle_stage_clone(cmd, uow, fetcher, producer)
-            await uow.commit()
-            return result
-
-    try:
-        result = run_async(_run())
+    async with UnitOfWork() as uow:
+        producer = EventProducer()
+        fetcher = RepositoryFetcher()
+        result = await handle_stage_clone(cmd, uow, fetcher, producer)
+        await uow.commit()
         result["job_id"] = job_id
         return result
-    except Exception as exc:
-        logger.error("task_clone_failed", job_id=job_id, error=str(exc))
-        raise self.retry(exc=exc)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
-def task_parse(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+async def task_parse(prev_result: dict[str, object]) -> dict[str, object]:
     job_id = cast(str, prev_result["job_id"])
     repo_path = cast(str, prev_result["repo_path"])
     files = cast(list[dict[str, object]], prev_result["files"])
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="parse")
     parser = _get_parser()
 
-    async def _run() -> list[dict[str, object]]:
-        async with UnitOfWork() as uow:
-            producer = EventProducer()
-            metadata = await handle_stage_parse(
-                cmd, parser, uow, producer, repo_path, files,
-            )
-            await uow.commit()
-            return metadata
+    async with UnitOfWork() as uow:
+        producer = EventProducer()
+        metadata = await handle_stage_parse(
+            cmd, parser, uow, producer, repo_path, files,
+        )
+        await uow.commit()
 
-    try:
-        metadata = run_async(_run())
-        prev_result["parsed_files"] = metadata
-        return prev_result
-    except Exception as exc:
-        logger.error("task_parse_failed", job_id=job_id, error=str(exc))
-        raise self.retry(exc=exc)
+    prev_result["parsed_files"] = metadata
+    return prev_result
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
-def task_rules(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+async def task_rules(prev_result: dict[str, object]) -> dict[str, object]:
     job_id = cast(str, prev_result["job_id"])
-    prev_result["repo_path"]
     files = cast(list[dict[str, object]], prev_result["files"])
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="rules")
     parser = _get_parser()
 
-    async def _run() -> tuple[list[ParsedFile], list[dict[str, str | int | float | None]]]:
-        async with UnitOfWork() as uow:
-            parsed_files = []
-            for f in files:
-                pf = await parser.parse(cast(str, f["path"]), cast(str, f["content"]))
-                parsed_files.append(pf)
+    async with UnitOfWork() as uow:
+        parsed_files = []
+        for f in files:
+            pf = await parser.parse(cast(str, f["path"]), cast(str, f["content"]))
+            parsed_files.append(pf)
 
-            producer = EventProducer()
-            summary = await handle_stage_rules(
-                cmd, _REGISTRY, uow, producer, parsed_files,
-            )
-            await uow.commit()
-            return parsed_files, summary
+        producer = EventProducer()
+        summary = await handle_stage_rules(
+            cmd, _REGISTRY, uow, producer, parsed_files,
+        )
+        await uow.commit()
 
-    try:
-        parsed_files, summary = run_async(_run())
-        prev_result["rule_violations"] = summary
-        prev_result["_parsed_files"] = parsed_files
-        return prev_result
-    except Exception as exc:
-        logger.error("task_rules_failed", job_id=job_id, error=str(exc))
-        raise self.retry(exc=exc)
+    prev_result["rule_violations"] = summary
+    prev_result["_parsed_files"] = parsed_files
+    return prev_result
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
-def task_save_findings(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+async def task_save_findings(prev_result: dict[str, object]) -> dict[str, object]:
     job_id = cast(str, prev_result["job_id"])
     parsed_files = cast(list[ParsedFile], prev_result.get("_parsed_files", []))
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="save_findings")
 
-    async def _run() -> tuple[list[dict[str, object]], list[Finding]]:
-        async with UnitOfWork() as uow:
-            job = await uow.jobs.get_by_id(cmd.job_id)
-            if not job:
-                return [], []
+    async with UnitOfWork() as uow:
+        job = await uow.jobs.get_by_id(cmd.job_id)
+        if not job:
+            return prev_result
 
-            violations = []
-            for pf in parsed_files:
-                ast_data = pf.ast_data
-                ast_data["functions"] = pf.functions
-                ast_data["classes"] = pf.classes
-                ast_data["imports"] = pf.imports
-                ast_data["routes"] = pf.routes
-                applicable = _REGISTRY.filter_for_file(pf.path, pf.language)
-                for rule in applicable:
-                    try:
-                        v = await rule.analyze(pf.path, pf.content, ast_data)
-                        violations.extend(v)
-                    except Exception:
-                        logger.warning(
-                            "rule_failed", rule_id=rule.rule_id,
-                            file=pf.path, job_id=job_id,
-                        )
+        violations = []
+        for pf in parsed_files:
+            ast_data = pf.ast_data
+            ast_data["functions"] = pf.functions
+            ast_data["classes"] = pf.classes
+            ast_data["imports"] = pf.imports
+            ast_data["routes"] = pf.routes
+            applicable = _REGISTRY.filter_for_file(pf.path, pf.language)
+            for rule in applicable:
+                try:
+                    v = await rule.analyze(pf.path, pf.content, ast_data)
+                    violations.extend(v)
+                except Exception:
+                    logger.warning(
+                        "rule_failed", rule_id=rule.rule_id,
+                        file=pf.path, job_id=job_id,
+                    )
 
-            findings = await handle_save_findings(cmd, uow, violations, job)
-            await uow.commit()
+        findings = await handle_save_findings(cmd, uow, violations, job)
+        await uow.commit()
 
-
-            rule_violations = [
-                {
-                    "rule_id": v.rule_id,
-                    "severity": str(v.severity),
-                    "category": str(v.category),
-                    "title": v.title,
-                    "file_path": v.file_path,
-                    "line_start": v.line_start,
-                    "line_end": v.line_end,
-                    "score_impact": v.score_impact,
-                    "rpm_impact": v.rpm_impact,
-                    "breaks_at_users": v.breaks_at_users,
-                }
-                for v in violations
-            ]
-            return cast(list[dict[str, object]], rule_violations), findings
-
-    try:
-        rule_violations, findings = run_async(_run())
-        prev_result["rule_violations"] = rule_violations
-        prev_result["_findings"] = findings
-        return prev_result
-    except Exception as exc:
-        logger.error("task_save_findings_failed", job_id=job_id, error=str(exc))
-        raise self.retry(exc=exc)
+    rule_violations = [
+        {
+            "rule_id": v.rule_id,
+            "severity": str(v.severity),
+            "category": str(v.category),
+            "title": v.title,
+            "file_path": v.file_path,
+            "line_start": v.line_start,
+            "line_end": v.line_end,
+            "score_impact": v.score_impact,
+            "rpm_impact": v.rpm_impact,
+            "breaks_at_users": v.breaks_at_users,
+        }
+        for v in violations
+    ]
+    prev_result["rule_violations"] = rule_violations
+    prev_result["_findings"] = findings
+    return prev_result
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
-def task_score(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+async def task_score(prev_result: dict[str, object]) -> dict[str, object]:
     job_id = cast(str, prev_result["job_id"])
     rule_violations = cast(list[dict[str, object]], prev_result.get("rule_violations", []))
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="score")
@@ -253,29 +204,19 @@ def task_score(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
         for v in rule_violations
     ]
 
-    from app.infrastructure.scorer import ProductionReadinessScorer
-
     scorer = ProductionReadinessScorer()
 
-    async def _run() -> Score:
-        async with UnitOfWork() as uow:
-            producer = EventProducer()
-            score = await handle_stage_score(cmd, scorer, uow, producer, violations)
-            await uow.commit()
-            return score
+    async with UnitOfWork() as uow:
+        producer = EventProducer()
+        score = await handle_stage_score(cmd, scorer, uow, producer, violations)
+        await uow.commit()
 
-    try:
-        score = run_async(_run())
-        prev_result["score"] = score.to_dict()
-        prev_result["_score_obj"] = score
-        return prev_result
-    except Exception as exc:
-        logger.error("task_score_failed", job_id=job_id, error=str(exc))
-        raise self.retry(exc=exc)
+    prev_result["score"] = score.to_dict()
+    prev_result["_score_obj"] = score
+    return prev_result
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
-def task_finalize(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+async def task_finalize(prev_result: dict[str, object]) -> dict[str, object]:
     job_id = cast(str, prev_result["job_id"])
     score_raw = prev_result.get("_score_obj")
     score = cast(Score, score_raw) if score_raw is not None else Score(overall=0)
@@ -286,119 +227,79 @@ def task_finalize(self: Task, prev_result: dict[str, object]) -> dict[str, objec
     duration_seconds = cast(int, prev_result.get("duration_seconds", 0))
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="finalize")
 
-    async def _run() -> dict[str, object]:
-        async with UnitOfWork() as uow:
-            job = await uow.jobs.get_by_id(cmd.job_id)
-            if not job:
-                return {}
-            producer = EventProducer()
-            storage = S3Storage()
-            report = await handle_stage_finalize(
-                cmd, uow, producer, storage, job, score, findings,
-                languages, total_files, total_lines, duration_seconds,
-            )
-            await uow.commit()
-            return report.to_dict()
+    async with UnitOfWork() as uow:
+        job = await uow.jobs.get_by_id(cmd.job_id)
+        if not job:
+            return {"job_id": job_id, "report": None}
+        producer = EventProducer()
+        storage = S3Storage()
+        report = await handle_stage_finalize(
+            cmd, uow, producer, storage, job, score, findings,
+            languages, total_files, total_lines, duration_seconds,
+        )
+        await uow.commit()
 
-    try:
-        report_dict = run_async(_run())
-        return {"job_id": job_id, "report": report_dict}
-    except Exception as exc:
-        logger.error("task_finalize_failed", job_id=job_id, error=str(exc))
-        raise self.retry(exc=exc)
+    return {"job_id": job_id, "report": report.to_dict()}
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
-def task_dead_code(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+async def task_dead_code(prev_result: dict[str, object]) -> dict[str, object]:
     job_id = cast(str, prev_result["job_id"])
     parsed_files = cast(list[ParsedFile], prev_result.get("_parsed_files", []))
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="dead_code")
 
-    async def _run() -> list[DeadCodeFinding]:
-        async with UnitOfWork() as uow:
-            producer = EventProducer()
-            results = await handle_stage_dead_code(cmd, uow, producer, parsed_files)
-            await uow.commit()
-            return results
+    async with UnitOfWork() as uow:
+        producer = EventProducer()
+        results = await handle_stage_dead_code(cmd, uow, producer, parsed_files)
+        await uow.commit()
 
-    try:
-        results = run_async(_run())
-        prev_result["dead_code_results"] = results
-        return prev_result
-    except Exception as exc:
-        logger.error("task_dead_code_failed", job_id=job_id, error=str(exc))
-        raise self.retry(exc=exc)
+    prev_result["dead_code_results"] = results
+    return prev_result
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
-def task_errors(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+async def task_errors(prev_result: dict[str, object]) -> dict[str, object]:
     job_id = cast(str, prev_result["job_id"])
     parsed_files = cast(list[ParsedFile], prev_result.get("_parsed_files", []))
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="errors")
 
-    async def _run() -> list[ErrorFinding]:
-        async with UnitOfWork() as uow:
-            producer = EventProducer()
-            results = await handle_stage_errors(cmd, uow, producer, parsed_files)
-            await uow.commit()
-            return results
+    async with UnitOfWork() as uow:
+        producer = EventProducer()
+        results = await handle_stage_errors(cmd, uow, producer, parsed_files)
+        await uow.commit()
 
-    try:
-        results = run_async(_run())
-        prev_result["error_results"] = results
-        return prev_result
-    except Exception as exc:
-        logger.error("task_errors_failed", job_id=job_id, error=str(exc))
-        raise self.retry(exc=exc)
+    prev_result["error_results"] = results
+    return prev_result
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
-def task_perf(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+async def task_perf(prev_result: dict[str, object]) -> dict[str, object]:
     job_id = cast(str, prev_result["job_id"])
     parsed_files = cast(list[ParsedFile], prev_result.get("_parsed_files", []))
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="perf")
 
-    async def _run() -> PerformanceMetrics | None:
-        async with UnitOfWork() as uow:
-            producer = EventProducer()
-            metrics = await handle_stage_perf(cmd, uow, producer, parsed_files)
-            await uow.commit()
-            return metrics
+    async with UnitOfWork() as uow:
+        producer = EventProducer()
+        metrics = await handle_stage_perf(cmd, uow, producer, parsed_files)
+        await uow.commit()
 
-    try:
-        metrics = run_async(_run())
-        prev_result["perf_metrics"] = metrics
-        return prev_result
-    except Exception as exc:
-        logger.error("task_perf_failed", job_id=job_id, error=str(exc))
-        raise self.retry(exc=exc)
+    prev_result["perf_metrics"] = metrics
+    return prev_result
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
-def task_simulation(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+async def task_simulation(prev_result: dict[str, object]) -> dict[str, object]:
     job_id = cast(str, prev_result["job_id"])
     perf_metrics_raw = prev_result.get("perf_metrics")
     perf_metrics = cast(PerformanceMetrics, perf_metrics_raw) if perf_metrics_raw is not None else None
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="simulation")
 
-    async def _run() -> list[dict[str, object]]:
-        async with UnitOfWork() as uow:
-            producer = EventProducer()
-            results = await handle_stage_simulation(cmd, uow, producer, perf_metrics)
-            await uow.commit()
-            return results
+    async with UnitOfWork() as uow:
+        producer = EventProducer()
+        results = await handle_stage_simulation(cmd, uow, producer, perf_metrics)
+        await uow.commit()
 
-    try:
-        results = run_async(_run())
-        prev_result["simulation_results"] = results
-        return prev_result
-    except Exception as exc:
-        logger.error("task_simulation_failed", job_id=job_id, error=str(exc))
-        raise self.retry(exc=exc)
+    prev_result["simulation_results"] = results
+    return prev_result
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)  # type: ignore[untyped-decorator]
-def task_guide_gen(self: Task, prev_result: dict[str, object]) -> dict[str, object]:
+async def task_guide_gen(prev_result: dict[str, object]) -> dict[str, object]:
     job_id = cast(str, prev_result["job_id"])
     violations_raw = cast(list[dict[str, object]], prev_result.get("rule_violations", []))
     score_raw = prev_result.get("score")
@@ -431,23 +332,16 @@ def task_guide_gen(self: Task, prev_result: dict[str, object]) -> dict[str, obje
 
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="guide_gen")
 
-    async def _run() -> dict[str, object] | None:
-        async with UnitOfWork() as uow:
-            producer = EventProducer()
-            guide = await handle_stage_guide_gen(
-                cmd, uow, producer, violations, score,
-                perf_metrics=perf_metrics,
-                simulation_results=simulation_results,
-                dead_code_results=dead_code_results,
-                error_results=error_results,
-            )
-            await uow.commit()
-            return guide
+    async with UnitOfWork() as uow:
+        producer = EventProducer()
+        guide = await handle_stage_guide_gen(
+            cmd, uow, producer, violations, score,
+            perf_metrics=perf_metrics,
+            simulation_results=simulation_results,
+            dead_code_results=dead_code_results,
+            error_results=error_results,
+        )
+        await uow.commit()
 
-    try:
-        guide = run_async(_run())
-        prev_result["enterprise_guide"] = guide
-        return prev_result
-    except Exception as exc:
-        logger.error("task_guide_gen_failed", job_id=job_id, error=str(exc))
-        raise self.retry(exc=exc)
+    prev_result["enterprise_guide"] = guide
+    return prev_result

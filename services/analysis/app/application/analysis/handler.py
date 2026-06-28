@@ -1,5 +1,6 @@
 import asyncio
 import json
+from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import cast
 from uuid import UUID, uuid4
@@ -226,10 +227,10 @@ async def handle_stage_rules(
     total = len(parsed_files)
     for i, pf in enumerate(parsed_files):
         ast_data = pf.ast_data
-        ast_data["functions"] = pf.functions
-        ast_data["classes"] = pf.classes
-        ast_data["imports"] = pf.imports
-        ast_data["routes"] = pf.routes
+        ast_data["functions"] = [asdict(f) for f in pf.functions]
+        ast_data["classes"] = [asdict(c) for c in pf.classes]
+        ast_data["imports"] = [asdict(i) for i in pf.imports]
+        ast_data["routes"] = [asdict(r) for r in pf.routes]
 
         applicable = registry.filter_for_file(pf.path, pf.language)
         for rule in applicable:

@@ -29,6 +29,8 @@ class AnalysisJobModel(Base, TimestampMixin, SoftDeleteMixin):
     progress_pct: Mapped[int] = mapped_column(SmallInteger, default=0)
     progress_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
+    total_files: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_lines: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total_findings: Mapped[int] = mapped_column(Integer, default=0)
     critical_count: Mapped[int] = mapped_column(Integer, default=0)
     high_count: Mapped[int] = mapped_column(Integer, default=0)

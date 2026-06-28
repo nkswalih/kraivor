@@ -155,3 +155,35 @@ export function useEnterpriseGuide(jobId: string | null) {
     enabled: !!jobId,
   });
 }
+
+// ─── Category Counts (for nav cards) ───────────────────
+
+export interface CategoryCounts {
+  findings: number;
+  deadCode: number;
+  errors: number;
+  perf: number;
+  simulation: number;
+  hasGuide: boolean;
+}
+
+export function useCategoryCounts(jobId: string | null) {
+  const find = useFindings(jobId, { pageSize: 1 });
+  const dc = useDeadCode(jobId);
+  const err = useErrorFindings(jobId);
+  const perf = usePerfMetrics(jobId);
+  const sim = useSimulationResults(jobId);
+  const guide = useEnterpriseGuide(jobId);
+
+  return {
+    data: {
+      findings: find.data?.total ?? 0,
+      deadCode: dc.data?.total ?? 0,
+      errors: err.data?.total ?? 0,
+      perf: perf.data?.total ?? 0,
+      simulation: sim.data?.total ?? 0,
+      hasGuide: guide.data?.id != null,
+    } satisfies CategoryCounts,
+    isLoading: find.isLoading || dc.isLoading || err.isLoading || perf.isLoading || sim.isLoading,
+  };
+}

@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, Integer, SmallInteger, String, Text
+from sqlalchemy import Boolean, DateTime, Integer, SmallInteger, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -45,8 +45,8 @@ class AnalysisJobModel(Base, TimestampMixin, SoftDeleteMixin):
     devops_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
 
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    started_at: Mapped[datetime | None] = mapped_column(nullable=True)
-    completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     queue_wait_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
 

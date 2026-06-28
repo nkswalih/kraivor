@@ -52,9 +52,9 @@ class ProductionReadinessScorer(AbstractScorer):
 
             try:
                 sev_enum = Severity(sev)
-                penalty = v.score_impact if v.score_impact else SEVERITY_PENALTIES.get(sev_enum, 0)
+                penalty = abs(v.score_impact) if v.score_impact else SEVERITY_PENALTIES.get(sev_enum, 0)
             except ValueError:
-                penalty = v.score_impact or 0
+                penalty = abs(v.score_impact) if v.score_impact else 0
             category_scores[cat] -= penalty
 
         for cat in category_scores:

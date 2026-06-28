@@ -1,5 +1,6 @@
 from app.api.routers.dead_code import router as dead_code_router
 from app.api.routers.errors import router as error_findings_router
+from app.api.routers.files import router as files_router
 from app.api.routers.findings import router as findings_router
 from app.api.routers.guide import router as enterprise_guide_router
 from app.api.routers.health import router as health_router
@@ -12,6 +13,7 @@ __all__ = [
     "dead_code_router",
     "enterprise_guide_router",
     "error_findings_router",
+    "files_router",
     "findings_router",
     "health_router",
     "jobs_router",

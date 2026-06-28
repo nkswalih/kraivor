@@ -43,6 +43,19 @@ export function useJobsList(page = 1, pageSize = 20) {
   });
 }
 
+// ─── File Upload ─────────────────────────────────────────
+
+export function useFileUpload() {
+  const queryClient = useQueryClient();
+  return useMutation<AnalysisJob, Error, { workspaceId: string; file: File }>({
+    mutationFn: ({ workspaceId, file }) =>
+      analysisService.files.upload(workspaceId, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['analysis-jobs'] });
+    },
+  });
+}
+
 // ─── Start Analysis ─────────────────────────────────────
 
 export function useStartAnalysis() {

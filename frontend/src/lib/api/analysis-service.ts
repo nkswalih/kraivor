@@ -72,6 +72,20 @@ function analysisPost<T>(path: string, body: unknown): Promise<T> {
 }
 
 export const analysisService = {
+  files: {
+    upload(workspaceId: string, file: File, repoUrl = '', branch = 'main'): Promise<AnalysisJob> {
+      const formData = new FormData();
+      formData.append('workspace_id', workspaceId);
+      formData.append('repo_url', repoUrl);
+      formData.append('branch', branch);
+      formData.append('file', file);
+      return analysisFetch<AnalysisJob>(API_ENDPOINTS.ANALYSIS.FILE_UPLOAD, {
+        method: 'POST',
+        body: formData,
+        headers: {}, // let fetch set content-type for multipart
+      });
+    },
+  },
   jobs: {
     start(data: StartAnalysisRequest): Promise<AnalysisJob> {
       return analysisPost<AnalysisJob>(API_ENDPOINTS.ANALYSIS.JOB_START, data);

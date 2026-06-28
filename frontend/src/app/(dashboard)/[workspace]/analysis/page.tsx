@@ -28,7 +28,7 @@ function JobRow({ job, workspaceSlug }: { job: AnalysisJob; workspaceSlug: strin
       <div className="text-muted-foreground text-[12px] font-mono">{job.branch}</div>
       <div>
         {isRunning ? (
-          <ProgressBar pct={job.progress_pct} message="" />
+          <ProgressBar pct={job.progress_pct} message={job.progress_message} />
         ) : job.overall_score != null ? (
           <span className="text-foreground font-semibold">{job.overall_score}</span>
         ) : (

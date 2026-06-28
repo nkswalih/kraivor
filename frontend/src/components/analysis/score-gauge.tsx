@@ -44,7 +44,7 @@ export function ScoreGauge({
   const tier = scoreTier(score);
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-1 relative">
       <svg width={size} height={size} className="-rotate-90">
         <circle
           cx={size / 2}

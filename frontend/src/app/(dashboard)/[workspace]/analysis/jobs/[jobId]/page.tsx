@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatRelativeTime } from '@/lib/utils';
-import { useJob, useReport, useFindingsSummary } from '@/lib/hooks/use-analysis';
+import { useJob, useReport, useFindingsSummary, useCategoryCounts } from '@/lib/hooks/use-analysis';
 import { JobStatusBadge } from '@/components/analysis/job-status-badge';
 import { ProgressBar } from '@/components/analysis/progress-bar';
 import { ScoreGauge } from '@/components/analysis/score-gauge';
@@ -44,6 +44,7 @@ export default function JobDetailPage() {
   const { data: job, isLoading, error } = useJob(jobId);
   const { data: report } = useReport(jobId);
   const { data: summary } = useFindingsSummary(jobId);
+  const { data: counts } = useCategoryCounts(jobId);
 
   if (isLoading) {
     return (
@@ -143,7 +144,7 @@ export default function JobDetailPage() {
             )}
 
             {/* Stats Row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {report && (
                 <>
                   <div className="bg-card border border-border rounded-lg p-4 text-center">
@@ -170,7 +171,20 @@ export default function JobDetailPage() {
             {/* Findings Summary */}
             {summary && (
               <div className="bg-card border border-border rounded-lg p-4">
-                <h3 className="text-[13px] font-medium text-foreground mb-3">Findings by Severity</h3>
+                <h3 className="text-[13px] font-medium text-foreground mb-3">Findings Summary</h3>
+                {summary.total > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4 text-[12px]">
+                    {Object.entries(summary.by_category).map(([cat, cnt]) =>
+                      cnt > 0 ? (
+                        <div key={cat} className="bg-background rounded px-2 py-1 flex justify-between">
+                          <span className="text-text-tertiary capitalize">{cat}</span>
+                          <span className="text-foreground font-medium">{cnt}</span>
+                        </div>
+                      ) : null
+                    )}
+                  </div>
+                )}
+                <h4 className="text-[12px] font-medium text-text-tertiary mb-2">by Severity</h4>
                 <div className="flex gap-1 h-4 rounded-full overflow-hidden">
                   {summary.by_severity.critical > 0 && (
                     <div
@@ -218,7 +232,7 @@ export default function JobDetailPage() {
               >
                 <Activity className="w-5 h-5 text-yellow-400 mb-2" />
                 <p className="text-[13px] font-medium text-foreground group-hover:text-venom-yellow transition-colors">Findings</p>
-                <p className="text-[11px] text-text-tertiary mt-1">Browse all detected issues</p>
+                <p className="text-[11px] text-text-tertiary mt-1">{counts?.findings ?? 0} issue{counts?.findings !== 1 ? 's' : ''} detected</p>
               </Link>
               <Link
                 href={`/${workspaceSlug}/analysis/jobs/${jobId}/dead-code`}
@@ -226,7 +240,7 @@ export default function JobDetailPage() {
               >
                 <Bug className="w-5 h-5 text-orange-400 mb-2" />
                 <p className="text-[13px] font-medium text-foreground group-hover:text-venom-yellow transition-colors">Dead Code</p>
-                <p className="text-[11px] text-text-tertiary mt-1">Unused imports, functions, and more</p>
+                <p className="text-[11px] text-text-tertiary mt-1">{counts?.deadCode ?? 0} dead code entr{counts?.deadCode === 1 ? 'y' : 'ies'}</p>
               </Link>
               <Link
                 href={`/${workspaceSlug}/analysis/jobs/${jobId}/errors`}
@@ -234,7 +248,7 @@ export default function JobDetailPage() {
               >
                 <AlertTriangle className="w-5 h-5 text-red-400 mb-2" />
                 <p className="text-[13px] font-medium text-foreground group-hover:text-venom-yellow transition-colors">Error Patterns</p>
-                <p className="text-[11px] text-text-tertiary mt-1">Bare excepts, missing timeouts, etc.</p>
+                <p className="text-[11px] text-text-tertiary mt-1">{counts?.errors ?? 0} error pattern{counts?.errors !== 1 ? 's' : ''}</p>
               </Link>
               <Link
                 href={`/${workspaceSlug}/analysis/jobs/${jobId}/performance`}
@@ -242,15 +256,16 @@ export default function JobDetailPage() {
               >
                 <Zap className="w-5 h-5 text-yellow-400 mb-2" />
                 <p className="text-[13px] font-medium text-foreground group-hover:text-venom-yellow transition-colors">Performance</p>
-                <p className="text-[11px] text-text-tertiary mt-1">RPM estimates, latency, bottlenecks</p>
+                <p className="text-[11px] text-text-tertiary mt-1">{counts?.perf ?? 0} metric{(counts?.perf ?? 0) !== 1 ? 's' : ''}, {counts?.simulation ?? 0} simulation{(counts?.simulation ?? 0) !== 1 ? 's' : ''}</p>
               </Link>
+
               <Link
                 href={`/${workspaceSlug}/analysis/jobs/${jobId}/guide`}
                 className="p-4 rounded-lg border border-border bg-card hover:border-venom-yellow/30 hover:shadow-venom transition-all group"
               >
                 <FileText className="w-5 h-5 text-blue-400 mb-2" />
                 <p className="text-[13px] font-medium text-foreground group-hover:text-venom-yellow transition-colors">Enterprise Guide</p>
-                <p className="text-[11px] text-text-tertiary mt-1">Remediation plan and migration path</p>
+                <p className="text-[11px] text-text-tertiary mt-1">{counts?.hasGuide ? 'Available' : 'Not generated'}</p>
               </Link>
             </div>
           </div>

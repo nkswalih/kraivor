@@ -27,7 +27,7 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1/findings", tags=["findings"])
 
 
-@router.get("/", response_model=FindingsListResponse)
+@router.get("", response_model=FindingsListResponse)
 async def list_findings_endpoint(
     job_id: UUID = Query(..., description="Filter by job ID"),
     severity: str | None = Query(None, description="Filter by severity"),

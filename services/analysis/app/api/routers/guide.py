@@ -14,7 +14,7 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1/enterprise-guide", tags=["enterprise-guide"])
 
 
-@router.get("/", response_model=EnterpriseGuideResponse)
+@router.get("", response_model=EnterpriseGuideResponse)
 async def get_guide(
     job_id: UUID = Query(..., description="Job ID"),
     uow: UnitOfWork = Depends(get_uow),

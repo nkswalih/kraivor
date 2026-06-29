@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import cast
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.dependencies.services import get_uow
 from app.api.schemas.jobs import (
@@ -112,11 +112,12 @@ async def get_job(
 async def list_jobs_endpoint(
     page: int = 1,
     page_size: int = 20,
+    workspace_id: UUID | None = Query(None, description="Filter by workspace. Defaults to user's first workspace."),
     uow: UnitOfWork = Depends(get_uow),
     user: JWTPayload = Depends(get_current_user),
 ) -> JobListResponse:
     query = ListJobsQuery(
-        workspace_id=UUID(user.workspace_ids[0]) if user.workspace_ids else None,
+        workspace_id=workspace_id or (UUID(user.workspace_ids[0]) if user.workspace_ids else None),
         limit=page_size,
         offset=(page - 1) * page_size,
     )
@@ -143,7 +144,9 @@ def _job_to_response(job: dict[str, object]) -> JobStatusResponse:
         total_findings=cast(int, job["total_findings"]),
         total_files=cast(int | None, job.get("total_files")),
         total_lines=cast(int | None, job.get("total_lines")),
-        overall_score=cast(float | None, job.get("overall_score")),
+        overall_score=cast(int | None, job.get("overall_score")),
+        blocked_by=cast(list[str], job.get("blocked_by") or []),
+        engine_statuses=cast(dict[str, str], job.get("engine_statuses") or {}),
         error_message=cast(str | None, job.get("error_message")),
         created_at=cast(datetime, job["created_at"]),
         started_at=cast(datetime | None, job.get("started_at")),

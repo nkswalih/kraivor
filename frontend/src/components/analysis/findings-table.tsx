@@ -1,19 +1,36 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, FileCode } from 'lucide-react';
+import { Ban, CheckCircle2, ChevronDown, ChevronRight, FileCode } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { analysisService } from '@/lib/api/analysis-service';
 import { SeverityBadge } from './severity-badge';
 import { CategoryIcon } from './category-icon';
 import type { Finding } from '@/types/domain/analysis';
 
-function FindingRow({ finding }: { finding: Finding }) {
+function FindingRow({ finding, onDismiss }: { finding: Finding; onDismiss: () => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [dismissing, setDismissing] = useState(false);
+
+  const handleDismiss = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (dismissing) return;
+    setDismissing(true);
+    try {
+      await analysisService.findings.dismiss([finding.id]);
+      onDismiss();
+    } catch {
+      setDismissing(false);
+    }
+  };
 
   return (
     <>
       <div
-        className="grid grid-cols-[auto_1fr_auto] gap-3 p-3 items-center hover:bg-white/[0.02] transition-colors cursor-pointer text-[13px] group border-b border-border last:border-0"
+        className={cn(
+          'grid grid-cols-[auto_1fr_auto] gap-3 p-3 items-center hover:bg-white/[0.02] transition-colors cursor-pointer text-[13px] group border-b border-border last:border-0',
+          finding.status === 'dismissed' && 'opacity-50'
+        )}
         onClick={() => setExpanded(!expanded)}
         onKeyDown={(e) => { if (e.key === 'Enter') setExpanded(!expanded); }}
         role="button"
@@ -22,6 +39,9 @@ function FindingRow({ finding }: { finding: Finding }) {
         <div className="flex items-center gap-2 min-w-0">
           {expanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
           <SeverityBadge severity={finding.severity} />
+          {finding.status === 'dismissed' && (
+            <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
+          )}
         </div>
         <div className="min-w-0">
           <p className="text-foreground truncate font-medium">{finding.title}</p>
@@ -38,10 +58,20 @@ function FindingRow({ finding }: { finding: Finding }) {
               {finding.file_path}:{finding.line_start}
             </span>
           )}
+          {finding.status === 'active' && (
+            <button
+              onClick={handleDismiss}
+              disabled={dismissing}
+              className="ml-1 p-1 rounded hover:bg-white/[0.05] text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+              title="Dismiss finding"
+            >
+              <Ban className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
       {expanded && (
-        <div className="px-6 pb-3 border-b border-border bg-background/30">
+        <div className={cn('px-6 pb-3 border-b border-border bg-background/30', finding.status === 'dismissed' && 'opacity-50')}>
           <div className="grid grid-cols-2 gap-4 mb-3">
             <div>
               <span className="text-[11px] text-text-tertiary uppercase">Score Impact</span>
@@ -76,9 +106,11 @@ function FindingRow({ finding }: { finding: Finding }) {
 
 export function FindingsTable({
   findings,
+  onDismiss,
   className,
 }: {
   findings: Finding[];
+  onDismiss?: () => void;
   className?: string;
 }) {
   if (findings.length === 0) {
@@ -95,7 +127,7 @@ export function FindingsTable({
     <div className={cn('border border-border rounded-lg overflow-hidden', className)}>
       <div className="divide-y divide-border">
         {findings.map((f) => (
-          <FindingRow key={f.id} finding={f} />
+          <FindingRow key={f.id} finding={f} onDismiss={onDismiss || (() => {})} />
         ))}
       </div>
     </div>

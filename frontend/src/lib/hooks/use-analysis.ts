@@ -12,6 +12,7 @@ import type {
   ErrorFindingListResponse,
   PerformanceMetricListResponse,
   SimulationResultListResponse,
+  ScoreHistoryListResponse,
   EnterpriseGuide,
 } from '@/types/domain/analysis';
 
@@ -35,10 +36,11 @@ export function useJob(jobId: string | null) {
 
 // ─── Job List ───────────────────────────────────────────
 
-export function useJobsList(page = 1, pageSize = 20) {
+export function useJobsList(page = 1, pageSize = 20, workspaceId?: string) {
   return useQuery<JobListResponse>({
-    queryKey: ['analysis-jobs', page, pageSize],
-    queryFn: () => analysisService.jobs.list(page, pageSize),
+    queryKey: ['analysis-jobs', workspaceId, page, pageSize],
+    queryFn: () => analysisService.jobs.list(page, pageSize, workspaceId),
+    enabled: !!workspaceId,
     refetchInterval: 5000,
   });
 }
@@ -72,7 +74,7 @@ export function useStartAnalysis() {
 
 export function useFindings(
   jobId: string | null,
-  filters?: { severity?: string; category?: string; page?: number; pageSize?: number }
+  filters?: { severity?: string; category?: string; includeDismissed?: boolean; page?: number; pageSize?: number }
 ) {
   return useQuery({
     queryKey: ['analysis-findings', jobId, filters],
@@ -81,10 +83,22 @@ export function useFindings(
         jobId: jobId!,
         severity: filters?.severity,
         category: filters?.category,
+        includeDismissed: filters?.includeDismissed,
         page: filters?.page,
         pageSize: filters?.pageSize,
       }),
     enabled: !!jobId,
+  });
+}
+
+export function useDismissFinding() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (findingIds: string[]) =>
+      analysisService.findings.dismiss(findingIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['analysis-findings'] });
+    },
   });
 }
 
@@ -149,10 +163,21 @@ export function useSimulationResults(jobId: string | null) {
 // ─── Enterprise Guide ───────────────────────────────────
 
 export function useEnterpriseGuide(jobId: string | null) {
-  return useQuery<EnterpriseGuide>({
+  return useQuery<EnterpriseGuide | null>({
     queryKey: ['analysis-guide', jobId],
     queryFn: () => analysisService.enterpriseGuide.get(jobId!),
     enabled: !!jobId,
+    retry: false,
+  });
+}
+
+// ─── Score History ─────────────────────────────────────
+
+export function useScoreHistory(repoId: string | null, limit = 50) {
+  return useQuery<ScoreHistoryListResponse>({
+    queryKey: ['analysis-score-history', repoId, limit],
+    queryFn: () => analysisService.scoreHistory.list(repoId!, limit),
+    enabled: !!repoId,
   });
 }
 

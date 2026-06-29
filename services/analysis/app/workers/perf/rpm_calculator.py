@@ -8,6 +8,7 @@ from app.domain.contracts.parser import ParsedFile, ParsedRoute
 logger = get_logger(__name__)
 
 BASE_RPM = 2000
+LATENCY_BASE_MS = 10
 
 
 @dataclass
@@ -21,6 +22,7 @@ class EndpointMetric:
     max_concurrent_users: int
     bottlenecks: list[str] = field(default_factory=list)
     deductions: list[dict[str, object]] = field(default_factory=list)
+    confidence: float = 0.8
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -37,6 +39,7 @@ class EndpointMetric:
             "bottleneck_detail": "; ".join(
                 f"{d['type']}: -{d['rpm_impact']} RPM" for d in self.deductions
             ) if self.deductions else None,
+            "confidence": self.confidence,
         }
 
 
@@ -46,6 +49,7 @@ class PerformanceMetrics:
     overall_rpm: int = BASE_RPM
     breaks_at_concurrent_users: int = 10000
     bottlenecks: list[str] = field(default_factory=list)
+    overall_confidence: float = 0.8
 
 
 class RPMCalculator:
@@ -64,6 +68,9 @@ class RPMCalculator:
             )
             metrics.breaks_at_concurrent_users = min(
                 em.max_concurrent_users for em in metrics.endpoints
+            )
+            metrics.overall_confidence = min(
+                em.confidence for em in metrics.endpoints
             )
             all_bottlenecks: list[str] = []
             for em in metrics.endpoints:
@@ -96,13 +103,36 @@ class RPMCalculator:
         if self._has_file_io(code):
             deductions.append(("file_io_in_request", RPM_DEDUCTIONS["file_io_in_request"]))
 
+        # New detections
+        if self._has_high_cpu_complexity(code):
+            deductions.append(("high_complexity", RPM_DEDUCTIONS["high_complexity"]))
+
+        if self._has_memory_pressure(code):
+            deductions.append(("memory_pressure", self._memory_pressure_impact(code)))
+
+        serialization = self._count_serialization(code)
+        if serialization > 0:
+            deductions.append(("serialization_bottleneck", RPM_DEDUCTIONS["serialization_bottleneck"] * serialization))
+
+        if self._has_no_caching(code):
+            deductions.append(("no_caching", RPM_DEDUCTIONS["no_caching"]))
+
+        loop_score = self._loop_complexity(code)
+        if loop_score > 1:
+            deductions.append(("loop_complexity", 100 * (loop_score - 1)))
+
         total_deduction = sum(d[1] for d in deductions)
         rpm = max(BASE_RPM - total_deduction, 50)
 
-        p50 = self._estimate_p50_latency(db_queries, sync_calls, code)
+        p50 = self._estimate_p50_latency(db_queries, sync_calls, code, loop_score)
         p95 = int(p50 * 2.5)
         p99 = int(p50 * 5.0)
         breaks_at = self._calculate_breakpoint(rpm, p50)
+
+        has_route_code = bool(route.code and len(route.code.strip()) > 0)
+        has_content = bool(pf.content and len(pf.content.strip()) > 0)
+        signal_count = len([d for d, _ in deductions if d not in ("no_caching", "memory_pressure")])
+        confidence = self._compute_confidence(has_route_code, has_content, db_queries, sync_calls, signal_count)
 
         return EndpointMetric(
             endpoint=route.path,
@@ -114,10 +144,29 @@ class RPMCalculator:
             max_concurrent_users=breaks_at,
             bottlenecks=[d[0] for d in deductions],
             deductions=[{"type": d[0], "rpm_impact": d[1]} for d in deductions],
+            confidence=confidence,
         )
+
+    def _compute_confidence(
+        self, has_code: bool, has_content: bool, db_queries: int, sync_calls: int, signals: int,
+    ) -> float:
+        base = 0.5
+        if has_code:
+            base += 0.2
+        if has_content:
+            base += 0.1
+        if db_queries > 0:
+            base += 0.05
+        if sync_calls > 0:
+            base += 0.05
+        if signals >= 2:
+            base += 0.05
+        return min(base, 1.0)
 
     def _has_n_plus_one(self, code: str, full_content: str) -> bool:
         target = code or full_content
+        if not target:
+            return False
         loop_pattern = r'for\s+\w+\s+in\s+\w+\s*:'
         query_pattern = r'\.(?:get|filter|all|first|fetch|select)\s*\('
         return bool(re.search(loop_pattern, target)) and bool(re.search(query_pattern, target))
@@ -174,14 +223,83 @@ class RPMCalculator:
         ]
         return any(re.search(p, code) for p in patterns)
 
-    def _estimate_p50_latency(self, db_queries: int, sync_calls: int, code: str) -> int:
-        base = 10
+    def _has_high_cpu_complexity(self, code: str) -> bool:
+        if not code:
+            return False
+        nested_loops = len(re.findall(r'for\s+\w+\s+in\s+\w+\s*:', code))
+        heavy_ops = len(re.findall(r'(?:sorted|filter|map|reduce|comprehension)', code))
+        return (nested_loops >= 2) or (nested_loops >= 1 and heavy_ops >= 2)
+
+    def _has_memory_pressure(self, code: str) -> bool:
+        if not code:
+            return False
+        large_alloc = bool(re.search(r'\[\s*\]\s*=\s*\[\s*\]|list\s*\(\s*range|\[\s*\w+\s+for\s+\w+\s+in\s+range', code))
+        file_read = bool(re.search(r'\.read\s*\(\s*\)', code))
+        return large_alloc or file_read
+
+    def _memory_pressure_impact(self, code: str) -> int:
+        impact = 0
+        if re.search(r'\.read\s*\(\s*\)', code):
+            impact += 100
+        if re.search(r'list\s*\(\s*range', code):
+            impact += 50
+        if re.search(r'\[\s*\w+\s+for\s+\w+\s+in\s+range', code):
+            impact += 50
+        return impact
+
+    def _count_serialization(self, code: str) -> int:
+        if not code:
+            return 0
+        patterns = [
+            r'json\.(?:dumps|loads)\(',
+            r'pickle\.(?:dump|load|dumps|loads)\(',
+            r'marshal\.(?:dump|load)\(',
+            r'yaml\.(?:dump|load|safe_load)\(',
+            r'xml\.(?:etree|dom|sax)',
+            r'serialize|deserialize',
+            r'\.serialize\(',
+            r'\.to_json\(',
+        ]
+        count = 0
+        for p in patterns:
+            count += len(re.findall(p, code))
+        return count
+
+    def _has_no_caching(self, code: str) -> bool:
+        if not code:
+            return False
+        has_cache = bool(re.search(r'\b(?:cache|memoize|lru_cache|redis|memcache)\b', code, re.IGNORECASE))
+        has_db_or_compute = bool(
+            re.search(r'\.(?:get|filter|all|fetch|select|query)\s*\(', code)
+            or re.search(r'(?:sorted|filter|map|reduce|comprehension)', code)
+        )
+        return has_db_or_compute and not has_cache
+
+    def _loop_complexity(self, code: str) -> int:
+        if not code:
+            return 0
+        loops = re.findall(r'for\s+\w+\s+in\s+\w+\s*:', code)
+        nested = len(loops)
+        if nested >= 3:
+            return 5
+        if nested >= 2:
+            return 3
+        if nested >= 1:
+            return 1
+        return 0
+
+    def _estimate_p50_latency(self, db_queries: int, sync_calls: int, code: str, loop_score: int = 0) -> int:
+        base = LATENCY_BASE_MS
         unindexed = 0
         if code:
             unindexed = len(re.findall(r'\.(?:all|filter)\s*\(', code))
         db_latency = (db_queries - unindexed) * 5 + unindexed * 20
         sync_latency = sync_calls * 50
-        return base + db_latency + sync_latency
+        loop_latency = loop_score * 15
+        serialization = self._count_serialization(code) * 10
+        memory = 20 if self._has_memory_pressure(code) else 0
+        complexity = 30 if self._has_high_cpu_complexity(code) else 0
+        return base + db_latency + sync_latency + loop_latency + serialization + memory + complexity
 
     def _calculate_breakpoint(self, rpm: int, p50_ms: int) -> int:
         response_time_sec = p50_ms / 1000

@@ -72,6 +72,10 @@ function analysisPost<T>(path: string, body: unknown): Promise<T> {
   });
 }
 
+function analysisDelete<T>(path: string): Promise<T> {
+  return analysisFetch<T>(path, { method: 'DELETE' });
+}
+
 export const analysisService = {
   scoreHistory: {
     list(repoId: string, limit = 50): Promise<ScoreHistoryListResponse> {
@@ -107,6 +111,9 @@ export const analysisService = {
       return analysisGet<JobListResponse>(
         `${API_ENDPOINTS.ANALYSIS.JOBS_LIST}?${q}`
       );
+    },
+    delete(jobId: string): Promise<void> {
+      return analysisDelete<void>(API_ENDPOINTS.ANALYSIS.JOB_DELETE(jobId));
     },
   },
   findings: {

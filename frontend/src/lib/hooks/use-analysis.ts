@@ -58,6 +58,18 @@ export function useFileUpload() {
   });
 }
 
+// ─── Delete Job ─────────────────────────────────────────
+
+export function useDeleteJob() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: (jobId) => analysisService.jobs.delete(jobId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['analysis-jobs'] });
+    },
+  });
+}
+
 // ─── Start Analysis ─────────────────────────────────────
 
 export function useStartAnalysis() {

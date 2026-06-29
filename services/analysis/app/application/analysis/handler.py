@@ -6,6 +6,7 @@ from typing import cast
 from uuid import UUID, uuid4
 
 from app.application.analysis.commands import (
+    DeleteJobCommand,
     ProcessStageCommand,
     StartAnalysisCommand,
 )
@@ -1006,6 +1007,30 @@ async def list_jobs(
         )
         return {"jobs": jobs, "total": total}
     return {"jobs": [], "total": 0}
+
+
+async def handle_delete_job(
+    cmd: DeleteJobCommand,
+    uow: UnitOfWork,
+    storage: AbstractStorage | None = None,
+) -> dict[str, object]:
+    """Permanently delete a job and all its data."""
+    job = await uow.jobs.hard_delete(cmd.job_id)
+    if not job:
+        raise NotFoundError(f"Job {cmd.job_id} not found")
+
+    # Clean up S3 artifacts for this job
+    if storage:
+        s3_prefix = f"reports/{cmd.workspace_id}/{cmd.job_id}"
+        try:
+            s3_keys = await storage.list_keys(s3_prefix)
+            for key in s3_keys:
+                await storage.delete(key)
+        except Exception:
+            logger.warning("s3_cleanup_failed", job_id=str(cmd.job_id), prefix=s3_prefix)
+
+    logger.info("job_deleted", job_id=str(cmd.job_id))
+    return job
 
 
 async def get_dead_code(

@@ -19,17 +19,20 @@ from app.application.analysis.commands import (
 from app.application.analysis.handler import (
     handle_analysis_failure,
     handle_save_findings,
+    handle_start_analysis,
     handle_stage_clone,
     handle_stage_dead_code,
+    handle_stage_devops,
     handle_stage_errors,
     handle_stage_finalize,
     handle_stage_guide_gen,
+    handle_stage_maintainability,
     handle_stage_parse,
     handle_stage_perf,
+    handle_stage_reliability,
     handle_stage_rules,
     handle_stage_score,
     handle_stage_simulation,
-    handle_start_analysis,
     _push_progress,
 )
 from app.core.logging import get_logger
@@ -58,6 +61,10 @@ from app.infrastructure.storage.s3 import S3Storage
 from app.workers.dead_code.detector import DeadCodeFinding
 from app.workers.errors.scanner import ErrorFinding
 from app.workers.perf.rpm_calculator import PerformanceMetrics
+from app.workers.devops.analyzer import DevopsAnalyzer
+from app.workers.devops.models import DevOpsFinding
+from app.workers.maintainability.models import MaintainabilityFinding
+from app.workers.reliability.models import ReliabilityFinding
 
 logger = get_logger(__name__)
 
@@ -71,14 +78,41 @@ _STAGE_STATUS: dict[str, str] = {
     "parse": "parsing",
     "rules": "rules",
     "save_findings": "save_findings",
-    "score": "scoring",
     "dead_code": "dead_code",
     "errors": "errors",
+    "reliability": "reliability",
+    "maintainability": "maintainability",
+    "devops": "devops",
     "perf": "perf",
     "simulation": "simulation",
+    "score": "scoring",
     "guide_gen": "guide_gen",
     "finalize": "finalize",
 }
+
+_STAGE_ENGINE: dict[str, str | None] = {
+    "start": None,
+    "clone": None,
+    "parse": None,
+    "rules": None,
+    "save_findings": None,
+    "dead_code": "dead_code",
+    "errors": "error_detection",
+    "reliability": "reliability",
+    "maintainability": "maintainability",
+    "devops": "devops",
+    "perf": "performance",
+    "simulation": "simulation",
+    "score": None,
+    "guide_gen": None,
+    "finalize": None,
+}
+
+_STAGE_ENGINES: dict[str, list[str]] = {
+    "rules": ["security"],
+}
+
+ALL_ENGINES = {"security", "maintainability", "reliability", "devops", "dead_code", "error_detection", "performance", "simulation"}
 
 _STAGE_PROGRESS: dict[str, int] = {
     "start": 10,
@@ -86,12 +120,15 @@ _STAGE_PROGRESS: dict[str, int] = {
     "parse": 25,
     "rules": 50,
     "save_findings": 65,
-    "score": 75,
-    "dead_code": 80,
-    "errors": 85,
-    "perf": 88,
-    "simulation": 92,
-    "guide_gen": 95,
+    "dead_code": 75,
+    "errors": 78,
+    "reliability": 80,
+    "maintainability": 82,
+    "devops": 84,
+    "perf": 87,
+    "simulation": 90,
+    "score": 93,
+    "guide_gen": 96,
     "finalize": 100,
 }
 
@@ -186,28 +223,41 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
     immediately with a clear message and halts the pipeline.
     """
     state["_pipeline_start"] = time.monotonic()
+    state["engine_statuses"] = {e: "pending" for e in ALL_ENGINES}
     for stage_name, stage_fn, stage_args in (
         ("start", _stage_start, (cmd,)),
         ("clone", _stage_clone, ()),
         ("parse", _stage_parse, ()),
         ("rules", _stage_rules, ()),
         ("save_findings", _stage_save_findings, ()),
-        ("score", _stage_score, ()),
         ("dead_code", _stage_dead_code, ()),
         ("errors", _stage_errors, ()),
+        ("reliability", _stage_reliability, ()),
+        ("maintainability", _stage_maintainability, ()),
+        ("devops", _stage_devops, ()),
         ("perf", _stage_perf, ()),
         ("simulation", _stage_simulation, ()),
+        ("score", _stage_score, ()),
         ("guide_gen", _stage_guide_gen, ()),
         ("finalize", _stage_finalize, ()),
     ):
         state["_last_stage"] = stage_name
+        engine_ids = _STAGE_ENGINES.get(stage_name, [])
+        single_engine_id = _STAGE_ENGINE.get(stage_name)
+        engine_ids = engine_ids + ([single_engine_id] if single_engine_id else [])
+        for eid in engine_ids:
+            cast(dict[str, str], state["engine_statuses"])[eid] = "running"
         await _push_stage_progress(state, stage_name)
         try:
             if stage_args:
                 await stage_fn(state, *stage_args)
             else:
                 await stage_fn(state)
+            for eid in engine_ids:
+                cast(dict[str, str], state["engine_statuses"])[eid] = "completed"
         except Exception:
+            for eid in engine_ids:
+                cast(dict[str, str], state["engine_statuses"])[eid] = "failed"
             job_id = cast(UUID, state.get("job_id"))
             if job_id:
                 await _handle_failure_async(
@@ -334,12 +384,36 @@ async def _stage_score(state: dict[str, object]) -> None:
     state["_last_stage"] = "score"
     job_id = cast(UUID, state["job_id"])
     violations = cast(list[RuleViolation], state.get("_violations", []))
-    cmd = ProcessStageCommand(job_id=job_id, stage="score")
+    dead_code_results_raw = state.get("dead_code_results")
+    dead_code_results = cast(list[DeadCodeFinding], dead_code_results_raw) if dead_code_results_raw is not None else None
+    error_results_raw = state.get("error_results")
+    error_results = cast(list[ErrorFinding], error_results_raw) if error_results_raw is not None else None
+    perf_metrics_raw = state.get("perf_metrics")
+    perf_metrics = cast(PerformanceMetrics, perf_metrics_raw) if perf_metrics_raw is not None else None
+    simulation_results_raw = state.get("simulation_results")
+    simulation_results = cast(list[dict[str, object]], simulation_results_raw) if simulation_results_raw is not None else None
+    reliability_results_raw = state.get("reliability_results")
+    reliability_results = cast(list[ReliabilityFinding], reliability_results_raw) if reliability_results_raw is not None else None
+    devops_results_raw = state.get("devops_results")
+    devops_results = cast(list[DevOpsFinding], devops_results_raw) if devops_results_raw is not None else None
+    maintainability_results_raw = state.get("maintainability_results")
+    maintainability_results = cast(list[MaintainabilityFinding], maintainability_results_raw) if maintainability_results_raw is not None else None
+    total_files = cast(int, state.get("total_files", 0))
+    cmd = ProcessStageCommand(job_id=job_id, stage="score", total_files=total_files)
 
     async with UnitOfWork() as uow:
         producer = EventProducer()
+        engine_statuses = cast(dict[str, str] | None, state.get("engine_statuses"))
         score = await handle_stage_score(
             cmd, _SCORER, uow, producer, violations,
+            dead_code_results=dead_code_results,
+            error_results=error_results,
+            reliability_results=reliability_results,
+            devops_results=devops_results,
+            maintainability_results=maintainability_results,
+            perf_metrics=perf_metrics,
+            simulation_results=simulation_results,
+            engine_statuses=engine_statuses,
         )
         await uow.commit()
         state["score"] = score
@@ -390,6 +464,69 @@ async def _stage_errors(state: dict[str, object]) -> None:
         "pipeline_stage_complete",
         stage="errors", job_id=str(job_id),
         count=len(cast(list[object], state.get("error_results", []))),
+    )
+
+
+async def _stage_reliability(state: dict[str, object]) -> None:
+    state["_last_stage"] = "reliability"
+    job_id = cast(UUID, state["job_id"])
+    parsed_files = cast(list[ParsedFile], state.get("_parsed_files", []))
+    cmd = ProcessStageCommand(job_id=job_id, stage="reliability")
+
+    async with UnitOfWork() as uow:
+        producer = EventProducer()
+        results = await handle_stage_reliability(
+            cmd, uow, producer, parsed_files,
+        )
+        await uow.commit()
+        state["reliability_results"] = results
+
+    logger.info(
+        "pipeline_stage_complete",
+        stage="reliability", job_id=str(job_id),
+        count=len(cast(list[object], state.get("reliability_results", []))),
+    )
+
+
+async def _stage_maintainability(state: dict[str, object]) -> None:
+    state["_last_stage"] = "maintainability"
+    job_id = cast(UUID, state["job_id"])
+    parsed_files = cast(list[ParsedFile], state.get("_parsed_files", []))
+    cmd = ProcessStageCommand(job_id=job_id, stage="maintainability")
+
+    async with UnitOfWork() as uow:
+        producer = EventProducer()
+        results = await handle_stage_maintainability(
+            cmd, uow, producer, parsed_files,
+        )
+        await uow.commit()
+        state["maintainability_results"] = results
+
+    logger.info(
+        "pipeline_stage_complete",
+        stage="maintainability", job_id=str(job_id),
+        count=len(cast(list[object], state.get("maintainability_results", []))),
+    )
+
+
+async def _stage_devops(state: dict[str, object]) -> None:
+    state["_last_stage"] = "devops"
+    job_id = cast(UUID, state["job_id"])
+    parsed_files = cast(list[ParsedFile], state.get("_parsed_files", []))
+    cmd = ProcessStageCommand(job_id=job_id, stage="devops")
+
+    async with UnitOfWork() as uow:
+        producer = EventProducer()
+        results = await handle_stage_devops(
+            cmd, uow, producer, parsed_files,
+        )
+        await uow.commit()
+        state["devops_results"] = results
+
+    logger.info(
+        "pipeline_stage_complete",
+        stage="devops", job_id=str(job_id),
+        count=len(cast(list[object], state.get("devops_results", []))),
     )
 
 
@@ -450,6 +587,21 @@ async def _stage_guide_gen(state: dict[str, object]) -> None:
     dead_code_results = cast(list[DeadCodeFinding], dead_code_results_raw) if dead_code_results_raw is not None else None
     error_results_raw = state.get("error_results")
     error_results = cast(list[ErrorFinding], error_results_raw) if error_results_raw is not None else None
+    reliability_results_raw = state.get("reliability_results")
+    reliability_results: list[ReliabilityFinding] | None = (
+        cast(list[ReliabilityFinding], reliability_results_raw)
+        if reliability_results_raw is not None else None
+    )
+    devops_results_raw = state.get("devops_results")
+    devops_results: list[DevOpsFinding] | None = (
+        cast(list[DevOpsFinding], devops_results_raw)
+        if devops_results_raw is not None else None
+    )
+    maintainability_results_raw = state.get("maintainability_results")
+    maintainability_results: list[MaintainabilityFinding] | None = (
+        cast(list[MaintainabilityFinding], maintainability_results_raw)
+        if maintainability_results_raw is not None else None
+    )
     cmd = ProcessStageCommand(job_id=job_id, stage="guide_gen")
 
     async with UnitOfWork() as uow:
@@ -460,6 +612,9 @@ async def _stage_guide_gen(state: dict[str, object]) -> None:
             simulation_results=simulation_results,
             dead_code_results=dead_code_results,
             error_results=error_results,
+            reliability_results=reliability_results,
+            devops_results=devops_results,
+            maintainability_results=maintainability_results,
         )
         await uow.commit()
         state["enterprise_guide"] = guide

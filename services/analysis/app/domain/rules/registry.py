@@ -4,12 +4,7 @@ from app.domain.rules.base import BaseRule
 
 
 class RuleRegistry:
-    """Discovers, registers, and filters analysis rules.
-
-    Rules can be registered explicitly or auto-discovered
-    via Python entry points. The registry filters rules
-    by language and file pattern before execution.
-    """
+    """Discovers, registers, and filters analysis rules."""
 
     def __init__(self) -> None:
         self._rules: dict[str, BaseRule] = {}
@@ -68,19 +63,46 @@ def create_default_registry() -> RuleRegistry:
         QualityLongFunctionRule,
     )
     from app.domain.rules.security import (
+        SecurityCommandInjectionRule,
+        SecurityCORSMisconfigRule,
+        SecurityCSRFRule,
+        SecurityDeserializationRule,
         SecurityHardcodedSecretRule,
+        SecurityJWTRule,
+        SecurityMissingAuthzRule,
         SecurityNoAuthRule,
+        SecurityPathTraversalRule,
+        SecuritySQLInjectionRule,
+        SecuritySSRFRule,
+        SecurityWeakCryptoRule,
+        SecurityXXERule,
+        SecurityXSSRule,
     )
     from app.domain.rules.structure import StructureDeepNestingRule
 
     registry = RuleRegistry()
     registry.register_many(
         [
+            # Quality / structure
             QualityHighComplexityRule(),
             QualityLongFunctionRule(),
+            StructureDeepNestingRule(),
+            # Security (13 rules)
             SecurityNoAuthRule(),
             SecurityHardcodedSecretRule(),
-            StructureDeepNestingRule(),
+            SecuritySQLInjectionRule(),
+            SecurityCommandInjectionRule(),
+            SecurityPathTraversalRule(),
+            SecuritySSRFRule(),
+            SecurityXXERule(),
+            SecurityWeakCryptoRule(),
+            SecurityJWTRule(),
+            SecurityDeserializationRule(),
+            SecurityMissingAuthzRule(),
+            SecurityCSRFRule(),
+            SecurityCORSMisconfigRule(),
+            SecurityXSSRule(),
+            # DevOps stubs
             DevopsDockerfileRule(),
             DevopsEnvFileRule(),
             DevopsCIConfigRule(),

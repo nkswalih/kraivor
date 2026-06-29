@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from fnmatch import fnmatch
 
 from app.core.constants import Category, Severity
 
@@ -45,7 +46,21 @@ class BaseRule(ABC):
     severity: Severity = Severity.MEDIUM
     languages: list[str] = []
     file_patterns: list[str] = ["*"]
+    exclude_patterns: list[str] = []
     description: str = ""
+
+    def matches_exclude_pattern(self, file_path: str) -> bool:
+        """Check if *file_path* matches any ``exclude_patterns`` glob.
+
+        Returns ``True`` when the file should be down-weighted rather
+        than fully excluded — violations from these paths keep their
+        finding visibility but receive ``INFO`` severity (zero score
+        impact).
+        """
+        for pattern in self.exclude_patterns:
+            if fnmatch(file_path, pattern):
+                return True
+        return False
 
     @abstractmethod
     async def analyze(

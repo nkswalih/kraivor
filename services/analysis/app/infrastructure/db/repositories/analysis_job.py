@@ -1,10 +1,12 @@
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete as sa_delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.contracts.repository_provider import AbstractJobRepository
 from app.infrastructure.db.models.analysis_job import AnalysisJobModel
+from app.infrastructure.db.models.file_analysis import FileAnalysisModel
+from app.infrastructure.db.models.score_history import ScoreHistoryModel
 
 
 class JobRepository(AbstractJobRepository):
@@ -68,6 +70,28 @@ class JobRepository(AbstractJobRepository):
         stmt = base.order_by(AnalysisJobModel.created_at.desc()).offset(offset).limit(limit)
         result = await self._session.execute(stmt)
         return [self._to_dict(m) for m in result.scalars().all()], total
+
+    async def hard_delete(self, job_id: UUID) -> dict[str, object] | None:
+        job = await self.get_by_id(job_id)
+        if not job:
+            return None
+
+        # These tables have no FK cascade — delete manually
+        stmt_del_score = sa_delete(ScoreHistoryModel).where(
+            ScoreHistoryModel.job_id == job_id,
+        )
+        await self._session.execute(stmt_del_score)
+
+        stmt_del_files = sa_delete(FileAnalysisModel).where(
+            FileAnalysisModel.job_id == job_id,
+        )
+        await self._session.execute(stmt_del_files)
+
+        # Delete the job row — DB ON DELETE CASCADE handles the rest
+        stmt_del_job = sa_delete(AnalysisJobModel).where(AnalysisJobModel.id == job_id)
+        await self._session.execute(stmt_del_job)
+
+        return job
 
     async def count_by_workspace(self, workspace_id: UUID) -> int:
         stmt = select(func.count()).select_from(AnalysisJobModel).where(

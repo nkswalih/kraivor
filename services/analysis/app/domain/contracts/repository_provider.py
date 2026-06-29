@@ -35,6 +35,13 @@ class AbstractJobRepository(ABC):
     ) -> tuple[list[dict[str, object]], int]:
         ...
 
+    @abstractmethod
+    async def hard_delete(self, job_id: UUID) -> dict[str, object] | None:
+        """Permanently delete a job and all cascade-related data.
+        Returns the job dict before deletion (for S3 cleanup etc).
+        """
+        ...
+
 
 class AbstractFindingRepository(ABC):
     """Contract for finding persistence."""

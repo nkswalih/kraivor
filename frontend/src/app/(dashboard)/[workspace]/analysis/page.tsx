@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Activity, Plus, GitBranch, Clock, Search, Filter, Loader2, AlertCircle } from 'lucide-react';
 import { useJobsList } from '@/lib/hooks/use-analysis';
+import { useAuthStore } from '@/lib/stores/auth-store';
 import { JobStatusBadge } from '@/components/analysis/job-status-badge';
 import { ProgressBar } from '@/components/analysis/progress-bar';
 import { Skeleton } from '@/components/ui/shadcn';
@@ -47,8 +48,9 @@ function JobRow({ job, workspaceSlug }: { job: AnalysisJob; workspaceSlug: strin
 export default function AnalysisPage() {
   const params = useParams<{ workspace: string }>();
   const workspaceSlug = params?.workspace ?? '';
+  const workspaceId = useAuthStore((s) => s.workspaceId);
   const [page, setPage] = useState(1);
-  const { data, isLoading, error } = useJobsList(page, 20);
+  const { data, isLoading, error } = useJobsList(page, 20, workspaceId ?? undefined);
 
   if (error) {
     return (

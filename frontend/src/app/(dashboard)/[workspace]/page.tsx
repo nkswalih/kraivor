@@ -22,8 +22,9 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useDashboard, type DashboardData } from '@/lib/hooks/use-dashboard';
+import type { AnalysisJob } from '@/types/domain/analysis';
 import { Badge, Skeleton } from '@/components/ui/shadcn';
-import { formatRelativeTime, avatarUrl } from '@/lib/utils';
+import { cn, formatRelativeTime, avatarUrl } from '@/lib/utils';
 import { profileEndpoints } from '@/lib/api/endpoints';
 
 /* ─── Stat Card ──────────────────────────────────────────────────── */
@@ -443,7 +444,7 @@ function Greeting() {
 export default function DashboardPage() {
   const params = useParams<{ workspace: string }>();
   const workspaceSlug = params?.workspace ?? '';
-  const { workspace, rooms, repositories, knowledgeSpaces, members, stats, isLoading, error } =
+  const { workspace, rooms, repositories, knowledgeSpaces, members, recentJobs, stats, isLoading, error } =
     useDashboard();
 
   if (error) {
@@ -512,6 +513,73 @@ export default function DashboardPage() {
           loading={isLoading}
         />
       </div>
+
+      {/* Recent Analysis */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.06 }}
+        className="mb-8"
+      >
+        <SectionHeader title="Recent Analysis" href={`/${workspaceSlug}/analysis`} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} variant="rect" className="h-28" />
+              ))
+            : recentJobs.slice(0, 4).map((job: AnalysisJob) => (
+                <Link
+                  key={job.job_id}
+                  href={`/${workspaceSlug}/analysis/jobs/${job.job_id}`}
+                  className="block p-4 rounded-lg bg-krait-surface1 border border-krait-border
+                             hover:border-venom-yellow/30 hover:shadow-venom
+                             transition-all duration-[var(--duration-normal)] ease-strike group"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <GitBranch className="w-4 h-4 text-venom-yellow/60 group-hover:text-venom-yellow transition-colors" />
+                    <span className="text-[11px] text-text-tertiary font-mono">
+                      {job.completed_at ? formatRelativeTime(job.completed_at) : job.status}
+                    </span>
+                  </div>
+                  <p className="text-[13px] font-medium text-text-primary group-hover:text-venom-yellow transition-colors truncate">
+                    {job.repo_url?.split('/').pop() ?? 'Untitled'}
+                  </p>
+                  <div className="flex items-center gap-3 mt-2">
+                    {job.overall_score != null ? (
+                      <span className={cn(
+                        'text-lg font-semibold',
+                        job.overall_score >= 75 ? 'text-color-success' :
+                        job.overall_score >= 50 ? 'text-venom-amber' :
+                        'text-color-error'
+                      )}>
+                        {job.overall_score}
+                      </span>
+                    ) : (
+                      <span className="text-[12px] text-text-tertiary">
+                        {job.status === 'completed' ? 'No score' : 'Running...'}
+                      </span>
+                    )}
+                    {job.total_findings != null && (
+                      <span className="text-[11px] text-text-tertiary">
+                        {job.total_findings} finding{job.total_findings !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              ))}
+          {!isLoading && recentJobs.length === 0 && (
+            <div className="col-span-full flex flex-col items-center justify-center py-8 text-center">
+              <Sparkles className="w-6 h-6 text-text-tertiary mb-2" />
+              <p className="text-sm text-text-secondary font-medium">No analyses yet</p>
+              <p className="text-xs text-text-tertiary mt-1">
+                <Link href={`/${workspaceSlug}/analysis`} className="text-venom-yellow hover:underline">
+                  Run your first analysis
+                </Link>
+              </p>
+            </div>
+          )}
+        </div>
+      </motion.div>
 
       {/* Row 2: 3-column middle section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">

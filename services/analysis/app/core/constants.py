@@ -43,6 +43,29 @@ class TriggerType(StrEnum):
     API = "api"
 
 
+class EngineStatus(StrEnum):
+    PENDING = "pending"
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+    DISABLED = "disabled"
+    NOT_CONFIGURED = "not_configured"
+
+
+# Engines whose failure blocks the overall score from being computed
+CORE_ENGINES: set[str] = {
+    "security",
+    "maintainability",
+}
+
+
+class FindingStatus(StrEnum):
+    ACTIVE = "active"
+    DISMISSED = "dismissed"
+
+
 class SimulationStatus(StrEnum):
     STABLE = "stable"
     DEGRADED = "degraded"
@@ -96,9 +119,9 @@ DEFAULT_SCORE_WEIGHTS: dict[str, float] = {
 
 SEVERITY_PENALTIES: dict[Severity, float] = {
     Severity.CRITICAL: 15.0,
-    Severity.HIGH: 8.0,
-    Severity.MEDIUM: 3.0,
-    Severity.LOW: 1.0,
+    Severity.HIGH: 10.0,
+    Severity.MEDIUM: 5.0,
+    Severity.LOW: 2.0,
     Severity.INFO: 0.0,
 }
 
@@ -110,18 +133,15 @@ SCORE_TIER_THRESHOLDS: list[tuple[float, Tiers]] = [
     (0, Tiers.CRITICAL_STATE),
 ]
 
-# RPM deduction keys
+# RPM deduction keys — each must be referenced in rpm_calculator.py
 RPM_DEDUCTIONS: dict[str, int] = {
     "n_plus_one": 400,
     "sync_external_call": 200,
     "unbounded_query": 300,
-    "missing_connection_pool": 250,
-    "missing_index": 150,
     "sync_in_async": 200,
     "high_complexity": 100,
     "file_io_in_request": 150,
     "no_caching": 100,
     "serialization_bottleneck": 150,
-    "lock_contention": 300,
     "many_db_queries": 50,
 }

@@ -77,9 +77,11 @@ class AnalysisCompleted(DomainEvent):
     job_id: UUID
     repo_id: UUID
     workspace_id: UUID
-    overall_score: int
-    findings_count: int
+    overall_score: int | None = None
+    findings_count: int = 0
     duration_seconds: int | None = None
+    engine_statuses: dict[str, str] | None = None
+    blocked_by: list[str] | None = None
 
     def to_dict(self) -> dict[str, object]:
         base = super().to_dict()
@@ -91,6 +93,8 @@ class AnalysisCompleted(DomainEvent):
                 "overall_score": self.overall_score,
                 "findings_count": self.findings_count,
                 "duration_seconds": self.duration_seconds,
+                "engine_statuses": self.engine_statuses or {},
+                "blocked_by": self.blocked_by or [],
             }
         )
         return base

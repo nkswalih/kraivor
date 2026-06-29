@@ -184,7 +184,8 @@ async def task_save_findings(prev_result: dict[str, object]) -> dict[str, object
 async def task_score(prev_result: dict[str, object]) -> dict[str, object]:
     job_id = cast(str, prev_result["job_id"])
     rule_violations = cast(list[dict[str, object]], prev_result.get("rule_violations", []))
-    cmd = ProcessStageCommand(job_id=UUID(job_id), stage="score")
+    total_files = cast(int, prev_result.get("total_files", 0))
+    cmd = ProcessStageCommand(job_id=UUID(job_id), stage="score", total_files=total_files)
 
     from app.domain.rules.base import RuleViolation as RuleV
 

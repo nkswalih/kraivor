@@ -9,8 +9,17 @@ from app.infrastructure.db.repositories.enterprise_guide import (
 from app.infrastructure.db.repositories.error_finding import ErrorFindingRepository
 from app.infrastructure.db.repositories.file_analysis import FileAnalysisRepository
 from app.infrastructure.db.repositories.finding import FindingRepository
+from app.infrastructure.db.repositories.maintainability_finding import (
+    MaintainabilityFindingRepository,
+)
 from app.infrastructure.db.repositories.performance_metric import (
     PerformanceMetricRepository,
+)
+from app.infrastructure.db.repositories.devops_finding import (
+    DevOpsFindingRepository,
+)
+from app.infrastructure.db.repositories.reliability_finding import (
+    ReliabilityFindingRepository,
 )
 from app.infrastructure.db.repositories.report import ReportRepository
 from app.infrastructure.db.repositories.score_history import ScoreHistoryRepository
@@ -41,6 +50,9 @@ class UnitOfWork:
         self.reports: ReportRepository
         self.dead_code: DeadCodeRepository
         self.error_findings: ErrorFindingRepository
+        self.reliability_findings: ReliabilityFindingRepository
+        self.maintainability_findings: MaintainabilityFindingRepository
+        self.devops_findings: DevOpsFindingRepository
         self.performance_metrics: PerformanceMetricRepository
         self.simulation_results: SimulationResultRepository
         self.score_history: ScoreHistoryRepository
@@ -56,6 +68,9 @@ class UnitOfWork:
         self.reports = ReportRepository(self._session)
         self.dead_code = DeadCodeRepository(self._session)
         self.error_findings = ErrorFindingRepository(self._session)
+        self.reliability_findings = ReliabilityFindingRepository(self._session)
+        self.maintainability_findings = MaintainabilityFindingRepository(self._session)
+        self.devops_findings = DevOpsFindingRepository(self._session)
         self.performance_metrics = PerformanceMetricRepository(self._session)
         self.simulation_results = SimulationResultRepository(self._session)
         self.score_history = ScoreHistoryRepository(self._session)

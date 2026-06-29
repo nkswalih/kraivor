@@ -129,11 +129,11 @@ class TestScore:
 
     def test_default_dimensions(self) -> None:
         score = Score(overall=75)
-        assert score.performance == 100
-        assert score.security == 100
-        assert score.reliability == 100
-        assert score.maintainability == 100
-        assert score.devops == 100
+        assert score.performance is None
+        assert score.security is None
+        assert score.reliability is None
+        assert score.maintainability is None
+        assert score.devops is None
 
     def test_to_dict(self) -> None:
         score = Score(overall=88, performance=85, security=90)

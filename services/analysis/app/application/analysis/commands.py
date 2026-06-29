@@ -20,3 +20,4 @@ class ProcessStageCommand:
     job_id: UUID
     stage: str
     repo_path: str | None = None
+    total_files: int = 0

@@ -10,6 +10,7 @@ from app.application.analysis.commands import (
     StartAnalysisCommand,
 )
 from app.application.analysis.queries import (
+    DismissFindingsCommand,
     GetFindingsSummaryQuery,
     GetJobStatusQuery,
     GetReportQuery,
@@ -43,6 +44,12 @@ from app.workers.enterprise_guide import EnterpriseGuideGenerator
 from app.workers.errors.scanner import ErrorFinding, ErrorScanner
 from app.workers.perf.load_sim import ProductionSimulator
 from app.workers.perf.rpm_calculator import PerformanceMetrics, RPMCalculator
+from app.workers.devops.analyzer import DevopsAnalyzer
+from app.workers.devops.models import DevOpsFinding
+from app.workers.maintainability.detector import MaintainabilityDetector
+from app.workers.maintainability.models import MaintainabilityFinding
+from app.workers.reliability.detector import ReliabilityDetector
+from app.workers.reliability.models import ReliabilityFinding
 
 logger = get_logger(__name__)
 
@@ -285,12 +292,30 @@ async def handle_stage_rules(
     return summary, violations
 
 
+def _dedup_violations(violations: list[RuleViolation]) -> list[RuleViolation]:
+    """Remove duplicate violations based on (rule_id, file_path, line_start, line_end).
+
+    Within a single pipeline run each rule fires once, so in-practice duplicates
+    are rare.  This is a defensive guard that also makes re-runs safer.
+    """
+    seen: set[tuple[str, str, int, int]] = set()
+    deduped: list[RuleViolation] = []
+    for v in violations:
+        key = (v.rule_id, v.file_path or "", v.line_start or 0, v.line_end or 0)
+        if key not in seen:
+            seen.add(key)
+            deduped.append(v)
+    return deduped
+
+
 async def handle_save_findings(
     cmd: ProcessStageCommand,
     uow: UnitOfWork,
     violations: list[RuleViolation],
     job: dict[str, object],
 ) -> list[Finding]:
+    violations = _dedup_violations(violations)
+
     findings = [
         Finding(
             job_id=cmd.job_id,
@@ -327,8 +352,16 @@ async def handle_stage_score(
     uow: UnitOfWork,
     producer: EventProducer,
     violations: list[RuleViolation],
+    dead_code_results: list[DeadCodeFinding] | None = None,
+    error_results: list[ErrorFinding] | None = None,
+    reliability_results: list[ReliabilityFinding] | None = None,
+    devops_results: list[DevOpsFinding] | None = None,
+    maintainability_results: list[MaintainabilityFinding] | None = None,
+    perf_metrics: PerformanceMetrics | None = None,
+    simulation_results: list[dict[str, object]] | None = None,
+    engine_statuses: dict[str, str] | None = None,
 ) -> Score:
-    scorer_violations = [
+    scorer_violations: list[Violation] = [
         Violation(
             rule_id=v.rule_id,
             category=str(v.category),
@@ -348,16 +381,114 @@ async def handle_stage_score(
         for v in violations
     ]
 
-    settings = get_settings()
-    weights = {
-        "performance": settings.scoring.performance_weight,
-        "security": settings.scoring.security_weight,
-        "reliability": settings.scoring.reliability_weight,
-        "maintainability": settings.scoring.maintainability_weight,
-        "devops": settings.scoring.devops_weight,
-    }
+    # Dead code findings → maintainability violations (medium severity)
+    if dead_code_results:
+        for d in dead_code_results:
+            scorer_violations.append(Violation(
+                rule_id=f"DEAD-{d.code_type.upper()}",
+                category="maintainability",
+                severity="medium",
+                title=f"Dead code: {d.name}",
+                description=f"Unused {d.code_type}: {d.name}",
+                file_path=d.file_path,
+                line_start=d.line_start,
+                line_end=d.line_end,
+            ))
 
-    score = scorer.calculate(scorer_violations, weights=weights)
+    # Error scanner findings → reliability violations
+    if error_results:
+        for e in error_results:
+            scorer_violations.append(Violation(
+                rule_id=f"ERR-{e.error_type.upper()}",
+                category="reliability",
+                severity=e.severity,
+                title=e.title,
+                description=e.description,
+                file_path=e.file_path,
+                line_start=e.line_start,
+                line_end=e.line_end,
+                code_snippet=e.code_snippet or "",
+                recommendation=e.recommendation or "",
+            ))
+
+    # Dedicated reliability detector findings
+    if reliability_results:
+        for r in reliability_results:
+            scorer_violations.append(Violation(
+                rule_id=f"REL-{r.reliability_type.upper()}",
+                category="reliability",
+                severity=r.severity,
+                title=r.title,
+                description=r.description,
+                file_path=r.file_path,
+                line_start=r.line_start,
+                line_end=r.line_end,
+                code_snippet=r.code_snippet or "",
+                recommendation=r.recommendation or "",
+            ))
+
+    # DevOps engine findings
+    if devops_results:
+        for d in devops_results:
+            scorer_violations.append(Violation(
+                rule_id=f"DEVOPS-{d.devops_type.upper()}",
+                category="devops",
+                severity=d.severity,
+                title=d.title,
+                description=d.description,
+                file_path=d.file_path,
+                line_start=d.line_start,
+                line_end=d.line_end,
+                code_snippet=d.code_snippet or "",
+                recommendation=d.recommendation or "",
+            ))
+
+    # Maintainability engine findings
+    if maintainability_results:
+        for m in maintainability_results:
+            scorer_violations.append(Violation(
+                rule_id=f"MAINT-{m.maintainability_type.upper()}",
+                category="maintainability",
+                severity=m.severity,
+                title=m.title,
+                description=m.description,
+                file_path=m.file_path,
+                line_start=m.line_start,
+                line_end=m.line_end,
+                code_snippet=m.code_snippet or "",
+                recommendation=m.recommendation or "",
+            ))
+
+    # Build capacity metrics from perf + simulation data
+    from app.domain.contracts.scorer import CapacityMetrics
+
+    capacity: CapacityMetrics | None = None
+    if perf_metrics is not None or (simulation_results and len(simulation_results) > 0):
+        sim_status: str | None = None
+        bottlenecks: list[str] = list(perf_metrics.bottlenecks) if perf_metrics else []
+        if simulation_results:
+            for sr in simulation_results:
+                s = cast(str, sr.get("status", ""))
+                bottlenecks.extend(cast(list[object], sr.get("bottlenecks", [])))
+                if s == "failing":
+                    sim_status = "failing"
+                elif s == "degraded" and sim_status != "failing":
+                    sim_status = "degraded"
+                elif s == "stable" and sim_status is None:
+                    sim_status = "stable"
+
+        capacity = CapacityMetrics(
+            has_data=True,
+            simulation_status=sim_status,
+            breaks_at_users=perf_metrics.breaks_at_concurrent_users if perf_metrics else None,
+            overall_rpm=perf_metrics.overall_rpm if perf_metrics else None,
+            bottlenecks=bottlenecks,
+        )
+
+    score = scorer.calculate(
+        scorer_violations, capacity=capacity, engine_statuses=engine_statuses,
+        total_files=cmd.total_files,
+    )
     return score
 
 
@@ -404,6 +535,20 @@ async def handle_stage_finalize(
 
     await uow.reports.save(report)
 
+    await uow.score_history.save({
+        "time": datetime.now(UTC),
+        "repo_id": job["repo_id"],
+        "workspace_id": job["workspace_id"],
+        "overall_score": score.overall if score.overall is not None else 0,
+        "performance_score": score.performance,
+        "security_score": score.security,
+        "reliability_score": score.reliability,
+        "maintainability_score": score.maintainability,
+        "devops_score": score.devops,
+        "findings_count": len(findings),
+        "job_id": cmd.job_id,
+    })
+
     severity_counts = dict.fromkeys(Severity, 0)
     for f in findings:
         if f.severity in severity_counts:
@@ -413,6 +558,8 @@ async def handle_stage_finalize(
         cmd.job_id, JobStatus.COMPLETED, progress_pct=100,
         progress_message="Analysis complete",
         overall_score=score.overall,
+        blocked_by=score.blocked_by,
+        engine_statuses=score.engine_statuses,
         performance_score=score.performance,
         security_score=score.security,
         reliability_score=score.reliability,
@@ -434,6 +581,8 @@ async def handle_stage_finalize(
         overall_score=score.overall,
         findings_count=len(findings),
         duration_seconds=duration_seconds,
+        engine_statuses=score.engine_statuses,
+        blocked_by=score.blocked_by,
     ))
 
     logger.info(
@@ -548,6 +697,104 @@ async def handle_stage_errors(
     return error_results
 
 
+async def handle_stage_reliability(
+    cmd: ProcessStageCommand,
+    uow: UnitOfWork,
+    producer: EventProducer,
+    parsed_files: list[ParsedFile],
+) -> list[ReliabilityFinding]:
+    job = await uow.jobs.get_by_id(cmd.job_id)
+    if not job:
+        raise NotFoundError(f"Job {cmd.job_id} not found")
+
+    detector = ReliabilityDetector(parsed_files)
+    reliability_results = await detector.scan_all()
+
+    if reliability_results:
+        entries = [r.to_dict() for r in reliability_results]
+        for e in entries:
+            e["job_id"] = cmd.job_id
+            e["repo_id"] = job["repo_id"]
+            e["workspace_id"] = job["workspace_id"]
+        await uow.reliability_findings.save_many(entries)
+        logger.info(
+            "reliability_findings_saved", count=len(entries), job_id=str(cmd.job_id),
+        )
+
+    await uow.jobs.update_status(
+        cmd.job_id, "reliability", progress_pct=84,
+        progress_message=f"Found {len(reliability_results)} reliability issues",
+    )
+
+    return reliability_results
+
+
+async def handle_stage_maintainability(
+    cmd: ProcessStageCommand,
+    uow: UnitOfWork,
+    producer: EventProducer,
+    parsed_files: list[ParsedFile],
+) -> list[MaintainabilityFinding]:
+    job = await uow.jobs.get_by_id(cmd.job_id)
+    if not job:
+        raise NotFoundError(f"Job {cmd.job_id} not found")
+
+    detector = MaintainabilityDetector(parsed_files)
+    maintainability_results = await detector.scan_all()
+    metrics = detector.compute_metrics(maintainability_results)
+
+    if maintainability_results:
+        entries = [r.to_dict() for r in maintainability_results]
+        for e in entries:
+            e["job_id"] = cmd.job_id
+            e["repo_id"] = job["repo_id"]
+            e["workspace_id"] = job["workspace_id"]
+            e["metrics"] = metrics.to_dict()
+        await uow.maintainability_findings.save_many(entries)
+        logger.info(
+            "maintainability_findings_saved", count=len(entries), job_id=str(cmd.job_id),
+        )
+
+    await uow.jobs.update_status(
+        cmd.job_id, "maintainability", progress_pct=82,
+        progress_message=f"Found {len(maintainability_results)} maintainability issues",
+    )
+
+    return maintainability_results
+
+
+async def handle_stage_devops(
+    cmd: ProcessStageCommand,
+    uow: UnitOfWork,
+    producer: EventProducer,
+    parsed_files: list[ParsedFile],
+) -> list[DevOpsFinding]:
+    job = await uow.jobs.get_by_id(cmd.job_id)
+    if not job:
+        raise NotFoundError(f"Job {cmd.job_id} not found")
+
+    analyzer = DevopsAnalyzer(parsed_files)
+    devops_results = await analyzer.scan_all()
+
+    if devops_results:
+        entries = [r.to_dict() for r in devops_results]
+        for e in entries:
+            e["job_id"] = cmd.job_id
+            e["repo_id"] = job["repo_id"]
+            e["workspace_id"] = job["workspace_id"]
+        await uow.devops_findings.save_many(entries)
+        logger.info(
+            "devops_findings_saved", count=len(entries), job_id=str(cmd.job_id),
+        )
+
+    await uow.jobs.update_status(
+        cmd.job_id, "devops", progress_pct=86,
+        progress_message=f"Found {len(devops_results)} DevOps issues",
+    )
+
+    return devops_results
+
+
 async def handle_stage_perf(
     cmd: ProcessStageCommand,
     uow: UnitOfWork,
@@ -644,6 +891,9 @@ async def handle_stage_guide_gen(
     simulation_results: list[dict[str, object]] | None = None,
     dead_code_results: list[DeadCodeFinding] | None = None,
     error_results: list[ErrorFinding] | None = None,
+    reliability_results: list[ReliabilityFinding] | None = None,
+    devops_results: list[DevOpsFinding] | None = None,
+    maintainability_results: list[MaintainabilityFinding] | None = None,
 ) -> dict[str, object] | None:
     job = await uow.jobs.get_by_id(cmd.job_id)
     if not job:
@@ -664,6 +914,9 @@ async def handle_stage_guide_gen(
             simulation=sim_objects,
             dead_code=dead_code_results,
             errors=error_results,
+            reliability=reliability_results,
+            devops=devops_results,
+            maintainability=maintainability_results,
         )
 
         guide_dict = guide.to_dict()
@@ -702,9 +955,17 @@ async def list_findings(
         query.job_id,
         category=query.category,
         severity=query.severity,
+        include_dismissed=query.include_dismissed,
         limit=query.limit,
         offset=query.offset,
     )
+
+
+async def dismiss_findings(
+    command: DismissFindingsCommand,
+    uow: UnitOfWork,
+) -> int:
+    return await uow.findings.dismiss_many(command.finding_ids)
 
 
 async def get_findings_summary(

@@ -264,6 +264,67 @@ export interface EnterpriseGuide {
   generated_at: string | null;
 }
 
+// ─── Analysis Insights (Sidebar) ────────────────────────
+
+export interface AnalysisInsights {
+  aiSummary: AiSummaryCard;
+  priorityRecommendation: PriorityRecommendation;
+  repositoryOverview: RepositoryOverview;
+  engineStatus: EngineStatusItem[];
+  metadata: AnalysisMetadata;
+}
+
+export interface AiSummaryCard {
+  summary: string;
+  isAiGenerated: boolean;
+}
+
+export interface PriorityRecommendation {
+  title: string;
+  description: string;
+  impact: 'high' | 'medium' | 'low';
+  difficulty: 'high' | 'medium' | 'low';
+  estimatedTime: string;
+  findingId: string | null;
+  category: string;
+}
+
+export interface LanguageBar {
+  name: string;
+  percentage: number;
+  color: string;
+}
+
+export interface RepositoryOverview {
+  languages: LanguageBar[];
+  totalFiles: number;
+  totalLines: number;
+}
+
+export interface EngineStatusItem {
+  name: string;
+  key: string;
+  status: 'completed' | 'running' | 'failed' | 'skipped' | 'pending' | 'unavailable';
+  duration: string | null;
+  score: number | null;
+  error: string | null;
+}
+
+export interface AnalysisMetadata {
+  totalFiles: number;
+  totalLines: number;
+  classes: number;
+  functions: number;
+  endpoints: number;
+  languages: string[];
+  duration: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  branch: string;
+  repoUrl: string;
+  workspaceId: string;
+}
+
 // ─── Job Start Request ──────────────────────────────────
 
 export interface StartAnalysisRequest {

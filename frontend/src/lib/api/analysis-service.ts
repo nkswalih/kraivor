@@ -11,6 +11,7 @@ import type {
   ErrorFindingListResponse,
   PerformanceMetricListResponse,
   SimulationResultListResponse,
+  ScoreHistoryListResponse,
   EnterpriseGuide,
 } from '@/types/domain/analysis';
 
@@ -72,6 +73,13 @@ function analysisPost<T>(path: string, body: unknown): Promise<T> {
 }
 
 export const analysisService = {
+  scoreHistory: {
+    list(repoId: string, limit = 50): Promise<ScoreHistoryListResponse> {
+      return analysisGet<ScoreHistoryListResponse>(
+        `${API_ENDPOINTS.ANALYSIS.SCORE_HISTORY(repoId)}?limit=${limit}`
+      );
+    },
+  },
   files: {
     upload(workspaceId: string, file: File, repoUrl = '', branch = 'main'): Promise<AnalysisJob> {
       const formData = new FormData();
@@ -93,9 +101,11 @@ export const analysisService = {
     get(jobId: string): Promise<AnalysisJob> {
       return analysisGet<AnalysisJob>(API_ENDPOINTS.ANALYSIS.JOB_GET(jobId));
     },
-    list(page = 1, pageSize = 20): Promise<JobListResponse> {
+    list(page = 1, pageSize = 20, workspaceId?: string): Promise<JobListResponse> {
+      const q = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+      if (workspaceId) q.set('workspace_id', workspaceId);
       return analysisGet<JobListResponse>(
-        `${API_ENDPOINTS.ANALYSIS.JOBS_LIST}?page=${page}&page_size=${pageSize}`
+        `${API_ENDPOINTS.ANALYSIS.JOBS_LIST}?${q}`
       );
     },
   },
@@ -104,12 +114,14 @@ export const analysisService = {
       jobId: string;
       severity?: string;
       category?: string;
+      includeDismissed?: boolean;
       page?: number;
       pageSize?: number;
     }): Promise<FindingsListResponse> {
       const q = new URLSearchParams({ job_id: params.jobId });
       if (params.severity) q.set('severity', params.severity);
       if (params.category) q.set('category', params.category);
+      if (params.includeDismissed) q.set('include_dismissed', 'true');
       if (params.page) q.set('page', String(params.page));
       if (params.pageSize) q.set('page_size', String(params.pageSize));
       return analysisGet<FindingsListResponse>(
@@ -120,6 +132,15 @@ export const analysisService = {
       return analysisGet<FindingsSummary>(
         `${API_ENDPOINTS.ANALYSIS.FINDINGS_SUMMARY}?job_id=${jobId}`
       );
+    },
+    dismiss(
+      findingIds: string[],
+      dismissed = true,
+    ): Promise<{ dismissed: number; status: string }> {
+      return analysisPost(`${API_ENDPOINTS.ANALYSIS.FINDINGS_DISMISS}`, {
+        finding_ids: findingIds,
+        dismissed,
+      });
     },
   },
   reports: {
@@ -156,8 +177,8 @@ export const analysisService = {
     },
   },
   enterpriseGuide: {
-    get(jobId: string): Promise<EnterpriseGuide> {
-      return analysisGet<EnterpriseGuide>(
+    get(jobId: string): Promise<EnterpriseGuide | null> {
+      return analysisGet<EnterpriseGuide | null>(
         `${API_ENDPOINTS.ANALYSIS.ENTERPRISE_GUIDE}?job_id=${jobId}`
       );
     },

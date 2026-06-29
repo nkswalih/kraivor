@@ -86,10 +86,28 @@ export interface AnalysisJob {
   total_files: number | null;
   total_lines: number | null;
   overall_score: number | null;
+  blocked_by: string[];
+  engine_statuses: Record<string, string>;
   error_message: string | null;
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
+}
+
+export interface ScoreHistoryEntry {
+  time: string;
+  overall_score: number;
+  performance_score: number | null;
+  security_score: number | null;
+  reliability_score: number | null;
+  maintainability_score: number | null;
+  devops_score: number | null;
+  findings_count: number;
+}
+
+export interface ScoreHistoryListResponse {
+  entries: ScoreHistoryEntry[];
+  total: number;
 }
 
 export interface JobListResponse {
@@ -114,6 +132,7 @@ export interface Finding {
   file_path: string | null;
   line_start: number | null;
   line_end: number | null;
+  status: 'active' | 'dismissed';
   code_snippet: string;
   score_impact: number;
   rpm_impact: number;

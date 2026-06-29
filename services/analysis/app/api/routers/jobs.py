@@ -5,16 +5,17 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.api.dependencies.services import get_uow
+from app.api.dependencies.services import get_storage, get_uow
 from app.api.schemas.jobs import (
     JobListResponse,
     JobStatusResponse,
     StartAnalysisRequest,
 )
-from app.application.analysis.commands import StartAnalysisCommand
+from app.application.analysis.commands import DeleteJobCommand, StartAnalysisCommand
 from app.application.analysis.handler import (
     get_job_status,
     handle_analysis_failure,
+    handle_delete_job,
     handle_start_analysis,
     list_jobs,
 )
@@ -23,6 +24,7 @@ from app.application.tasks.pipeline import run_full_analysis
 from app.core.constants import TriggerType
 from app.core.logging import get_logger
 from app.dependencies.auth import JWTPayload, get_current_user
+from app.domain.contracts.storage import AbstractStorage
 from app.infrastructure.db.unit_of_work import UnitOfWork
 from app.infrastructure.messaging.producer import EventProducer
 
@@ -129,6 +131,21 @@ async def list_jobs_endpoint(
         page=page,
         page_size=page_size,
     )
+
+
+@router.delete("/{job_id}", status_code=204)
+async def delete_job(
+    job_id: UUID,
+    uow: UnitOfWork = Depends(get_uow),
+    storage: AbstractStorage = Depends(get_storage),
+    user: JWTPayload = Depends(get_current_user),
+) -> None:
+    cmd = DeleteJobCommand(
+        job_id=job_id,
+        workspace_id=UUID(user.workspace_ids[0]) if user.workspace_ids else UUID(int=0),
+    )
+    await handle_delete_job(cmd, uow, storage)
+    await uow.commit()
 
 
 def _job_to_response(job: dict[str, object]) -> JobStatusResponse:

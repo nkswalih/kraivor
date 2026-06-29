@@ -1,6 +1,8 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Loader2,
@@ -13,13 +15,26 @@ import {
   Clock,
   Files,
   List,
+  RotateCcw,
 } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/utils';
-import { useJob, useReport, useFindingsSummary, useCategoryCounts } from '@/lib/hooks/use-analysis';
+import {
+  useJob,
+  useReport,
+  useFindingsSummary,
+  useCategoryCounts,
+  useScoreHistory,
+  useStartAnalysis,
+} from '@/lib/hooks/use-analysis';
 import { JobStatusBadge } from '@/components/analysis/job-status-badge';
 import { ProgressBar } from '@/components/analysis/progress-bar';
 import { ScoreGauge } from '@/components/analysis/score-gauge';
+import { EngineStatusCard } from '@/components/analysis/engine-status-card';
+import { BlockedOverall } from '@/components/analysis/blocked-overall';
+import { ScoreHistoryChart } from '@/components/analysis/score-history-chart';
+
 function ScoreCard({
   label,
   score,
@@ -38,13 +53,58 @@ function ScoreCard({
 
 export default function JobDetailPage() {
   const params = useParams<{ workspace: string; jobId: string }>();
+  const router = useRouter();
   const workspaceSlug = params?.workspace ?? '';
   const jobId = params?.jobId ?? '';
+  const [reanalyzing, setReanalyzing] = useState(false);
 
   const { data: job, isLoading, error } = useJob(jobId);
   const { data: report } = useReport(jobId);
   const { data: summary } = useFindingsSummary(jobId);
   const { data: counts } = useCategoryCounts(jobId);
+  const { data: scoreHistory, isLoading: isScoreHistoryLoading, error: scoreHistoryError } = useScoreHistory(
+    job?.repo_id ?? null,
+  );
+  const startAnalysis = useStartAnalysis();
+  const queryClient = useQueryClient();
+  const prevStatusRef = useRef<string | undefined>(undefined);
+
+  const handleReanalyze = async () => {
+    if (!job || reanalyzing) return;
+    setReanalyzing(true);
+    try {
+      const newJob = await startAnalysis.mutateAsync({
+        repo_id: job.repo_id,
+        workspace_id: job.workspace_id,
+        repo_url: job.repo_url,
+        branch: job.branch,
+      });
+      toast.success('Reanalysis started');
+      router.push(`/${workspaceSlug}/analysis/jobs/${newJob.job_id}`);
+    } catch {
+      toast.error('Failed to start reanalysis');
+    } finally {
+      setReanalyzing(false);
+    }
+  };
+
+  useEffect(() => {
+    const currentStatus = job?.status;
+    const prevStatus = prevStatusRef.current;
+    prevStatusRef.current = currentStatus;
+
+    if (currentStatus === 'completed' && prevStatus !== 'completed') {
+      queryClient.invalidateQueries({ queryKey: ['analysis-report', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['analysis-findings-summary', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['analysis-findings', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['analysis-dead-code', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['analysis-error-findings', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['analysis-perf-metrics', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['analysis-simulation', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['analysis-guide', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['analysis-score-history', job?.repo_id] });
+    }
+  }, [job?.status, jobId, job?.repo_id, queryClient]);
 
   if (isLoading) {
     return (
@@ -72,6 +132,7 @@ export default function JobDetailPage() {
 
   const isRunning = !['completed', 'failed'].includes(job.status);
   const isComplete = job.status === 'completed';
+  const engineKeys = ['security', 'reliability', 'maintainability', 'devops', 'performance'];
 
   return (
     <div className="flex flex-col h-full animate-fade-up">
@@ -89,6 +150,15 @@ export default function JobDetailPage() {
             Analysis {job.job_id.slice(0, 8)}
           </h1>
           <JobStatusBadge status={job.status} />
+          <button
+            onClick={handleReanalyze}
+            disabled={reanalyzing}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-card text-[12px] text-text-secondary hover:text-foreground hover:border-venom-yellow/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Run analysis again on this repository"
+          >
+            <RotateCcw className={`w-3.5 h-3.5 ${reanalyzing ? 'animate-spin' : ''}`} />
+            {reanalyzing ? 'Reanalyzing...' : 'Reanalyze'}
+          </button>
         </div>
         <div className="flex items-center gap-4 text-[12px] text-text-tertiary">
           <span className="flex items-center gap-1">
@@ -104,6 +174,19 @@ export default function JobDetailPage() {
         {isRunning && (
           <div className="max-w-2xl mx-auto space-y-6">
             <ProgressBar pct={job.progress_pct} message={job.progress_message} className="mb-4" />
+            <div className="space-y-3">
+              <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider">Engine Status</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {engineKeys.map(k => (
+                  <EngineStatusCard
+                    key={k}
+                    engine={k}
+                    status={job.engine_statuses[k]}
+                    score={report?.[k === 'performance' ? 'performance_score' : `${k}_score` as keyof typeof report] as number | null | undefined}
+                  />
+                ))}
+              </div>
+            </div>
             <div className="flex items-center gap-2 text-text-tertiary text-[12px]">
               <Loader2 className="w-3.5 h-3.5 animate-spin text-venom-yellow" />
               Analysis in progress — this page updates automatically
@@ -112,17 +195,40 @@ export default function JobDetailPage() {
         )}
 
         {job.status === 'failed' && (
-          <div className="max-w-2xl mx-auto p-4 border border-red-500/30 bg-red-500/10 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[13px] font-medium text-red-400">Analysis Failed</p>
-              <p className="text-[12px] text-text-tertiary mt-1">{job.error_message || 'Unknown error'}</p>
+          <div className="max-w-2xl mx-auto space-y-4">
+            <div className="p-4 border border-red-500/30 bg-red-500/10 rounded-lg flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[13px] font-medium text-red-400">Analysis Failed</p>
+                <p className="text-[12px] text-text-tertiary mt-1">{job.error_message || 'Unknown error'}</p>
+              </div>
+            </div>
+            {job.blocked_by.length > 0 && (
+              <BlockedOverall blockedBy={job.blocked_by} />
+            )}
+            <div className="space-y-3">
+              <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider">Engine Status</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {engineKeys.map(k => (
+                  <EngineStatusCard
+                    key={k}
+                    engine={k}
+                    status={job.engine_statuses[k]}
+                    score={undefined}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         {isComplete && (
           <div className="space-y-8 max-w-4xl">
+            {/* Blocked Overall Banner */}
+            {job.blocked_by.length > 0 && (
+              <BlockedOverall blockedBy={job.blocked_by} />
+            )}
+
             {/* Overall Score */}
             <div className="flex flex-col items-center">
               <ScoreGauge
@@ -130,6 +236,25 @@ export default function JobDetailPage() {
                 size={160}
                 strokeWidth={12}
               />
+            </div>
+
+            {/* Engine Status Cards */}
+            <div className="space-y-3">
+              <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider">Engine Status</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+                {engineKeys.map(k => {
+                  const scoreKey = k === 'performance' ? 'performance_score' : `${k}_score` as keyof typeof report;
+                  const engineScore = report?.[scoreKey] as number | null | undefined;
+                  return (
+                    <EngineStatusCard
+                      key={k}
+                      engine={k}
+                      status={job.engine_statuses[k]}
+                      score={engineScore}
+                    />
+                  );
+                })}
+              </div>
             </div>
 
             {/* Category Scores */}
@@ -160,13 +285,20 @@ export default function JobDetailPage() {
                   <div className="bg-card border border-border rounded-lg p-4 text-center">
                     <Clock className="w-5 h-5 text-green-400 mx-auto mb-1" />
                     <p className="text-2xl font-semibold text-foreground">
-                      {report.duration_seconds ? `${report.duration_seconds}s` : '—'}
+                      {report.duration_seconds ? `${report.duration_seconds}s` : '\u2014'}
                     </p>
                     <p className="text-[11px] text-text-tertiary uppercase tracking-wider">Duration</p>
                   </div>
                 </>
               )}
             </div>
+
+            {/* Score History Chart */}
+            <ScoreHistoryChart
+              entries={scoreHistory?.entries ?? []}
+              isLoading={isScoreHistoryLoading}
+              error={scoreHistoryError as Error | null}
+            />
 
             {/* Findings Summary */}
             {summary && (
@@ -256,9 +388,8 @@ export default function JobDetailPage() {
               >
                 <Zap className="w-5 h-5 text-yellow-400 mb-2" />
                 <p className="text-[13px] font-medium text-foreground group-hover:text-venom-yellow transition-colors">Performance</p>
-                <p className="text-[11px] text-text-tertiary mt-1">{counts?.perf ?? 0} metric{(counts?.perf ?? 0) !== 1 ? 's' : ''}, {counts?.simulation ?? 0} simulation{(counts?.simulation ?? 0) !== 1 ? 's' : ''}</p>
+                <p className="text-[11px] text-text-tertiary mt-1">{counts?.perf ?? 0} metric{(counts?.perf ?? 0) !== 1 ? 's' : ''}</p>
               </Link>
-
               <Link
                 href={`/${workspaceSlug}/analysis/jobs/${jobId}/guide`}
                 className="p-4 rounded-lg border border-border bg-card hover:border-venom-yellow/30 hover:shadow-venom transition-all group"

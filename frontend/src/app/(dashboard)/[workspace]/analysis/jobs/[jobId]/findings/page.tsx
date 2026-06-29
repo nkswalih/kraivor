@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Search, Loader2, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ArrowLeft, Eye, EyeOff, Search, Loader2, AlertCircle } from 'lucide-react';
 import { useFindings } from '@/lib/hooks/use-analysis';
+import { useQueryClient } from '@tanstack/react-query';
 import { FindingsTable } from '@/components/analysis/findings-table';
 import { Severity } from '@/types/domain/analysis';
 import type { Finding } from '@/types/domain/analysis';
@@ -19,15 +21,19 @@ export default function FindingsPage() {
 
   const [severity, setSeverity] = useState('');
   const [category, setCategory] = useState('');
+  const [includeDismissed, setIncludeDismissed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
 
   const { data, isLoading, error } = useFindings(jobId, {
     severity: severity || undefined,
     category: category || undefined,
+    includeDismissed,
     page,
     pageSize: 50,
   });
+
+  const queryClient = useQueryClient();
 
   const findings = (data?.findings ?? []) as Finding[];
   const total = data?.total ?? 0;
@@ -40,6 +46,10 @@ export default function FindingsPage() {
           f.file_path?.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : findings;
+
+  const handleDismiss = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['analysis-findings'] });
+  }, [queryClient]);
 
   return (
     <div className="flex flex-col h-full animate-fade-up">
@@ -89,6 +99,19 @@ export default function FindingsPage() {
             ))}
           </select>
 
+          <button
+            onClick={() => setIncludeDismissed(!includeDismissed)}
+            className={cn(
+              'flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] rounded-md border transition-colors',
+              includeDismissed
+                ? 'border-primary text-primary bg-primary/10'
+                : 'border-border text-muted-foreground bg-card hover:text-foreground'
+            )}
+          >
+            {includeDismissed ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+            {includeDismissed ? 'Showing dismissed' : 'Dismissed hidden'}
+          </button>
+
           {isLoading && <Loader2 className="w-4 h-4 text-venom-yellow animate-spin" />}
         </div>
       </div>
@@ -108,7 +131,7 @@ export default function FindingsPage() {
           </div>
         ) : (
           <>
-            <FindingsTable findings={filtered} />
+            <FindingsTable findings={filtered} onDismiss={handleDismiss} />
             {total > 50 && (
               <div className="flex items-center justify-between mt-4">
                 <span className="text-[12px] text-muted-foreground">{total} total findings</span>

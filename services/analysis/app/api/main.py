@@ -15,14 +15,18 @@ from app.api.middleware.logging import RequestLoggingMiddleware
 from app.api.middleware.request_id import RequestIDMiddleware
 from app.api.routers import (
     dead_code_router,
+    devops_findings_router,
     enterprise_guide_router,
     error_findings_router,
     files_router,
     findings_router,
     health_router,
     jobs_router,
+    maintainability_findings_router,
     performance_metrics_router,
+    reliability_findings_router,
     reports_router,
+    score_history_router,
     simulation_results_router,
 )
 from app.core.config import get_settings
@@ -104,8 +108,12 @@ def create_app() -> FastAPI:
     app.include_router(findings_router)
     app.include_router(reports_router)
     app.include_router(dead_code_router)
+    app.include_router(devops_findings_router)
     app.include_router(error_findings_router)
+    app.include_router(reliability_findings_router)
+    app.include_router(maintainability_findings_router)
     app.include_router(performance_metrics_router)
+    app.include_router(score_history_router)
     app.include_router(simulation_results_router)
     app.include_router(enterprise_guide_router)
 

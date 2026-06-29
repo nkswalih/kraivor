@@ -68,11 +68,11 @@ class ReportRepository(AbstractReportRepository):
         if job.overall_score is not None:
             score = Score(
                 overall=job.overall_score,
-                performance=job.performance_score or 100,
-                security=job.security_score or 100,
-                reliability=job.reliability_score or 100,
-                maintainability=job.maintainability_score or 100,
-                devops=job.devops_score or 100,
+                performance=job.performance_score,
+                security=job.security_score,
+                reliability=job.reliability_score,
+                maintainability=job.maintainability_score,
+                devops=job.devops_score,
                 findings_count=job.total_findings,
                 critical_count=job.critical_count,
                 high_count=job.high_count,
@@ -87,11 +87,11 @@ class ReportRepository(AbstractReportRepository):
         if job.overall_score is not None:
             score = Score(
                 overall=job.overall_score,
-                performance=job.performance_score or 100,
-                security=job.security_score or 100,
-                reliability=job.reliability_score or 100,
-                maintainability=job.maintainability_score or 100,
-                devops=job.devops_score or 100,
+                performance=job.performance_score,
+                security=job.security_score,
+                reliability=job.reliability_score,
+                maintainability=job.maintainability_score,
+                devops=job.devops_score,
                 findings_count=job.total_findings,
                 critical_count=job.critical_count,
                 high_count=job.high_count,

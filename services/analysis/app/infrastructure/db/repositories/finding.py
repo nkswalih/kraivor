@@ -1,8 +1,9 @@
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.constants import FindingStatus
 from app.domain.contracts.repository_provider import AbstractFindingRepository
 from app.domain.entities.finding import Finding
 from app.infrastructure.db.models.finding import FindingModel
@@ -25,6 +26,7 @@ class FindingRepository(AbstractFindingRepository):
         job_id: UUID,
         category: str | None = None,
         severity: str | None = None,
+        include_dismissed: bool = False,
         limit: int = 100,
         offset: int = 0,
     ) -> tuple[list[Finding], int]:
@@ -33,6 +35,9 @@ class FindingRepository(AbstractFindingRepository):
             FindingModel.job_id == job_id
         )
 
+        if not include_dismissed:
+            stmt = stmt.where(FindingModel.status == FindingStatus.ACTIVE)
+            count_stmt = count_stmt.where(FindingModel.status == FindingStatus.ACTIVE)
         if category:
             stmt = stmt.where(FindingModel.category == category)
             count_stmt = count_stmt.where(FindingModel.category == category)
@@ -57,6 +62,7 @@ class FindingRepository(AbstractFindingRepository):
         repo_id: UUID,
         category: str | None = None,
         severity: str | None = None,
+        include_dismissed: bool = False,
         limit: int = 100,
         offset: int = 0,
     ) -> tuple[list[Finding], int]:
@@ -65,6 +71,9 @@ class FindingRepository(AbstractFindingRepository):
             FindingModel.repo_id == repo_id
         )
 
+        if not include_dismissed:
+            stmt = stmt.where(FindingModel.status == FindingStatus.ACTIVE)
+            count_stmt = count_stmt.where(FindingModel.status == FindingStatus.ACTIVE)
         if category:
             stmt = stmt.where(FindingModel.category == category)
             count_stmt = count_stmt.where(FindingModel.category == category)
@@ -81,10 +90,28 @@ class FindingRepository(AbstractFindingRepository):
         findings = [self._to_domain(m) for m in result.scalars().all()]
         return findings, total
 
+    async def dismiss(self, finding_id: UUID) -> None:
+        stmt = (
+            update(FindingModel)
+            .where(FindingModel.id == finding_id)
+            .values(status=FindingStatus.DISMISSED)
+        )
+        await self._session.execute(stmt)
+
+    async def dismiss_many(self, finding_ids: list[UUID]) -> int:
+        stmt = (
+            update(FindingModel)
+            .where(FindingModel.id.in_(finding_ids))  # type: ignore[attr-defined]
+            .values(status=FindingStatus.DISMISSED)
+        )
+        result = await self._session.execute(stmt)
+        return result.rowcount  # type: ignore[return-value]
+
     async def count_by_severity(self, job_id: UUID) -> dict[str, int]:
         stmt = (
             select(FindingModel.severity, func.count())
             .where(FindingModel.job_id == job_id)
+            .where(FindingModel.status == FindingStatus.ACTIVE)
             .group_by(FindingModel.severity)
         )
         result = await self._session.execute(stmt)
@@ -94,6 +121,7 @@ class FindingRepository(AbstractFindingRepository):
         stmt = (
             select(FindingModel.category, func.count())
             .where(FindingModel.job_id == job_id)
+            .where(FindingModel.status == FindingStatus.ACTIVE)
             .group_by(FindingModel.category)
         )
         result = await self._session.execute(stmt)
@@ -108,6 +136,7 @@ class FindingRepository(AbstractFindingRepository):
             workspace_id=finding.workspace_id,
             category=str(finding.category),
             severity=str(finding.severity),
+            status=str(finding.status),
             rule_id=finding.rule_id,
             title=finding.title,
             description=finding.description,
@@ -127,7 +156,7 @@ class FindingRepository(AbstractFindingRepository):
 
     @staticmethod
     def _to_domain(model: FindingModel) -> Finding:
-        from app.core.constants import Category, Severity
+        from app.core.constants import Category, FindingStatus, Severity
 
         return Finding(
             id=model.id,
@@ -137,6 +166,7 @@ class FindingRepository(AbstractFindingRepository):
             rule_id=model.rule_id or "",
             category=Category(model.category),
             severity=Severity(model.severity),
+            status=FindingStatus(model.status) if model.status else FindingStatus.ACTIVE,
             title=model.title,
             description=model.description or "",
             recommendation=model.recommendation or "",

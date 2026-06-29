@@ -44,6 +44,7 @@ class FindingModel(Base):
     rpm_impact: Mapped[int | None] = mapped_column(Integer, nullable=True)
     breaks_at_users: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active", index=True)
     is_ai_enriched: Mapped[bool] = mapped_column(Boolean, default=False)
     ai_explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
 

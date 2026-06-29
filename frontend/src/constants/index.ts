@@ -71,6 +71,7 @@ export const API_ENDPOINTS = {
   ANALYSIS: {
     JOBS_LIST: '/api/v1/jobs',
     JOB_GET: (id: string) => `/api/v1/jobs/${id}`,
+    JOB_DELETE: (id: string) => `/api/v1/jobs/${id}`,
     JOB_START: '/api/v1/jobs',
     FINDINGS: '/api/v1/findings',
     FINDINGS_SUMMARY: '/api/v1/findings/summary',

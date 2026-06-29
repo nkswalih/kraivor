@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { Activity, Plus, GitBranch, Clock, Search, Filter, Loader2, AlertCircle } from 'lucide-react';
-import { useJobsList } from '@/lib/hooks/use-analysis';
+import { useParams, useRouter } from 'next/navigation';
+import { Activity, Plus, GitBranch, Clock, Search, Filter, Loader2, AlertCircle, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useJobsList, useDeleteJob } from '@/lib/hooks/use-analysis';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { JobStatusBadge } from '@/components/analysis/job-status-badge';
 import { ProgressBar } from '@/components/analysis/progress-bar';
@@ -14,10 +15,29 @@ import type { AnalysisJob } from '@/types/domain/analysis';
 
 function JobRow({ job, workspaceSlug }: { job: AnalysisJob; workspaceSlug: string }) {
   const isRunning = !['completed', 'failed'].includes(job.status);
+  const deleteJob = useDeleteJob();
+  const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await deleteJob.mutateAsync(job.job_id);
+      toast.success('Analysis deleted');
+    } catch {
+      toast.error('Failed to delete analysis');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <Link
       href={`/${workspaceSlug}/analysis/jobs/${job.job_id}`}
-      className="grid grid-cols-[100px_1.5fr_1fr_1fr_1fr_100px] gap-4 p-3 items-center hover:bg-white/[0.02] transition-colors text-[13px] group border-b border-border last:border-0"
+      className="grid grid-cols-[100px_1.5fr_1fr_1fr_1fr_80px_32px] gap-4 p-3 items-center hover:bg-white/[0.02] transition-colors text-[13px] group border-b border-border last:border-0"
     >
       <JobStatusBadge status={job.status} className="justify-self-start" />
       <div className="flex items-center gap-2 min-w-0">
@@ -41,6 +61,14 @@ function JobRow({ job, workspaceSlug }: { job: AnalysisJob; workspaceSlug: strin
         <Clock className="w-3 h-3" />
         {formatRelativeTime(job.created_at)}
       </div>
+      <button
+        onClick={handleDelete}
+        disabled={deleting}
+        className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-30"
+        title="Permanently delete this analysis"
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
     </Link>
   );
 }
@@ -151,13 +179,14 @@ export default function AnalysisPage() {
         ) : (
           <>
             <div className="border border-border rounded-lg overflow-hidden">
-              <div className="grid grid-cols-[100px_1.5fr_1fr_1fr_1fr_100px] gap-4 p-3 border-b border-border bg-background/50 text-[12px] font-medium text-muted-foreground">
+              <div className="grid grid-cols-[100px_1.5fr_1fr_1fr_1fr_80px_32px] gap-4 p-3 border-b border-border bg-background/50 text-[12px] font-medium text-muted-foreground">
                 <div>Status</div>
                 <div>Repository</div>
                 <div>Branch</div>
                 <div>Score</div>
                 <div>Findings</div>
                 <div>Date</div>
+                <div />
               </div>
               <div className="divide-y divide-border">
                 {jobs.map((job: AnalysisJob) => (

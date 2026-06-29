@@ -50,10 +50,15 @@ class AbstractFindingRepository(ABC):
         job_id: UUID,
         category: str | None = None,
         severity: str | None = None,
+        include_dismissed: bool = False,
         limit: int = 100,
         offset: int = 0,
     ) -> tuple[list[Finding], int]:
-        """Get findings for a job with optional filters. Returns (findings, total_count)."""
+        """Get findings for a job with optional filters. Returns (findings, total_count).
+
+        When ``include_dismissed`` is ``False`` (default) only ``ACTIVE`` findings are
+        returned. Pass ``True`` to include dismissed findings as well.
+        """
         ...
 
     @abstractmethod
@@ -62,10 +67,21 @@ class AbstractFindingRepository(ABC):
         repo_id: UUID,
         category: str | None = None,
         severity: str | None = None,
+        include_dismissed: bool = False,
         limit: int = 100,
         offset: int = 0,
     ) -> tuple[list[Finding], int]:
         """Get findings for a repo with optional filters."""
+        ...
+
+    @abstractmethod
+    async def dismiss(self, finding_id: UUID) -> None:
+        """Mark a single finding as dismissed."""
+        ...
+
+    @abstractmethod
+    async def dismiss_many(self, finding_ids: list[UUID]) -> int:
+        """Mark findings as dismissed in batch. Returns count updated."""
         ...
 
     @abstractmethod

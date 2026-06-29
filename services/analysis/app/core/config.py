@@ -6,7 +6,6 @@ from pydantic import (
     BaseModel,
     Field,
     SecretStr,
-    model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -66,29 +65,6 @@ class AnalysisSettings(BaseModel):
     ephemeral_path: str = "/tmp/analysis"
 
 
-class ScoringSettings(BaseModel):
-    performance_weight: float = Field(default=0.25, ge=0, le=1)
-    security_weight: float = Field(default=0.25, ge=0, le=1)
-    reliability_weight: float = Field(default=0.20, ge=0, le=1)
-    maintainability_weight: float = Field(default=0.15, ge=0, le=1)
-    devops_weight: float = Field(default=0.15, ge=0, le=1)
-
-    @model_validator(mode="after")
-    def _weights_must_sum_to_one(self) -> "ScoringSettings":
-        total = (
-            self.performance_weight
-            + self.security_weight
-            + self.reliability_weight
-            + self.maintainability_weight
-            + self.devops_weight
-        )
-        if abs(total - 1.0) > 0.001:
-            raise ValueError(
-                f"Scoring weights must sum to 1.0, got {total:.4f}"
-            )
-        return self
-
-
 class RPMSettings(BaseModel):
     base_per_endpoint: int = Field(default=2000, ge=0)
     n_plus_one_deduction: int = Field(default=400, ge=0)
@@ -140,7 +116,6 @@ class Settings(BaseSettings):
     jwt: JWTSettings = JWTSettings()
     git: GitSettings = GitSettings()
     analysis: AnalysisSettings = AnalysisSettings()
-    scoring: ScoringSettings = ScoringSettings()
     rpm: RPMSettings = RPMSettings()
     kafka: KafkaSettings = KafkaSettings()
     otel: OTelSettings = OTelSettings()

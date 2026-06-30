@@ -13,8 +13,6 @@ import {
   FileText,
   Activity,
   Clock,
-  Files,
-  List,
   RotateCcw,
   Trash2,
   PanelRightOpen,
@@ -34,27 +32,14 @@ import {
 } from '@/lib/hooks/use-analysis';
 import { JobStatusBadge } from '@/components/analysis/job-status-badge';
 import { ProgressBar } from '@/components/analysis/progress-bar';
-import { ScoreGauge } from '@/components/analysis/score-gauge';
-import { EngineStatusCard } from '@/components/analysis/engine-status-card';
 import { BlockedOverall } from '@/components/analysis/blocked-overall';
 import { ScoreHistoryChart } from '@/components/analysis/score-history-chart';
 import { AnalysisInsightsSidebar } from '@/components/analysis/sidebar/AnalysisInsightsSidebar';
-
-function ScoreCard({
-  label,
-  score,
-}: {
-  label: string;
-  score: number | null | undefined;
-}) {
-  if (score == null) return null;
-  return (
-    <div className="bg-card border border-border rounded-lg p-3 flex flex-col items-center gap-1">
-      <ScoreGauge score={score} size={80} strokeWidth={6} />
-      <span className="text-[11px] text-text-tertiary uppercase tracking-wider mt-1">{label}</span>
-    </div>
-  );
-}
+import { HeroCard } from '@/components/analysis/hero-card';
+import { EngineCard } from '@/components/analysis/engine-card';
+import { MetricCard } from '@/components/analysis/metric-card';
+import { ChartCard } from '@/components/analysis/chart-card';
+import { AnalysisModuleCard } from '@/components/analysis/analysis-module-card';
 
 export default function JobDetailPage() {
   const params = useParams<{ workspace: string; jobId: string }>();
@@ -181,7 +166,6 @@ export default function JobDetailPage() {
             </h1>
             <JobStatusBadge status={job.status} />
             <div className="ml-auto flex items-center gap-2">
-              {/* Mobile sidebar toggle */}
               <button
                 onClick={() => setSidebarOpen(true)}
                 className="lg:hidden p-1.5 rounded-md border border-border bg-card text-muted-foreground hover:text-foreground transition-colors"
@@ -225,9 +209,9 @@ export default function JobDetailPage() {
               <ProgressBar pct={job.progress_pct} message={job.progress_message} className="mb-4" />
               <div className="space-y-3">
                 <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider">Engine Status</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {engineKeys.map(k => (
-                    <EngineStatusCard
+                    <EngineCard
                       key={k}
                       engine={k}
                       status={job.engine_statuses[k]}
@@ -257,9 +241,9 @@ export default function JobDetailPage() {
               )}
               <div className="space-y-3">
                 <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider">Engine Status</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {engineKeys.map(k => (
-                    <EngineStatusCard
+                    <EngineCard
                       key={k}
                       engine={k}
                       status={job.engine_statuses[k]}
@@ -278,24 +262,23 @@ export default function JobDetailPage() {
                 <BlockedOverall blockedBy={job.blocked_by} />
               )}
 
-              {/* Overall Score */}
-              <div className="flex flex-col items-center">
-                <ScoreGauge
-                  score={report?.overall_score ?? job.overall_score ?? 0}
-                  size={160}
-                  strokeWidth={12}
-                />
-              </div>
+              {/* Hero Card */}
+              <HeroCard
+                overallScore={report?.overall_score ?? job.overall_score ?? 0}
+                report={report}
+                scoreHistory={scoreHistory?.entries}
+                job={job}
+              />
 
               {/* Engine Status Cards */}
               <div className="space-y-3">
                 <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider">Engine Status</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                   {engineKeys.map(k => {
                     const scoreKey = k === 'performance' ? 'performance_score' : `${k}_score` as keyof typeof report;
                     const engineScore = report?.[scoreKey] as number | null | undefined;
                     return (
-                      <EngineStatusCard
+                      <EngineCard
                         key={k}
                         engine={k}
                         status={job.engine_statuses[k]}
@@ -309,38 +292,22 @@ export default function JobDetailPage() {
               {/* Category Scores */}
               {report && (
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  <ScoreCard label="Performance" score={report.performance_score} />
-                  <ScoreCard label="Security" score={report.security_score} />
-                  <ScoreCard label="Reliability" score={report.reliability_score} />
-                  <ScoreCard label="Maintainability" score={report.maintainability_score} />
-                  <ScoreCard label="DevOps" score={report.devops_score} />
+                  <MetricCard icon={Zap} value={report.performance_score ?? '\u2014'} label="Performance" />
+                  <MetricCard icon={AlertTriangle} value={report.security_score ?? '\u2014'} label="Security" />
+                  <MetricCard icon={Activity} value={report.reliability_score ?? '\u2014'} label="Reliability" />
+                  <MetricCard icon={FileText} value={report.maintainability_score ?? '\u2014'} label="Maintainability" />
+                  <MetricCard icon={Bug} value={report.devops_score ?? '\u2014'} label="DevOps" />
                 </div>
               )}
 
               {/* Stats Row */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {report && (
-                  <>
-                    <div className="bg-card border border-border rounded-lg p-4 text-center">
-                      <Files className="w-5 h-5 text-blue-400 mx-auto mb-1" />
-                      <p className="text-2xl font-semibold text-foreground">{report.total_files}</p>
-                      <p className="text-[11px] text-text-tertiary uppercase tracking-wider">Files</p>
-                    </div>
-                    <div className="bg-card border border-border rounded-lg p-4 text-center">
-                      <List className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
-                      <p className="text-2xl font-semibold text-foreground">{report.total_findings}</p>
-                      <p className="text-[11px] text-text-tertiary uppercase tracking-wider">Findings</p>
-                    </div>
-                    <div className="bg-card border border-border rounded-lg p-4 text-center">
-                      <Clock className="w-5 h-5 text-green-400 mx-auto mb-1" />
-                      <p className="text-2xl font-semibold text-foreground">
-                        {report.duration_seconds ? `${report.duration_seconds}s` : '\u2014'}
-                      </p>
-                      <p className="text-[11px] text-text-tertiary uppercase tracking-wider">Duration</p>
-                    </div>
-                  </>
-                )}
-              </div>
+              {report && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <MetricCard icon={FileText} value={report.total_files} label="Files" />
+                  <MetricCard icon={AlertCircle} value={report.total_findings} label="Findings" />
+                  <MetricCard icon={Clock} value={report.duration_seconds ? `${report.duration_seconds}s` : '\u2014'} label="Duration" />
+                </div>
+              )}
 
               {/* Score History Chart */}
               <ScoreHistoryChart
@@ -351,8 +318,7 @@ export default function JobDetailPage() {
 
               {/* Findings Summary */}
               {summary && (
-                <div className="bg-card border border-border rounded-lg p-4">
-                  <h3 className="text-[13px] font-medium text-foreground mb-3">Findings Summary</h3>
+                <ChartCard title="Findings Summary" icon={AlertCircle}>
                   {summary.total > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4 text-[12px]">
                       {Object.entries(summary.by_category).map(([cat, cnt]) =>
@@ -402,51 +368,45 @@ export default function JobDetailPage() {
                     <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500" /> Medium {summary.by_severity.medium}</span>
                     <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> Low {summary.by_severity.low}</span>
                   </div>
-                </div>
+                </ChartCard>
               )}
 
               {/* Navigation Cards */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <Link
+                <AnalysisModuleCard
                   href={`/${workspaceSlug}/analysis/jobs/${jobId}/findings`}
-                  className="p-4 rounded-lg border border-border bg-card hover:border-venom-yellow/30 hover:shadow-venom transition-all group"
-                >
-                  <Activity className="w-5 h-5 text-yellow-400 mb-2" />
-                  <p className="text-[13px] font-medium text-foreground group-hover:text-venom-yellow transition-colors">Findings</p>
-                  <p className="text-[11px] text-text-tertiary mt-1">{counts?.findings ?? 0} issue{counts?.findings !== 1 ? 's' : ''} detected</p>
-                </Link>
-                <Link
+                  icon={Activity}
+                  label="Findings"
+                  count={counts?.findings ?? 0}
+                  countLabel={counts?.findings !== 1 ? 'issues' : 'issue'}
+                />
+                <AnalysisModuleCard
                   href={`/${workspaceSlug}/analysis/jobs/${jobId}/dead-code`}
-                  className="p-4 rounded-lg border border-border bg-card hover:border-venom-yellow/30 hover:shadow-venom transition-all group"
-                >
-                  <Bug className="w-5 h-5 text-orange-400 mb-2" />
-                  <p className="text-[13px] font-medium text-foreground group-hover:text-venom-yellow transition-colors">Dead Code</p>
-                  <p className="text-[11px] text-text-tertiary mt-1">{counts?.deadCode ?? 0} dead code entr{counts?.deadCode === 1 ? 'y' : 'ies'}</p>
-                </Link>
-                <Link
+                  icon={Bug}
+                  label="Dead Code"
+                  count={counts?.deadCode ?? 0}
+                  countLabel={counts?.deadCode === 1 ? 'entry' : 'entries'}
+                />
+                <AnalysisModuleCard
                   href={`/${workspaceSlug}/analysis/jobs/${jobId}/errors`}
-                  className="p-4 rounded-lg border border-border bg-card hover:border-venom-yellow/30 hover:shadow-venom transition-all group"
-                >
-                  <AlertTriangle className="w-5 h-5 text-red-400 mb-2" />
-                  <p className="text-[13px] font-medium text-foreground group-hover:text-venom-yellow transition-colors">Error Patterns</p>
-                  <p className="text-[11px] text-text-tertiary mt-1">{counts?.errors ?? 0} error pattern{counts?.errors !== 1 ? 's' : ''}</p>
-                </Link>
-                <Link
+                  icon={AlertTriangle}
+                  label="Error Patterns"
+                  count={counts?.errors ?? 0}
+                  countLabel={counts?.errors !== 1 ? 'patterns' : 'pattern'}
+                />
+                <AnalysisModuleCard
                   href={`/${workspaceSlug}/analysis/jobs/${jobId}/performance`}
-                  className="p-4 rounded-lg border border-border bg-card hover:border-venom-yellow/30 hover:shadow-venom transition-all group"
-                >
-                  <Zap className="w-5 h-5 text-yellow-400 mb-2" />
-                  <p className="text-[13px] font-medium text-foreground group-hover:text-venom-yellow transition-colors">Performance</p>
-                  <p className="text-[11px] text-text-tertiary mt-1">{counts?.perf ?? 0} metric{(counts?.perf ?? 0) !== 1 ? 's' : ''}</p>
-                </Link>
-                <Link
+                  icon={Zap}
+                  label="Performance"
+                  count={counts?.perf ?? 0}
+                  countLabel={counts?.perf !== 1 ? 'metrics' : 'metric'}
+                />
+                <AnalysisModuleCard
                   href={`/${workspaceSlug}/analysis/jobs/${jobId}/guide`}
-                  className="p-4 rounded-lg border border-border bg-card hover:border-venom-yellow/30 hover:shadow-venom transition-all group"
-                >
-                  <FileText className="w-5 h-5 text-blue-400 mb-2" />
-                  <p className="text-[13px] font-medium text-foreground group-hover:text-venom-yellow transition-colors">Enterprise Guide</p>
-                  <p className="text-[11px] text-text-tertiary mt-1">{counts?.hasGuide ? 'Available' : 'Not generated'}</p>
-                </Link>
+                  icon={FileText}
+                  label="Enterprise Guide"
+                  count={counts?.hasGuide ? 'Available' : 'Not generated'}
+                />
               </div>
             </div>
           )}

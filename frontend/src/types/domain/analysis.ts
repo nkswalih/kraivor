@@ -168,9 +168,20 @@ export interface Report {
   devops_score: number | null;
   total_findings: number;
   total_files: number;
+  total_lines_of_code: number;
+  languages_detected: string[];
   duration_seconds: number | null;
   completed_at: string | null;
   report_url: string | null;
+}
+
+export interface AnalysisMetadataResponse {
+  job_id: string;
+  class_count: number;
+  function_count: number;
+  endpoint_count: number;
+  languages: string[];
+  frameworks: string[];
 }
 
 // ─── Dead Code ──────────────────────────────────────────

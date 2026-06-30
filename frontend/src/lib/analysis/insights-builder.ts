@@ -1,6 +1,7 @@
 import type {
   AnalysisInsights,
   AnalysisJob,
+  AnalysisMetadataResponse,
   Report,
   FindingsSummary,
   Finding,
@@ -19,7 +20,6 @@ const ENGINE_LABELS: Record<string, string> = {
   simulation: 'Simulation',
 };
 
-// TODO: Replace language detection with real data from API or AI service
 const FALLBACK_LANGUAGES = [
   { name: 'Python', percentage: 60, color: '#3572A5' },
   { name: 'TypeScript', percentage: 20, color: '#3178C6' },
@@ -51,6 +51,7 @@ export function analysisInsightsBuilder(
   report: Report | null | undefined,
   findingsSummary: FindingsSummary | null | undefined,
   findings: Finding[] | null | undefined,
+  analysisMetadata?: AnalysisMetadataResponse | null | undefined,
 ): AnalysisInsights {
   const performanceScore = report?.performance_score ?? job?.overall_score;
   const securityScore = report?.security_score;
@@ -94,18 +95,27 @@ export function analysisInsightsBuilder(
     },
     priorityRecommendation,
     repositoryOverview: {
-      languages: FALLBACK_LANGUAGES,
+      languages: report?.languages_detected?.length
+        ? report.languages_detected.map((name) => ({
+            name,
+            percentage: 0,
+            color: '#6366f1',
+          }))
+        : FALLBACK_LANGUAGES,
       totalFiles: report?.total_files ?? job?.total_files ?? 0,
-      totalLines: job?.total_lines ?? 0,
+      totalLines: report?.total_lines_of_code ?? job?.total_lines ?? 0,
     },
     engineStatus,
     metadata: {
       totalFiles: report?.total_files ?? job?.total_files ?? 0,
-      totalLines: job?.total_lines ?? 0,
-      classes: 0, // TODO: populate from parsed file metadata
-      functions: 0, // TODO: populate from parsed file metadata
-      endpoints: 0, // TODO: populate from parsed file metadata
-      languages: [], // TODO: populate from detected languages
+      totalLines: report?.total_lines_of_code ?? job?.total_lines ?? 0,
+      classes: analysisMetadata?.class_count ?? 0,
+      functions: analysisMetadata?.function_count ?? 0,
+      endpoints: analysisMetadata?.endpoint_count ?? 0,
+      languages:
+        report?.languages_detected?.length
+          ? report.languages_detected
+          : analysisMetadata?.languages ?? [],
       duration: parseDuration(report?.duration_seconds),
       startedAt: job?.started_at ?? null,
       completedAt: job?.completed_at ?? null,

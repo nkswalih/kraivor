@@ -87,6 +87,12 @@ class OTelSettings(BaseModel):
     traces_sample_rate: float = Field(default=1.0, ge=0, le=1)
 
 
+class AiServiceSettings(BaseModel):
+    url: str = "http://ai:8004"
+    enrich_endpoint: str = "/v1/analysis/enrich"
+    timeout: int = Field(default=120, ge=1)
+
+
 class MonitoringSettings(BaseModel):
     enabled: bool = True
     port: int = Field(default=8003, ge=1024, le=65535)
@@ -119,6 +125,7 @@ class Settings(BaseSettings):
     rpm: RPMSettings = RPMSettings()
     kafka: KafkaSettings = KafkaSettings()
     otel: OTelSettings = OTelSettings()
+    ai: AiServiceSettings = AiServiceSettings()
     monitoring: MonitoringSettings = MonitoringSettings()
     logging: LoggingSettings = LoggingSettings()
 

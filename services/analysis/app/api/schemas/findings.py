@@ -21,6 +21,7 @@ class FindingResponse(BaseModel):
     score_impact: float = 0.0
     rpm_impact: int = 0
     is_ai_enriched: bool = False
+    ai_explanation: str = ""
 
 
 class FindingsListResponse(BaseModel):

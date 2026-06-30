@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { analysisService } from '@/lib/api/analysis-service';
 import type {
   AnalysisJob,
+  AnalysisMetadataResponse,
   JobListResponse,
   StartAnalysisRequest,
   FindingsSummary,
@@ -129,6 +130,17 @@ export function useReport(jobId: string | null) {
     queryKey: ['analysis-report', jobId],
     queryFn: () => analysisService.reports.byJob(jobId!),
     enabled: !!jobId,
+  });
+}
+
+// ─── Analysis Metadata ─────────────────────────────────
+
+export function useAnalysisMetadata(jobId: string | null) {
+  return useQuery<AnalysisMetadataResponse>({
+    queryKey: ['analysis-metadata', jobId],
+    queryFn: () => analysisService.reports.metadata(jobId!),
+    enabled: !!jobId,
+    retry: false,
   });
 }
 

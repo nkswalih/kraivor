@@ -2,6 +2,7 @@ import { API_ENDPOINTS } from '@/constants';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import type {
   AnalysisJob,
+  AnalysisMetadataResponse,
   JobListResponse,
   StartAnalysisRequest,
   FindingsListResponse,
@@ -153,6 +154,11 @@ export const analysisService = {
   reports: {
     byJob(jobId: string): Promise<Report> {
       return analysisGet<Report>(API_ENDPOINTS.ANALYSIS.REPORT_BY_JOB(jobId));
+    },
+    metadata(jobId: string): Promise<AnalysisMetadataResponse> {
+      return analysisGet<AnalysisMetadataResponse>(
+        API_ENDPOINTS.ANALYSIS.REPORT_METADATA_BY_JOB(jobId),
+      );
     },
   },
   deadCode: {

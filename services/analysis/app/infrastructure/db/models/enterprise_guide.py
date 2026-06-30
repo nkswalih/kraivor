@@ -31,6 +31,7 @@ class EnterpriseGuideModel(Base):
     architecture_review: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     capacity_analysis: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
     migration_path: Mapped[list[object] | None] = mapped_column(JSONB, nullable=True)
+    ai_executive_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     generated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

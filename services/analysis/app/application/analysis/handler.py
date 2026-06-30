@@ -25,6 +25,7 @@ from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
 from app.domain.contracts.scorer import AbstractScorer, Violation
 from app.domain.contracts.storage import AbstractStorage
+from app.domain.entities.analysis_metadata import AnalysisMetadata
 from app.domain.entities.finding import Finding
 from app.domain.entities.report import Report
 from app.domain.entities.score import Score
@@ -941,6 +942,99 @@ async def handle_stage_guide_gen(
         return None
 
 
+async def handle_stage_ai_enrich(
+    cmd: ProcessStageCommand,
+    uow: UnitOfWork,
+    findings: list[Finding],
+    score: Score | None = None,
+    languages: list[str] | None = None,
+    frameworks: list[str] | None = None,
+) -> dict[str, object] | None:
+    from app.infrastructure.ai.enrichment_client import AiEnrichmentClient
+
+    job_id = cmd.job_id
+    job = await uow.jobs.get_by_id(job_id)
+    if not job:
+        raise NotFoundError(f"Job {job_id} not found")
+
+    finding_dicts = []
+    for f in findings:
+        finding_dicts.append({
+            "title": f.title,
+            "category": str(f.category),
+            "severity": str(f.severity),
+            "description": f.description or "",
+            "recommendation": f.recommendation or "",
+            "file_path": f.file_path or "",
+            "line_start": f.line_start,
+            "line_end": f.line_end,
+            "code_snippet": f.code_snippet or "",
+        })
+
+    if not finding_dicts:
+        await uow.jobs.update_status(
+            job_id, JobStatus.AI_ENRICH, progress_pct=98,
+            progress_message="AI enrichment skipped (no findings)",
+        )
+        return {"findings": [], "ai_executive_summary": ""}
+
+    client = AiEnrichmentClient()
+    result = await client.enrich_findings(
+        findings=finding_dicts,
+        overall_score=score.overall if score else None,
+        tier=str(score.tier) if score and score.tier else None,
+        languages=languages,
+        frameworks=frameworks,
+    )
+
+    if not result:
+        logger.info("ai_enrichment_unavailable", job_id=str(job_id))
+        await uow.jobs.update_status(
+            job_id, JobStatus.AI_ENRICH, progress_pct=98,
+            progress_message="AI enrichment skipped (service unavailable)",
+        )
+        return None
+
+    enriched_findings_map: dict[str, dict] = {}
+    for item in result.get("findings", []):
+        title = item.get("title", "")
+        file_path = item.get("file_path", "")
+        key = f"{title}|{file_path}"
+        enriched_findings_map[key] = item
+
+    updated_count = 0
+    for finding in findings:
+        key = f"{finding.title}|{finding.file_path}"
+        enriched = enriched_findings_map.get(key)
+        if enriched and enriched.get("is_ai_enriched"):
+            await uow.findings.update_ai_fields(
+                finding_id=finding.id,
+                is_ai_enriched=True,
+                ai_explanation=enriched.get("ai_explanation", ""),
+            )
+            updated_count += 1
+
+    ai_executive_summary = result.get("ai_executive_summary", "")
+    if ai_executive_summary:
+        guide = await uow.enterprise_guides.get_by_job(job_id)
+        if guide:
+            guide["ai_executive_summary"] = ai_executive_summary
+            await uow.enterprise_guides.save(guide)
+
+    await uow.jobs.update_status(
+        job_id, JobStatus.AI_ENRICH, progress_pct=98,
+        progress_message=f"AI enrichment complete ({updated_count} findings enriched)",
+    )
+
+    logger.info(
+        "ai_enrichment_complete",
+        job_id=str(job_id),
+        enriched=updated_count,
+        total=len(findings),
+    )
+    return result
+
+
 async def get_job_status(
     query: GetJobStatusQuery,
     uow: UnitOfWork,
@@ -1066,3 +1160,43 @@ async def get_enterprise_guide(
     uow: UnitOfWork,
 ) -> dict[str, object] | None:
     return await uow.enterprise_guides.get_by_job(job_id)
+
+
+async def handle_save_analysis_metadata(
+    job_id: UUID,
+    parsed_files_metadata: list[dict[str, object]],
+    languages: list[str],
+    frameworks: list[str],
+    uow: UnitOfWork,
+) -> None:
+    class_count = 0
+    function_count = 0
+    endpoint_count = 0
+    for meta in parsed_files_metadata:
+        class_count += cast(int, meta.get("classes", 0))
+        function_count += cast(int, meta.get("functions", 0))
+        endpoint_count += cast(int, meta.get("routes", 0))
+
+    metadata = AnalysisMetadata(
+        job_id=job_id,
+        class_count=class_count,
+        function_count=function_count,
+        endpoint_count=endpoint_count,
+        languages=list(dict.fromkeys(languages)),
+        frameworks=list(dict.fromkeys(frameworks)),
+    )
+    await uow.analysis_metadata.save(metadata)
+    logger.info(
+        "analysis_metadata_saved",
+        job_id=str(job_id),
+        classes=class_count,
+        functions=function_count,
+        endpoints=endpoint_count,
+    )
+
+
+async def get_analysis_metadata(
+    job_id: UUID,
+    uow: UnitOfWork,
+) -> AnalysisMetadata | None:
+    return await uow.analysis_metadata.get_by_job(job_id)

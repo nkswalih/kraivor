@@ -138,12 +138,13 @@ export function SeverityDonutChart({
                   strokeLinecap="round"
                   opacity={isHovered ? 1 : 0.3}
                   filter={isHovered && hoveredKey !== null ? `url(#glow-${seg.key})` : undefined}
-                  className="cursor-pointer transition-all duration-300"
+                  className="cursor-pointer"
                   onMouseEnter={() => setHoveredKey(seg.key)}
                   onMouseLeave={() => setHoveredKey(null)}
                   style={{
-                    transition: 'stroke-dasharray 700ms ease-out, stroke-dashoffset 700ms ease-out, opacity 200ms ease-out',
-                    transitionDelay: animated ? `${i * 120}ms` : '0ms',
+                    transition: animated
+                      ? `stroke-dasharray 700ms ease-out ${i * 120}ms, stroke-dashoffset 700ms ease-out ${i * 120}ms, opacity 200ms ease-out`
+                      : 'stroke-dasharray 700ms ease-out 0ms, stroke-dashoffset 700ms ease-out 0ms, opacity 200ms ease-out 0ms',
                   }}
                 />
               );
@@ -193,16 +194,17 @@ export function SeverityDonutChart({
             <div
               key={seg.key}
               className={cn(
-                'flex items-center gap-3 text-[12px] cursor-pointer transition-all duration-200',
+                'flex items-center gap-3 text-[12px] cursor-pointer',
                 isHovered ? 'opacity-100' : 'opacity-40',
               )}
               onMouseEnter={() => setHoveredKey(seg.key)}
               onMouseLeave={() => setHoveredKey(null)}
               style={{
-                transitionDelay: animated ? `${i * 80}ms` : '0ms',
                 transform: animated ? 'translateY(0)' : 'translateY(8px)',
                 opacity: animated ? (isHovered ? 1 : 0.4) : 0,
-                transition: 'transform 400ms ease-out, opacity 400ms ease-out',
+                transition: animated
+                  ? `transform 400ms ease-out ${i * 80}ms, opacity 400ms ease-out ${i * 80}ms`
+                  : 'transform 400ms ease-out 0ms, opacity 400ms ease-out 0ms',
               }}
             >
               <span

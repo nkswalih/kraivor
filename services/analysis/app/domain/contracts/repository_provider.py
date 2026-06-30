@@ -88,7 +88,14 @@ class AbstractFindingRepository(ABC):
 
     @abstractmethod
     async def dismiss_many(self, finding_ids: list[UUID]) -> int:
-        """Mark findings as dismissed in batch. Returns count updated."""
+        """Dismiss findings in batch. Returns count dismissed."""
+        ...
+
+    @abstractmethod
+    async def update_ai_fields(
+        self, finding_id: UUID, is_ai_enriched: bool, ai_explanation: str,
+    ) -> None:
+        """Update AI enrichment fields on a single finding."""
         ...
 
     @abstractmethod

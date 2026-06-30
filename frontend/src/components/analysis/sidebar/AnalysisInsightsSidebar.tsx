@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, PanelRightClose } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { analysisInsightsBuilder } from '@/lib/analysis/insights-builder';
+import { useAnalysisMetadata } from '@/lib/hooks/use-analysis';
 import type { AnalysisJob, Report, FindingsSummary, Finding } from '@/types/domain/analysis';
 import { AIExecutiveSummaryCard } from './AIExecutiveSummaryCard';
 import { PriorityRecommendationCard } from './PriorityRecommendationCard';
@@ -35,6 +36,8 @@ export function AnalysisInsightsSidebar({
   onToggleCollapse,
 }: AnalysisInsightsSidebarProps) {
   const [mounted, setMounted] = useState(false);
+  const jobId = job?.job_id ?? null;
+  const { data: analysisMetadata } = useAnalysisMetadata(jobId);
 
   useEffect(() => {
     setMounted(true);
@@ -42,7 +45,7 @@ export function AnalysisInsightsSidebar({
 
   const isLoading = externalLoading ?? !job;
 
-  const insights = analysisInsightsBuilder(job, report, findingsSummary, findings);
+  const insights = analysisInsightsBuilder(job, report, findingsSummary, findings, analysisMetadata);
 
   if (collapsed) {
     return (
@@ -86,6 +89,9 @@ export function AnalysisInsightsSidebar({
         <div className="flex flex-col gap-4 p-4">
           <AIExecutiveSummaryCard
             data={insights.aiSummary}
+            findings={findings}
+            report={report}
+            jobId={jobId}
             isLoading={isLoading}
           />
 

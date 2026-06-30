@@ -24,6 +24,7 @@ class EnterpriseGuide:
         self.architecture_review: dict[str, object] | None = None
         self.capacity_analysis: dict[str, object] | None = None
         self.migration_path: list[dict[str, object]] = []
+        self.ai_executive_summary: str = ""
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -34,6 +35,7 @@ class EnterpriseGuide:
             "architecture_review": self.architecture_review,
             "capacity_analysis": self.capacity_analysis,
             "migration_path": self.migration_path,
+            "ai_executive_summary": self.ai_executive_summary,
         }
 
 

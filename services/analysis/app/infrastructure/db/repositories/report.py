@@ -22,6 +22,7 @@ class ReportRepository(AbstractReportRepository):
             .values(
                 total_files=report.total_files_analyzed,
                 duration_seconds=report.duration_seconds,
+                languages_detected=report.languages_detected,
                 overall_score=report.scores.overall if report.scores else None,
                 performance_score=report.scores.performance if report.scores else None,
                 security_score=report.scores.security if report.scores else None,
@@ -98,11 +99,15 @@ class ReportRepository(AbstractReportRepository):
                 medium_count=job.medium_count,
                 low_count=job.low_count,
             )
+        languages: list[str] = []
+        if job.languages_detected:
+            languages = list(job.languages_detected)
         return Report(
             job_id=job.id,
             repo_id=job.repo_id,
             workspace_id=job.workspace_id,
             branch=job.branch,
+            languages_detected=languages,
             duration_seconds=job.duration_seconds,
             completed_at=job.completed_at,  # type: ignore[arg-type]
             scores=score,

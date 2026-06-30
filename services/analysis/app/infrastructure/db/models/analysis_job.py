@@ -47,6 +47,7 @@ class AnalysisJobModel(Base, TimestampMixin, SoftDeleteMixin):
     blocked_by: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     engine_statuses: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True)
 
+    languages_detected: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

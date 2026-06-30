@@ -2,6 +2,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.db.repositories.analysis_job import JobRepository
+from app.infrastructure.db.repositories.analysis_metadata import (
+    AnalysisMetadataRepository,
+)
 from app.infrastructure.db.repositories.dead_code import DeadCodeRepository
 from app.infrastructure.db.repositories.enterprise_guide import (
     EnterpriseGuideRepository,
@@ -48,6 +51,7 @@ class UnitOfWork:
         self.jobs: JobRepository
         self.findings: FindingRepository
         self.reports: ReportRepository
+        self.analysis_metadata: AnalysisMetadataRepository
         self.dead_code: DeadCodeRepository
         self.error_findings: ErrorFindingRepository
         self.reliability_findings: ReliabilityFindingRepository
@@ -66,6 +70,7 @@ class UnitOfWork:
         self.jobs = JobRepository(self._session)
         self.findings = FindingRepository(self._session)
         self.reports = ReportRepository(self._session)
+        self.analysis_metadata = AnalysisMetadataRepository(self._session)
         self.dead_code = DeadCodeRepository(self._session)
         self.error_findings = ErrorFindingRepository(self._session)
         self.reliability_findings = ReliabilityFindingRepository(self._session)

@@ -32,6 +32,7 @@ class JobStatus(StrEnum):
     SIMULATION = "simulation"
     SCORING = "scoring"
     GUIDE_GEN = "guide_gen"
+    AI_ENRICH = "ai_enrich"
     COMPLETED = "completed"
     FAILED = "failed"
 

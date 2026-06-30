@@ -63,4 +63,6 @@ class Finding:
             "score_impact": self.score_impact,
             "rpm_impact": self.rpm_impact,
             "breaks_at_users": self.breaks_at_users,
+            "is_ai_enriched": self.is_ai_enriched,
+            "ai_explanation": self.ai_explanation,
         }

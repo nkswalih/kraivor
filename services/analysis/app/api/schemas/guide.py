@@ -15,3 +15,4 @@ class EnterpriseGuideResponse(BaseModel):
     capacity_analysis: dict[str, object] | None = None
     migration_path: list[object] | None = None
     generated_at: datetime | None = None
+    ai_executive_summary: str | None = None

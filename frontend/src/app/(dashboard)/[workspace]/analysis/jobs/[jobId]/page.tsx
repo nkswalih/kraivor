@@ -37,9 +37,9 @@ import { BlockedOverall } from '@/components/analysis/blocked-overall';
 import { AnalysisInsightsSidebar } from '@/components/analysis/sidebar/AnalysisInsightsSidebar';
 import { HeroCard } from '@/components/analysis/hero-card';
 import { EngineCard } from '@/components/analysis/engine-card';
-import { MetricCard } from '@/components/analysis/metric-card';
+import { MetricCard, MetricCardSkeleton } from '@/components/analysis/metric-card';
 import { ChartCard } from '@/components/analysis/chart-card';
-import { AnalysisModuleCard } from '@/components/analysis/analysis-module-card';
+import { AnalysisModuleCard, AnalysisModuleCardSkeleton } from '@/components/analysis/analysis-module-card';
 import { AnalysisTrendChart } from '@/components/analysis/analysis-trend-chart';
 import { SeverityDonutChart } from '@/components/analysis/severity-donut-chart';
 
@@ -59,7 +59,7 @@ export default function JobDetailPage() {
   const { data: report } = useReport(jobId);
   const { data: summary, isLoading: isSummaryLoading, error: summaryError } = useFindingsSummary(jobId);
   const { data: findingsData } = useFindings(jobId);
-  const { data: counts } = useCategoryCounts(jobId);
+  const { data: counts, isLoading: isCountsLoading } = useCategoryCounts(jobId);
   const { data: scoreHistory, isLoading: isScoreHistoryLoading, error: scoreHistoryError } = useScoreHistory(
     job?.repo_id ?? null,
   );
@@ -320,88 +320,142 @@ export default function JobDetailPage() {
                 </ChartCard>
               </div>
 
-              {/* Section 4: Analysis Summary Cards */}
-              {report && counts && (
-                <div>
-                  <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider mb-3">
-                    Summary
-                  </h3>
+              {/* Section 4: Repository Summary */}
+              <div>
+                <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider mb-4">
+                  Repository Summary
+                </h3>
+                {isCountsLoading ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    {[1,2,3,4,5].map(i => <MetricCardSkeleton key={i} />)}
+                  </div>
+                ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                     <MetricCard
                       icon={Activity}
-                      value={counts?.findings ?? 0}
-                      label="Issues Detected"
+                      value={counts.findings}
+                      title="Findings"
+                      subtitle="Issues detected in codebase"
+                      status={counts.findings > 0 ? 'attention' : 'healthy'}
+                      color="green"
+                      index={0}
                       onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/findings`)}
                     />
                     <MetricCard
                       icon={Bug}
-                      value={counts?.deadCode ?? 0}
-                      label="Unused Entries"
+                      value={counts.deadCode}
+                      title="Dead Code"
+                      subtitle="Unused files, methods, imports"
+                      status={counts.deadCode > 0 ? 'attention' : 'healthy'}
+                      color="orange"
+                      index={1}
                       onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/dead-code`)}
                     />
                     <MetricCard
                       icon={AlertTriangle}
-                      value={counts?.errors ?? 0}
-                      label="Error Patterns"
+                      value={counts.errors}
+                      title="Error Patterns"
+                      subtitle="Exception & reliability issues"
+                      status={counts.errors > 0 ? 'attention' : 'healthy'}
+                      color="red"
+                      index={2}
                       onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/errors`)}
                     />
                     <MetricCard
                       icon={Zap}
-                      value={counts?.perf ?? 0}
-                      label="Bottlenecks"
+                      value={counts.perf}
+                      title="Performance"
+                      subtitle="Bottlenecks & latency metrics"
+                      status={counts.perf > 0 ? 'attention' : 'healthy'}
+                      color="blue"
+                      index={3}
                       onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/performance`)}
                     />
                     <MetricCard
                       icon={FileText}
-                      value={counts?.hasGuide ? 'Ready' : 'Not Generated'}
-                      label="AI Assisted"
-                      onClick={counts?.hasGuide ? () => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/guide`) : undefined}
+                      value={counts.hasGuide ? 'Ready' : '—'}
+                      title="Enterprise Guide"
+                      subtitle="AI-assisted analysis summary"
+                      status={counts.hasGuide ? 'available' : 'pending'}
+                      color="purple"
+                      index={4}
+                      onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/guide`)}
                     />
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              {/* Section 5: Bottom Modules */}
+              {/* Section 5: Analysis Workspaces */}
               <div>
-                <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider mb-3">
-                  Modules
+                <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider mb-4">
+                  Analysis Workspaces
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                  <AnalysisModuleCard
-                    href={`/${workspaceSlug}/analysis/jobs/${jobId}/findings`}
-                    icon={Activity}
-                    label="Findings"
-                    count={counts?.findings ?? 0}
-                    countLabel={counts?.findings !== 1 ? 'issues detected' : 'issue detected'}
-                  />
-                  <AnalysisModuleCard
-                    href={`/${workspaceSlug}/analysis/jobs/${jobId}/dead-code`}
-                    icon={Bug}
-                    label="Dead Code"
-                    count={counts?.deadCode ?? 0}
-                    countLabel={counts?.deadCode === 1 ? 'unused entry' : 'unused entries'}
-                  />
-                  <AnalysisModuleCard
-                    href={`/${workspaceSlug}/analysis/jobs/${jobId}/errors`}
-                    icon={AlertTriangle}
-                    label="Error Patterns"
-                    count={counts?.errors ?? 0}
-                    countLabel={counts?.errors !== 1 ? 'patterns' : 'pattern'}
-                  />
-                  <AnalysisModuleCard
-                    href={`/${workspaceSlug}/analysis/jobs/${jobId}/performance`}
-                    icon={Zap}
-                    label="Performance"
-                    count={counts?.perf ?? 0}
-                    countLabel={counts?.perf !== 1 ? 'bottlenecks' : 'bottleneck'}
-                  />
-                  <AnalysisModuleCard
-                    href={`/${workspaceSlug}/analysis/jobs/${jobId}/guide`}
-                    icon={FileText}
-                    label="Enterprise Guide"
-                    count={counts?.hasGuide ? 'Available' : 'Not generated'}
-                  />
-                </div>
+                {isCountsLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {[1,2,3,4,5].map(i => <AnalysisModuleCardSkeleton key={i} />)}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <AnalysisModuleCard
+                      href={`/${workspaceSlug}/analysis/jobs/${jobId}/findings`}
+                      icon={Activity}
+                      title="Findings"
+                      count={counts.findings + (counts.findings !== 1 ? ' Findings' : ' Finding')}
+                      description="Browse every issue detected during analysis. Review severity, category, and file-level details."
+                      stats={summary ? [
+                        { label: 'Critical', value: summary.by_severity.critical ?? 0, color: '#ef4444' },
+                        { label: 'High', value: summary.by_severity.high ?? 0, color: '#f97316' },
+                        { label: 'Low', value: summary.by_severity.low ?? 0, color: '#3b82f6' },
+                      ] : undefined}
+                      color="green"
+                      actionLabel="Open Findings"
+                      index={0}
+                    />
+                    <AnalysisModuleCard
+                      href={`/${workspaceSlug}/analysis/jobs/${jobId}/dead-code`}
+                      icon={Bug}
+                      title="Dead Code"
+                      count={counts.deadCode + (counts.deadCode !== 1 ? ' Entries' : ' Entry')}
+                      description="Unused files, methods, and imports in your codebase. Clean up to reduce maintenance burden."
+                      color="orange"
+                      actionLabel="Open Dead Code"
+                      index={1}
+                    />
+                    <AnalysisModuleCard
+                      href={`/${workspaceSlug}/analysis/jobs/${jobId}/errors`}
+                      icon={AlertTriangle}
+                      title="Error Patterns"
+                      count={counts.errors + (counts.errors !== 1 ? ' Patterns' : ' Pattern')}
+                      description="Unhandled exceptions, retry loops, and silent failures. Fix reliability issues before they reach production."
+                      color="red"
+                      actionLabel="Open Error Analysis"
+                      index={2}
+                    />
+                    <AnalysisModuleCard
+                      href={`/${workspaceSlug}/analysis/jobs/${jobId}/performance`}
+                      icon={Zap}
+                      title="Performance"
+                      count={counts.perf + (counts.perf !== 1 ? ' Metrics' : ' Metric')}
+                      description="Endpoint analysis, simulation results, and latency metrics. Optimize slow paths and reduce response times."
+                      stats={report ? [
+                        { label: 'Score', value: report.performance_score ?? '—', color: '#3b82f6' },
+                      ] : undefined}
+                      color="blue"
+                      actionLabel="Open Performance"
+                      index={3}
+                    />
+                    <AnalysisModuleCard
+                      href={`/${workspaceSlug}/analysis/jobs/${jobId}/guide`}
+                      icon={FileText}
+                      title="Enterprise Guide"
+                      count={counts.hasGuide ? 'AI Generated' : 'Not Generated'}
+                      description="Architecture review, security checklist, and deployment guidance tailored to your codebase."
+                      color="purple"
+                      actionLabel="Open Guide"
+                      index={4}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}

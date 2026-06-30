@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -16,6 +16,7 @@ import {
   RotateCcw,
   Trash2,
   PanelRightOpen,
+  BarChart3,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -33,13 +34,14 @@ import {
 import { JobStatusBadge } from '@/components/analysis/job-status-badge';
 import { ProgressBar } from '@/components/analysis/progress-bar';
 import { BlockedOverall } from '@/components/analysis/blocked-overall';
-import { ScoreHistoryChart } from '@/components/analysis/score-history-chart';
 import { AnalysisInsightsSidebar } from '@/components/analysis/sidebar/AnalysisInsightsSidebar';
 import { HeroCard } from '@/components/analysis/hero-card';
 import { EngineCard } from '@/components/analysis/engine-card';
 import { MetricCard } from '@/components/analysis/metric-card';
 import { ChartCard } from '@/components/analysis/chart-card';
 import { AnalysisModuleCard } from '@/components/analysis/analysis-module-card';
+import { AnalysisTrendChart } from '@/components/analysis/analysis-trend-chart';
+import { SeverityDonutChart } from '@/components/analysis/severity-donut-chart';
 
 export default function JobDetailPage() {
   const params = useParams<{ workspace: string; jobId: string }>();
@@ -51,10 +53,11 @@ export default function JobDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'all'>('all');
 
   const { data: job, isLoading, error } = useJob(jobId);
   const { data: report } = useReport(jobId);
-  const { data: summary } = useFindingsSummary(jobId);
+  const { data: summary, isLoading: isSummaryLoading, error: summaryError } = useFindingsSummary(jobId);
   const { data: findingsData } = useFindings(jobId);
   const { data: counts } = useCategoryCounts(jobId);
   const { data: scoreHistory, isLoading: isScoreHistoryLoading, error: scoreHistoryError } = useScoreHistory(
@@ -64,6 +67,13 @@ export default function JobDetailPage() {
   const deleteJob = useDeleteJob();
   const queryClient = useQueryClient();
   const prevStatusRef = useRef<string | undefined>(undefined);
+
+  const filteredEntries = useMemo(() => {
+    if (timeRange === 'all' || !scoreHistory?.entries) return scoreHistory?.entries ?? [];
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - (timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90));
+    return scoreHistory.entries.filter(e => new Date(e.time) >= cutoff);
+  }, [timeRange, scoreHistory?.entries]);
 
   const handleReanalyze = async () => {
     if (!job || reanalyzing) return;
@@ -289,124 +299,109 @@ export default function JobDetailPage() {
                 </div>
               </div>
 
-              {/* Category Scores */}
-              {report && (
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  <MetricCard icon={Zap} value={report.performance_score ?? '\u2014'} label="Performance" />
-                  <MetricCard icon={AlertTriangle} value={report.security_score ?? '\u2014'} label="Security" />
-                  <MetricCard icon={Activity} value={report.reliability_score ?? '\u2014'} label="Reliability" />
-                  <MetricCard icon={FileText} value={report.maintainability_score ?? '\u2014'} label="Maintainability" />
-                  <MetricCard icon={Bug} value={report.devops_score ?? '\u2014'} label="DevOps" />
-                </div>
-              )}
-
-              {/* Stats Row */}
-              {report && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <MetricCard icon={FileText} value={report.total_files} label="Files" />
-                  <MetricCard icon={AlertCircle} value={report.total_findings} label="Findings" />
-                  <MetricCard icon={Clock} value={report.duration_seconds ? `${report.duration_seconds}s` : '\u2014'} label="Duration" />
-                </div>
-              )}
-
-              {/* Score History Chart */}
-              <ScoreHistoryChart
-                entries={scoreHistory?.entries ?? []}
-                isLoading={isScoreHistoryLoading}
-                error={scoreHistoryError as Error | null}
-              />
-
-              {/* Findings Summary */}
-              {summary && (
-                <ChartCard title="Findings Summary" icon={AlertCircle}>
-                  {summary.total > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4 text-[12px]">
-                      {Object.entries(summary.by_category).map(([cat, cnt]) =>
-                        cnt > 0 ? (
-                          <div key={cat} className="bg-background rounded px-2 py-1 flex justify-between">
-                            <span className="text-text-tertiary capitalize">{cat}</span>
-                            <span className="text-foreground font-medium">{cnt}</span>
-                          </div>
-                        ) : null
-                      )}
-                    </div>
-                  )}
-                  <h4 className="text-[12px] font-medium text-text-tertiary mb-2">by Severity</h4>
-                  <div className="flex gap-1 h-4 rounded-full overflow-hidden">
-                    {summary.by_severity.critical > 0 && (
-                      <div
-                        className="bg-red-500 h-full transition-all"
-                        style={{ width: `${(summary.by_severity.critical / summary.total) * 100}%` }}
-                        title={`Critical: ${summary.by_severity.critical}`}
-                      />
-                    )}
-                    {summary.by_severity.high > 0 && (
-                      <div
-                        className="bg-orange-500 h-full transition-all"
-                        style={{ width: `${(summary.by_severity.high / summary.total) * 100}%` }}
-                        title={`High: ${summary.by_severity.high}`}
-                      />
-                    )}
-                    {summary.by_severity.medium > 0 && (
-                      <div
-                        className="bg-yellow-500 h-full transition-all"
-                        style={{ width: `${(summary.by_severity.medium / summary.total) * 100}%` }}
-                        title={`Medium: ${summary.by_severity.medium}`}
-                      />
-                    )}
-                    {summary.by_severity.low > 0 && (
-                      <div
-                        className="bg-blue-500 h-full transition-all"
-                        style={{ width: `${(summary.by_severity.low / summary.total) * 100}%` }}
-                        title={`Low: ${summary.by_severity.low}`}
-                      />
-                    )}
-                  </div>
-                  <div className="flex gap-4 mt-2 text-[11px] text-text-tertiary">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Critical {summary.by_severity.critical}</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500" /> High {summary.by_severity.high}</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500" /> Medium {summary.by_severity.medium}</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> Low {summary.by_severity.low}</span>
-                  </div>
+              {/* Section 3: Charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ChartCard title="Score Trend" icon={BarChart3}>
+                  <AnalysisTrendChart
+                    entries={filteredEntries}
+                    isLoading={isScoreHistoryLoading}
+                    error={scoreHistoryError as Error | null}
+                    timeRange={timeRange}
+                    onTimeRangeChange={setTimeRange}
+                  />
                 </ChartCard>
+
+                <ChartCard title="Findings by Severity" icon={AlertCircle}>
+                  <SeverityDonutChart
+                    summary={summary}
+                    isLoading={isSummaryLoading}
+                    error={summaryError as Error | null}
+                  />
+                </ChartCard>
+              </div>
+
+              {/* Section 4: Analysis Summary Cards */}
+              {report && counts && (
+                <div>
+                  <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider mb-3">
+                    Summary
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    <MetricCard
+                      icon={Activity}
+                      value={counts?.findings ?? 0}
+                      label="Issues Detected"
+                      onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/findings`)}
+                    />
+                    <MetricCard
+                      icon={Bug}
+                      value={counts?.deadCode ?? 0}
+                      label="Unused Entries"
+                      onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/dead-code`)}
+                    />
+                    <MetricCard
+                      icon={AlertTriangle}
+                      value={counts?.errors ?? 0}
+                      label="Error Patterns"
+                      onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/errors`)}
+                    />
+                    <MetricCard
+                      icon={Zap}
+                      value={counts?.perf ?? 0}
+                      label="Bottlenecks"
+                      onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/performance`)}
+                    />
+                    <MetricCard
+                      icon={FileText}
+                      value={counts?.hasGuide ? 'Ready' : 'Not Generated'}
+                      label="AI Assisted"
+                      onClick={counts?.hasGuide ? () => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/guide`) : undefined}
+                    />
+                  </div>
+                </div>
               )}
 
-              {/* Navigation Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <AnalysisModuleCard
-                  href={`/${workspaceSlug}/analysis/jobs/${jobId}/findings`}
-                  icon={Activity}
-                  label="Findings"
-                  count={counts?.findings ?? 0}
-                  countLabel={counts?.findings !== 1 ? 'issues' : 'issue'}
-                />
-                <AnalysisModuleCard
-                  href={`/${workspaceSlug}/analysis/jobs/${jobId}/dead-code`}
-                  icon={Bug}
-                  label="Dead Code"
-                  count={counts?.deadCode ?? 0}
-                  countLabel={counts?.deadCode === 1 ? 'entry' : 'entries'}
-                />
-                <AnalysisModuleCard
-                  href={`/${workspaceSlug}/analysis/jobs/${jobId}/errors`}
-                  icon={AlertTriangle}
-                  label="Error Patterns"
-                  count={counts?.errors ?? 0}
-                  countLabel={counts?.errors !== 1 ? 'patterns' : 'pattern'}
-                />
-                <AnalysisModuleCard
-                  href={`/${workspaceSlug}/analysis/jobs/${jobId}/performance`}
-                  icon={Zap}
-                  label="Performance"
-                  count={counts?.perf ?? 0}
-                  countLabel={counts?.perf !== 1 ? 'metrics' : 'metric'}
-                />
-                <AnalysisModuleCard
-                  href={`/${workspaceSlug}/analysis/jobs/${jobId}/guide`}
-                  icon={FileText}
-                  label="Enterprise Guide"
-                  count={counts?.hasGuide ? 'Available' : 'Not generated'}
-                />
+              {/* Section 5: Bottom Modules */}
+              <div>
+                <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider mb-3">
+                  Modules
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                  <AnalysisModuleCard
+                    href={`/${workspaceSlug}/analysis/jobs/${jobId}/findings`}
+                    icon={Activity}
+                    label="Findings"
+                    count={counts?.findings ?? 0}
+                    countLabel={counts?.findings !== 1 ? 'issues detected' : 'issue detected'}
+                  />
+                  <AnalysisModuleCard
+                    href={`/${workspaceSlug}/analysis/jobs/${jobId}/dead-code`}
+                    icon={Bug}
+                    label="Dead Code"
+                    count={counts?.deadCode ?? 0}
+                    countLabel={counts?.deadCode === 1 ? 'unused entry' : 'unused entries'}
+                  />
+                  <AnalysisModuleCard
+                    href={`/${workspaceSlug}/analysis/jobs/${jobId}/errors`}
+                    icon={AlertTriangle}
+                    label="Error Patterns"
+                    count={counts?.errors ?? 0}
+                    countLabel={counts?.errors !== 1 ? 'patterns' : 'pattern'}
+                  />
+                  <AnalysisModuleCard
+                    href={`/${workspaceSlug}/analysis/jobs/${jobId}/performance`}
+                    icon={Zap}
+                    label="Performance"
+                    count={counts?.perf ?? 0}
+                    countLabel={counts?.perf !== 1 ? 'bottlenecks' : 'bottleneck'}
+                  />
+                  <AnalysisModuleCard
+                    href={`/${workspaceSlug}/analysis/jobs/${jobId}/guide`}
+                    icon={FileText}
+                    label="Enterprise Guide"
+                    count={counts?.hasGuide ? 'Available' : 'Not generated'}
+                  />
+                </div>
               </div>
             </div>
           )}

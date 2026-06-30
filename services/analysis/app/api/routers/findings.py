@@ -116,4 +116,5 @@ def _finding_to_response(f: Finding) -> FindingResponse:
         score_impact=f.score_impact or 0.0,
         rpm_impact=f.rpm_impact or 0,
         is_ai_enriched=f.is_ai_enriched,
+        ai_explanation=f.ai_explanation or "",
     )

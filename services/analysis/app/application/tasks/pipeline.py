@@ -18,8 +18,10 @@ from app.application.analysis.commands import (
 )
 from app.application.analysis.handler import (
     handle_analysis_failure,
+    handle_save_analysis_metadata,
     handle_save_findings,
     handle_start_analysis,
+    handle_stage_ai_enrich,
     handle_stage_clone,
     handle_stage_dead_code,
     handle_stage_devops,
@@ -87,6 +89,7 @@ _STAGE_STATUS: dict[str, str] = {
     "simulation": "simulation",
     "score": "scoring",
     "guide_gen": "guide_gen",
+    "ai_enrich": "ai_enrich",
     "finalize": "finalize",
 }
 
@@ -105,6 +108,7 @@ _STAGE_ENGINE: dict[str, str | None] = {
     "simulation": "simulation",
     "score": None,
     "guide_gen": None,
+    "ai_enrich": None,
     "finalize": None,
 }
 
@@ -128,7 +132,8 @@ _STAGE_PROGRESS: dict[str, int] = {
     "perf": 87,
     "simulation": 90,
     "score": 93,
-    "guide_gen": 96,
+    "guide_gen": 95,
+    "ai_enrich": 98,
     "finalize": 100,
 }
 
@@ -239,6 +244,7 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
         ("simulation", _stage_simulation, ()),
         ("score", _stage_score, ()),
         ("guide_gen", _stage_guide_gen, ()),
+        ("ai_enrich", _stage_ai_enrich, ()),
         ("finalize", _stage_finalize, ()),
     ):
         state["_last_stage"] = stage_name
@@ -323,6 +329,13 @@ async def _stage_parse(state: dict[str, object]) -> None:
         producer = EventProducer()
         metadata, parsed_files = await handle_stage_parse(
             cmd, parser, uow, producer, repo_path, files,
+        )
+        await handle_save_analysis_metadata(
+            job_id=job_id,
+            parsed_files_metadata=metadata,
+            languages=cast(list[str], state.get("languages", [])),
+            frameworks=cast(list[str], state.get("frameworks", [])),
+            uow=uow,
         )
         await uow.commit()
 
@@ -622,6 +635,34 @@ async def _stage_guide_gen(state: dict[str, object]) -> None:
     logger.info(
         "pipeline_stage_complete",
         stage="guide_gen", job_id=str(job_id),
+    )
+
+
+async def _stage_ai_enrich(state: dict[str, object]) -> None:
+    state["_last_stage"] = "ai_enrich"
+    job_id = cast(UUID, state["job_id"])
+    findings = cast(list[Finding], state.get("findings", []))
+    score_raw = state.get("score")
+    score = cast(Score, score_raw) if score_raw is not None else None
+    languages = cast(list[str] | None, state.get("languages"))
+    frameworks = cast(list[str] | None, state.get("frameworks"))
+    cmd = ProcessStageCommand(job_id=job_id, stage="ai_enrich")
+
+    async with UnitOfWork() as uow:
+        result = await handle_stage_ai_enrich(
+            cmd, uow, findings,
+            score=score,
+            languages=languages,
+            frameworks=frameworks,
+        )
+        await uow.commit()
+        if result:
+            state["ai_enrichment"] = result
+
+    logger.info(
+        "pipeline_stage_complete",
+        stage="ai_enrich", job_id=str(job_id),
+        enriched=len(result.get("findings", [])) if result else 0,
     )
 
 

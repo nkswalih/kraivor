@@ -117,6 +117,16 @@ class FindingRepository(AbstractFindingRepository):
         result = await self._session.execute(stmt)
         return dict(result.all())  # type: ignore[arg-type]
 
+    async def update_ai_fields(
+        self, finding_id: UUID, is_ai_enriched: bool, ai_explanation: str,
+    ) -> None:
+        stmt = (
+            update(FindingModel)
+            .where(FindingModel.id == finding_id)
+            .values(is_ai_enriched=is_ai_enriched, ai_explanation=ai_explanation)
+        )
+        await self._session.execute(stmt)
+
     async def count_by_category(self, job_id: UUID) -> dict[str, int]:
         stmt = (
             select(FindingModel.category, func.count())

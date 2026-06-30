@@ -11,6 +11,7 @@ from app.core.config import get_settings
 settings = get_settings()
 # Import all models so Base.metadata is populated
 import app.infrastructure.db.models.analysis_job
+import app.infrastructure.db.models.analysis_metadata  # noqa: F401
 import app.infrastructure.db.models.dead_code
 import app.infrastructure.db.models.enterprise_guide
 import app.infrastructure.db.models.error_finding

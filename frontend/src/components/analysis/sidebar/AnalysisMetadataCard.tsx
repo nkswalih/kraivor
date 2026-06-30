@@ -34,9 +34,9 @@ export function AnalysisMetadataCard({
   const rows: MetaRow[] = [
     { icon: Files, label: 'Files', value: data.totalFiles.toLocaleString() },
     { icon: Code2, label: 'LOC', value: data.totalLines.toLocaleString() },
-    { icon: Braces, label: 'Classes', value: data.classes > 0 ? data.classes.toLocaleString() : '—' },
-    { icon: FunctionSquare, label: 'Functions', value: data.functions > 0 ? data.functions.toLocaleString() : '—' },
-    { icon: Route, label: 'Endpoints', value: data.endpoints > 0 ? data.endpoints.toLocaleString() : '—' },
+    { icon: Braces, label: 'Classes', value: data.classes.toLocaleString() },
+    { icon: FunctionSquare, label: 'Functions', value: data.functions.toLocaleString() },
+    { icon: Route, label: 'Endpoints', value: data.endpoints.toLocaleString() },
     { icon: Languages, label: 'Languages', value: data.languages.length > 0 ? data.languages.join(', ') : '—' },
     { icon: Clock, label: 'Duration', value: data.duration ?? '—' },
     { icon: Calendar, label: 'Started', value: data.startedAt ? formatRelativeTime(data.startedAt) : '—' },

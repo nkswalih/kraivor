@@ -161,13 +161,13 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
           <InboxPopover />
 
           {/* VS Code Style Right Panel Toggle */}
-          <button
+          {/* <button
             onClick={toggleRightPanel}
             className="p-1.5 text-text-secondary hover:text-text-primary hover:bg-krait-border/50 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             title="Toggle Context Panel (VS Code style Chat/Context)"
           >
             <PanelRight className="w-4 h-4" />
-          </button>
+          </button>  */}
         </div>
       </div>
 

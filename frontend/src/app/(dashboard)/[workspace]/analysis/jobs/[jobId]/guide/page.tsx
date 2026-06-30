@@ -2,9 +2,11 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileText, Loader2, AlertCircle, ChevronDown, ChevronRight, Users, Zap } from 'lucide-react';
+import { ArrowLeft, FileText, Loader2, AlertCircle, ChevronDown, ChevronRight, Users, Zap, RefreshCw } from 'lucide-react';
 import { useEnterpriseGuide } from '@/lib/hooks/use-analysis';
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 function AccordionSection({
   title,
@@ -40,7 +42,21 @@ export default function EnterpriseGuidePage() {
   const workspaceSlug = params?.workspace ?? '';
   const jobId = params?.jobId ?? '';
 
+  const queryClient = useQueryClient();
   const { data: guide, isLoading, error } = useEnterpriseGuide(jobId);
+  const [regenerating, setRegenerating] = useState(false);
+
+  const handleRegenerate = async () => {
+    setRegenerating(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['analysis-guide', jobId] });
+      toast.success('Guide refreshed');
+    } catch {
+      toast.error('Failed to refresh guide');
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -83,6 +99,14 @@ export default function EnterpriseGuidePage() {
           <h1 className="text-lg font-medium text-foreground flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-400" /> Enterprise Guide
           </h1>
+          <button
+            onClick={handleRegenerate}
+            disabled={regenerating}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-card text-[12px] text-text-secondary hover:text-foreground hover:border-venom-yellow/30 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${regenerating ? 'animate-spin' : ''}`} />
+            {regenerating ? 'Refreshing...' : 'Regenerate'}
+          </button>
         </div>
       </div>
 

@@ -26,6 +26,7 @@ import {
   Building2,
   PanelLeftClose,
   PanelLeftOpen,
+  BotMessageSquare
 } from 'lucide-react';
 
 export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
@@ -63,7 +64,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
     { name: 'Home', icon: Home, href: `/${workspaceSlug}` },
     { name: 'Repositories', icon: GitBranch, href: `/${workspaceSlug}/repositories` },
     { name: 'Analysis', icon: Activity, href: `/${workspaceSlug}/analysis` },
-    { name: 'AI Workspace', icon: Sparkles, href: `/${workspaceSlug}/ai` },
+    { name: 'AI Workspace', icon: BotMessageSquare, href: `/${workspaceSlug}/ai` },
     { name: 'Knowledge', icon: Edit3, href: `/${workspaceSlug}/knowledge` },
     { name: 'Projects', icon: KanbanSquare, href: `/${workspaceSlug}/projects` },
     { name: 'Tasks', icon: CheckSquare, href: `/${workspaceSlug}/tasks` },

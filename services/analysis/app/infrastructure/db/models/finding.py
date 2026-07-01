@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import Boolean, Float, Integer, String, Text
+from sqlalchemy import Boolean, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,6 +14,7 @@ class FindingModel(Base):
     id: Mapped[UUID] = UUIDColumn()
     job_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
+        ForeignKey("analysis.analysis_jobs.id"),
         nullable=False,
         index=True,
     )
@@ -43,6 +44,7 @@ class FindingModel(Base):
     rpm_impact: Mapped[int | None] = mapped_column(Integer, nullable=True)
     breaks_at_users: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active", index=True)
     is_ai_enriched: Mapped[bool] = mapped_column(Boolean, default=False)
     ai_explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
 

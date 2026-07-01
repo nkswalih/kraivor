@@ -357,7 +357,8 @@ services:
     command: >
       sh -c "
         until pg_isready -h postgres -U ${POSTGRES_USER:-kraivor}; do sleep 1; done &&
-        uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
+        alembic -c migrations/alembic.ini upgrade head &&
+        exec uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
       "
 
 volumes:

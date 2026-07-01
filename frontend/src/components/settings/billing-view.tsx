@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   CreditCard,
   Check,
@@ -66,9 +67,9 @@ export function BillingView() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <a href="/pricing" className="text-[12px] font-medium text-primary hover:underline">
+            <Link href="/pricing" className="text-[12px] font-medium text-primary hover:underline">
               View all plans
-            </a>
+            </Link>
             <button className="bg-gradient-to-r from-primary to-primary-light hover:from-primary-dark hover:to-primary-dark text-primary-foreground font-semibold py-2.5 px-5 rounded-lg transition-all duration-150 text-[13px] active:scale-[0.98] shadow-venom">
               Upgrade now
             </button>

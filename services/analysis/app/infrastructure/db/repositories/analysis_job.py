@@ -1,10 +1,13 @@
 from uuid import UUID
 
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.contracts.repository_provider import AbstractJobRepository
 from app.infrastructure.db.models.analysis_job import AnalysisJobModel
+from app.infrastructure.db.models.file_analysis import FileAnalysisModel
+from app.infrastructure.db.models.score_history import ScoreHistoryModel
 
 
 class JobRepository(AbstractJobRepository):
@@ -69,6 +72,28 @@ class JobRepository(AbstractJobRepository):
         result = await self._session.execute(stmt)
         return [self._to_dict(m) for m in result.scalars().all()], total
 
+    async def hard_delete(self, job_id: UUID) -> dict[str, object] | None:
+        job = await self.get_by_id(job_id)
+        if not job:
+            return None
+
+        # These tables have no FK cascade — delete manually
+        stmt_del_score = sa_delete(ScoreHistoryModel).where(
+            ScoreHistoryModel.job_id == job_id,
+        )
+        await self._session.execute(stmt_del_score)
+
+        stmt_del_files = sa_delete(FileAnalysisModel).where(
+            FileAnalysisModel.job_id == job_id,
+        )
+        await self._session.execute(stmt_del_files)
+
+        # Delete the job row — DB ON DELETE CASCADE handles the rest
+        stmt_del_job = sa_delete(AnalysisJobModel).where(AnalysisJobModel.id == job_id)
+        await self._session.execute(stmt_del_job)
+
+        return job
+
     async def count_by_workspace(self, workspace_id: UUID) -> int:
         stmt = select(func.count()).select_from(AnalysisJobModel).where(
             AnalysisJobModel.workspace_id == workspace_id,
@@ -92,15 +117,24 @@ class JobRepository(AbstractJobRepository):
             "status": model.status,
             "progress_pct": model.progress_pct,
             "progress_message": model.progress_message,
+            "total_files": model.total_files,
+            "total_lines": model.total_lines,
             "total_findings": model.total_findings,
             "critical_count": model.critical_count,
             "high_count": model.high_count,
             "medium_count": model.medium_count,
             "low_count": model.low_count,
             "overall_score": model.overall_score,
+            "performance_score": model.performance_score,
+            "security_score": model.security_score,
+            "reliability_score": model.reliability_score,
+            "maintainability_score": model.maintainability_score,
+            "devops_score": model.devops_score,
+            "blocked_by": model.blocked_by,
+            "engine_statuses": model.engine_statuses,
             "error_message": model.error_message,
-            "started_at": model.started_at.isoformat() if model.started_at else None,
-            "completed_at": model.completed_at.isoformat() if model.completed_at else None,
+            "started_at": model.started_at,
+            "completed_at": model.completed_at,
             "duration_seconds": model.duration_seconds,
-            "created_at": model.created_at.isoformat() if model.created_at else None,
+            "created_at": model.created_at,
         }

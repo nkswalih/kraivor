@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.core.constants import SCORE_TIER_THRESHOLDS, Tiers
 
@@ -7,20 +7,26 @@ from app.core.constants import SCORE_TIER_THRESHOLDS, Tiers
 class Score:
     """Value object representing a production readiness score.
 
-    Five dimensions with configurable weights:
-    - Performance (25%)
-    - Security (25%)
-    - Reliability (20%)
-    - Maintainability (15%)
-    - DevOps (15%)
+    Five dimensions with configurable weights.
+    A category score of ``None`` means the module has no data
+    (e.g. devops rules are not implemented) and should be
+    rendered as ``None`` (N/A) rather than defaulting to 100.
+
+    ``overall`` is ``None`` when a **blocked** state is detected:
+    a core engine (security, maintainability) failed or was not
+    configured.  ``blocked_by`` lists the engine IDs that caused
+    the blockage along with their failure reason.
     """
 
-    overall: int
-    performance: int = 100
-    security: int = 100
-    reliability: int = 100
-    maintainability: int = 100
-    devops: int = 100
+    overall: int | None = None
+    performance: int | None = None
+    security: int | None = None
+    reliability: int | None = None
+    maintainability: int | None = None
+    devops: int | None = None
+
+    blocked_by: list[str] = field(default_factory=list)
+    engine_statuses: dict[str, str] = field(default_factory=dict)
 
     findings_count: int = 0
     critical_count: int = 0
@@ -31,15 +37,21 @@ class Score:
     def __post_init__(self) -> None:
         self._tier = self._compute_tier()
 
-    def _compute_tier(self) -> Tiers:
+    def _compute_tier(self) -> Tiers | None:
+        if self.overall is None:
+            return None
         for threshold, tier in SCORE_TIER_THRESHOLDS:
             if self.overall >= threshold:
                 return tier
         return Tiers.CRITICAL_STATE
 
     @property
-    def tier(self) -> Tiers:
+    def tier(self) -> Tiers | None:
         return self._tier
+
+    @property
+    def is_blocked(self) -> bool:
+        return self.overall is None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -49,7 +61,9 @@ class Score:
             "reliability": self.reliability,
             "maintainability": self.maintainability,
             "devops": self.devops,
-            "tier": str(self.tier),
+            "blocked_by": list(self.blocked_by),
+            "engine_statuses": dict(self.engine_statuses),
+            "tier": str(self.tier) if self.tier is not None else None,
             "findings_count": self.findings_count,
             "critical_count": self.critical_count,
             "high_count": self.high_count,

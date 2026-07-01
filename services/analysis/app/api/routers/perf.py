@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1/performance-metrics", tags=["performance-metrics"])
 
 
-@router.get("/", response_model=PerformanceMetricListResponse)
+@router.get("", response_model=PerformanceMetricListResponse)
 async def list_performance_metrics(
     job_id: UUID = Query(..., description="Job ID"),
     uow: UnitOfWork = Depends(get_uow),

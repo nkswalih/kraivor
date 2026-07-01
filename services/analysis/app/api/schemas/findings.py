@@ -17,9 +17,11 @@ class FindingResponse(BaseModel):
     line_start: int | None = None
     line_end: int | None = None
     code_snippet: str = ""
+    status: str = "active"
     score_impact: float = 0.0
     rpm_impact: int = 0
     is_ai_enriched: bool = False
+    ai_explanation: str = ""
 
 
 class FindingsListResponse(BaseModel):
@@ -27,6 +29,11 @@ class FindingsListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class DismissFindingsRequest(BaseModel):
+    finding_ids: list[UUID]
+    dismissed: bool = True
 
 
 class FindingsSummaryResponse(BaseModel):

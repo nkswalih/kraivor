@@ -5,9 +5,12 @@ from app.core.logging import get_logger
 from app.domain.entities.score import Score
 from app.domain.rules.base import RuleViolation
 from app.workers.dead_code.detector import DeadCodeFinding
+from app.workers.devops.models import DevOpsFinding
 from app.workers.errors.scanner import ErrorFinding
+from app.workers.maintainability.models import MaintainabilityFinding
 from app.workers.perf.load_sim import SimulationResult
 from app.workers.perf.rpm_calculator import PerformanceMetrics
+from app.workers.reliability.models import ReliabilityFinding
 
 logger = get_logger(__name__)
 
@@ -21,6 +24,7 @@ class EnterpriseGuide:
         self.architecture_review: dict[str, object] | None = None
         self.capacity_analysis: dict[str, object] | None = None
         self.migration_path: list[dict[str, object]] = []
+        self.ai_executive_summary: str = ""
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -31,6 +35,7 @@ class EnterpriseGuide:
             "architecture_review": self.architecture_review,
             "capacity_analysis": self.capacity_analysis,
             "migration_path": self.migration_path,
+            "ai_executive_summary": self.ai_executive_summary,
         }
 
 
@@ -43,10 +48,13 @@ class EnterpriseGuideGenerator:
         simulation: list[SimulationResult] | None = None,
         dead_code: list[DeadCodeFinding] | None = None,
         errors: list[ErrorFinding] | None = None,
+        reliability: list[ReliabilityFinding] | None = None,
+        devops: list[DevOpsFinding] | None = None,
+        maintainability: list[MaintainabilityFinding] | None = None,
     ) -> EnterpriseGuide:
         guide = EnterpriseGuide()
         self._generate_executive_summary(guide, scores, perf_metrics, simulation)
-        self._group_findings_by_severity(guide, findings, dead_code, errors)
+        self._group_findings_by_severity(guide, findings, dead_code, errors, reliability, devops, maintainability)
         self._generate_architecture_review(guide, findings)
         self._generate_capacity_analysis(guide, perf_metrics, simulation)
         self._generate_migration_path(guide, findings, perf_metrics)
@@ -60,11 +68,14 @@ class EnterpriseGuideGenerator:
         simulation: list[SimulationResult] | None,
     ) -> None:
         tier_label = scores.tier.value if isinstance(scores.tier, Tiers) else str(scores.tier)
+        def _fmt(v: int | None) -> str:
+            return str(v) if v is not None else "N/A"
+
         parts = [
             f"Production Readiness Score: {scores.overall}/100 ({tier_label})",
-            f"Security: {scores.security} | Performance: {scores.performance} | "
-            f"Reliability: {scores.reliability} | Maintainability: {scores.maintainability} | "
-            f"DevOps: {scores.devops}",
+            f"Security: {_fmt(scores.security)} | Performance: {_fmt(scores.performance)} | "
+            f"Reliability: {_fmt(scores.reliability)} | Maintainability: {_fmt(scores.maintainability)} | "
+            f"DevOps: {_fmt(scores.devops)}",
         ]
         if perf_metrics:
             parts.append(f"Estimated System RPM: {perf_metrics.overall_rpm}")
@@ -80,6 +91,9 @@ class EnterpriseGuideGenerator:
         findings: list[RuleViolation],
         dead_code: list[DeadCodeFinding] | None,
         errors: list[ErrorFinding] | None,
+        reliability: list[ReliabilityFinding] | None = None,
+        devops: list[DevOpsFinding] | None = None,
+        maintainability: list[MaintainabilityFinding] | None = None,
     ) -> None:
         all_entries: list[tuple[object, ...]] = []
         for f in findings:
@@ -120,7 +134,49 @@ class EnterpriseGuideGenerator:
                     self._estimate_fix_effort_from_title(err.title),
                 ))
 
-        for _severity, title, file_ref, sev, desc, rec, ep, effort in all_entries:
+        if reliability:
+            for r in reliability:
+                sev = Severity.HIGH if r.severity in ("critical", "high") else Severity.MEDIUM
+                all_entries.append((
+                    sev,
+                    r.title,
+                    f"{r.file_path}:{r.line_start}" if r.line_start else r.file_path,
+                    sev,
+                    (r.description or "")[:200],
+                    r.recommendation or "",
+                    f"Pattern: {r.reliability_type}",
+                    self._estimate_fix_effort_from_title(r.title),
+                ))
+
+        if devops:
+            for d in devops:
+                sev = Severity.HIGH if d.severity in ("critical", "high") else Severity.MEDIUM
+                all_entries.append((
+                    sev,
+                    d.title,
+                    f"{d.file_path}:{d.line_start}" if d.line_start else d.file_path,
+                    sev,
+                    (d.description or "")[:200],
+                    d.recommendation or "",
+                    f"Pattern: {d.devops_type}",
+                    self._estimate_fix_effort_from_title(d.title),
+                ))
+
+        if maintainability:
+            for m in maintainability:
+                sev = Severity.HIGH if m.severity in ("critical", "high", "medium") else Severity.MEDIUM
+                all_entries.append((
+                    sev,
+                    m.title,
+                    f"{m.file_path}:{m.line_start}" if m.line_start else m.file_path,
+                    sev,
+                    (m.description or "")[:200],
+                    m.recommendation or "",
+                    f"Pattern: {m.maintainability_type}",
+                    self._estimate_fix_effort_from_title(m.title),
+                ))
+
+        for _severity, title, file_ref, sev, desc, rec, ep, effort in all_entries:  # type: ignore[assignment]
             issue_entry = {
                 "title": title,
                 "file": file_ref,

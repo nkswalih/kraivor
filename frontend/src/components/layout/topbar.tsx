@@ -38,7 +38,7 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
   const wsRef = useRef<HTMLDivElement>(null);
 
   const workspace = useMemo(
-    () => workspaces.find((w: any) => w.slug === workspaceSlug),
+    () => workspaces.find((w: { slug: string }) => w.slug === workspaceSlug),
     [workspaces, workspaceSlug]
   );
 
@@ -96,7 +96,7 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
                 {workspaces.length === 0 && (
                   <p className="px-3 py-2 text-[12px] text-text-tertiary">No workspaces</p>
                 )}
-                {(workspaces as any[]).map((ws: any) => (
+                {(workspaces as Array<{ id: string; slug: string; name: string }>).map((ws) => (
                   <button
                     key={ws.id}
                     onClick={() => {
@@ -161,13 +161,13 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
           <InboxPopover />
 
           {/* VS Code Style Right Panel Toggle */}
-          <button
+          {/* <button
             onClick={toggleRightPanel}
             className="p-1.5 text-text-secondary hover:text-text-primary hover:bg-krait-border/50 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             title="Toggle Context Panel (VS Code style Chat/Context)"
           >
             <PanelRight className="w-4 h-4" />
-          </button>
+          </button>  */}
         </div>
       </div>
 

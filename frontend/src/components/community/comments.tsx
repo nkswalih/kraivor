@@ -210,6 +210,7 @@ function CommentItem({
   depth = 0,
 }: {
   discussionId: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   comment: any;
   depth?: number;
 }) {

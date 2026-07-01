@@ -22,7 +22,7 @@ interface ExtendedAuthState extends AuthState {
   mfaToken: string | null;
   workspaceSlug: string | null;
   workspaceId: string | null;
-  workspaces: any[];
+  workspaces: Array<{ id: string; slug: string; name: string }>;
 }
 
 type AuthStore = ExtendedAuthState & AuthActions;
@@ -74,7 +74,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
       const page = await workspaceEndpoints.list(20);
       const savedSlug =
         typeof window !== 'undefined' ? localStorage.getItem(WORKSPACE_SLUG_KEY) : null;
-      const target = savedSlug ? page.results?.find((w: any) => w.slug === savedSlug) : null;
+      const target = savedSlug ? page.results?.find((w: { slug: string }) => w.slug === savedSlug) : null;
       const ws = target ?? page.results?.[0];
       if (ws) {
         set({

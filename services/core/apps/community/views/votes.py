@@ -9,20 +9,18 @@ from ..serializers import TagSerializer
 from ..services import TagService
 
 
-@extend_schema(tags=["Community"])
 class PopularTagsView(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(summary="Get popular tags")
+    @extend_schema(tags=["Community"], summary="Get popular tags")
     def get(self, request: Request) -> Response:
         limit = int(request.query_params.get("limit", 20))
         tags = TagService.get_popular_tags(limit=limit)
         return Response({"results": TagSerializer(tags, many=True).data})
 
 
-@extend_schema(tags=["Community"])
 class TagSearchView(APIView):
-    @extend_schema(summary="Search tags")
+    @extend_schema(tags=["Community"], summary="Search tags")
     def get(self, request: Request) -> Response:
         query = request.query_params.get("q", "").strip()
         if not query:

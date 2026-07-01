@@ -75,8 +75,8 @@ def create_default_registry() -> RuleRegistry:
         SecuritySQLInjectionRule,
         SecuritySSRFRule,
         SecurityWeakCryptoRule,
-        SecurityXXERule,
         SecurityXSSRule,
+        SecurityXXERule,
     )
     from app.domain.rules.structure import StructureDeepNestingRule
 

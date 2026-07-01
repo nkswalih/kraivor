@@ -57,10 +57,7 @@ class BaseRule(ABC):
         finding visibility but receive ``INFO`` severity (zero score
         impact).
         """
-        for pattern in self.exclude_patterns:
-            if fnmatch(file_path, pattern):
-                return True
-        return False
+        return any(fnmatch(file_path, pattern) for pattern in self.exclude_patterns)
 
     @abstractmethod
     async def analyze(

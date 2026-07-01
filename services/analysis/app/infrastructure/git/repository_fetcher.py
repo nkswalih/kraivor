@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import os
 import tempfile
 from pathlib import Path
@@ -102,6 +103,7 @@ class RepositoryFetcher:
         Returns:
             Path to the cloned repository root.
         """
+        os.makedirs(settings.analysis.ephemeral_path, exist_ok=True)
         dest = tempfile.mkdtemp(
             prefix="kraivor_analysis_",
             dir=settings.analysis.ephemeral_path,
@@ -115,41 +117,57 @@ class RepositoryFetcher:
             )
 
         cmd = [
-            "git",
-            "clone",
-            "--depth",
-            str(depth),
-            "--branch",
-            branch,
+            "git", "clone",
+            "--depth", str(depth),
+            "--branch", branch,
             "--single-branch",
-            clone_url,
-            dest,
+            clone_url, dest,
         ]
 
+        stderr_fd: int | None = None
+        stderr_path = ""
         try:
+            stderr_fd, stderr_path = tempfile.mkstemp(
+                suffix=".git_stderr",
+                dir=settings.analysis.ephemeral_path,
+            )
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=stderr_fd,
             )
-            _stdout, stderr = await asyncio.wait_for(
-                proc.communicate(),
-                timeout=settings.git.clone_timeout,
-            )
+            os.close(stderr_fd)
+            stderr_fd = None
+
+            try:
+                await asyncio.wait_for(proc.wait(), timeout=settings.git.clone_timeout)
+            except TimeoutError:
+                proc.kill()
+                with contextlib.suppress(TimeoutError):
+                    await asyncio.wait_for(proc.wait(), timeout=5)
+                raise RuntimeError(
+                    f"Git clone timed out after {settings.git.clone_timeout}s"
+                ) from None
 
             if proc.returncode != 0:
-                msg = f"Git clone failed: {stderr.decode()}"
-                raise RuntimeError(msg)
+                with open(stderr_path, "rb") as f:
+                    stderr = f.read()
+                msg = stderr.decode(errors="replace").strip()
+                raise RuntimeError(f"Git clone failed: {msg}")
 
             logger.info("repository_cloned", url=clone_url, branch=branch, dest=dest)
             return dest
-
-        except TimeoutError:
-            msg = f"Git clone timed out after {settings.git.clone_timeout}s"
-            raise RuntimeError(msg) from None
+        finally:
+            if stderr_fd is not None:
+                os.close(stderr_fd)
+            if stderr_path and os.path.exists(stderr_path):
+                with contextlib.suppress(OSError):
+                    os.unlink(stderr_path)
 
     async def detect_languages(self, repo_path: str) -> list[str]:
-        """Detect programming languages in the repository based on file extensions."""
+        return await asyncio.to_thread(self._detect_languages_sync, repo_path)
+
+    def _detect_languages_sync(self, repo_path: str) -> list[str]:
         detected: set[str] = set()
         for _root, dirs, files in os.walk(repo_path):
             dirs[:] = [d for d in dirs if d not in _EXCLUDED_DIRS]
@@ -163,7 +181,9 @@ class RepositoryFetcher:
         return sorted(detected)
 
     async def build_file_tree(self, repo_path: str) -> dict[str, list[dict[str, object]]]:
-        """Build a structured file tree grouped by language."""
+        return await asyncio.to_thread(self._build_file_tree_sync, repo_path)
+
+    def _build_file_tree_sync(self, repo_path: str) -> dict[str, list[dict[str, object]]]:
         tree: dict[str, list[dict[str, object]]] = {}
         for root, dirs, files in os.walk(repo_path):
             dirs[:] = [d for d in dirs if d not in _EXCLUDED_DIRS]
@@ -193,7 +213,9 @@ class RepositoryFetcher:
         return tree
 
     async def count_loc(self, repo_path: str) -> int:
-        """Count total lines of code in the repository."""
+        return await asyncio.to_thread(self._count_loc_sync, repo_path)
+
+    def _count_loc_sync(self, repo_path: str) -> int:
         total = 0
         for root, dirs, files in os.walk(repo_path):
             dirs[:] = [d for d in dirs if d not in _EXCLUDED_DIRS]
@@ -212,10 +234,11 @@ class RepositoryFetcher:
     async def get_source_files(
         self, repo_path: str
     ) -> list[dict[str, object]]:
-        """Get all source files with their content.
+        return await asyncio.to_thread(self._get_source_files_sync, repo_path)
 
-        Returns list of dicts with: path, language, content, size_bytes
-        """
+    def _get_source_files_sync(
+        self, repo_path: str
+    ) -> list[dict[str, object]]:
         files: list[dict[str, object]] = []
         for root, dirs, _ in os.walk(repo_path):
             dirs[:] = [d for d in dirs if d not in _EXCLUDED_DIRS]

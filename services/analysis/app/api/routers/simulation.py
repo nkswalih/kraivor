@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1/simulation-results", tags=["simulation-results"])
 
 
-@router.get("/", response_model=SimulationResultListResponse)
+@router.get("", response_model=SimulationResultListResponse)
 async def list_simulation_results(
     job_id: UUID = Query(..., description="Job ID"),
     uow: UnitOfWork = Depends(get_uow),

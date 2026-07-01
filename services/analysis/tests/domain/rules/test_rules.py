@@ -67,7 +67,7 @@ class TestRuleRegistry:
 
     def test_create_default_registry(self) -> None:
         registry = create_default_registry()
-        assert registry.count() == 8
+        assert registry.count() == 20
 
     def test_clear(self) -> None:
         registry = create_default_registry()

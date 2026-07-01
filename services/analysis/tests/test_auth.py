@@ -9,73 +9,11 @@ from unittest.mock import MagicMock, patch
 
 import jwt
 import pytest
-from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi import HTTPException
 
 
 def generate_test_jwt(private_key_pem: bytes, payload: dict[str, object], algorithm: str = "RS256") -> str:
     return jwt.encode(payload, private_key_pem, algorithm=algorithm)
-
-
-def generate_test_rsa_keypair() -> tuple[bytes, bytes]:
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric import rsa
-
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    public_key = private_key.public_key()
-
-    private_pem = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
-    )
-    public_pem = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    )
-    return private_pem, public_pem
-
-
-@pytest.fixture
-def keypair() -> tuple[bytes, bytes]:
-    return generate_test_rsa_keypair()
-
-
-@pytest.fixture
-def private_key(keypair: tuple[bytes, bytes]) -> bytes:
-    return keypair[0]
-
-
-@pytest.fixture
-def public_key(keypair: tuple[bytes, bytes]) -> bytes:
-    return keypair[1]
-
-
-@pytest.fixture
-def mock_jwks(public_key: bytes) -> dict[str, object]:
-    from cryptography.hazmat.primitives import serialization
-
-    public_key_obj = serialization.load_pem_public_key(public_key)
-    if not isinstance(public_key_obj, rsa.RSAPublicKey):
-        raise TypeError("Expected RSA public key")
-    public_numbers = public_key_obj.public_numbers()
-    n_bytes = public_numbers.n.to_bytes(256, "big")
-    e_bytes = public_numbers.e.to_bytes(4, "big")
-
-    def b64url_encode(data: bytes) -> str:
-        import base64
-        return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
-
-    return {
-        "keys": [{
-            "kty": "RSA",
-            "use": "sig",
-            "alg": "RS256",
-            "kid": "kraivor-key-1",
-            "n": b64url_encode(n_bytes),
-            "e": b64url_encode(e_bytes),
-        }]
-    }
 
 
 @pytest.fixture
@@ -92,12 +30,8 @@ def mock_settings() -> Generator[MagicMock, None, None]:
 
 
 class TestGetCurrentUser:
-    def test_valid_token_returns_payload(self, private_key: bytes, mock_settings: None, mock_jwks: dict[str, object]) -> None:
-        # Set up cache
-        import app.dependencies.auth as auth_module
+    def test_valid_token_returns_payload(self, mock_settings: None) -> None:
         from app.dependencies.auth import get_current_user
-        auth_module._jwks_cache = mock_jwks
-        auth_module._jwks_cache_time = time.time()
 
         payload = {
             "sub": "user-123",
@@ -111,10 +45,8 @@ class TestGetCurrentUser:
             "iss": "kraivor-identity",
         }
 
-        token = generate_test_jwt(private_key, payload)
-
         mock_request = MagicMock(spec=object)
-        mock_request.headers = {"Authorization": f"Bearer {token}"}
+        mock_request.headers = {"Authorization": "Bearer some.valid.token"}
 
         with patch("app.dependencies.auth._verify_token", return_value=payload):
             user = get_current_user(mock_request)
@@ -140,36 +72,26 @@ class TestGetCurrentUser:
         mock_request = MagicMock()
         mock_request.headers = {"Authorization": "Bearer invalid.token.here"}
 
-        with pytest.raises(HTTPException) as exc_info:
+        with (
+            patch("app.dependencies.auth._verify_token", side_effect=jwt.InvalidTokenError("bad token")),
+            pytest.raises(HTTPException) as exc_info,
+        ):
             get_current_user(mock_request)
 
         assert exc_info.value.status_code == 401
 
-    def test_expired_token_raises_401(self, private_key: bytes, mock_settings: None, mock_jwks: dict[str, object]) -> None:
-        import app.dependencies.auth as auth_module
+    def test_expired_token_raises_401(self, mock_settings: None) -> None:
         from app.dependencies.auth import get_current_user
-        auth_module._jwks_cache = mock_jwks
-        auth_module._jwks_cache_time = time.time()
-
-        payload = {
-            "sub": "user-123",
-            "email": "test@example.com",
-            "token_type": "access",
-            "iat": datetime.now(UTC) - timedelta(hours=2),
-            "exp": datetime.now(UTC) - timedelta(hours=1),
-            "aud": "kraivor",
-            "iss": "kraivor-identity",
-        }
-
-        token = generate_test_jwt(private_key, payload)
 
         mock_request = MagicMock()
-        mock_request.headers = {"Authorization": f"Bearer {token}"}
+        mock_request.headers = {"Authorization": "Bearer expired.token.here"}
 
-        with pytest.raises(HTTPException) as exc_info:
+        with (
+            patch("app.dependencies.auth._verify_token", side_effect=jwt.ExpiredSignatureError("expired")),
+            pytest.raises(HTTPException) as exc_info,
+        ):
             get_current_user(mock_request)
 
-        assert exc_info.value.status_code == 401
         assert exc_info.value.status_code == 401
 
     def test_internal_request_bypasses_verification(self, mock_settings: None) -> None:
@@ -188,13 +110,130 @@ class TestGetCurrentUser:
         assert user.email == "internal@example.com"
 
 
-class TestCacheInvalidation:
-    def test_cache_can_be_invalidated(self, mock_settings: None) -> None:
+class TestVerifyToken:
+    """Integration-style tests that exercise _verify_token with real keys."""
+
+    def test_verify_valid_token(self, mock_settings: None) -> None:
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+
         import app.dependencies.auth as auth_module
-        from app.dependencies.auth import invalidate_jwks_cache
-        auth_module._jwks_cache = {"test": "data"}
-        auth_module._jwks_cache_time = time.time()
 
-        invalidate_jwks_cache()
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        public_key = private_key.public_key()
+        private_pem = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        public_pem = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
 
-        assert auth_module._jwks_cache is None
+        payload = {
+            "sub": "user-123",
+            "email": "test@example.com",
+            "token_type": "access",
+            "iat": datetime.now(UTC),
+            "exp": datetime.now(UTC) + timedelta(hours=1),
+            "aud": "kraivor",
+            "iss": "kraivor-identity",
+        }
+
+        token = generate_test_jwt(private_pem, payload)
+
+        with patch.object(auth_module, "_get_jwks_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_signing_key = MagicMock()
+            mock_signing_key.key = public_pem.decode("utf-8")
+            mock_client.get_signing_key_from_jwt.return_value = mock_signing_key
+            mock_get_client.return_value = mock_client
+
+            result = auth_module._verify_token(token)
+
+        assert result["sub"] == "user-123"
+        assert result["email"] == "test@example.com"
+
+    def test_expired_token_raises(self, mock_settings: None) -> None:
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+
+        import app.dependencies.auth as auth_module
+
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        public_key = private_key.public_key()
+        private_pem = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        public_pem = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+
+        payload = {
+            "sub": "user-123",
+            "email": "test@example.com",
+            "token_type": "access",
+            "iat": datetime.now(UTC) - timedelta(hours=2),
+            "exp": datetime.now(UTC) - timedelta(hours=1),
+            "aud": "kraivor",
+            "iss": "kraivor-identity",
+        }
+
+        token = generate_test_jwt(private_pem, payload)
+
+        mock_client = MagicMock()
+        mock_signing_key = MagicMock()
+        mock_signing_key.key = public_pem.decode("utf-8")
+        mock_client.get_signing_key_from_jwt.return_value = mock_signing_key
+
+        with (
+            patch.object(auth_module, "_get_jwks_client", return_value=mock_client),
+            pytest.raises(jwt.ExpiredSignatureError),
+        ):
+            auth_module._verify_token(token)
+
+    def test_invalid_token_raises(self, mock_settings: None) -> None:
+        import app.dependencies.auth as auth_module
+
+        mock_client = MagicMock()
+        mock_client.get_signing_key_from_jwt.side_effect = jwt.InvalidTokenError("bad kid")
+
+        with (
+            patch.object(auth_module, "_get_jwks_client", return_value=mock_client),
+            pytest.raises(jwt.InvalidTokenError),
+        ):
+            auth_module._verify_token("bad.token.here")
+
+
+class TestGetJwksClient:
+    def test_client_created_and_cached(self, mock_settings: None) -> None:
+        import app.dependencies.auth as auth_module
+
+        auth_module._jwks_client = None
+        auth_module._jwks_client_ttl = 0
+
+        with patch("app.dependencies.auth.PyJWKClient") as mock_pyjwk:
+            mock_instance = MagicMock()
+            mock_pyjwk.return_value = mock_instance
+
+            client1 = auth_module._get_jwks_client()
+            client2 = auth_module._get_jwks_client()
+
+            assert client1 is client2
+            mock_pyjwk.assert_called_once()
+            mock_instance.fetch_data.assert_called_once()
+
+    def test_invalidate_cache(self, mock_settings: None) -> None:
+        import app.dependencies.auth as auth_module
+
+        auth_module._jwks_client = MagicMock()
+        auth_module._jwks_client_ttl = time.time()
+
+        auth_module.invalidate_jwks_cache()
+
+        assert auth_module._jwks_client is None
+        assert auth_module._jwks_client_ttl == 0

@@ -35,6 +35,13 @@ class AbstractJobRepository(ABC):
     ) -> tuple[list[dict[str, object]], int]:
         ...
 
+    @abstractmethod
+    async def hard_delete(self, job_id: UUID) -> dict[str, object] | None:
+        """Permanently delete a job and all cascade-related data.
+        Returns the job dict before deletion (for S3 cleanup etc).
+        """
+        ...
+
 
 class AbstractFindingRepository(ABC):
     """Contract for finding persistence."""
@@ -50,10 +57,15 @@ class AbstractFindingRepository(ABC):
         job_id: UUID,
         category: str | None = None,
         severity: str | None = None,
+        include_dismissed: bool = False,
         limit: int = 100,
         offset: int = 0,
     ) -> tuple[list[Finding], int]:
-        """Get findings for a job with optional filters. Returns (findings, total_count)."""
+        """Get findings for a job with optional filters. Returns (findings, total_count).
+
+        When ``include_dismissed`` is ``False`` (default) only ``ACTIVE`` findings are
+        returned. Pass ``True`` to include dismissed findings as well.
+        """
         ...
 
     @abstractmethod
@@ -62,10 +74,28 @@ class AbstractFindingRepository(ABC):
         repo_id: UUID,
         category: str | None = None,
         severity: str | None = None,
+        include_dismissed: bool = False,
         limit: int = 100,
         offset: int = 0,
     ) -> tuple[list[Finding], int]:
         """Get findings for a repo with optional filters."""
+        ...
+
+    @abstractmethod
+    async def dismiss(self, finding_id: UUID) -> None:
+        """Mark a single finding as dismissed."""
+        ...
+
+    @abstractmethod
+    async def dismiss_many(self, finding_ids: list[UUID]) -> int:
+        """Dismiss findings in batch. Returns count dismissed."""
+        ...
+
+    @abstractmethod
+    async def update_ai_fields(
+        self, finding_id: UUID, is_ai_enriched: bool, ai_explanation: str,
+    ) -> None:
+        """Update AI enrichment fields on a single finding."""
         ...
 
     @abstractmethod

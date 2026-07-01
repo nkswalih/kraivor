@@ -13,6 +13,13 @@ class StartAnalysisRequest(BaseModel):
     depth: int = Field(default=1, ge=1, le=10)
 
 
+class EngineStatusEntry(BaseModel):
+    engine: str
+    status: str
+    reason: str = ""
+    error_code: str = ""
+
+
 class JobStatusResponse(BaseModel):
     job_id: str
     repo_id: UUID
@@ -25,7 +32,9 @@ class JobStatusResponse(BaseModel):
     total_findings: int = 0
     total_files: int | None = None
     total_lines: int | None = None
-    overall_score: float | None = None
+    overall_score: int | None = None
+    blocked_by: list[str] = []
+    engine_statuses: dict[str, str] = {}
     error_message: str | None = None
     created_at: datetime
     started_at: datetime | None = None

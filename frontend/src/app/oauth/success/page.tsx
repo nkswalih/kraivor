@@ -109,9 +109,9 @@ export default function OAuthSuccessPage() {
             router.replace(slug ? `/${slug}` : '/new-workspace');
           }
         }, 800);
-      } catch (err: any) {
+      } catch (err: unknown) {
         setStage('error');
-        setError(err.message || 'Authorization failed');
+        setError(err instanceof Error ? err.message : 'Authorization failed');
       }
     };
 

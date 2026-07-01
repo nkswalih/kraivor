@@ -13,7 +13,7 @@ export function WorkspaceSwitcher({ workspaceSlug }: { workspaceSlug: string }) 
   const [showCreate, setShowCreate] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const current = workspaces.find((w: any) => w.slug === workspaceSlug) ?? workspaces[0];
+  const current = workspaces.find((w: { slug: string }) => w.slug === workspaceSlug) ?? workspaces[0];
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -23,7 +23,7 @@ export function WorkspaceSwitcher({ workspaceSlug }: { workspaceSlug: string }) 
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleSwitch = (ws: any) => {
+  const handleSwitch = (ws: { id: string; slug: string }) => {
     setWorkspace(ws.id, ws.slug);
     setOpen(false);
     router.push(`/${ws.slug}`);
@@ -57,7 +57,7 @@ export function WorkspaceSwitcher({ workspaceSlug }: { workspaceSlug: string }) 
             {workspaces.length === 0 && (
               <p className="px-3 py-2 text-[12px] text-text-tertiary">No workspaces</p>
             )}
-            {workspaces.map((ws: any) => (
+            {workspaces.map((ws: { id: string; slug: string; name: string }) => (
               <button
                 key={ws.id}
                 onClick={() => handleSwitch(ws)}

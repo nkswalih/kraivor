@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from uuid import UUID, uuid4
 
-from app.core.constants import Category, Severity
+from app.core.constants import Category, FindingStatus, Severity
 
 
 @dataclass(kw_only=True)
@@ -37,6 +37,7 @@ class Finding:
     rpm_impact: int = 0
     breaks_at_users: int | None = None
 
+    status: FindingStatus = FindingStatus.ACTIVE
     is_ai_enriched: bool = False
     metadata: dict[str, object] = field(default_factory=dict)
 
@@ -58,7 +59,10 @@ class Finding:
             "line_end": self.line_end,
             "code_snippet": self.code_snippet,
             "fix_snippet": self.fix_snippet,
+            "status": str(self.status),
             "score_impact": self.score_impact,
             "rpm_impact": self.rpm_impact,
             "breaks_at_users": self.breaks_at_users,
+            "is_ai_enriched": self.is_ai_enriched,
+            "ai_explanation": self.ai_explanation,
         }

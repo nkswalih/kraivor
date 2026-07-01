@@ -1,8 +1,8 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, Integer, SmallInteger, String, Text
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy import Boolean, DateTime, Integer, SmallInteger, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY, JSON
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -29,6 +29,8 @@ class AnalysisJobModel(Base, TimestampMixin, SoftDeleteMixin):
     progress_pct: Mapped[int] = mapped_column(SmallInteger, default=0)
     progress_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
+    total_files: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_lines: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total_findings: Mapped[int] = mapped_column(Integer, default=0)
     critical_count: Mapped[int] = mapped_column(Integer, default=0)
     high_count: Mapped[int] = mapped_column(Integer, default=0)
@@ -42,9 +44,13 @@ class AnalysisJobModel(Base, TimestampMixin, SoftDeleteMixin):
     maintainability_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     devops_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
 
+    blocked_by: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    engine_statuses: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True)
+
+    languages_detected: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    started_at: Mapped[datetime | None] = mapped_column(nullable=True)
-    completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     queue_wait_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
@@ -54,4 +60,7 @@ class AnalysisJobModel(Base, TimestampMixin, SoftDeleteMixin):
     error_findings = relationship("ErrorFindingModel", back_populates="job", lazy="selectin")
     performance_metrics = relationship("PerformanceMetricModel", back_populates="job", lazy="selectin")
     simulation_results = relationship("SimulationResultModel", back_populates="job", lazy="selectin")
+    reliability_findings = relationship("ReliabilityFindingModel", back_populates="job", lazy="selectin")
+    maintainability_findings = relationship("MaintainabilityFindingModel", back_populates="job", lazy="selectin")
+    devops_findings = relationship("DevOpsFindingModel", back_populates="job", lazy="selectin")
     enterprise_guide = relationship("EnterpriseGuideModel", back_populates="job", uselist=False, lazy="selectin")

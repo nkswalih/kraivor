@@ -12,8 +12,15 @@ class ListFindingsQuery:
     job_id: UUID
     category: str | None = None
     severity: str | None = None
+    include_dismissed: bool = False
     limit: int = 100
     offset: int = 0
+
+
+@dataclass(kw_only=True)
+class DismissFindingsCommand:
+    finding_ids: list[UUID]
+    dismissed: bool = True
 
 
 @dataclass(kw_only=True)

@@ -6,6 +6,8 @@ import { workspaceEndpoints } from '@/lib/api/endpoints';
 import { chatEndpoints } from '@/lib/api/endpoints';
 import { repositoryEndpoints } from '@/lib/api/endpoints';
 import { knowledgeEndpoints } from '@/lib/api/endpoints';
+import { analysisService } from '@/lib/api/analysis-service';
+import type { AnalysisJob } from '@/types/domain/analysis';
 import type { Workspace, ChatRoom, Repository, KnowledgeSpace, WorkspaceMember } from '@/types/api';
 
 export interface DashboardData {
@@ -56,12 +58,21 @@ export function useDashboard() {
     enabled: !!workspaceId,
   });
 
+  const recentJobsQuery = useQuery({
+    queryKey: ['dashboard-recent-jobs', workspaceId],
+    queryFn: () => analysisService.jobs.list(1, 5, workspaceId ?? undefined),
+    enabled: !!workspaceId,
+    refetchInterval: 10_000,
+  });
+
   const isLoading =
     workspaceQuery.isLoading ||
     roomsQuery.isLoading ||
     reposQuery.isLoading ||
     knowledgeQuery.isLoading ||
     membersQuery.isLoading;
+
+  const recentJobs = recentJobsQuery.data?.jobs ?? [];
 
   const error =
     workspaceQuery.error ||
@@ -90,6 +101,7 @@ export function useDashboard() {
     repositories,
     knowledgeSpaces,
     members,
+    recentJobs: recentJobs as AnalysisJob[],
     stats,
     isLoading,
     error,

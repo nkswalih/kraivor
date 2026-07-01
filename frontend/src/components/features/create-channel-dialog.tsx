@@ -40,8 +40,8 @@ export function CreateChannelDialog({
       onClose();
       router.push(`/${workspaceSlug}/chat/${room.id}`);
     },
-    onError: (err: any) => {
-      setError(err?.message || 'Failed to create channel');
+    onError: (err: unknown) => {
+      setError(err instanceof Error ? err.message : 'Failed to create channel');
     },
   });
 

@@ -348,7 +348,7 @@ export default function DocsPage() {
         <section className="container mx-auto px-6 pb-12">
           <RevealSection>
             <div className="text-center">
-              <p className="text-slate-400 mb-4">Can't find what you're looking for?</p>
+              <p className="text-slate-400 mb-4">Can&apos;t find what you&apos;re looking for?</p>
               <Link
                 href="#"
                 className="inline-flex items-center gap-2 text-[hsl(var(--primary-light))] hover:text-white transition-colors font-medium"

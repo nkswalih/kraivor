@@ -273,7 +273,7 @@ class GitHubAppInstallationImportView(WorkspaceContextMixin, APIView):
                 extra={
                     "installation_id": installation_id,
                     "workspace_id": str(workspace.id),
-                    "created": created,
+                    "was_created": created,
                 },
             )
 

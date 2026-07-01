@@ -6,7 +6,6 @@ from pydantic import (
     BaseModel,
     Field,
     SecretStr,
-    model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -29,16 +28,6 @@ class RedisSettings(BaseModel):
     url: str = "redis://localhost:6379/0"
     socket_timeout: int = Field(default=5, ge=1)
     retry_on_timeout: bool = True
-
-
-class CelerySettings(BaseModel):
-    broker_url: str = "redis://localhost:6379/1"
-    result_backend: str = "redis://localhost:6379/2"
-    task_acks_late: bool = True
-    worker_prefetch_multiplier: int = Field(default=1, ge=1)
-    worker_concurrency: int = Field(default=2, ge=1)
-    task_soft_time_limit: int = Field(default=600, ge=1)
-    task_time_limit: int = Field(default=660, ge=1)
 
 
 class S3Settings(BaseModel):
@@ -65,7 +54,7 @@ class JWTSettings(BaseModel):
 
 class GitSettings(BaseModel):
     clone_depth: int = Field(default=1, ge=1)
-    clone_timeout: int = Field(default=300, ge=1)
+    clone_timeout: int = Field(default=120, ge=1)
     token: SecretStr = SecretStr("")
 
 
@@ -74,29 +63,6 @@ class AnalysisSettings(BaseModel):
     simulate_users: list[int] = [100, 500, 5000, 50000]
     max_file_size_bytes: int = Field(default=1_000_000, ge=1)
     ephemeral_path: str = "/tmp/analysis"
-
-
-class ScoringSettings(BaseModel):
-    performance_weight: float = Field(default=0.25, ge=0, le=1)
-    security_weight: float = Field(default=0.25, ge=0, le=1)
-    reliability_weight: float = Field(default=0.20, ge=0, le=1)
-    maintainability_weight: float = Field(default=0.15, ge=0, le=1)
-    devops_weight: float = Field(default=0.15, ge=0, le=1)
-
-    @model_validator(mode="after")
-    def _weights_must_sum_to_one(self) -> "ScoringSettings":
-        total = (
-            self.performance_weight
-            + self.security_weight
-            + self.reliability_weight
-            + self.maintainability_weight
-            + self.devops_weight
-        )
-        if abs(total - 1.0) > 0.001:
-            raise ValueError(
-                f"Scoring weights must sum to 1.0, got {total:.4f}"
-            )
-        return self
 
 
 class RPMSettings(BaseModel):
@@ -119,6 +85,12 @@ class OTelSettings(BaseModel):
         "always_on", "always_off", "parent_based", "trace_id_ratio"
     ] = "always_on"
     traces_sample_rate: float = Field(default=1.0, ge=0, le=1)
+
+
+class AiServiceSettings(BaseModel):
+    url: str = "http://ai:8004"
+    enrich_endpoint: str = "/v1/analysis/enrich"
+    timeout: int = Field(default=120, ge=1)
 
 
 class MonitoringSettings(BaseModel):
@@ -146,15 +118,14 @@ class Settings(BaseSettings):
     service: ServiceSettings = ServiceSettings()
     database: DatabaseSettings
     redis: RedisSettings = RedisSettings()
-    celery: CelerySettings = CelerySettings()
     s3: S3Settings = S3Settings()
     jwt: JWTSettings = JWTSettings()
     git: GitSettings = GitSettings()
     analysis: AnalysisSettings = AnalysisSettings()
-    scoring: ScoringSettings = ScoringSettings()
     rpm: RPMSettings = RPMSettings()
     kafka: KafkaSettings = KafkaSettings()
     otel: OTelSettings = OTelSettings()
+    ai: AiServiceSettings = AiServiceSettings()
     monitoring: MonitoringSettings = MonitoringSettings()
     logging: LoggingSettings = LoggingSettings()
 

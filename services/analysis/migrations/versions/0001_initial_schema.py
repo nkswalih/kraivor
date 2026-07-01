@@ -5,9 +5,9 @@ Revises:
 Create Date: 2026-06-25
 """
 
-from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "0001"
@@ -51,8 +51,9 @@ def upgrade() -> None:
         sa.Column("duration_seconds", sa.Integer(), nullable=True),
         sa.Column("queue_wait_seconds", sa.Integer(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.PrimaryKeyConstraint("id", schema="analysis"),
+        sa.PrimaryKeyConstraint("id"),
         schema="analysis",
     )
     op.create_index("idx_jobs_repo", "analysis_jobs", ["repo_id", sa.text("created_at DESC")], schema="analysis")
@@ -85,7 +86,7 @@ def upgrade() -> None:
         sa.Column("is_ai_enriched", sa.Boolean(), server_default=sa.text("false"), nullable=True),
         sa.Column("ai_explanation", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
-        sa.PrimaryKeyConstraint("id", schema="analysis"),
+        sa.PrimaryKeyConstraint("id"),
         schema="analysis",
     )
     op.create_index("idx_results_job", "analysis_results", ["job_id"], schema="analysis")
@@ -110,7 +111,7 @@ def upgrade() -> None:
         sa.Column("evidence", sa.Text(), nullable=True),
         sa.Column("confidence", sa.Numeric(3, 2), server_default=sa.text("0.0"), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
-        sa.PrimaryKeyConstraint("id", schema="analysis"),
+        sa.PrimaryKeyConstraint("id"),
         schema="analysis",
     )
     op.create_index("idx_dead_code_job", "dead_code", ["job_id"], schema="analysis")
@@ -134,7 +135,7 @@ def upgrade() -> None:
         sa.Column("code_snippet", sa.Text(), nullable=True),
         sa.Column("recommendation", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
-        sa.PrimaryKeyConstraint("id", schema="analysis"),
+        sa.PrimaryKeyConstraint("id"),
         schema="analysis",
     )
     op.create_index("idx_errors_job", "error_findings", ["job_id"], schema="analysis")
@@ -159,7 +160,7 @@ def upgrade() -> None:
         sa.Column("bottleneck_severity", sa.String(20), nullable=True),
         sa.Column("bottleneck_detail", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
-        sa.PrimaryKeyConstraint("id", schema="analysis"),
+        sa.PrimaryKeyConstraint("id"),
         schema="analysis",
     )
     op.create_index("idx_perf_job", "performance_metrics", ["job_id"], schema="analysis")
@@ -176,10 +177,10 @@ def upgrade() -> None:
         sa.Column("status", sa.String(20), nullable=False),
         sa.Column("overall_rpm", sa.Integer(), nullable=True),
         sa.Column("error_rate_pct", sa.Numeric(5, 2), nullable=True),
-        sa.Column("endpoints_analysis", sa.JSONB(), nullable=True),
-        sa.Column("bottlenecks", sa.JSONB(), nullable=True),
+        sa.Column("endpoints_analysis", sa.dialects.postgresql.JSONB(), nullable=True),
+        sa.Column("bottlenecks", sa.dialects.postgresql.JSONB(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
-        sa.PrimaryKeyConstraint("id", schema="analysis"),
+        sa.PrimaryKeyConstraint("id"),
         schema="analysis",
     )
     op.create_index("idx_sim_job", "simulation_results", ["job_id"], schema="analysis")
@@ -199,7 +200,7 @@ def upgrade() -> None:
         sa.Column("devops_score", sa.SmallInteger(), nullable=True),
         sa.Column("findings_count", sa.Integer(), server_default=sa.text("0"), nullable=True),
         sa.Column("job_id", sa.Uuid(), nullable=True),
-        sa.PrimaryKeyConstraint("time", "repo_id", schema="analysis"),
+        sa.PrimaryKeyConstraint("time", "repo_id"),
         schema="analysis",
     )
     op.create_index("idx_score_history_repo", "score_history", ["repo_id", sa.text("time DESC")], schema="analysis")
@@ -213,14 +214,14 @@ def upgrade() -> None:
         sa.Column("repo_id", sa.Uuid(), nullable=False),
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
         sa.Column("executive_summary", sa.Text(), nullable=True),
-        sa.Column("critical_issues", sa.JSONB(), nullable=True),
-        sa.Column("high_issues", sa.JSONB(), nullable=True),
-        sa.Column("medium_issues", sa.JSONB(), nullable=True),
-        sa.Column("architecture_review", sa.JSONB(), nullable=True),
-        sa.Column("capacity_analysis", sa.JSONB(), nullable=True),
-        sa.Column("migration_path", sa.JSONB(), nullable=True),
+        sa.Column("critical_issues", sa.dialects.postgresql.JSONB(), nullable=True),
+        sa.Column("high_issues", sa.dialects.postgresql.JSONB(), nullable=True),
+        sa.Column("medium_issues", sa.dialects.postgresql.JSONB(), nullable=True),
+        sa.Column("architecture_review", sa.dialects.postgresql.JSONB(), nullable=True),
+        sa.Column("capacity_analysis", sa.dialects.postgresql.JSONB(), nullable=True),
+        sa.Column("migration_path", sa.dialects.postgresql.JSONB(), nullable=True),
         sa.Column("generated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
-        sa.PrimaryKeyConstraint("id", schema="analysis"),
+        sa.PrimaryKeyConstraint("id"),
         schema="analysis",
     )
     op.create_index("idx_guides_job", "enterprise_guides", ["job_id"], schema="analysis")
@@ -239,7 +240,7 @@ def upgrade() -> None:
         sa.Column("s3_key", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.PrimaryKeyConstraint("id", schema="analysis"),
+        sa.PrimaryKeyConstraint("id"),
         schema="analysis",
     )
 

@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import os
 import tempfile
 from pathlib import Path
@@ -140,12 +141,10 @@ class RepositoryFetcher:
 
             try:
                 await asyncio.wait_for(proc.wait(), timeout=settings.git.clone_timeout)
-            except (TimeoutError, asyncio.TimeoutError):
+            except TimeoutError:
                 proc.kill()
-                try:
+                with contextlib.suppress(TimeoutError):
                     await asyncio.wait_for(proc.wait(), timeout=5)
-                except (TimeoutError, asyncio.TimeoutError):
-                    pass
                 raise RuntimeError(
                     f"Git clone timed out after {settings.git.clone_timeout}s"
                 ) from None
@@ -162,10 +161,8 @@ class RepositoryFetcher:
             if stderr_fd is not None:
                 os.close(stderr_fd)
             if stderr_path and os.path.exists(stderr_path):
-                try:
+                with contextlib.suppress(OSError):
                     os.unlink(stderr_path)
-                except OSError:
-                    pass
 
     async def detect_languages(self, repo_path: str) -> list[str]:
         return await asyncio.to_thread(self._detect_languages_sync, repo_path)

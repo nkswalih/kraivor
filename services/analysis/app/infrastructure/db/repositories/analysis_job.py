@@ -1,6 +1,7 @@
 from uuid import UUID
 
-from sqlalchemy import delete as sa_delete, func, select, update
+from sqlalchemy import delete as sa_delete
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.contracts.repository_provider import AbstractJobRepository

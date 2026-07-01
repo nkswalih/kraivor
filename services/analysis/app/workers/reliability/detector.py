@@ -134,15 +134,12 @@ class ReliabilityDetector:
         findings: list[ReliabilityFinding] = []
         lines = content.split("\n")
         try_blocks: list[tuple[int, int]] = []
-        depth = 0
         try_start = -1
         for line_num, line in enumerate(lines, 1):
             stripped = line.strip()
             if stripped.startswith("try:"):
-                depth = 1
                 try_start = line_num
-            elif try_start > -1:
-                if stripped.startswith("except") or stripped.startswith("finally"):
+            elif try_start > -1 and (stripped.startswith("except") or stripped.startswith("finally")):
                     try_blocks.append((try_start, line_num))
                     try_start = -1
 
@@ -521,11 +518,9 @@ class ReliabilityDetector:
         findings: list[ReliabilityFinding] = []
         lines = content.split("\n")
         in_handler = False
-        handler_line = 0
         for line_num, line in enumerate(lines, 1):
             if re.search(r'(?i)def\s+\w+\(', line):
                 in_handler = True
-                handler_line = line_num
             if in_handler and line.strip() and not line.startswith(" "):
                 in_handler = False
             if not in_handler:

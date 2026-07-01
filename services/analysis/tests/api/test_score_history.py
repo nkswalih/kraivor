@@ -1,19 +1,19 @@
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from app.api.main import create_app
-from app.application.analysis.handler import handle_stage_finalize
 from app.application.analysis.commands import ProcessStageCommand
-from app.domain.entities.score import Score
+from app.application.analysis.handler import handle_stage_finalize
+from app.dependencies.auth import JWTPayload
+from app.domain.contracts.storage import AbstractStorage
 from app.domain.entities.finding import Finding
 from app.domain.entities.report import Report
+from app.domain.entities.score import Score
 from app.infrastructure.db.unit_of_work import UnitOfWork
 from app.infrastructure.messaging.producer import EventProducer
-from app.domain.contracts.storage import AbstractStorage
-from app.dependencies.auth import JWTPayload
 
 
 @pytest.fixture

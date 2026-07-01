@@ -1,9 +1,11 @@
 import re
-from dataclasses import dataclass
 
 from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
-from app.workers.maintainability.models import MaintainabilityFinding, MaintainabilityMetrics
+from app.workers.maintainability.models import (
+    MaintainabilityFinding,
+    MaintainabilityMetrics,
+)
 
 logger = get_logger(__name__)
 
@@ -160,7 +162,7 @@ class MaintainabilityDetector:
                     line_start=func.line_start,
                     line_end=func.line_start,
                     code_snippet=snippet,
-                    recommendation=f"Reduce parameters by using a configuration object, builder pattern, or keyword arguments.",
+                    recommendation="Reduce parameters by using a configuration object, builder pattern, or keyword arguments.",
                     confidence=0.85,
                     estimated_effort_hours=_EFFORT_ESTIMATES["too_many_parameters"],
                 ))
@@ -252,7 +254,7 @@ class MaintainabilityDetector:
                 seen_blocks[normalized] = []
             seen_blocks[normalized].append(i + 1)
 
-        for normalized, positions in seen_blocks.items():
+        for _normalized, positions in seen_blocks.items():
             if len(positions) >= 2:
                 snippet = "\n".join(lines[positions[0] - 1:positions[0] + 2]).strip()
                 findings.append(MaintainabilityFinding(
@@ -503,7 +505,7 @@ class MaintainabilityDetector:
                     line_start=cls.line_start,
                     line_end=cls.line_end,
                     code_snippet=snippet,
-                    recommendation=f"Prefer composition over inheritance. Extract shared behavior into mixins or use dependency injection.",
+                    recommendation="Prefer composition over inheritance. Extract shared behavior into mixins or use dependency injection.",
                     confidence=0.75,
                     estimated_effort_hours=_EFFORT_ESTIMATES["deep_inheritance"],
                 ))
@@ -528,8 +530,7 @@ class MaintainabilityDetector:
                 inside_function = False
                 continue
 
-            if inside_function and import_pattern.match(stripped):
-                if "typing" not in stripped and "TYPE_CHECKING" not in stripped:
+            if inside_function and import_pattern.match(stripped) and "typing" not in stripped and "TYPE_CHECKING" not in stripped:
                     snippet = stripped[:200]
                     findings.append(MaintainabilityFinding(
                         maintainability_type="circular_import",

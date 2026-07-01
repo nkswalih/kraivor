@@ -3,7 +3,9 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.infrastructure.db.models.maintainability_finding import MaintainabilityFindingModel
+from app.infrastructure.db.models.maintainability_finding import (
+    MaintainabilityFindingModel,
+)
 
 
 class MaintainabilityFindingRepository:

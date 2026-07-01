@@ -15,8 +15,8 @@ from app.domain.rules.security import (
     SecuritySQLInjectionRule,
     SecuritySSRFRule,
     SecurityWeakCryptoRule,
-    SecurityXXERule,
     SecurityXSSRule,
+    SecurityXXERule,
 )
 
 

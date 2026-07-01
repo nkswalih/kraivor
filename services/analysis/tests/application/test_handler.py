@@ -1,13 +1,9 @@
 """Tests for handler-level functions — dedup, save_findings, stage_score."""
 
-from uuid import UUID, uuid4
 
-import pytest
 
 from app.application.analysis.handler import _dedup_violations
-from app.domain.contracts.scorer import CapacityMetrics, Violation
 from app.domain.rules.base import RuleViolation
-
 
 # ======================================================================
 # _dedup_violations

@@ -1,4 +1,3 @@
-import math
 import re
 
 from app.core.logging import get_logger
@@ -129,7 +128,7 @@ class DevopsAnalyzer:
                         confidence=0.8,
                     ))
                     break
-        stages = [l for l in lines if re.search(r'(?i)^\s*FROM\s', l)]
+        stages = [line for line in lines if re.search(r'(?i)^\s*FROM\s', line)]
         if len(stages) < 2:
             findings.append(DevOpsFinding(
                 devops_type="no_multi_stage_build",
@@ -151,13 +150,12 @@ class DevopsAnalyzer:
         lines = content.split("\n")
         full_lower = content.lower()
         services_section = False
-        for line_num, line in enumerate(lines, 1):
+        for _line_num, line in enumerate(lines, 1):
             stripped = line.strip()
             if re.match(r'^services:', stripped):
                 services_section = True
                 continue
-            if services_section:
-                if re.match(r'^\w', stripped) and ":" in stripped and not stripped.startswith(" "):
+            if services_section and re.match(r'^\w', stripped) and ":" in stripped and not stripped.startswith(" "):
                     services_section = False
         if not re.search(r'restart\s*:', full_lower):
             findings.append(DevOpsFinding(
@@ -357,8 +355,7 @@ class DevopsAnalyzer:
         ])
         if not is_helm:
             return findings
-        if fp.endswith("values.yaml") or fp.endswith("templates/") or "/templates/" in fp:
-            if not re.search(r'\{\{\s*\.Values\.', content):
+        if (fp.endswith("values.yaml") or fp.endswith("templates/") or "/templates/" in fp) and not re.search(r'\{\{\s*\.Values\.', content):
                 findings.append(DevOpsFinding(
                     devops_type="hardcoded_values",
                     severity="medium",
@@ -635,7 +632,6 @@ class DevopsAnalyzer:
 
     def _analyze_health(self, fp: str, content: str) -> list[DevOpsFinding]:
         findings: list[DevOpsFinding] = []
-        full_lower = content.lower()
         has_health_endpoint = bool(re.search(r'(?i)(?:["\']/health["\']|["\']/healthz["\']|["\']/ready["\']|["\']/live["\']|health_check|healthcheck)', content))
         has_readiness = bool(re.search(r'(?i)readinessProbe\s*:', content))
         has_liveness = bool(re.search(r'(?i)livenessProbe\s*:', content))

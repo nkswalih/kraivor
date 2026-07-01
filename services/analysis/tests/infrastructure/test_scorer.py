@@ -3,8 +3,6 @@
 
 import math
 
-import pytest
-
 from app.domain.contracts.scorer import CapacityMetrics, Violation
 from app.infrastructure.scorer import ProductionReadinessScorer
 
@@ -204,10 +202,10 @@ class TestCriticalFloor:
             v("maintainability", "critical"),
         ]
         score = scorer.calculate(violations)
-        # security: 4× critical (same rule+severity)
+        # security: 4x critical (same rule+severity)
         #   count=4, n=1 → log(5)/log(2)=2.322, penalty=15*2.322=34.83
         #   security ≈ 65
-        # maintainability: 4× critical (same rule+severity)
+        # maintainability: 4x critical (same rule+severity)
         #   similarly ≈ 65
         # min=65 >= 50 → overall = round(mean(65,65)) = 65
         assert score.security == 65
@@ -219,7 +217,7 @@ class TestCriticalFloor:
         from a single rule can still push a category below 50."""
         violations = [v("security", "critical") for _ in range(100)]
         score = scorer.calculate(violations, total_files=50)
-        # 100 × critical under same rule_id+severity
+        # 100 x critical under same rule_id+severity
         # count=100, n=50 → log(101)/log(51)=4.615/3.932=1.174
         # penalty=15*1.174=17.61 → security ≈ 82
         # This doesn't go below 50 because log-normalization is strong
@@ -274,7 +272,7 @@ class TestCapacityPenalties:
             v("performance", "critical"),
         ]
         score = scorer.calculate(violations, capacity=cap)
-        # 4× critical (same rule+severity): count=4, n=1→factor=2.322, penalty=34.83
+        # 4x critical (same rule+severity): count=4, n=1→factor=2.322, penalty=34.83
         # perf ≈ 65 - 50 (failing) = 15
         assert score.performance == 15
 
@@ -347,7 +345,7 @@ class TestEdgeCases:
             v("security", "critical"),
         ]
         score = scorer.calculate(violations)
-        # With total_files=0 (→ n=1), 7× critical has factor=log(8)/log(2)=3.0
+        # With total_files=0 (→ n=1), 7x critical has factor=log(8)/log(2)=3.0
         # penalty=45 → security=55
         assert score.security == 55
 

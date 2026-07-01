@@ -5,12 +5,12 @@ from app.core.logging import get_logger
 from app.domain.entities.score import Score
 from app.domain.rules.base import RuleViolation
 from app.workers.dead_code.detector import DeadCodeFinding
+from app.workers.devops.models import DevOpsFinding
 from app.workers.errors.scanner import ErrorFinding
+from app.workers.maintainability.models import MaintainabilityFinding
 from app.workers.perf.load_sim import SimulationResult
 from app.workers.perf.rpm_calculator import PerformanceMetrics
 from app.workers.reliability.models import ReliabilityFinding
-from app.workers.maintainability.models import MaintainabilityFinding
-from app.workers.devops.models import DevOpsFinding
 
 logger = get_logger(__name__)
 

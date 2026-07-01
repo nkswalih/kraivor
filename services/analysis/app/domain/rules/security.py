@@ -568,7 +568,6 @@ class SecurityCSRFRule(BaseRule):
         self, file_path: str, content: str, ast_data: dict[str, object]
     ) -> list[RuleViolation]:
         violations: list[RuleViolation] = []
-        lines = content.split("\n")
         has_csrf_protection = any(
             pattern.search(content)
             for pattern in CSRF_PATTERNS

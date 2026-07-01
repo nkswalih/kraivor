@@ -18,8 +18,8 @@ class ProductionReadinessScorer(AbstractScorer):
     * **Log-normalized per-rule scoring**: Violations are grouped by
       ``(category, rule_id, severity)``. Within each group, the base
       penalty is scaled by ``log(1 + count) / log(1 + total_files)``,
-      so that the same rule firing 1 × on a 10 k-file project costs the
-      same as firing 1 × on a 100-file project. This prevents finding
+      so that the same rule firing 1 x on a 10k-file project costs the
+      same as firing 1 x on a 100-file project. This prevents finding
       counts from dominating scores on large projects.
     * **Capacity penalties**: Simulation results apply major penalties
       to performance when the system is explicitly failing or degraded.
@@ -74,7 +74,7 @@ class ProductionReadinessScorer(AbstractScorer):
 
         # ── 2. Log-normalized per-rule scoring ─────────────────────────
         # Group violations by (category, rule_id, severity) and apply
-        #   penalty = base × log(1 + count) / log(1 + total_files)
+        #   penalty = base x log(1 + count) / log(1 + total_files)
         # so that a rule that fires many times on a large project does
         # not dominate the score.
         rule_groups: Counter[tuple[str, str, str]] = Counter()

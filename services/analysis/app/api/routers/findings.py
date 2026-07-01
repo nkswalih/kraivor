@@ -1,11 +1,9 @@
 from typing import cast
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
-
-from app.api.dependencies.services import get_uow
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.api.dependencies.services import get_uow
 from app.api.schemas.findings import (
     DismissFindingsRequest,
     FindingResponse,

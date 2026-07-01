@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, Query
 from app.api.dependencies.services import get_uow
 from app.api.schemas.maintainability import (
     MaintainabilityFindingListResponse,
-    MaintainabilityMetricsResponse,
     MaintainabilityFindingResponse,
+    MaintainabilityMetricsResponse,
 )
 from app.core.logging import get_logger
 from app.dependencies.auth import JWTPayload, get_current_user

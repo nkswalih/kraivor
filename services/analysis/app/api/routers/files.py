@@ -11,12 +11,31 @@ from app.application.analysis.commands import StartAnalysisCommand
 from app.application.analysis.handler import handle_start_analysis
 from app.application.tasks.pipeline import run_full_analysis
 from app.core.config import get_settings
-from app.core.constants import JobStatus, TriggerType
+from app.core.constants import TriggerType
 from app.core.logging import get_logger
 from app.dependencies.auth import JWTPayload, get_current_user
 from app.infrastructure.db.unit_of_work import UnitOfWork
 from app.infrastructure.messaging.producer import EventProducer
 from app.infrastructure.storage.s3 import S3Storage
+
+_background_tasks: set[asyncio.Task[None]] = set()
+
+
+_EXT_TO_LANG: dict[str, str] = {
+    ".py": "python", ".pyi": "python", ".pyx": "python",
+    ".js": "javascript", ".mjs": "javascript", ".cjs": "javascript",
+    ".ts": "typescript", ".tsx": "typescript",
+    ".go": "go",
+    ".java": "java",
+    ".rs": "rust",
+    ".rb": "ruby",
+    ".yml": "yaml", ".yaml": "yaml",
+    ".json": "json",
+    ".md": "markdown", ".mdx": "markdown",
+    ".sh": "shell", ".bash": "shell",
+    ".sql": "sql",
+    "Dockerfile": "dockerfile", ".dockerfile": "dockerfile",
+}
 
 logger = get_logger(__name__)
 
@@ -54,7 +73,7 @@ async def upload_file(
     await storage.upload(s3_key, contents, content_type=content_type)
 
     ext = os.path.splitext(file.filename)[1].lower()
-    language = _ext_to_lang.get(ext, "unknown")
+    language = _EXT_TO_LANG.get(ext, "unknown")
 
     await uow.file_analyses.save_many([{
         "job_id": job_id,
@@ -80,7 +99,7 @@ async def upload_file(
     await handle_start_analysis(cmd, uow)
     await uow.commit()
 
-    asyncio.create_task(_run_analysis_safe({
+    background_task = asyncio.create_task(_run_analysis_safe({
         "job_id": str(job_id),
         "repo_id": str(cmd.repo_id),
         "workspace_id": workspace_id,
@@ -91,6 +110,8 @@ async def upload_file(
         "deep_scan": False,
         "depth": 1,
     }))
+    _background_tasks.add(background_task)
+    background_task.add_done_callback(lambda t: _background_tasks.discard(t))
 
     job = await uow.jobs.get_by_id(job_id)
     return _job_to_response(job)
@@ -122,6 +143,9 @@ async def _run_analysis_safe(cmd_dict: dict[str, object]) -> None:
 def _job_to_response(job: dict[str, object]) -> JobStatusResponse:
     from app.api.routers.jobs import _job_to_response as jtr
     return jtr(job)
+
+
+_background_tasks: set[asyncio.Task[None]] = set()
 
 
 _EXT_TO_LANG: dict[str, str] = {

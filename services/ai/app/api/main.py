@@ -1,0 +1,60 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.config import settings
+from app.api.dependencies.auth import invalidate_jwks_cache
+from app.infrastructure.db.database import init_db, close_db
+from app.infrastructure.cache.redis_client import close_redis
+from app.infrastructure.messaging.kafka_producer import get_event_producer
+from app.core.logging import setup_logging
+from app.monitoring.metrics import setup_metrics
+from app.api.middleware.request_id import RequestIDMiddleware
+from app.api.middleware.prometheus import PrometheusMiddleware
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    setup_logging()
+    setup_metrics(app)
+    await init_db()
+    await get_event_producer().start()
+    invalidate_jwks_cache()
+    yield
+    await get_event_producer().stop()
+    await close_redis()
+    await close_db()
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title="Kraivor AI Service",
+        description="Multi-agent AI system with RAG, streaming, and per-user key provisioning",
+        version="0.1.0",
+        lifespan=lifespan,
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    app.add_middleware(PrometheusMiddleware)
+    app.add_middleware(RequestIDMiddleware)
+
+    from app.api.routers import chat, embeddings, api_keys, health, analysis, conversations
+    app.include_router(health.router, prefix="/v1")
+    app.include_router(chat.router, prefix="/v1")
+    app.include_router(embeddings.router, prefix="/v1")
+    app.include_router(api_keys.router, prefix="/v1")
+    app.include_router(analysis.router)
+    app.include_router(conversations.router, prefix="/v1")
+
+    return app
+
+
+app = create_app()

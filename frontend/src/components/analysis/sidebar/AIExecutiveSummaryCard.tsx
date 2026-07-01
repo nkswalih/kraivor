@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { aiApi, type EnrichResponse } from '@/lib/api/ai-api';
 import type { AiSummaryCard, Finding, Report } from '@/types/domain/analysis';
-import { Sparkles } from 'lucide-react';
+import { BotMessageSquare } from 'lucide-react';
 
 export function AIExecutiveSummaryCard({
   data,
@@ -56,7 +56,7 @@ export function AIExecutiveSummaryCard({
     <div className={cn('bg-card border border-border rounded-xl p-4', className)}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-[13px] font-semibold text-foreground flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-venom-yellow" />
+          <BotMessageSquare className="w-3.5 h-3.5 text-venom-yellow" />
           AI Executive Summary
         </h3>
         {!isAiGenerated && (

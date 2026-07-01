@@ -3,7 +3,6 @@
 import { useState, useCallback, memo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Sparkles,
   Copy,
   Check,
   RefreshCw,
@@ -12,6 +11,7 @@ import {
   Share2,
   FileJson,
   Pencil,
+  BotMessageSquare,
 } from 'lucide-react';
 import { SnakeIcon } from '@/components/features/ai-snake-icon';
 import { AiMarkdown } from '@/components/features/ai-markdown';
@@ -188,7 +188,7 @@ export const AiMessage = memo(function AiMessage({
           <div className="rounded-xl border border-red-900/40 bg-red-950/20 p-4">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-red-900/30 flex items-center justify-center shrink-0">
-                <Sparkles className="w-4 h-4 text-red-400" />
+                <BotMessageSquare className="w-4 h-4 text-red-400" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-medium text-red-300 mb-1">
@@ -254,14 +254,15 @@ export const AiMessage = memo(function AiMessage({
                     {/* Header — visible when content is streaming or complete */}
                     <div className="flex items-center gap-2 mb-1.5">
                       <SnakeIcon />
-                      <span className="text-[13px] font-semibold text-text-primary">
+                      {/* <span className="text-[13px] font-semibold text-text-primary">
                         Kraivor AI
-                      </span>
+                      </span> */}
                       {message.timestamp && (
                         <span className="text-[11px] text-text-tertiary">
                           {new Date(message.timestamp).toLocaleTimeString([], {
-                            hour: '2-digit',
+                            hour: 'numeric',
                             minute: '2-digit',
+                            hour12: true,
                           })}
                         </span>
                       )}

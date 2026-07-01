@@ -9,8 +9,8 @@
 export function SnakeIcon({ className = '' }: { className?: string }) {
   return (
     <svg
-      width={18}
-      height={18}
+      width={24}
+      height={24}
       viewBox="0 0 18 18"
       fill="none"
       className={`shrink-0 ${className}`}

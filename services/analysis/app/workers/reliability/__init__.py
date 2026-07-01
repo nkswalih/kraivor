@@ -1,4 +1,5 @@
-from app.workers.reliability.detector import ReliabilityDetector, ReliabilityFinding
+from app.workers.reliability.detector import ReliabilityDetector
+from app.workers.reliability.models import ReliabilityFinding
 
 __all__ = [
     "ReliabilityDetector",

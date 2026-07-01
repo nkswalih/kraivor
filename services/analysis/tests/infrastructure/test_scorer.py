@@ -2,6 +2,7 @@
 (Log-normalized per-rule scoring + Critical-Floor formula)."""
 
 import math
+from typing import cast
 
 from app.domain.contracts.scorer import CapacityMetrics, Violation
 from app.infrastructure.scorer import ProductionReadinessScorer
@@ -15,14 +16,14 @@ scorer = ProductionReadinessScorer()
 
 def v(category: str, severity: str, **kw: object) -> Violation:
     return Violation(
-        rule_id=kw.get("rule_id", "TEST-RULE"),
+        rule_id=str(kw.get("rule_id", "TEST-RULE")),
         category=category,
         severity=severity,
-        title=kw.get("title", "Test violation"),
-        description=kw.get("description", ""),
-        file_path=kw.get("file_path", ""),
-        line_start=kw.get("line_start", 1),
-        line_end=kw.get("line_end", 1),
+        title=str(kw.get("title", "Test violation")),
+        description=str(kw.get("description", "")),
+        file_path=str(kw.get("file_path", "")),
+        line_start=cast(int | None, kw.get("line_start", 1)),
+        line_end=cast(int | None, kw.get("line_end", 1)),
     )
 
 
@@ -222,7 +223,7 @@ class TestCriticalFloor:
         # penalty=15*1.174=17.61 → security ≈ 82
         # This doesn't go below 50 because log-normalization is strong
         # for large counts on smaller projects
-        assert score.security >= 50
+        assert score.security is not None and score.security >= 50
 
     def test_only_one_category_with_data(self) -> None:
         violations = [
@@ -354,7 +355,7 @@ class TestEdgeCases:
             v("security", "info"),
             v("performance", "info"),
         ])
-        assert score.overall <= 100
+        assert score.overall is not None and score.overall <= 100
         assert score.overall == 100
 
     def test_violation_category_not_in_scorer_list_ignored(self) -> None:

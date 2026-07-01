@@ -16,7 +16,7 @@ class DevOpsFindingResponse(BaseModel):
     code_snippet: str | None = None
     recommendation: str | None = None
     confidence: float = 0.8
-    devops_score: dict | None = None
+    devops_score: dict[str, object] | None = None
 
 
 class DevOpsFindingListResponse(BaseModel):

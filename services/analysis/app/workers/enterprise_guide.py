@@ -176,7 +176,7 @@ class EnterpriseGuideGenerator:
                     self._estimate_fix_effort_from_title(m.title),
                 ))
 
-        for _severity, title, file_ref, sev, desc, rec, ep, effort in all_entries:
+        for _severity, title, file_ref, sev, desc, rec, ep, effort in all_entries:  # type: ignore[assignment]
             issue_entry = {
                 "title": title,
                 "file": file_ref,

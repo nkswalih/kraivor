@@ -101,11 +101,11 @@ class FindingRepository(AbstractFindingRepository):
     async def dismiss_many(self, finding_ids: list[UUID]) -> int:
         stmt = (
             update(FindingModel)
-            .where(FindingModel.id.in_(finding_ids))  # type: ignore[attr-defined]
+            .where(FindingModel.id.in_(finding_ids))
             .values(status=FindingStatus.DISMISSED)
         )
         result = await self._session.execute(stmt)
-        return result.rowcount  # type: ignore[return-value]
+        return len(result.all())
 
     async def count_by_severity(self, job_id: UUID) -> dict[str, int]:
         stmt = (

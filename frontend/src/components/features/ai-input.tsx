@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, SlidersHorizontal, Sparkles, ArrowUp, ArrowUpCircle, X } from 'lucide-react';
+import { Plus, SlidersHorizontal, ArrowUp, ArrowUpCircle, X, BotMessageSquare } from 'lucide-react';
 import { ModelSelector, getModelIcon, getModelName, getModelGroup } from '@/components/features/model-selector';
 import { aiApi } from '@/lib/api/ai-api';
 import { toast } from 'sonner';
@@ -62,7 +62,7 @@ function ApiKeyDialog({
       <div className="bg-[#18181C] border border-[#27272A] rounded-xl p-5 max-w-sm w-full mx-4 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-venom-yellow" />
+            <BotMessageSquare className="w-4 h-4 text-venom-yellow" />
             <h3 className="text-[14px] font-semibold text-[#f2f2f3]">{modelName}</h3>
           </div>
           <button

@@ -18,7 +18,7 @@ interface AiInputProps {
   showBanner: boolean;
 }
 
-const MAX_HEIGHT = 260;
+const MAX_HEIGHT = 240;
 
 /* ─── API Key Dialog ──────────────────────────────────── */
 
@@ -184,7 +184,7 @@ export function AiInput({
       <div className="flex-1 min-w-0">
         {/* Banner (free plan alert) — top-outer corners rounded, bottom flat */}
         {showBanner && (
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-950/40 border border-blue-800/30 border-b-0 rounded-t-2xl">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-950/40 border border-blue-800/30 border-b-0 rounded-t-[20px]">
             <ArrowUpCircle className="w-4 h-4 text-blue-400 shrink-0" strokeWidth={1.8} />
             <span className="text-[13px] text-[#f2f2f3]">
               You&rsquo;ve run out of free AI responses.{' '}
@@ -200,12 +200,12 @@ export function AiInput({
 
         {/* Main input container */}
         <div
-          className={`bg-krait-surface2 border border-krait-border focus-within:border-krait-borderHi transition-colors ${
-            showBanner ? 'rounded-b-2xl border-t-0' : 'rounded-2xl'
+          className={`bg-krait-surface2 border border-krait-border/50 focus-within:border-venom-yellow/40 hover:border-krait-borderHi/70 transition-all duration-200 shadow-sm focus-within:shadow-[0_0_0_1px_rgba(250,204,21,0.06)] ${
+            showBanner ? 'rounded-b-[20px] border-t-0' : 'rounded-[20px]'
           }`}
         >
           {/* Textarea area */}
-          <div className="px-4 pt-3.5">
+          <div className="px-4 pt-3.5 min-h-[36px] flex items-start">
             <textarea
               ref={textareaRef}
               value={value}
@@ -217,7 +217,7 @@ export function AiInput({
               rows={1}
               disabled={isStreaming}
               style={{ maxHeight: MAX_HEIGHT }}
-              className="w-full bg-transparent border-none text-[14px] text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none py-0 leading-relaxed whitespace-pre-wrap break-words disabled:opacity-50"
+              className="w-full bg-transparent border-none text-[14px] text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none py-0 leading-relaxed whitespace-pre-wrap break-words disabled:opacity-50 overflow-x-hidden"
             />
           </div>
 
@@ -241,12 +241,15 @@ export function AiInput({
               </button>
             </div>
 
-            {/* Right: Model Pill */}
-            <div ref={buttonRef}>
+            {/* Right: Send + Model Pill */}
+            <div className="flex items-center gap-1.5">
+              
+
+              <div ref={buttonRef}>
               <button
                 type="button"
                 onClick={() => setShowModelSelector(v => !v)}
-                className="flex items-center gap-1.5 px-2 py-1 bg-krait-surface3 border border-krait-border rounded-md hover:border-krait-borderHi transition-colors"
+                className="flex items-center gap-1.5 px-2 py-1 bg-krait-surface3 border border-krait-border/60 rounded-md hover:border-krait-borderHi transition-colors"
               >
                 <span className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
                   {getModelIcon(selectedModel)}
@@ -255,6 +258,15 @@ export function AiInput({
                 <div className="w-4 h-4 rounded-full border border-krait-borderHi flex items-center justify-center ml-0.5">
                   <ArrowUp className="w-2.5 h-2.5 text-text-tertiary" strokeWidth={2.5} />
                 </div>
+              </button>
+            </div>
+            <button
+                type="button"
+                onClick={onSend}
+                disabled={!value.trim() || isStreaming}
+                className="w-6 h-6 rounded-full bg-venom-yellow text-black flex items-center justify-center shrink-0 hover:brightness-110 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ArrowUp className="w-3 h-3" strokeWidth={2.5} />
               </button>
             </div>
 
@@ -272,15 +284,6 @@ export function AiInput({
           </div>
         </div>
       </div>
-
-      {/* Floating send button (outside container) */}
-      <button
-        onClick={onSend}
-        disabled={!value.trim() || isStreaming}
-        className="w-10 h-10 rounded-full bg-venom-yellow text-black flex items-center justify-center shrink-0 hover:brightness-110 transition-all disabled:opacity-30 disabled:cursor-not-allowed mb-[1px]"
-      >
-        <ArrowUp className="w-4 h-4" strokeWidth={2.5} />
-      </button>
 
       {/* API Key Dialog */}
       {apiKeyDialog && (

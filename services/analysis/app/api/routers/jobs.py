@@ -155,8 +155,8 @@ async def delete_job(
 def _job_to_response(job: dict[str, object]) -> JobStatusResponse:
     return JobStatusResponse(
         job_id=str(job["id"]),
-        repo_id=job["repo_id"],
-        workspace_id=job["workspace_id"],
+        repo_id=cast(UUID, job["repo_id"]),
+        workspace_id=cast(UUID, job["workspace_id"]),
         status=cast(str, job["status"]),
         repo_url=cast(str, job["repo_url"]),
         branch=cast(str, job["branch"]),

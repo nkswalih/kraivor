@@ -21,6 +21,6 @@ async def list_devops_findings(
 ) -> DevOpsFindingListResponse:
     findings = await uow.devops_findings.get_by_job(job_id)
     return DevOpsFindingListResponse(
-        findings=[DevOpsFindingResponse(**f) for f in findings],
+        findings=[DevOpsFindingResponse(**f)  for f in findings],  # type: ignore[arg-type]
         total=len(findings),
     )

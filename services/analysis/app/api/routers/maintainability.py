@@ -1,3 +1,4 @@
+from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
@@ -25,7 +26,7 @@ async def list_maintainability_findings(
 ) -> MaintainabilityFindingListResponse:
     findings = await uow.maintainability_findings.get_by_job(job_id)
     return MaintainabilityFindingListResponse(
-        findings=[MaintainabilityFindingResponse(**f) for f in findings],
+        findings=[MaintainabilityFindingResponse(**f)  for f in findings],  # type: ignore[arg-type]
         total=len(findings),
     )
 
@@ -40,8 +41,8 @@ async def get_maintainability_metrics(
     if metrics is None:
         return MaintainabilityMetricsResponse()
     return MaintainabilityMetricsResponse(
-        maintainability_index=metrics.get("maintainability_index", 100.0),
-        technical_debt_hours=metrics.get("technical_debt_hours", 0.0),
-        complexity_score=metrics.get("complexity_score", 100.0),
-        total_findings=metrics.get("total_findings", 0),
+        maintainability_index=float(cast(float, metrics.get("maintainability_index", 100.0))),
+        technical_debt_hours=float(cast(float, metrics.get("technical_debt_hours", 0.0))),
+        complexity_score=float(cast(float, metrics.get("complexity_score", 100.0))),
+        total_findings=int(cast(int, metrics.get("total_findings", 0))),
     )

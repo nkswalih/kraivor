@@ -24,6 +24,6 @@ async def list_reliability_findings(
 ) -> ReliabilityFindingListResponse:
     findings = await uow.reliability_findings.get_by_job(job_id)
     return ReliabilityFindingListResponse(
-        findings=[ReliabilityFindingResponse(**f) for f in findings],
+        findings=[ReliabilityFindingResponse(**f)  for f in findings],  # type: ignore[arg-type]
         total=len(findings),
     )

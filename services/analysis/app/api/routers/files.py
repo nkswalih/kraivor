@@ -114,7 +114,7 @@ async def upload_file(
     background_task.add_done_callback(lambda t: _background_tasks.discard(t))
 
     job = await uow.jobs.get_by_id(job_id)
-    return _job_to_response(job)
+    return _job_to_response(cast(dict[str, object], job))
 
 
 async def _run_analysis_safe(cmd_dict: dict[str, object]) -> None:
@@ -140,29 +140,7 @@ async def _run_analysis_safe(cmd_dict: dict[str, object]) -> None:
                 logger.exception("last_resort_failure_update_failed")
 
 
-def _job_to_response(job: dict[str, object]) -> JobStatusResponse:
+def _job_to_response(job: dict[str, object] | None) -> JobStatusResponse:
     from app.api.routers.jobs import _job_to_response as jtr
-    return jtr(job)
+    return jtr(cast(dict[str, object], job))
 
-
-_background_tasks: set[asyncio.Task[None]] = set()
-
-
-_EXT_TO_LANG: dict[str, str] = {
-    ".py": "python", ".js": "javascript", ".ts": "typescript",
-    ".tsx": "typescript", ".jsx": "javascript",
-    ".rs": "rust", ".go": "go", ".java": "java",
-    ".kt": "kotlin", ".kts": "kotlin",
-    ".cs": "csharp", ".fs": "fsharp",
-    ".rb": "ruby", ".php": "php",
-    ".ex": "elixir", ".exs": "elixir",
-    ".swift": "swift", ".scala": "scala",
-    ".vue": "vue", ".svelte": "svelte",
-    ".css": "css", ".scss": "scss", ".less": "less",
-    ".html": "html", ".htm": "html",
-    ".json": "json", ".yaml": "yaml", ".yml": "yaml",
-    ".md": "markdown", ".txt": "text",
-    ".sql": "sql", ".sh": "shell", ".bash": "shell",
-    ".dockerfile": "dockerfile", ".tf": "terraform",
-    ".toml": "toml", ".ini": "ini", ".cfg": "ini",
-}

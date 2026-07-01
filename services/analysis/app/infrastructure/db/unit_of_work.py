@@ -6,6 +6,9 @@ from app.infrastructure.db.repositories.analysis_metadata import (
     AnalysisMetadataRepository,
 )
 from app.infrastructure.db.repositories.dead_code import DeadCodeRepository
+from app.infrastructure.db.repositories.devops_finding import (
+    DevOpsFindingRepository,
+)
 from app.infrastructure.db.repositories.enterprise_guide import (
     EnterpriseGuideRepository,
 )
@@ -17,9 +20,6 @@ from app.infrastructure.db.repositories.maintainability_finding import (
 )
 from app.infrastructure.db.repositories.performance_metric import (
     PerformanceMetricRepository,
-)
-from app.infrastructure.db.repositories.devops_finding import (
-    DevOpsFindingRepository,
 )
 from app.infrastructure.db.repositories.reliability_finding import (
     ReliabilityFindingRepository,

@@ -6,8 +6,8 @@ marked as failed immediately and the pipeline halts.
 """
 
 import asyncio
-import traceback
 import time
+import traceback
 from datetime import datetime
 from typing import cast
 from uuid import UUID
@@ -17,10 +17,10 @@ from app.application.analysis.commands import (
     StartAnalysisCommand,
 )
 from app.application.analysis.handler import (
+    _push_progress,
     handle_analysis_failure,
     handle_save_analysis_metadata,
     handle_save_findings,
-    handle_start_analysis,
     handle_stage_ai_enrich,
     handle_stage_clone,
     handle_stage_dead_code,
@@ -35,7 +35,7 @@ from app.application.analysis.handler import (
     handle_stage_rules,
     handle_stage_score,
     handle_stage_simulation,
-    _push_progress,
+    handle_start_analysis,
 )
 from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
@@ -61,11 +61,10 @@ from app.infrastructure.parsers.rust_parser import RustParser
 from app.infrastructure.scorer import ProductionReadinessScorer
 from app.infrastructure.storage.s3 import S3Storage
 from app.workers.dead_code.detector import DeadCodeFinding
-from app.workers.errors.scanner import ErrorFinding
-from app.workers.perf.rpm_calculator import PerformanceMetrics
-from app.workers.devops.analyzer import DevopsAnalyzer
 from app.workers.devops.models import DevOpsFinding
+from app.workers.errors.scanner import ErrorFinding
 from app.workers.maintainability.models import MaintainabilityFinding
+from app.workers.perf.rpm_calculator import PerformanceMetrics
 from app.workers.reliability.models import ReliabilityFinding
 
 logger = get_logger(__name__)
@@ -228,7 +227,7 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
     immediately with a clear message and halts the pipeline.
     """
     state["_pipeline_start"] = time.monotonic()
-    state["engine_statuses"] = {e: "pending" for e in ALL_ENGINES}
+    state["engine_statuses"] = dict.fromkeys(ALL_ENGINES, "pending")
     for stage_name, stage_fn, stage_args in (
         ("start", _stage_start, (cmd,)),
         ("clone", _stage_clone, ()),

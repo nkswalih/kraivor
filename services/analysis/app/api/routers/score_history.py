@@ -3,7 +3,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 
 from app.api.dependencies.services import get_uow
-from app.api.schemas.score_history import ScoreHistoryEntryResponse, ScoreHistoryListResponse
+from app.api.schemas.score_history import (
+    ScoreHistoryEntryResponse,
+    ScoreHistoryListResponse,
+)
 from app.core.logging import get_logger
 from app.dependencies.auth import JWTPayload, get_current_user
 from app.infrastructure.db.unit_of_work import UnitOfWork

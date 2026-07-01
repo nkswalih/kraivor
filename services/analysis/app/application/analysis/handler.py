@@ -42,14 +42,14 @@ from app.infrastructure.git.repository_fetcher import RepositoryFetcher
 from app.infrastructure.messaging.producer import EventProducer
 from app.infrastructure.parsers.base import ChainedParser
 from app.workers.dead_code.detector import DeadCodeDetector, DeadCodeFinding
-from app.workers.enterprise_guide import EnterpriseGuideGenerator
-from app.workers.errors.scanner import ErrorFinding, ErrorScanner
-from app.workers.perf.load_sim import ProductionSimulator
-from app.workers.perf.rpm_calculator import PerformanceMetrics, RPMCalculator
 from app.workers.devops.analyzer import DevopsAnalyzer
 from app.workers.devops.models import DevOpsFinding
+from app.workers.enterprise_guide import EnterpriseGuideGenerator
+from app.workers.errors.scanner import ErrorFinding, ErrorScanner
 from app.workers.maintainability.detector import MaintainabilityDetector
 from app.workers.maintainability.models import MaintainabilityFinding
+from app.workers.perf.load_sim import ProductionSimulator
+from app.workers.perf.rpm_calculator import PerformanceMetrics, RPMCalculator
 from app.workers.reliability.detector import ReliabilityDetector
 from app.workers.reliability.models import ReliabilityFinding
 
@@ -157,10 +157,10 @@ async def handle_stage_clone(
 
 
 async def _push_progress(job_id: UUID, status: str, pct: int, message: str) -> None:
-    from app.infrastructure.db.session import async_session_factory
     from sqlalchemy import update
 
     from app.infrastructure.db.models.analysis_job import AnalysisJobModel
+    from app.infrastructure.db.session import async_session_factory
 
     async with async_session_factory() as session:
         stmt = (

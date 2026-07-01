@@ -67,7 +67,7 @@ async def health_check() -> HealthResponse:
     try:
         cache = RedisCache()
         await cache.connect()
-        await cache.client.ping() if cache.client else None  # type: ignore[func-returns-value]
+        await cache.client.ping() if cache.client else None
         await cache.close()
         deps["redis"] = DependencyHealth(
             status="healthy",

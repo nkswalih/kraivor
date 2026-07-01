@@ -241,7 +241,7 @@ export function AiChatView({ workspaceSlug: _workspaceSlug }: { workspaceSlug: s
             onScroll={handleScroll}
             className="flex-1 overflow-y-auto scroll-smooth"
           >
-            <div className="py-4">
+            <div className="py-4 pb-6">
               {messages.map((msg) => {
                 const isAssistant = msg.role === MessageRole.ASSISTANT;
                 const isStreamingMsg = isAssistant && msg.status === MessageStatus.SENDING;
@@ -265,7 +265,7 @@ export function AiChatView({ workspaceSlug: _workspaceSlug }: { workspaceSlug: s
 
           {/* New messages button */}
           {!shouldAutoScroll.current && messages.length > 0 && (
-            <div className="sticky bottom-[88px] flex justify-center z-10">
+            <div className="flex justify-center py-3">
               <button
                 onClick={() => {
                   scrollToBottom();
@@ -278,19 +278,21 @@ export function AiChatView({ workspaceSlug: _workspaceSlug }: { workspaceSlug: s
             </div>
           )}
 
-          {/* Input area */}
-          <div className="px-4 pb-4 pt-3 shrink-0 border-t border-krait-border bg-krait-void">
-            <AiInput
-              value={input}
-              onChange={setInput}
-              onSend={() => handleSend()}
-              onKeyDown={e => handleKeyDown(e)}
-              isStreaming={isStreaming}
-              selectedModel={selectedModel}
-              onModelSelect={setSelectedModel}
-              showBanner={rateLimited}
-            />
-            <p className="text-center text-[11px] text-text-tertiary mt-1.5">
+          {/* Input area — continuous with conversation */}
+          <div className="shrink-0 pb-3 pt-1">
+            <div className="px-4">
+              <AiInput
+                value={input}
+                onChange={setInput}
+                onSend={() => handleSend()}
+                onKeyDown={e => handleKeyDown(e)}
+                isStreaming={isStreaming}
+                selectedModel={selectedModel}
+                onModelSelect={setSelectedModel}
+                showBanner={rateLimited}
+              />
+            </div>
+            <p className="text-center text-[11px] text-text-tertiary mt-2.5 px-4">
               AI can make mistakes. Verify critical code architectures.
             </p>
           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { Sparkles, MessageSquare, Shield, FileText, Gauge, CheckCircle } from 'lucide-react';
+import { MessagesSquare, Shield, FileText, Gauge, CheckCircle, BotMessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AiInput } from '@/components/features/ai-input';
 import type { ConversationSummary } from '@/lib/api/ai-api';
@@ -59,7 +59,7 @@ export function AiWelcome({
             />
           ) : (
             <div className="w-14 h-14 rounded-2xl bg-krait-surface3 border border-krait-border flex items-center justify-center mx-auto mb-5">
-              <Sparkles className="w-7 h-7 text-venom-yellow" />
+              <BotMessageSquare className="w-7 h-7 text-venom-yellow" />
             </div>
           )}
           <h1 className="text-[22px] font-bold text-text-primary tracking-tight">
@@ -108,7 +108,7 @@ export function AiWelcome({
                   onClick={() => onLoadConversation(conv.id)}
                   className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-krait-surface3 transition-colors text-left group"
                 >
-                  <MessageSquare
+                  <MessagesSquare
                     className="w-4 h-4 text-text-tertiary shrink-0 group-hover:text-text-secondary transition-colors"
                     strokeWidth={1.5}
                   />

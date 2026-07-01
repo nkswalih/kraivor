@@ -291,7 +291,7 @@ async def handle_stage_rules(
         for v in violations
     ]
 
-    return summary, violations
+    return cast(tuple[list[dict[str, object]], list[RuleViolation]], (summary, violations))
 
 
 def _dedup_violations(violations: list[RuleViolation]) -> list[RuleViolation]:
@@ -321,8 +321,8 @@ async def handle_save_findings(
     findings = [
         Finding(
             job_id=cmd.job_id,
-            repo_id=job["repo_id"],
-            workspace_id=job["workspace_id"],
+            repo_id=cast(UUID, job["repo_id"]),
+            workspace_id=cast(UUID, job["workspace_id"]),
             rule_id=v.rule_id,
             category=v.category,
             severity=v.severity,
@@ -431,18 +431,18 @@ async def handle_stage_score(
 
     # DevOps engine findings
     if devops_results:
-        for d in devops_results:
+        for devops_item in devops_results:
             scorer_violations.append(Violation(
-                rule_id=f"DEVOPS-{d.devops_type.upper()}",
+                rule_id=f"DEVOPS-{devops_item.devops_type.upper()}",
                 category="devops",
-                severity=d.severity,
-                title=d.title,
-                description=d.description,
-                file_path=d.file_path,
-                line_start=d.line_start,
-                line_end=d.line_end,
-                code_snippet=d.code_snippet or "",
-                recommendation=d.recommendation or "",
+                severity=devops_item.severity,
+                title=devops_item.title,
+                description=devops_item.description,
+                file_path=devops_item.file_path,
+                line_start=devops_item.line_start,
+                line_end=devops_item.line_end,
+                code_snippet=devops_item.code_snippet or "",
+                recommendation=devops_item.recommendation or "",
             ))
 
     # Maintainability engine findings
@@ -471,7 +471,7 @@ async def handle_stage_score(
         if simulation_results:
             for sr in simulation_results:
                 s = cast(str, sr.get("status", ""))
-                bottlenecks.extend(cast(list[object], sr.get("bottlenecks", [])))
+                bottlenecks.extend(cast(list[str], sr.get("bottlenecks", [])))
                 if s == "failing":
                     sim_status = "failing"
                 elif s == "degraded" and sim_status != "failing":
@@ -511,8 +511,8 @@ async def handle_stage_finalize(
 
     report = Report(
         job_id=cmd.job_id,
-        repo_id=job["repo_id"],
-        workspace_id=job["workspace_id"],
+        repo_id=cast(UUID, job["repo_id"]),
+        workspace_id=cast(UUID, job["workspace_id"]),
         branch=cast(str, job["branch"]),
         languages_detected=languages,
         total_files_analyzed=total_files,
@@ -578,8 +578,8 @@ async def handle_stage_finalize(
 
     await producer.publish(AnalysisCompleted(
         job_id=cmd.job_id,
-        repo_id=job["repo_id"],
-        workspace_id=job["workspace_id"],
+        repo_id=cast(UUID, job["repo_id"]),
+        workspace_id=cast(UUID, job["workspace_id"]),
         overall_score=score.overall,
         findings_count=len(findings),
         duration_seconds=duration_seconds,
@@ -620,7 +620,7 @@ async def handle_analysis_failure(
         await asyncio.wait_for(
             producer.publish(AnalysisFailed(
                 job_id=job_id,
-                repo_id=job["repo_id"] if job else UUID(int=0),
+                repo_id=cast(UUID, job["repo_id"]) if job else UUID(int=0),
                 error_message=error_message,
                 stage=stage,
             )),
@@ -980,7 +980,7 @@ async def handle_stage_ai_enrich(
 
     client = AiEnrichmentClient()
     result = await client.enrich_findings(
-        findings=finding_dicts,
+        findings=cast(list[dict[str, object]], finding_dicts),
         overall_score=score.overall if score else None,
         tier=str(score.tier) if score and score.tier else None,
         languages=languages,
@@ -995,8 +995,10 @@ async def handle_stage_ai_enrich(
         )
         return None
 
-    enriched_findings_map: dict[str, dict] = {}
-    for item in result.get("findings", []):
+    enriched_findings_map: dict[str, dict[str, object]] = {}
+    enrich_data = result.get("findings", [])
+    assert isinstance(enrich_data, list)
+    for item in enrich_data:
         title = item.get("title", "")
         file_path = item.get("file_path", "")
         key = f"{title}|{file_path}"
@@ -1010,11 +1012,11 @@ async def handle_stage_ai_enrich(
             await uow.findings.update_ai_fields(
                 finding_id=finding.id,
                 is_ai_enriched=True,
-                ai_explanation=enriched.get("ai_explanation", ""),
+                ai_explanation=str(enriched.get("ai_explanation", "")),
             )
             updated_count += 1
 
-    ai_executive_summary = result.get("ai_executive_summary", "")
+    ai_executive_summary = str(result.get("ai_executive_summary", ""))
     if ai_executive_summary:
         guide = await uow.enterprise_guides.get_by_job(job_id)
         if guide:

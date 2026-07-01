@@ -31,6 +31,6 @@ class MaintainabilityFindingModel(Base):
     confidence: Mapped[float] = mapped_column(Float, default=0.8)
     estimated_effort_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
 
-    metrics: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    metrics: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
 
     job = relationship("AnalysisJobModel", back_populates="maintainability_findings")

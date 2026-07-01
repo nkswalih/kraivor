@@ -255,9 +255,9 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
         await _push_stage_progress(state, stage_name)
         try:
             if stage_args:
-                await stage_fn(state, *stage_args)
+                await stage_fn(state, *stage_args)  # type: ignore[call-arg]
             else:
-                await stage_fn(state)
+                await stage_fn(state)  # type: ignore[call-arg]
             for eid in engine_ids:
                 cast(dict[str, str], state["engine_statuses"])[eid] = "completed"
         except Exception:
@@ -661,7 +661,7 @@ async def _stage_ai_enrich(state: dict[str, object]) -> None:
     logger.info(
         "pipeline_stage_complete",
         stage="ai_enrich", job_id=str(job_id),
-        enriched=len(result.get("findings", [])) if result else 0,
+        enriched=len(cast(list[object], result.get("findings", []))) if result else 0,
     )
 
 

@@ -30,6 +30,6 @@ class DevOpsFindingModel(Base):
     code_snippet: Mapped[str | None] = mapped_column(Text, nullable=True)
     recommendation: Mapped[str | None] = mapped_column(Text, nullable=True)
     confidence: Mapped[float] = mapped_column(Float, default=0.8)
-    devops_score: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    devops_score: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
 
     job = relationship("AnalysisJobModel", back_populates="devops_findings")

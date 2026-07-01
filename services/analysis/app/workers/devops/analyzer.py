@@ -1,13 +1,14 @@
 import re
 
 from app.core.logging import get_logger
+from app.domain.contracts.parser import ParsedFile
 from app.workers.devops.models import DevOpsFinding
 
 logger = get_logger(__name__)
 
 
 class DevopsAnalyzer:
-    def __init__(self, parsed_files):
+    def __init__(self, parsed_files: list[ParsedFile]) -> None:
         self.parsed_files = parsed_files
         self._project_has_health = False
         self._project_has_observability = False

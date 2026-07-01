@@ -10,8 +10,8 @@ from app.workers.maintainability.models import MaintainabilityMetrics
 def _make_pf(
     path: str,
     content: str,
-    functions: list | None = None,
-    classes: list | None = None,
+    functions: list[ParsedFunction] | None = None,
+    classes: list[ParsedClass] | None = None,
 ) -> ParsedFile:
     return ParsedFile(
         path=path,

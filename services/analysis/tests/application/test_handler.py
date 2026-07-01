@@ -2,7 +2,10 @@
 
 
 
+from typing import cast
+
 from app.application.analysis.handler import _dedup_violations
+from app.core.constants import Category, Severity
 from app.domain.rules.base import RuleViolation
 
 # ======================================================================
@@ -19,10 +22,10 @@ def _rv(
 ) -> RuleViolation:
     return RuleViolation(
         rule_id=rule_id,
-        category=kw.get("category", "security"),
-        severity=kw.get("severity", "critical"),
-        title=kw.get("title", "Test"),
-        description=kw.get("description", ""),
+        category=cast(Category, str(kw.get("category", "security"))),
+        severity=cast(Severity, str(kw.get("severity", "critical"))),
+        title=str(kw.get("title", "Test")),
+        description=str(kw.get("description", "")),
         file_path=file_path,
         line_start=line_start,
         line_end=line_end,

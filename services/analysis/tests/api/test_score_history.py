@@ -1,12 +1,15 @@
+from collections.abc import Generator
 from uuid import uuid4
 
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+from pytest_mock.plugin import MockerFixture
 
 from app.api.main import create_app
 from app.application.analysis.commands import ProcessStageCommand
 from app.application.analysis.handler import handle_stage_finalize
+from app.core.constants import Category, Severity
 from app.dependencies.auth import JWTPayload
 from app.domain.contracts.storage import AbstractStorage
 from app.domain.entities.finding import Finding
@@ -22,7 +25,7 @@ def app() -> FastAPI:
 
 
 @pytest.fixture
-def app_with_auth_override(app: FastAPI) -> FastAPI:
+def app_with_auth_override(app: FastAPI) -> Generator[FastAPI, None, None]:
     async def mock_get_current_user() -> JWTPayload:
         return JWTPayload(
             sub="user-123",
@@ -38,7 +41,7 @@ def app_with_auth_override(app: FastAPI) -> FastAPI:
 
 @pytest.mark.asyncio
 class TestScoreHistoryHandler:
-    async def test_saves_score_history_in_finalize(self, mocker) -> None:
+    async def test_saves_score_history_in_finalize(self, mocker: MockerFixture) -> None:
         job_id = uuid4()
         repo_id = uuid4()
         ws_id = uuid4()
@@ -98,7 +101,7 @@ class TestScoreHistoryHandler:
         assert saved["findings_count"] == 0
         assert saved["job_id"] == job_id
 
-    async def test_saves_score_history_with_none_scores(self, mocker) -> None:
+    async def test_saves_score_history_with_none_scores(self, mocker: MockerFixture) -> None:
         job_id = uuid4()
         repo_id = uuid4()
         ws_id = uuid4()
@@ -118,8 +121,8 @@ class TestScoreHistoryHandler:
                 repo_id=repo_id,
                 workspace_id=ws_id,
                 rule_id="SEC-001",
-                category="security",
-                severity="high",
+                category=Category.SECURITY,
+                severity=Severity.HIGH,
                 title="test",
                 description="",
                 recommendation="",
@@ -158,9 +161,7 @@ class TestScoreHistoryHandler:
 
 @pytest.mark.asyncio
 class TestScoreHistoryAPI:
-    async def test_get_score_history_returns_list(
-        self, app_with_auth_override: FastAPI, mocker
-    ) -> None:
+    async def test_get_score_history_returns_list(self, app_with_auth_override: FastAPI, mocker: MockerFixture) -> None:
         repo_id = uuid4()
         mock_uow = mocker.AsyncMock()
         mock_uow.score_history.get_by_repo.return_value = [
@@ -209,9 +210,7 @@ class TestScoreHistoryAPI:
         assert data["entries"][0]["overall_score"] == 85
         assert data["entries"][1]["overall_score"] == 88
 
-    async def test_get_score_history_respects_limit(
-        self, app_with_auth_override: FastAPI, mocker
-    ) -> None:
+    async def test_get_score_history_respects_limit(self, app_with_auth_override: FastAPI, mocker: MockerFixture) -> None:
         repo_id = uuid4()
         mock_uow = mocker.AsyncMock()
         mock_uow.score_history.get_by_repo.return_value = []

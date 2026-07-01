@@ -1,4 +1,5 @@
 import re
+from typing import cast
 
 from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
@@ -356,11 +357,11 @@ class ReliabilityDetector:
         first_mutating: int | None = None
         snippet = ""
         for r in routes:
-            if not re.search(r'(?i)(?:GET|get|list|fetch|read|query)', r["text"]):
+            if not re.search(r'(?i)(?:GET|get|list|fetch|read|query)', str(r.get("text", ""))):
                 mutating_count += 1
                 if first_mutating is None:
-                    first_mutating = r["line"]
-                    snippet = r["text"]
+                    first_mutating = cast(int | None, r.get("line", 0))
+                    snippet = str(r.get("text", ""))
 
         if mutating_count >= 2:
             findings.append(ReliabilityFinding(

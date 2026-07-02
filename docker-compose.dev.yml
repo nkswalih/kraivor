@@ -390,6 +390,8 @@ services:
         condition: service_healthy
     ports:
       - "8004:8004"
+    volumes:
+      - ./services/ai:/app
     stdin_open: true
     tty: true
     restart: unless-stopped

@@ -1,3 +1,4 @@
+import json
 import time
 import logging
 from collections.abc import AsyncGenerator
@@ -53,7 +54,19 @@ class LLMClient:
                 messages=messages,
                 **kwargs,
             )
-            result = response.choices[0].message.content
+            message = response.choices[0].message
+            result = message.content
+            raw_calls = getattr(message, "tool_calls", None)
+            tool_calls = []
+            if raw_calls:
+                for tc in raw_calls:
+                    tool_calls.append({
+                        "id": tc.id,
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments,
+                        },
+                    })
             metrics["input_tokens"] = response.usage.prompt_tokens
             metrics["output_tokens"] = response.usage.completion_tokens
 
@@ -95,7 +108,7 @@ class LLMClient:
         except Exception as e:
             logger.warning("Failed to record LLM metrics", exc_info=e)
 
-        return {"content": result, **metrics}
+        return {"content": result, "tool_calls": tool_calls or [], **metrics}
 
     async def stream(
         self, messages: list, **kwargs

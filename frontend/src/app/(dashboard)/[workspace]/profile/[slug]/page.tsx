@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useProfile, useFollowers, useFollowing } from '@/lib/hooks/use-profiles';
+import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { ProfileHeader } from '@/components/profiles/profile-header';
 import { Avatar } from '@/components/profiles/avatar';
 import { Skeleton } from '@/components/ui/shadcn';
@@ -16,6 +17,7 @@ export default function UserProfilePage() {
   const params = useParams();
   const username = params?.slug as string;
   const { data: profile, isLoading, error } = useProfile(username);
+  useDetailBreadcrumb(profile?.display_name);
   const [activeTab, setActiveTab] = useState<Tab>('followers');
 
   const { data: followersData, isLoading: followersLoading } = useFollowers(username);

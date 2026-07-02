@@ -74,8 +74,16 @@ class JWTAuthenticationMiddleware:
         if any(request.path.startswith(p) for p in self._EXEMPT_PATHS):
             return self.get_response(request)
 
-        # ── Skip: internal gateway request ───────────────────────────────────
+        # ── Internal gateway request: trust headers, skip JWT ─────────────────
         if request.headers.get(settings.INTERNAL_REQUEST_HEADER):
+            request.jwt_payload = {}
+            request.user_id = request.headers.get("X-User-ID", "")
+            request.user_name = request.headers.get("X-User-Name", "")
+            request.email = request.headers.get("X-Email", "")
+            request.user_email = request.headers.get("X-Email", "")
+            workspace_ids_str = request.headers.get("X-Workspace-IDs", "")
+            request.workspace_ids = [w.strip() for w in workspace_ids_str.split(",") if w.strip()]
+            request.roles = {}
             return self.get_response(request)
 
         # ── Skip: public paths ────────────────────────────────────────────────

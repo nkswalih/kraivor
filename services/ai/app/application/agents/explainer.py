@@ -32,12 +32,19 @@ class ExplainerNode:
         context = state.get("assembled_context") or ""
         user_msg = state.get("message", "")
         history = state.get("context_history") or []
+        tool_results = state.get("tool_results")
 
         parts = [f"Original query: {user_msg}"]
+
+        if tool_results:
+            parts.append(f"Workspace data:\n{tool_results}")
+
         if context:
             parts.append(f"Repository context:\n{context}")
+
         if findings:
             parts.append(f"Analysis findings:\n" + "\n\n".join(findings))
+
         if history:
             brief = "\n".join(
                 f"{h.get('role', 'user')}: {h.get('content', '')[:200]}"

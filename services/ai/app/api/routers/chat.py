@@ -45,12 +45,13 @@ async def chat(
         repo_ids=request.repo_ids,
     )
 
+    usage_info = result.get("usage") or {}
     return ChatResponse(
         conversation_id=conv_id,
         message_id=str(uuid.uuid4()),
         content=result.get("response", ""),
-        model=result.get("usage", {}).get("model", "unknown"),
-        usage=result.get("usage"),
+        model=usage_info.get("model", "unknown"),
+        usage=usage_info,
         sources=result.get("sources"),
     )
 
@@ -67,12 +68,13 @@ async def completions(
         message=request.get("messages", [{}])[-1].get("content", ""),
         workspace_id=request.get("workspace_id", ""),
     )
+    usage_info = result.get("usage") or {}
     return ChatResponse(
         conversation_id=conv_id,
         message_id=str(uuid.uuid4()),
         content=result.get("response", ""),
-        model=result.get("usage", {}).get("model", "unknown"),
-        usage=result.get("usage"),
+        model=usage_info.get("model", "unknown"),
+        usage=usage_info,
         sources=result.get("sources"),
     )
 

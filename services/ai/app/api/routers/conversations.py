@@ -8,6 +8,7 @@ from app.application.chat.conversation_repository import (
     list_conversations,
     get_messages,
     get_conversation,
+    update_conversation,
 )
 from pydantic import BaseModel
 
@@ -19,9 +20,15 @@ class ConversationResponse(BaseModel):
     title: str
     model: str | None = None
     message_count: int = 0
+    is_pinned: bool = False
     last_message_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class UpdateConversationRequest(BaseModel):
+    title: str | None = None
+    is_pinned: bool | None = None
 
 
 class MessageResponse(BaseModel):
@@ -62,12 +69,45 @@ async def list_user_conversations(
                     title=c.title,
                     model=c.model,
                     message_count=c.message_count,
+                    is_pinned=c.is_pinned,
                     created_at=c.created_at,
                     updated_at=c.updated_at,
                 )
                 for c in convs
             ],
             total=len(convs),
+        )
+
+
+@router.patch("/conversations/{conversation_id}")
+async def update_conversation_endpoint(
+    conversation_id: str,
+    body: UpdateConversationRequest,
+    user: JWTPayload = Depends(get_current_user),
+    _: None = Depends(check_rate_limit),
+):
+    async with async_session_factory() as db:
+        conv = await get_conversation(db, conversation_id)
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        if conv.user_id != user.sub:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        updated = await update_conversation(
+            db,
+            conversation_id,
+            title=body.title,
+            is_pinned=body.is_pinned,
+        )
+        await db.commit()
+        return ConversationResponse(
+            id=updated.id,
+            title=updated.title,
+            model=updated.model,
+            message_count=updated.message_count,
+            is_pinned=updated.is_pinned,
+            created_at=updated.created_at,
+            updated_at=updated.updated_at,
         )
 
 

@@ -2,13 +2,15 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Pin, PinOff, Pencil } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
+import { useAiConversationStore } from '@/lib/stores/ai-conversation-store';
 import { workspaceEndpoints } from '@/lib/api/endpoints';
 import { aiApi, AiApiError } from '@/lib/api/ai-api';
 import type { HistoryMessage } from '@/lib/api/ai-api';
 import { AiInput } from '@/components/features/ai-input';
 import { AiMessage } from '@/components/features/ai-message';
+import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { AiWelcome } from '@/components/features/ai-welcome';
 import { UpgradeCard } from '@/components/features/upgrade-card';
 import type { ChatMessage } from '@/types/domain/ai';
@@ -18,11 +20,15 @@ interface StreamChunk {
   content?: string;
   done?: boolean;
   conversation_id?: string;
+  title?: string;
   [key: string]: unknown;
 }
 
-export function AiChatView({ workspaceSlug: _workspaceSlug }: { workspaceSlug: string }) {
+export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
   const workspaceId = useAuthStore(s => s.workspaceId);
+  const storeSetActiveConversation = useAiConversationStore(s => s.setActiveConversation);
+  const storeSetConversationTitle = useAiConversationStore(s => s.setConversationTitle);
+  const storeSetPinned = useAiConversationStore(s => s.setPinned);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -30,9 +36,14 @@ export function AiChatView({ workspaceSlug: _workspaceSlug }: { workspaceSlug: s
   const [rateLimited, setRateLimited] = useState(false);
   const [selectedModel, setSelectedModel] = useState('krait-2.0');
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversationTitle, setConversationTitle] = useState('');
+  const [isPinned, setIsPinned] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  useDetailBreadcrumb(conversationId ? conversationTitle || 'Untitled' : null);
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const shouldAutoScroll = useRef(true);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   const { data: workspace } = useQuery({
     queryKey: ['workspace', workspaceId],
@@ -41,14 +52,14 @@ export function AiChatView({ workspaceSlug: _workspaceSlug }: { workspaceSlug: s
     staleTime: 60_000,
   });
 
-  const { data: convList } = useQuery({
+  const convListQuery = useQuery({
     queryKey: ['ai-conversations', workspaceId],
     queryFn: () => aiApi.listConversations(workspaceId ?? undefined),
     enabled: !!workspaceId,
     staleTime: 30_000,
   });
 
-  const conversations = convList?.conversations ?? [];
+  const conversations = convListQuery.data?.conversations ?? [];
   const workspaceAvatar = workspace?.avatar_url;
 
   /* ─── Scroll management ───────────────────────────────── */
@@ -72,8 +83,12 @@ export function AiChatView({ workspaceSlug: _workspaceSlug }: { workspaceSlug: s
 
   const loadConversation = useCallback(async (convId: string) => {
     setConversationId(convId);
+    setEditingTitle(false);
     try {
-      const res = await aiApi.getMessages(convId);
+      const [res, convData] = await Promise.all([
+        aiApi.getMessages(convId),
+        aiApi.listConversations(workspaceId ?? undefined),
+      ]);
       const loaded: ChatMessage[] = res.messages.map((m: HistoryMessage) => ({
         id: m.id,
         role: m.role as MessageRole,
@@ -82,10 +97,16 @@ export function AiChatView({ workspaceSlug: _workspaceSlug }: { workspaceSlug: s
         status: MessageStatus.SENT,
       }));
       setMessages(loaded);
+      const match = convData.conversations.find(c => c.id === convId);
+      if (match) {
+        setConversationTitle(match.title);
+        setIsPinned(match.is_pinned);
+        storeSetActiveConversation(convId, match.title, match.is_pinned);
+      }
     } catch {
       setMessages([]);
     }
-  }, []);
+  }, [storeSetActiveConversation]);
 
   /* ─── Regenerate last response ────────────────────────── */
 
@@ -123,6 +144,11 @@ export function AiChatView({ workspaceSlug: _workspaceSlug }: { workspaceSlug: s
       setInput('');
       setIsStreaming(true);
       shouldAutoScroll.current = true;
+      if (!conversationId) {
+        const tempTitle = trimmed.length > 60 ? trimmed.slice(0, 60) + '...' : trimmed;
+        setConversationTitle(tempTitle);
+        storeSetConversationTitle(tempTitle);
+      }
 
       try {
         let accumulated = '';
@@ -140,6 +166,10 @@ export function AiChatView({ workspaceSlug: _workspaceSlug }: { workspaceSlug: s
             if (c.conversation_id && !newConvId) {
               newConvId = c.conversation_id;
               setConversationId(c.conversation_id);
+            }
+            if (c.title && typeof c.title === 'string') {
+              setConversationTitle(c.title);
+              storeSetConversationTitle(c.title);
             }
             break;
           }
@@ -185,7 +215,7 @@ export function AiChatView({ workspaceSlug: _workspaceSlug }: { workspaceSlug: s
         setIsStreaming(false);
       }
     },
-    [input, isStreaming, conversationId, selectedModel]
+    [input, isStreaming, conversationId, selectedModel, storeSetConversationTitle]
   );
 
   /* ─── Edit user message ──────────────────────────────── */
@@ -228,6 +258,7 @@ export function AiChatView({ workspaceSlug: _workspaceSlug }: { workspaceSlug: s
           onKeyDown={e => handleKeyDown(e)}
           onSuggestion={text => handleSend(text)}
           onLoadConversation={loadConversation}
+          onRefreshConversations={() => { convListQuery.refetch() }}
           isStreaming={isStreaming}
           selectedModel={selectedModel}
           onModelSelect={setSelectedModel}
@@ -241,6 +272,67 @@ export function AiChatView({ workspaceSlug: _workspaceSlug }: { workspaceSlug: s
             onScroll={handleScroll}
             className="flex-1 overflow-y-auto scroll-smooth"
           >
+            {/* Chat header — editable title + pin */}
+            <div className="px-4 pt-4 pb-1">
+              <div className="max-w-[720px] mx-auto flex items-center gap-2">
+                {editingTitle ? (
+                  <input
+                    ref={titleInputRef}
+                    type="text"
+                    defaultValue={conversationTitle}
+                    className="flex-1 bg-transparent border-b border-venom-yellow/50 text-[15px] font-semibold text-text-primary outline-none py-0.5"
+                    onBlur={async (e) => {
+                      const val = e.target.value.trim();
+                      if (val && conversationId) {
+                        await aiApi.updateConversation(conversationId, { title: val });
+                        setConversationTitle(val);
+                        storeSetConversationTitle(val);
+                      }
+                      setEditingTitle(false);
+                    }}
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Enter') {
+                        (e.target as HTMLInputElement).blur();
+                      }
+                      if (e.key === 'Escape') {
+                        setEditingTitle(false);
+                      }
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <button
+                    onClick={() => setEditingTitle(true)}
+                    className="flex-1 flex items-center gap-2 text-left group/title min-w-0"
+                  >
+                    <span className="text-[15px] font-semibold text-text-primary truncate">
+                      {conversationTitle}
+                    </span>
+                    <Pencil className="w-3.5 h-3.5 text-text-tertiary opacity-0 group-hover/title:opacity-100 transition-opacity shrink-0" strokeWidth={1.5} />
+                  </button>
+                )}
+
+                {conversationId && (
+                  <button
+                    onClick={async () => {
+                      const next = !isPinned;
+                      await aiApi.updateConversation(conversationId, { is_pinned: next });
+                      setIsPinned(next);
+                      storeSetPinned(next);
+                    }}
+                    className="p-1.5 rounded-md text-text-tertiary hover:text-venom-yellow hover:bg-krait-surface3 transition-all"
+                    title={isPinned ? 'Unpin' : 'Pin'}
+                  >
+                    {isPinned ? (
+                      <PinOff className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    ) : (
+                      <Pin className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="py-4 pb-6">
               {messages.map((msg) => {
                 const isAssistant = msg.role === MessageRole.ASSISTANT;

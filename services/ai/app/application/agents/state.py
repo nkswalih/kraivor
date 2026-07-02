@@ -16,6 +16,7 @@ class AgentState(TypedDict):
     required_agents: list[str] | None
     context_hints: list[str] | None
     needs_rag: bool
+    needs_tools: bool
 
     context_code: list[dict] | None
     context_analysis: list[dict] | None
@@ -23,6 +24,7 @@ class AgentState(TypedDict):
     assembled_context: str | None
 
     messages: Annotated[list, add_messages]
+    tool_results: str | None
     tool_calls: list[dict]
     sources: list[dict]
 

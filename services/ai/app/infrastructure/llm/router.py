@@ -35,6 +35,11 @@ class ModelRouter:
             "fallback": "mistralai/mistral-large",
             "max_tokens": 4096,
         },
+        "tool_calling": {
+            "model": "openai/gpt-4o-mini",
+            "fallback": "mistralai/mistral-large",
+            "max_tokens": 2048,
+        },
         "embeddings": {
             "model": "openai/gpt-4o-mini",
             "fallback": None,

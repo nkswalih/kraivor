@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from app.core.config import settings
 from app.application.agents.graph import build_agent_graph
 from app.application.provisioning.key_resolver import KeyResolver
 from app.application.chat.conversation_repository import (
@@ -9,12 +10,17 @@ from app.application.chat.conversation_repository import (
 from app.infrastructure.llm.router import ModelRouter
 from app.infrastructure.llm.client import LLMClient
 from app.infrastructure.db.database import async_session_factory
+from app.infrastructure.service_client import ServiceClient
 from app.domain.entities.message import Message as MessageEntity, MessageRole
 
 
 class ChatService:
     def __init__(self):
-        self.graph = build_agent_graph()
+        client = ServiceClient(
+            core_url=settings.core_api_url,
+            analysis_url=settings.analysis_api_url,
+        )
+        self.graph = build_agent_graph(client=client)
         self.key_resolver = KeyResolver()
         self.router = ModelRouter()
 
@@ -36,11 +42,13 @@ class ChatService:
             "required_agents": None,
             "context_hints": [],
             "needs_rag": False,
+            "needs_tools": False,
             "context_code": None,
             "context_analysis": None,
             "context_history": history or [],
             "assembled_context": None,
             "messages": [],
+            "tool_results": None,
             "tool_calls": [],
             "sources": [],
             "code_findings": None,
@@ -95,5 +103,18 @@ class ChatService:
 ) -> AsyncGenerator[dict, None]:
         result = await self.chat(user_id=user_id, message=message, **kwargs)
         content = result.get('response', '')
+        title = None
+        conv_id = kwargs.get("conversation_id")
+        if conv_id:
+            from sqlalchemy import select
+            from app.infrastructure.db.models.conversation import Conversation
+            async with async_session_factory() as db:
+                conv_result = await db.execute(
+                    select(Conversation).where(Conversation.id == conv_id)
+                )
+                conv = conv_result.scalar_one_or_none()
+                if conv:
+                    title = conv.title
+
         yield {"content": content}
-        yield {"done": True, "conversation_id": kwargs.get("conversation_id")}
+        yield {"done": True, "conversation_id": conv_id, "title": title}

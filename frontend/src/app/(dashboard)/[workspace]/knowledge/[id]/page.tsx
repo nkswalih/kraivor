@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useKnowledgeDetail } from '@/lib/hooks/use-knowledge';
 import { useCanvasAutosave } from '@/lib/hooks/use-canvas';
+import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { useKnowledgeStore } from '@/lib/stores/knowledge-store';
 import { KnowledgeCanvas } from '@/components/knowledge/canvas/knowledge-canvas';
 import { CanvasSidebar } from '@/components/knowledge/canvas/canvas-sidebar';
@@ -25,6 +26,7 @@ export default function KnowledgeDetailPage() {
   const dirtySpaceIds = useKnowledgeStore(s => s.dirtySpaceIds);
 
   const { data: space, isLoading } = useKnowledgeDetail(id || undefined);
+  useDetailBreadcrumb(space?.name);
 
   const workspaceId = space?.workspace_id ?? '';
 

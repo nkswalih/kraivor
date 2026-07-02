@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Hash, Send, Loader2, ChevronDown, Trash2, Edit3, X, Check } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useChatStore } from '@/lib/stores/chat-store';
+import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { chatEndpoints, profileEndpoints } from '@/lib/api/endpoints';
 import { ChatSocket } from '@/lib/ws/chat-socket';
 import { ChannelSidebar } from '@/components/features/channel-sidebar';
@@ -81,6 +82,7 @@ export default function ChatRoomPage() {
     queryFn: () => chatEndpoints.getRoom(workspaceId!, roomId),
     enabled: !!workspaceId && !!roomId,
   });
+  useDetailBreadcrumb(room?.name);
 
   /* ─── Messages fetch ──────────────────────────────────────── */
   const { isLoading: msgsLoading } = useQuery({

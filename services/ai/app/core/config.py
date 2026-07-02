@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     embedding_provider: str = "local"
     embedding_model: str = "all-MiniLM-L6-v2"
 
+    # Inter-service communication
+    core_api_url: str = "http://core:8002/api"
+    analysis_api_url: str = "http://analysis:8003/api/v1"
+
     # Server
     host: str = "0.0.0.0"
     port: int = 8004

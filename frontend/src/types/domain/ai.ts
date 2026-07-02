@@ -54,4 +54,5 @@ export interface SendMessagePayload {
   context?: ChatContext;
   attachments?: File[];
   model?: string;
+  repo_ids?: string[];
 }

@@ -163,6 +163,7 @@ export const aiApi = {
         message: payload.content,
         conversation_id: payload.sessionId,
         workspace_id: workspaceId,
+        repo_ids: payload.repo_ids,
         stream: true,
         model,
       }),

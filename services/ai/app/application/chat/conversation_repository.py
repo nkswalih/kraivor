@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, func, desc, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.db.models.conversation import Conversation
 from app.infrastructure.db.models.message import Message
@@ -87,6 +87,33 @@ async def update_conversation_after_message(
     await db.flush()
 
 
+async def update_conversation(
+    db: AsyncSession,
+    conversation_id: str,
+    title: str | None = None,
+    is_pinned: bool | None = None,
+) -> ConversationEntity | None:
+    values = {}
+    if title is not None:
+        values["title"] = title[:255]
+    if is_pinned is not None:
+        values["is_pinned"] = is_pinned
+    if not values:
+        return await get_conversation(db, conversation_id)
+
+    values["updated_at"] = func.now()
+
+    await db.execute(
+        sa_update(Conversation)
+        .where(Conversation.id == conversation_id)
+        .values(**values)
+        .execution_options(synchronize_session=False)
+    )
+    await db.flush()
+
+    return await get_conversation(db, conversation_id)
+
+
 async def list_conversations(
     db: AsyncSession,
     user_id: str,
@@ -97,7 +124,7 @@ async def list_conversations(
     query = (
         select(Conversation)
         .where(Conversation.user_id == user_id)
-        .order_by(desc(Conversation.last_message_at))
+        .order_by(desc(Conversation.is_pinned), desc(Conversation.last_message_at))
         .offset(offset)
         .limit(limit)
     )
@@ -115,6 +142,7 @@ async def list_conversations(
             model=r.model,
             message_count=r.message_count,
             is_archived=r.is_archived,
+            is_pinned=r.is_pinned,
             created_at=r.created_at,
             updated_at=r.updated_at or r.created_at,
         )
@@ -170,6 +198,7 @@ async def get_conversation(
         model=r.model,
         message_count=r.message_count,
         is_archived=r.is_archived,
+        is_pinned=r.is_pinned,
         created_at=r.created_at,
         updated_at=r.updated_at or r.created_at,
     )

@@ -88,6 +88,7 @@ export interface ConversationSummary {
   title: string;
   model: string | null;
   message_count: number;
+  is_pinned: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -139,6 +140,13 @@ export const aiApi = {
       stream: false,
       model,
     });
+  },
+
+  async updateConversation(
+    conversationId: string,
+    data: { title?: string; is_pinned?: boolean },
+  ): Promise<ConversationSummary> {
+    return aiPatch<ConversationSummary>(`/v1/conversations/${conversationId}`, data);
   },
 
   async *streamMessage(payload: SendMessagePayload) {
@@ -230,6 +238,13 @@ async function aiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
 async function aiPost<T>(path: string, body: unknown): Promise<T> {
   return aiFetch<T>(path, {
     method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+async function aiPatch<T>(path: string, body: unknown): Promise<T> {
+  return aiFetch<T>(path, {
+    method: 'PATCH',
     body: JSON.stringify(body),
   });
 }

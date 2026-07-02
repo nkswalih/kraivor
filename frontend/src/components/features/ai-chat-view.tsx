@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, Pin, PinOff, Pencil } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useAiConversationStore } from '@/lib/stores/ai-conversation-store';
-import { workspaceEndpoints } from '@/lib/api/endpoints';
+import { workspaceEndpoints, repositoryEndpoints } from '@/lib/api/endpoints';
 import { aiApi, AiApiError } from '@/lib/api/ai-api';
 import type { HistoryMessage } from '@/lib/api/ai-api';
 import { AiInput } from '@/components/features/ai-input';
@@ -51,6 +51,15 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
     enabled: !!workspaceId,
     staleTime: 60_000,
   });
+
+  const { data: reposData } = useQuery({
+    queryKey: ['repositories', workspaceId],
+    queryFn: () => repositoryEndpoints.list(workspaceId!),
+    enabled: !!workspaceId,
+    staleTime: 60_000,
+  });
+
+  const repoIds = reposData?.map(r => r.id) ?? [];
 
   const convListQuery = useQuery({
     queryKey: ['ai-conversations', workspaceId],
@@ -158,6 +167,7 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
           context: {},
           model: selectedModel,
           sessionId: newConvId ?? undefined,
+          repo_ids: repoIds,
         });
 
         for await (const chunk of stream) {

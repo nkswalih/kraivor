@@ -12,5 +12,6 @@ class Conversation:
     message_count: int = 0
     is_archived: bool = False
     is_pinned: bool = False
+    last_message_at: datetime | None = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)

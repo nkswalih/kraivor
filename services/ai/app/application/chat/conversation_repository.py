@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import select, func, desc, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.db.models.conversation import Conversation
@@ -34,6 +34,20 @@ async def ensure_conversation(
 
 
 async def save_message(db: AsyncSession, msg: MessageEntity) -> Message:
+    now = datetime.now(timezone.utc)
+
+    # Enforce strictly increasing timestamps within a conversation so that
+    # ORDER BY created_at ASC never encounters ties. Query the most recent
+    # message's created_at and bump forward by 1µs if needed.
+    last_ts = await db.scalar(
+        select(Message.created_at)
+        .where(Message.conversation_id == msg.conversation_id)
+        .order_by(Message.created_at.desc())
+        .limit(1)
+    )
+    if last_ts is not None and now <= last_ts:
+        now = last_ts + timedelta(microseconds=1)
+
     row = Message(
         id=str(uuid.uuid4()),
         conversation_id=msg.conversation_id,
@@ -44,6 +58,7 @@ async def save_message(db: AsyncSession, msg: MessageEntity) -> Message:
         tokens_input=msg.tokens_input,
         tokens_output=msg.tokens_output,
         msg_metadata=msg.metadata,
+        created_at=now,
     )
     db.add(row)
     await db.flush()
@@ -143,6 +158,7 @@ async def list_conversations(
             message_count=r.message_count,
             is_archived=r.is_archived,
             is_pinned=r.is_pinned,
+            last_message_at=r.last_message_at,
             created_at=r.created_at,
             updated_at=r.updated_at or r.created_at,
         )
@@ -199,6 +215,7 @@ async def get_conversation(
         message_count=r.message_count,
         is_archived=r.is_archived,
         is_pinned=r.is_pinned,
+        last_message_at=r.last_message_at,
         created_at=r.created_at,
         updated_at=r.updated_at or r.created_at,
     )

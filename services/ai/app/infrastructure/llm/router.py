@@ -8,12 +8,12 @@ class ModelRouter:
         "simple_qa": {
             "model": "openai/gpt-4o-mini",
             "fallback": "mistralai/mistral-large",
-            "max_tokens": 1024,
+            "max_tokens": 4096,
         },
         "code_generation": {
             "model": "openai/gpt-4o-mini",
             "fallback": "mistralai/mistral-large",
-            "max_tokens": 4096,
+            "max_tokens": 16384,
         },
         "code_review": {
             "model": "openai/gpt-4o-mini",
@@ -38,7 +38,7 @@ class ModelRouter:
         "tool_calling": {
             "model": "openai/gpt-4o-mini",
             "fallback": "mistralai/mistral-large",
-            "max_tokens": 2048,
+            "max_tokens": 4096,
         },
         "embeddings": {
             "model": "openai/gpt-4o-mini",

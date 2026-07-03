@@ -68,6 +68,7 @@ async def save_message(db: AsyncSession, msg: MessageEntity) -> Message:
 async def update_conversation_after_message(
     db: AsyncSession,
     conversation_id: str,
+    last_message_ts: datetime | None = None,
     title: str | None = None,
     model: str | None = None,
     input_tokens: int = 0,
@@ -81,7 +82,7 @@ async def update_conversation_after_message(
         return
 
     conv.message_count = (conv.message_count or 0) + 2
-    conv.last_message_at = datetime.now(timezone.utc)
+    conv.last_message_at = last_message_ts or datetime.now(timezone.utc)
 
     if title:
         first_msg_result = await db.execute(

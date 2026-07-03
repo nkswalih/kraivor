@@ -70,6 +70,7 @@ async def list_user_conversations(
                     model=c.model,
                     message_count=c.message_count,
                     is_pinned=c.is_pinned,
+                    last_message_at=c.last_message_at,
                     created_at=c.created_at,
                     updated_at=c.updated_at,
                 )
@@ -106,6 +107,7 @@ async def update_conversation_endpoint(
             model=updated.model,
             message_count=updated.message_count,
             is_pinned=updated.is_pinned,
+            last_message_at=updated.last_message_at,
             created_at=updated.created_at,
             updated_at=updated.updated_at,
         )

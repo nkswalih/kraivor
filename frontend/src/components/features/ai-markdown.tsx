@@ -1,6 +1,7 @@
 'use client';
 
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { AiCodeBlock } from '@/components/features/ai-code-block';
 
 interface AiMarkdownProps {
@@ -91,7 +92,7 @@ const HR = () => <hr className="my-6 border-krait-border" />;
 
 const Table = (props: any) => (
   <div className="my-4 overflow-x-auto rounded-lg border border-krait-border">
-    <table className="w-full text-[13px] text-text-secondary border-collapse" {...props} />
+    <table className="w-full text-[13px] text-text-secondary border-collapse" style={{ minWidth: 'max-content' }} {...props} />
   </div>
 );
 
@@ -100,7 +101,7 @@ const THead = (props: any) => (
 );
 
 const TBody = (props: any) => (
-  <tbody className="divide-y divide-krait-border" {...props} />
+  <tbody className="divide-y divide-krait-border align-top" {...props} />
 );
 
 const TR = (props: any) => (
@@ -108,11 +109,11 @@ const TR = (props: any) => (
 );
 
 const TH = (props: any) => (
-  <th className="px-4 py-2.5 text-left text-[12px] font-semibold text-text-primary uppercase tracking-wider" {...props} />
+  <th className="px-4 py-2.5 text-left text-[12px] font-semibold text-text-primary uppercase tracking-wider whitespace-nowrap" {...props} />
 );
 
 const TD = (props: any) => (
-  <td className="px-4 py-2.5 text-[13px] text-text-secondary" {...props} />
+  <td className="px-4 py-2.5 text-[13px] text-text-secondary whitespace-pre-wrap break-words" {...props} />
 );
 
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -122,6 +123,7 @@ export function AiMarkdown({ content, isStreaming }: AiMarkdownProps) {
     <div className="prose-custom max-w-none">
       {content ? (
         <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
           components={{
             h1: H1,
             h2: H2,

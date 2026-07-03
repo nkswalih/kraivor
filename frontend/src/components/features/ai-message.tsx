@@ -218,9 +218,9 @@ export const AiMessage = memo(function AiMessage({
               <div className="flex justify-end py-2">
                 <div className="group/user-msg max-w-[80%]">
                   <div className="bg-krait-surface3 border border-krait-border rounded-2xl rounded-br-md px-4 py-2.5">
-                    <p className="text-[14px] text-text-primary leading-relaxed whitespace-pre-wrap break-words">
-                      {message.content}
-                    </p>
+                    <div className="text-[14px] text-text-primary leading-relaxed">
+                      <AiMarkdown content={message.content} />
+                    </div>
                   </div>
 
                   {/* User message actions */}

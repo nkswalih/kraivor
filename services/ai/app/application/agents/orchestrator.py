@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 DIRECT_INTENTS = {
     "greeting", "conversation", "question", "programming",
     "code_generation", "writing", "translation", "planning",
+    "devops", "security_audit", "data_science",
+    "cloud_engineering", "system_design", "ui_ux",
+    "database_design", "testing", "full_stack",
     "unknown",
 }
 

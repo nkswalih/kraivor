@@ -77,7 +77,7 @@ class ChatService:
                     model=model,
                 ))
                 if response:
-                    await save_message(db, MessageEntity(
+                    assistant_msg = await save_message(db, MessageEntity(
                         role=MessageRole.ASSISTANT,
                         content=response,
                         conversation_id=conversation_id,
@@ -90,6 +90,7 @@ class ChatService:
                 await update_conversation_after_message(
                     db,
                     conversation_id,
+                    last_message_ts=assistant_msg.created_at if response else None,
                     title=message[:80],
                     model=usage.get("model", model),
                     input_tokens=usage.get("input_tokens", 0),

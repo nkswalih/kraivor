@@ -2,7 +2,7 @@
 -r base.txt
 
 # Formatting
-black>=24.0
+black>=26.5.1
 isort>=5.13
 
 # Linting

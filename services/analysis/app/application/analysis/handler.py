@@ -997,7 +997,8 @@ async def handle_stage_ai_enrich(
 
     enriched_findings_map: dict[str, dict[str, object]] = {}
     enrich_data = result.get("findings", [])
-    assert isinstance(enrich_data, list)
+    if not isinstance(enrich_data, list):
+        raise RuntimeError(f"Expected enrich_data to be a list, got {type(enrich_data).__name__}")
     for item in enrich_data:
         title = item.get("title", "")
         file_path = item.get("file_path", "")

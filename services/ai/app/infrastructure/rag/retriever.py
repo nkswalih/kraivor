@@ -32,21 +32,20 @@ class Retriever:
             filters.append("workspace_id = :workspace_id")
             params["workspace_id"] = workspace_id
 
-        where_clause = " AND ".join(filters) if filters else "TRUE"
+        where_clause = " AND ".join(filters) if filters else "1=1"
 
         async with self.db() as session:
             result = await session.execute(
-                text(f"""
-                    SELECT
-                        id, file_path, content, language,
-                        repo_id, line_start, line_end,
-                        1 - (embedding <=> :query_embedding) as similarity
-                    FROM ai.code_embeddings
-                    WHERE {where_clause}
-                      AND 1 - (embedding <=> :query_embedding) > :min_score
-                    ORDER BY similarity DESC
-                    LIMIT :top_k
-                """),
+                text(
+                    "SELECT id, file_path, content, language, "
+                    "repo_id, line_start, line_end, "
+                    "1 - (embedding <=> :query_embedding) as similarity "
+                    "FROM ai.code_embeddings "
+                    "WHERE " + where_clause + " "  # nosec - where_clause uses safe fragments with parameterized values
+                    "AND 1 - (embedding <=> :query_embedding) > :min_score "
+                    "ORDER BY similarity DESC "
+                    "LIMIT :top_k"
+                ),
                 params,
             )
             rows = result.fetchall()

@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     analysis_api_url: str = "http://analysis:8003/api/v1"
 
     # Server
-    host: str = "0.0.0.0"
+    host: str = "0.0.0.0"  # nosec - required for Docker container binding
     port: int = 8004
     debug: bool = False
 

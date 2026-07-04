@@ -56,12 +56,10 @@ Kraivor follows a **service-oriented architecture**. Each service lives in `serv
 
 ```
 services/
-├── identity/        # Django DRF — Authentication & User Management
+├── auth/            # Django DRF — Authentication & User Management
 ├── core/            # Django DRF — Workspaces, Repos, Notes, Projects
 ├── analysis/        # FastAPI    — Repository Analyzer, Rule Engine, Scoring
-├── ai/              # FastAPI    — Multi-Agent AI System, RAG Pipeline
-├── notifications/   # FastAPI    — Email, Push, Slack notifications
-└── realtime/        # Node.js    — WebSocket, Chat, Presence
+└── ai/              # FastAPI    — Multi-Agent AI System, RAG Pipeline
 ```
 
 ### Primary Stack
@@ -98,7 +96,7 @@ git fetch upstream
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.12+
 - Docker & Docker Compose
 - PostgreSQL 15+
 - Redis 7+
@@ -127,9 +125,7 @@ Edit `.env` with your API keys and secrets.
 
 ```bash
 cd services/ai
-python -m venv .venv
-source .venv/bin/activate  # or .venv\Scripts\Activate on Windows
-pip install -r requirements/dev.txt
+uv sync --group dev
 ```
 
 **Frontend**:
@@ -202,11 +198,13 @@ docs(readme): update Docker setup instructions
 
 ### Before Opening a PR
 
+- [ ] Pre-commit hooks pass (`make precommit`)
 - [ ] All tests pass locally (`make test`)
-- [ ] Lint checks pass (`ruff check .`, `ruff format .`)
+- [ ] Lint checks pass (`make lint`)
 - [ ] Rebased on latest `dev` branch
 - [ ] PR is focused on a single concern (small PRs review faster)
 - [ ] Description is clear and thorough
+- [ ] All CI checks pass (format, lint, type, security, tests)
 
 ### PR Template
 
@@ -241,11 +239,21 @@ docs(readme): update Docker setup instructions
 - Prefer explicit over implicit
 - Avoid unnecessary abstractions
 
-**Formatting & Linting:**
+**Pre-commit Hooks (run before every commit):**
+
+```bash
+make precommit
+```
+
+Or manually:
 
 ```bash
 ruff check .
 ruff format .
+isort --check-only --diff .
+black --check --diff .
+mypy .
+bandit -r . -x ./tests
 ```
 
 ### Backend (Django DRF / FastAPI)
@@ -291,8 +299,8 @@ All significant changes **must include tests**.
 # All services
 make test
 
-# Individual service
-cd services/analysis && pytest tests/
+# Individual service (using uv)
+cd services/analysis && uv run pytest tests/ -v
 
 # Frontend
 cd frontend && npm test

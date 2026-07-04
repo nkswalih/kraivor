@@ -32,7 +32,8 @@ class RedisCache:
                 retry_on_timeout=settings.redis.retry_on_timeout,
                 decode_responses=True,
             )
-            assert self._client is not None
+            if self._client is None:
+                raise RuntimeError("Redis client was not initialized")
             await self._client.ping()  # type: ignore[misc]
             logger.info("redis_connected")
         except Exception as e:

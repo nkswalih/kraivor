@@ -161,8 +161,8 @@ def detect_ci_platform(repo_path: str) -> str | None:
 def read_csproj(file_path: str) -> dict[str, str | None] | None:
     """Parse a .csproj file for PackageReference items."""
     try:
-        import xml.etree.ElementTree as ET
-        tree = ET.parse(file_path)
+        import xml.etree.ElementTree as ET  # nosec - parse trusted local .csproj files
+        tree = ET.parse(file_path)  # nosec - parses trusted local .csproj files
         root = tree.getroot()
     except (FileNotFoundError, ET.ParseError, PermissionError, ImportError):
         return None
@@ -193,8 +193,8 @@ def read_csproj(file_path: str) -> dict[str, str | None] | None:
 def read_pom_xml(file_path: str) -> dict[str, str | None] | None:
     """Parse a Maven pom.xml for dependencies."""
     try:
-        import xml.etree.ElementTree as ET
-        tree = ET.parse(file_path)
+        import xml.etree.ElementTree as ET  # nosec - parse trusted local pom.xml files
+        tree = ET.parse(file_path)  # nosec - parses trusted local pom.xml files
         root = tree.getroot()
     except (FileNotFoundError, ET.ParseError, PermissionError, ImportError):
         return None

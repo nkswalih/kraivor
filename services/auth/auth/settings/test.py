@@ -11,9 +11,8 @@ Usage:
     pytest tests/test_*.py   # Specific files
 """
 
-from pathlib import Path
-
 import os
+from pathlib import Path
 
 _keys_dir = Path(__file__).resolve().parent.parent.parent / ".keys"
 _keys_dir.mkdir(parents=True, exist_ok=True)

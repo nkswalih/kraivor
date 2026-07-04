@@ -1,8 +1,11 @@
+import logging
 import time
 
 from fastapi import HTTPException, Request
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 LUA_SLIDING_WINDOW = """
 local key = KEYS[1]
@@ -47,4 +50,4 @@ async def check_rate_limit(request: Request) -> None:
         except ImportError:
             pass
         except Exception:
-            pass
+            logger.warning("rate_limiter_check_failed", exc_info=True)

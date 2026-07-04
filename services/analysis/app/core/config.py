@@ -62,7 +62,7 @@ class AnalysisSettings(BaseModel):
     default_branch: str = "main"
     simulate_users: list[int] = [100, 500, 5000, 50000]
     max_file_size_bytes: int = Field(default=1_000_000, ge=1)
-    ephemeral_path: str = "/tmp/analysis"
+    ephemeral_path: str = "/tmp/analysis"  # nosec - containerized deployment default
 
 
 class RPMSettings(BaseModel):

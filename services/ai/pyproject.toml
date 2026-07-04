@@ -34,7 +34,7 @@ dependencies = [
     "tiktoken>=0.7",
     "pgvector>=0.2",
     "aiohttp>=3.9",
-    "aiokafka>=0.10",
+    "aiokafka>=0.14.0",
     "google-generativeai>=0.7",
     "alembic>=1.13",
 ]

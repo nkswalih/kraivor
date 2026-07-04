@@ -7,7 +7,7 @@ from .base import *  # noqa: F401,F403
 
 DEBUG = False
 
-SECRET_KEY = "test-secret-key"
+SECRET_KEY = "test-secret-key"  # nosec - test settings
 
 ALLOWED_HOSTS = ["*"]
 

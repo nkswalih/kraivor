@@ -21,7 +21,7 @@ types-requests>=2.31
 typing-extensions>=4.9
 
 # Testing
-pytest>=8.0
+pytest>=9.1.1
 pytest-cov>=5.0
 pytest-mock>=3.12
 pytest-xdist>=3.5

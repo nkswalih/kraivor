@@ -1,0 +1,10 @@
+* @kraivor/maintainers
+
+.github/ @kraivor/devops
+
+services/auth/ @kraivor/auth-team
+services/core/ @kraivor/core-team
+services/ai/ @kraivor/ai-team
+services/analysis/ @kraivor/analysis-team
+
+SECURITY.md @kraivor/security

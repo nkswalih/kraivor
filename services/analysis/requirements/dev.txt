@@ -34,5 +34,5 @@ faker>=22.0
 bandit>=1.7
 
 # DevX
-pre-commit>=3.6
+pre-commit>=4.6.0
 tox>=4.14

@@ -1,7 +1,9 @@
 from datetime import datetime
-from sqlalchemy import Integer, String, Text
-from app.infrastructure.db.models.base import Base, UUIDMixin
+
+from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
+
+from app.infrastructure.db.models.base import Base, UUIDMixin
 
 
 class SemanticCache(Base, UUIDMixin):

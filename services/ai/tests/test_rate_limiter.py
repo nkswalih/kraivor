@@ -1,7 +1,8 @@
-import pytest
 from unittest.mock import AsyncMock
-from app.api.dependencies.rate_limiter import LUA_SLIDING_WINDOW
 
+import pytest
+
+from app.api.dependencies.rate_limiter import LUA_SLIDING_WINDOW
 
 pytestmark = pytest.mark.unit
 

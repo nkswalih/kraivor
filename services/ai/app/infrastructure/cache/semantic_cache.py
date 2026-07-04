@@ -1,5 +1,3 @@
-import json
-import time
 from app.infrastructure.cache.redis_client import get_redis
 from app.monitoring.metrics import cache_hits, cache_misses
 

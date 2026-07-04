@@ -3,9 +3,10 @@ from app.core.celery_app import celery_app
 
 @celery_app.task(bind=True, queue="ai.indexing", acks_late=True)
 def index_repository(self, repo_id: str, workspace_id: str, files: list[dict]):
-    from app.infrastructure.rag.indexer import Indexer
-    from app.infrastructure.db.database import async_session_factory
     import asyncio
+
+    from app.infrastructure.db.database import async_session_factory
+    from app.infrastructure.rag.indexer import Indexer
 
     async def _run():
         indexer = Indexer()
@@ -27,9 +28,10 @@ def index_repository(self, repo_id: str, workspace_id: str, files: list[dict]):
 @celery_app.task(bind=True, queue="ai.indexing", acks_late=True)
 def index_single_file(self, repo_id: str, workspace_id: str,
                        file_path: str, content: str, language: str):
-    from app.infrastructure.rag.indexer import Indexer
-    from app.infrastructure.db.database import async_session_factory
     import asyncio
+
+    from app.infrastructure.db.database import async_session_factory
+    from app.infrastructure.rag.indexer import Indexer
 
     async def _run():
         indexer = Indexer()

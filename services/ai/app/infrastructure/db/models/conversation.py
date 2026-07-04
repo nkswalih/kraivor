@@ -1,7 +1,9 @@
 from datetime import datetime
-from sqlalchemy import Boolean, DateTime, Integer, String, Text
-from app.infrastructure.db.models.base import Base, TimestampMixin
+
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
+
+from app.infrastructure.db.models.base import Base, TimestampMixin
 
 
 class Conversation(Base, TimestampMixin):

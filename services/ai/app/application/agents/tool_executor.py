@@ -1,10 +1,14 @@
 import json
 import logging
+
 from app.application.agents.prompts.tool_executor import TOOL_EXECUTOR_PROMPT
-from app.application.tools.workspace_tools import WORKSPACE_TOOL_DEFINITIONS, WorkspaceTools
+from app.application.provisioning.key_resolver import KeyResolver
+from app.application.tools.workspace_tools import (
+    WORKSPACE_TOOL_DEFINITIONS,
+    WorkspaceTools,
+)
 from app.infrastructure.llm.client import LLMClient
 from app.infrastructure.llm.router import ModelRouter
-from app.application.provisioning.key_resolver import KeyResolver
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +47,7 @@ class ToolExecutorNode:
 
         recorded_calls = []
 
-        for round_num in range(3):
+        for _round_num in range(3):
             response = await client.generate(
                 messages,
                 tools=WORKSPACE_TOOL_DEFINITIONS,

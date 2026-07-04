@@ -1,17 +1,18 @@
 from collections.abc import AsyncGenerator
-from app.core.config import settings
+
 from app.application.agents.graph import build_agent_graph
-from app.application.provisioning.key_resolver import KeyResolver
 from app.application.chat.conversation_repository import (
     ensure_conversation,
     save_message,
     update_conversation_after_message,
 )
-from app.infrastructure.llm.router import ModelRouter
-from app.infrastructure.llm.client import LLMClient
+from app.application.provisioning.key_resolver import KeyResolver
+from app.core.config import settings
+from app.domain.entities.message import Message as MessageEntity
+from app.domain.entities.message import MessageRole
 from app.infrastructure.db.database import async_session_factory
+from app.infrastructure.llm.router import ModelRouter
 from app.infrastructure.service_client import ServiceClient
-from app.domain.entities.message import Message as MessageEntity, MessageRole
 
 
 class ChatService:
@@ -66,7 +67,7 @@ class ChatService:
         # Persist conversation and messages
         async with async_session_factory() as db:
             if conversation_id:
-                conv = await ensure_conversation(
+                await ensure_conversation(
                     db, conversation_id, user_id, workspace_id or "", model
                 )
                 await save_message(db, MessageEntity(
@@ -108,6 +109,7 @@ class ChatService:
         conv_id = kwargs.get("conversation_id")
         if conv_id:
             from sqlalchemy import select
+
             from app.infrastructure.db.models.conversation import Conversation
             async with async_session_factory() as db:
                 conv_result = await db.execute(

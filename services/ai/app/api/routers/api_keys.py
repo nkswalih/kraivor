@@ -1,13 +1,23 @@
-import uuid
 import base64
 import os
-from datetime import datetime, timezone
+import uuid
+from datetime import UTC, datetime
+from typing import Annotated
+
 from cryptography.fernet import Fernet
 from fastapi import APIRouter, Depends
-from app.api.dependencies.auth import get_current_user, JWTPayload
-from app.api.schemas.api_key import CreateKeyRequest, KeyResponse, ProvisionRequest, ProvisionResponse
+
+from app.api.dependencies.auth import JWTPayload, get_current_user
+from app.api.schemas.api_key import (
+    CreateKeyRequest,
+    KeyResponse,
+    ProvisionRequest,
+    ProvisionResponse,
+)
 from app.application.provisioning.key_provisioning import KeyProvisioner
 from app.core.config import settings
+
+CurrentUser = Annotated[JWTPayload, Depends(get_current_user)]
 
 router = APIRouter(tags=["api_keys"])
 
@@ -19,7 +29,7 @@ provisioner = KeyProvisioner(encrypter=encrypter)
 @router.post("/api-keys", response_model=KeyResponse)
 async def create_api_key(
     request: CreateKeyRequest,
-    user: JWTPayload = Depends(get_current_user),
+    user: CurrentUser,
 ):
     return KeyResponse(
         id=str(uuid.uuid4()),
@@ -27,14 +37,14 @@ async def create_api_key(
         prefix=request.name[:8],
         scopes=request.scopes or ["chat:basic"],
         rate_limit_rpm=request.rate_limit_rpm or 60,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
 
 
 @router.post("/api-keys/provision", response_model=ProvisionResponse)
 async def provision_provider_key(
     request: ProvisionRequest,
-    user: JWTPayload = Depends(get_current_user),
+    user: CurrentUser,
 ):
     result = await provisioner.provision_openrouter_key(
         user_id=user.sub,
@@ -45,5 +55,5 @@ async def provision_provider_key(
         provider=request.provider,
         model_access=result.get("models", []),
         rate_limit=result.get("rate_limits", {}),
-        provisioned_at=datetime.now(timezone.utc).isoformat(),
+        provisioned_at=datetime.now(UTC).isoformat(),
     )

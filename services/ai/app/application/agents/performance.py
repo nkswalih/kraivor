@@ -1,7 +1,7 @@
 from app.application.agents.prompts.specialist import PERFORMANCE_SYSTEM_PROMPT
+from app.application.provisioning.key_resolver import KeyResolver
 from app.infrastructure.llm.client import LLMClient
 from app.infrastructure.llm.router import ModelRouter
-from app.application.provisioning.key_resolver import KeyResolver
 
 
 class PerformanceAnalystNode:

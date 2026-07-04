@@ -4,7 +4,6 @@ Every tool receives (user_id, workspace_id) from AgentState — the LLM
 never controls which workspace to query. This is the security boundary.
 """
 
-import re
 from app.infrastructure.service_client import ServiceClient
 
 

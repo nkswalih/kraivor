@@ -1,6 +1,7 @@
-from sqlalchemy import Boolean, DateTime, Integer, JSON, String, Text
-from app.infrastructure.db.models.base import Base, UUIDMixin, TimestampMixin
+from sqlalchemy import JSON, Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
+
+from app.infrastructure.db.models.base import Base, TimestampMixin, UUIDMixin
 
 
 class ApiKey(Base, UUIDMixin, TimestampMixin):

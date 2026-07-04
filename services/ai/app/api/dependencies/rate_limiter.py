@@ -1,5 +1,7 @@
 import time
+
 from fastapi import HTTPException, Request
+
 from app.core.config import settings
 
 LUA_SLIDING_WINDOW = """

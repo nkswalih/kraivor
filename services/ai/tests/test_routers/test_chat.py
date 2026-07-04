@@ -1,7 +1,8 @@
-import pytest
-from unittest.mock import AsyncMock, patch
-from app.api.routers.chat import router, chat_service
+from unittest.mock import AsyncMock
 
+import pytest
+
+from app.api.routers.chat import chat_service
 
 pytestmark = pytest.mark.unit
 

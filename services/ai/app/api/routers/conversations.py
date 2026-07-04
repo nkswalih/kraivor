@@ -1,16 +1,22 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query
-from app.api.dependencies.auth import get_current_user, JWTPayload
+from pydantic import BaseModel
+
+from app.api.dependencies.auth import JWTPayload, get_current_user
 from app.api.dependencies.rate_limiter import check_rate_limit
-from app.infrastructure.db.database import async_session_factory
 from app.application.chat.conversation_repository import (
-    list_conversations,
-    get_messages,
     get_conversation,
+    get_messages,
+    list_conversations,
     update_conversation,
 )
-from pydantic import BaseModel
+from app.infrastructure.db.database import async_session_factory
+
+CurrentUser = Annotated[JWTPayload, Depends(get_current_user)]
+RateLimit = Annotated[None, Depends(check_rate_limit)]
 
 router = APIRouter(tags=["conversations"])
 
@@ -52,11 +58,11 @@ class MessageListResponse(BaseModel):
 
 @router.get("/conversations")
 async def list_user_conversations(
+    user: CurrentUser,
+    _: RateLimit = None,
     workspace_id: str | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    user: JWTPayload = Depends(get_current_user),
-    _: None = Depends(check_rate_limit),
 ):
     async with async_session_factory() as db:
         convs = await list_conversations(
@@ -84,8 +90,8 @@ async def list_user_conversations(
 async def update_conversation_endpoint(
     conversation_id: str,
     body: UpdateConversationRequest,
-    user: JWTPayload = Depends(get_current_user),
-    _: None = Depends(check_rate_limit),
+    user: CurrentUser,
+    _: RateLimit = None,
 ):
     async with async_session_factory() as db:
         conv = await get_conversation(db, conversation_id)
@@ -116,10 +122,10 @@ async def update_conversation_endpoint(
 @router.get("/conversations/{conversation_id}/messages")
 async def list_conversation_messages(
     conversation_id: str,
+    user: CurrentUser,
+    _: RateLimit = None,
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
-    user: JWTPayload = Depends(get_current_user),
-    _: None = Depends(check_rate_limit),
 ):
     async with async_session_factory() as db:
         conv = await get_conversation(db, conversation_id)

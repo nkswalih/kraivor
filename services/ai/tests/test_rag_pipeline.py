@@ -1,8 +1,9 @@
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, patch
+
 from app.infrastructure.rag.chunker import SemanticChunker
 from app.infrastructure.rag.embedder import Embedder
-
 
 pytestmark = pytest.mark.unit
 

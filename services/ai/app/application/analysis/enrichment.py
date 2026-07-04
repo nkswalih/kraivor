@@ -1,5 +1,4 @@
 import logging
-from collections.abc import Sequence
 
 from app.core.config import settings
 from app.infrastructure.llm.client import LLMClient
@@ -87,7 +86,7 @@ class EnrichmentService:
                 ]
 
         enriched_findings: list[dict] = []
-        for category, cat_results in enriched_map.items():
+        for _category, cat_results in enriched_map.items():
             for item in cat_results:
                 enriched_findings.append(item)
 
@@ -209,7 +208,7 @@ class EnrichmentService:
 
         critical = [f for f in findings if str(f.get("severity", "")).upper() == "CRITICAL"]
         high = [f for f in findings if str(f.get("severity", "")).upper() == "HIGH"]
-        categories = set(f.get("category", "") for f in findings)
+        categories = {f.get("category", "") for f in findings}
 
         user_prompt = (
             f"Overall Score: {overall_score or 'N/A'}/100\n"

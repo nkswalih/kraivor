@@ -19,11 +19,13 @@ For each conversation:
 
 import asyncio
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import timedelta
+
 from sqlalchemy import select, text
+
 from app.infrastructure.db.database import async_session_factory
-from app.infrastructure.db.models.message import Message
 from app.infrastructure.db.models.conversation import Conversation
+from app.infrastructure.db.models.message import Message
 
 
 async def fix_all():
@@ -60,12 +62,10 @@ async def fix_all():
                     ordered.append(assistants[i])
 
             base_ts = ordered[0].created_at
-            conv_changed = False
             for i, msg in enumerate(ordered):
                 new_ts = base_ts + timedelta(microseconds=i)
                 if msg.created_at != new_ts:
                     msg.created_at = new_ts
-                    conv_changed = True
                     changed += 1
 
             # Backfill last_message_at

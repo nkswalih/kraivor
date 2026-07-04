@@ -1,7 +1,7 @@
 import logging
-from app.application.agents.prompts.specialist import LOOKUP_SYSTEM_PROMPT
-from app.infrastructure.rag.retriever import Retriever
+
 from app.infrastructure.rag.embedder import Embedder
+from app.infrastructure.rag.retriever import Retriever
 
 logger = logging.getLogger(__name__)
 

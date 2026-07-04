@@ -5,6 +5,7 @@ class EventProducer:
     async def start(self):
         try:
             from aiokafka import AIOKafkaProducer
+
             from app.core.config import settings
             self.producer = AIOKafkaProducer(
                 bootstrap_servers=settings.kafka__bootstrap__servers,

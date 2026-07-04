@@ -1,6 +1,6 @@
-from datetime import datetime
-from app.infrastructure.rag.embedder import Embedder
 from sqlalchemy import text
+
+from app.infrastructure.rag.embedder import Embedder
 
 
 class Retriever:

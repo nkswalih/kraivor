@@ -26,8 +26,8 @@ class SemanticChunker:
         self, file_path: str, content: str, language: str
     ) -> list[dict]:
         try:
-            import tree_sitter_python as tspython
             import tree_sitter_javascript as tsjavascript
+            import tree_sitter_python as tspython
             import tree_sitter_typescript as tstypescript
             from tree_sitter import Language, Parser
 
@@ -44,7 +44,6 @@ class SemanticChunker:
             tree = parser.parse(bytes(content, "utf-8"))
 
             chunks = []
-            cursor = tree.walk()
 
             def visit(node):
                 if node.type in ("function_definition", "class_definition",

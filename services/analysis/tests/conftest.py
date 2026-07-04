@@ -13,23 +13,62 @@ if "ANALYSIS_DATABASE__URL" not in os.environ:
 @pytest.fixture
 def sample_python_functions() -> list[dict[str, object]]:
     return [
-        {"name": "simple_func", "line_start": 1, "line_end": 3, "snippet": "def simple_func():\n    pass\n", "complexity": 1},
-        {"name": "complex_func", "line_start": 10, "line_end": 35, "snippet": "def complex_func():\n    if a:\n        for b in c:\n            while d:\n                if e:\n                    pass\n", "complexity": 5},
-        {"name": "very_complex", "line_start": 40, "line_end": 90, "snippet": "def very_complex():\n    if a:\n        if b:\n            if c:\n                if d:\n                    if e:\n                        if f:\n                            pass\n", "complexity": 7},
+        {
+            "name": "simple_func",
+            "line_start": 1,
+            "line_end": 3,
+            "snippet": "def simple_func():\n    pass\n",
+            "complexity": 1,
+        },
+        {
+            "name": "complex_func",
+            "line_start": 10,
+            "line_end": 35,
+            "snippet": "def complex_func():\n    if a:\n        for b in c:\n            while d:\n                if e:\n                    pass\n",
+            "complexity": 5,
+        },
+        {
+            "name": "very_complex",
+            "line_start": 40,
+            "line_end": 90,
+            "snippet": "def very_complex():\n    if a:\n        if b:\n            if c:\n                if d:\n                    if e:\n                        if f:\n                            pass\n",
+            "complexity": 7,
+        },
     ]
 
 
 @pytest.fixture
 def sample_routes() -> list[dict[str, object]]:
     return [
-        {"path": "/api/public", "method": "GET", "has_auth": False, "line_start": 1, "snippet": 'app.get("/api/public")'},
-        {"path": "/api/secure", "method": "GET", "has_auth": True, "line_start": 5, "snippet": '@login_required\napp.get("/api/secure")'},
-        {"path": "/api/data", "method": "POST", "has_auth": False, "line_start": 10, "snippet": 'app.post("/api/data")'},
+        {
+            "path": "/api/public",
+            "method": "GET",
+            "has_auth": False,
+            "line_start": 1,
+            "snippet": 'app.get("/api/public")',
+        },
+        {
+            "path": "/api/secure",
+            "method": "GET",
+            "has_auth": True,
+            "line_start": 5,
+            "snippet": '@login_required\napp.get("/api/secure")',
+        },
+        {
+            "path": "/api/data",
+            "method": "POST",
+            "has_auth": False,
+            "line_start": 10,
+            "snippet": 'app.post("/api/data")',
+        },
     ]
 
 
 @pytest.fixture
-def sample_ast_data(sample_python_functions: list[dict[str, object]], sample_routes: list[dict[str, object]]) -> dict[str, object]:
+def sample_ast_data(
+    sample_python_functions: list[dict[str, object]],
+    sample_routes: list[dict[str, object]],
+) -> dict[str, object]:
     return {
         "functions": sample_python_functions,
         "routes": sample_routes,
@@ -40,16 +79,18 @@ def sample_ast_data(sample_python_functions: list[dict[str, object]], sample_rou
 
 @pytest.fixture
 def sample_content() -> str:
-    return "\n".join([
-        "import os",
-        "import sys",
-        "",
-        "SECRET_KEY = 'sk-abc123def456ghi'",
-        "API_KEY = 'a1b2c3d4e5f6a7b8c9d0e1f2'",
-        "",
-        "def hello():",
-        "    return 'world'",
-    ])
+    return "\n".join(
+        [
+            "import os",
+            "import sys",
+            "",
+            "SECRET_KEY = 'sk-abc123def456ghi'",
+            "API_KEY = 'a1b2c3d4e5f6a7b8c9d0e1f2'",
+            "",
+            "def hello():",
+            "    return 'world'",
+        ]
+    )
 
 
 # ── Fixtures for parser tests ──────────────────────────────────────────

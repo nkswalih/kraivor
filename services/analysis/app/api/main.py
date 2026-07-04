@@ -46,7 +46,11 @@ class StripTrailingSlashMiddleware:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] == "http" and scope["path"] != "/" and scope["path"].endswith("/"):
+        if (
+            scope["type"] == "http"
+            and scope["path"] != "/"
+            and scope["path"].endswith("/")
+        ):
             scope["path"] = scope["path"].rstrip("/")
         await self.app(scope, receive, send)
 
@@ -69,7 +73,9 @@ async def run_migrations() -> None:
             stderr=stderr.decode(errors="replace"),
             stdout=stdout.decode(errors="replace"),
         )
-        raise RuntimeError(f"Alembic migration failed: {stderr.decode(errors='replace')}")
+        raise RuntimeError(
+            f"Alembic migration failed: {stderr.decode(errors='replace')}"
+        )
     logger.info("migrations_applied")
 
 

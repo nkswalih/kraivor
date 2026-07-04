@@ -15,27 +15,19 @@ class MernParser(AbstractParser):
     supported_extensions: list[str] = [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"]
 
     # ---- JS Core ----
-    _FUNC_DECL = re.compile(
-        r"(?:export\s+)?(?:async\s+)?function\s+\*?\s*(\w+)\s*\("
-    )
+    _FUNC_DECL = re.compile(r"(?:export\s+)?(?:async\s+)?function\s+\*?\s*(\w+)\s*\(")
     _ARROW_FUNC = re.compile(
         r"(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?(?:\([^)]*\)|\w+)\s*=>"
     )
     _CLASS_DECL = re.compile(
         r"(?:export\s+)?(?:abstract\s+)?class\s+(\w+)(?:\s+extends\s+(\w+))?(?:\s+implements\s+(\w+(?:\s*,\s*\w+)*))?"
     )
-    _IMPORT_DEFAULT = re.compile(
-        r"import\s+(\w+)\s+from\s+[\"']([^\"']+)[\"']"
-    )
+    _IMPORT_DEFAULT = re.compile(r"import\s+(\w+)\s+from\s+[\"']([^\"']+)[\"']")
     _IMPORT_NAMED = re.compile(
         r"import\s+\{\s*([^}]+)\s*\}\s+from\s+[\"']([^\"']+)[\"']"
     )
-    _IMPORT_STAR = re.compile(
-        r"import\s+\*\s+as\s+(\w+)\s+from\s+[\"']([^\"']+)[\"']"
-    )
-    _IMPORT_SIDE_EFFECT = re.compile(
-        r"import\s+[\"']([^\"']+)[\"']"
-    )
+    _IMPORT_STAR = re.compile(r"import\s+\*\s+as\s+(\w+)\s+from\s+[\"']([^\"']+)[\"']")
+    _IMPORT_SIDE_EFFECT = re.compile(r"import\s+[\"']([^\"']+)[\"']")
     _REQUIRE = re.compile(
         r"(?:const|let|var)\s+(?:(\w+)|\{\s*([^}]+)\s*\})\s*=\s*require\([\"']([^\"']+)[\"']\)"
     )
@@ -49,21 +41,15 @@ class MernParser(AbstractParser):
     _EXPRESS_ROUTE = re.compile(
         r"(?:app|router|route|server|fastify|api)\.(get|post|put|delete|patch|options|all|head)\([\"']([^\"']+)[\"']"
     )
-    _COMPLEXITY_KEYWORDS = re.compile(
-        r"\b(?:if|for|while|switch|case|catch)\b"
-    )
+    _COMPLEXITY_KEYWORDS = re.compile(r"\b(?:if|for|while|switch|case|catch)\b")
     _JSX_TAG = re.compile(r"<[A-Z][\w.]*(?:\s+\w+\s*=|/>)|</[A-Z]")
 
     # ---- TS Core ----
     _INTERFACE_DECL = re.compile(
         r"(?:export\s+)?(?:abstract\s+)?interface\s+(\w+)(?:\s+extends\s+(\w+(?:\s*,\s*\w+)*))?"
     )
-    _ENUM_DECL = re.compile(
-        r"(?:export\s+)?(?:const\s+)?enum\s+(\w+)"
-    )
-    _TYPE_ALIAS = re.compile(
-        r"(?:export\s+)?type\s+(\w+)(?:<[^>]+>)?\s*="
-    )
+    _ENUM_DECL = re.compile(r"(?:export\s+)?(?:const\s+)?enum\s+(\w+)")
+    _TYPE_ALIAS = re.compile(r"(?:export\s+)?type\s+(\w+)(?:<[^>]+>)?\s*=")
     _DECORATOR = re.compile(r"@(\w+(?:\.\w+)?)\s*(?:\([^)]*\))?")
     _NESTJS_ROUTE = re.compile(
         r"@(?:Get|Post|Put|Delete|Patch|Options|Head|All)(?:\([\"']([^\"']+)[\"']\)|\(\))"
@@ -73,14 +59,10 @@ class MernParser(AbstractParser):
     _MONGOOSE_SCHEMA = re.compile(
         r"(?:const|let|var)\s+(\w+Schema)\s*=\s*new\s+(?:mongoose\.)?Schema\s*\("
     )
-    _MONGOOSE_MODEL = re.compile(
-        r"mongoose\.model\([\"'](\w+)[\"']\s*,\s*(\w+)"
-    )
+    _MONGOOSE_MODEL = re.compile(r"mongoose\.model\([\"'](\w+)[\"']\s*,\s*(\w+)")
 
     # ---- MERN: Express ----
-    _EXPRESS_MIDDLEWARE = re.compile(
-        r"(?:app|router)\.use\s*\(([^)]+)\)"
-    )
+    _EXPRESS_MIDDLEWARE = re.compile(r"(?:app|router)\.use\s*\(([^)]+)\)")
     _EXPRESS_ROUTER = re.compile(
         r"(?:express|require\([\"']express[\"']\))\.Router\s*\(\)"
     )
@@ -95,9 +77,7 @@ class MernParser(AbstractParser):
     _CUSTOM_HOOK = re.compile(
         r"(?:export\s+)?(?:const|let|var|function)\s+(use[A-Z]\w+)\s*"
     )
-    _REACT_IMPORT = re.compile(
-        r"from\s+[\"']react[\"']"
-    )
+    _REACT_IMPORT = re.compile(r"from\s+[\"']react[\"']")
 
     # ---- MERN: Node.js ----
     _CJS_INDICATOR = re.compile(r"(?:module\.exports|exports\.|require\s*\()")
@@ -160,7 +140,9 @@ class MernParser(AbstractParser):
             name = match.group(1)
             line_start = content[: match.start()].count("\n") + 1
             parsed.functions.append(
-                ParsedFunction(name=name, line_start=line_start, line_end=line_start, complexity=1)
+                ParsedFunction(
+                    name=name, line_start=line_start, line_end=line_start, complexity=1
+                )
             )
 
     def _extract_classes(self, content: str, parsed: ParsedFile) -> None:
@@ -181,7 +163,9 @@ class MernParser(AbstractParser):
             line_end = content[:body_end].count("\n") + 1
 
             method_names = []
-            clean_body = re.sub(r"^\s*@\w+(?:\([^)]*\))?\s*$", "", body, flags=re.MULTILINE)
+            clean_body = re.sub(
+                r"^\s*@\w+(?:\([^)]*\))?\s*$", "", body, flags=re.MULTILINE
+            )
             no_decorator_body = re.sub(r"@\w+(?:\([^)]*\))?", "", clean_body)
             for m in re.finditer(
                 r"^\s*(?:(?:public|private|protected|static|readonly|async)\s+)*(\w+)\s*\([^)]*\)\s*(?:\{|\:)",
@@ -211,7 +195,9 @@ class MernParser(AbstractParser):
             )
 
         for match in self._IMPORT_NAMED.finditer(content):
-            names = [n.strip().split(" as ")[0].strip() for n in match.group(1).split(",")]
+            names = [
+                n.strip().split(" as ")[0].strip() for n in match.group(1).split(",")
+            ]
             source = match.group(2)
             line = content[: match.start()].count("\n") + 1
             for name in names:
@@ -224,7 +210,9 @@ class MernParser(AbstractParser):
             name, source = match.group(1), match.group(2)
             line = content[: match.start()].count("\n") + 1
             parsed.imports.append(
-                ParsedImport(name=f"* as {name}", source=source, line=line, is_from=True)
+                ParsedImport(
+                    name=f"* as {name}", source=source, line=line, is_from=True
+                )
             )
 
         for match in self._IMPORT_SIDE_EFFECT.finditer(content):
@@ -239,10 +227,14 @@ class MernParser(AbstractParser):
             line = content[: match.start()].count("\n") + 1
             if match.group(1):
                 parsed.imports.append(
-                    ParsedImport(name=match.group(1), source=source, line=line, is_from=False)
+                    ParsedImport(
+                        name=match.group(1), source=source, line=line, is_from=False
+                    )
                 )
             elif match.group(2):
-                names = [n.strip().split(":")[0].strip() for n in match.group(2).split(",")]
+                names = [
+                    n.strip().split(":")[0].strip() for n in match.group(2).split(",")
+                ]
                 for name in names:
                     parsed.imports.append(
                         ParsedImport(name=name, source=source, line=line, is_from=False)
@@ -278,7 +270,13 @@ class MernParser(AbstractParser):
             method, path = match.group(1).upper(), match.group(2)
             line_start = content[: match.start()].count("\n") + 1
             parsed.routes.append(
-                ParsedRoute(path=path, method=method, handler_name="", line_start=line_start, line_end=line_start)
+                ParsedRoute(
+                    path=path,
+                    method=method,
+                    handler_name="",
+                    line_start=line_start,
+                    line_end=line_start,
+                )
             )
 
     def _detect_jsx(self, content: str, parsed: ParsedFile) -> None:
@@ -300,10 +298,21 @@ class MernParser(AbstractParser):
             body_end = self._find_matching_brace(content, body_start)
             line_end = content[:body_end].count("\n") + 1
             properties = []
-            for m in re.finditer(r"^\s*(\w+)\??\s*(?:\?)?\s*:", content[body_start + 1 : body_end], re.MULTILINE):
+            for m in re.finditer(
+                r"^\s*(\w+)\??\s*(?:\?)?\s*:",
+                content[body_start + 1 : body_end],
+                re.MULTILINE,
+            ):
                 properties.append(m.group(1))
             parsed.classes.append(
-                ParsedClass(name=name, line_start=line_start, line_end=line_end, bases=bases, decorators=["interface"], methods=properties)
+                ParsedClass(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_end,
+                    bases=bases,
+                    decorators=["interface"],
+                    methods=properties,
+                )
             )
 
     def _extract_enums(self, content: str, parsed: ParsedFile) -> None:
@@ -316,10 +325,18 @@ class MernParser(AbstractParser):
             body_end = self._find_matching_brace(content, body_start)
             line_end = content[:body_end].count("\n") + 1
             members = []
-            for m in re.finditer(r"^\s*(\w+)", content[body_start + 1 : body_end], re.MULTILINE):
+            for m in re.finditer(
+                r"^\s*(\w+)", content[body_start + 1 : body_end], re.MULTILINE
+            ):
                 members.append(m.group(1))
             parsed.classes.append(
-                ParsedClass(name=name, line_start=line_start, line_end=line_end, decorators=["enum"], methods=members)
+                ParsedClass(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_end,
+                    decorators=["enum"],
+                    methods=members,
+                )
             )
 
     def _extract_type_aliases(self, content: str, parsed: ParsedFile) -> None:
@@ -339,7 +356,13 @@ class MernParser(AbstractParser):
             method = match.group(0).lstrip("@").split("(")[0].upper()
             line_start = content[: match.start()].count("\n") + 1
             parsed.routes.append(
-                ParsedRoute(path=path, method=method, handler_name="", line_start=line_start, line_end=line_start)
+                ParsedRoute(
+                    path=path,
+                    method=method,
+                    handler_name="",
+                    line_start=line_start,
+                    line_end=line_start,
+                )
             )
 
     # ========== MERN: Mongoose ==========
@@ -360,21 +383,25 @@ class MernParser(AbstractParser):
 
             fields = self._parse_mongoose_fields(schema_body)
 
-            schemas.append({
-                "name": schema_name,
-                "fields": fields,
-                "line_start": line_start,
-            })
+            schemas.append(
+                {
+                    "name": schema_name,
+                    "fields": fields,
+                    "line_start": line_start,
+                }
+            )
 
         for match in self._MONGOOSE_MODEL.finditer(content):
             model_name = match.group(1)
             schema_ref = match.group(2)
             line_start = content[: match.start()].count("\n") + 1
-            models.append({
-                "name": model_name,
-                "schema": schema_ref,
-                "line_start": line_start,
-            })
+            models.append(
+                {
+                    "name": model_name,
+                    "schema": schema_ref,
+                    "line_start": line_start,
+                }
+            )
 
         if schemas:
             parsed.ast_data["mongoose_schemas"] = schemas
@@ -382,15 +409,33 @@ class MernParser(AbstractParser):
             parsed.ast_data["mongoose_models"] = models
 
     _MONGOOSE_TYPES = {
-        "String", "Number", "Date", "Boolean", "Buffer", "Mixed",
-        "ObjectId", "Decimal128", "Map", "BigInt",
-        "Schema.Types.String", "Schema.Types.Number", "Schema.Types.Date",
-        "Schema.Types.Boolean", "Schema.Types.ObjectId", "Schema.Types.Mixed",
-        "Schema.Types.Buffer", "Schema.Types.Decimal128", "Schema.Types.BigInt",
-        "mongoose.Schema.Types.ObjectId", "mongoose.Schema.Types.Mixed",
+        "String",
+        "Number",
+        "Date",
+        "Boolean",
+        "Buffer",
+        "Mixed",
+        "ObjectId",
+        "Decimal128",
+        "Map",
+        "BigInt",
+        "Schema.Types.String",
+        "Schema.Types.Number",
+        "Schema.Types.Date",
+        "Schema.Types.Boolean",
+        "Schema.Types.ObjectId",
+        "Schema.Types.Mixed",
+        "Schema.Types.Buffer",
+        "Schema.Types.Decimal128",
+        "Schema.Types.BigInt",
+        "mongoose.Schema.Types.ObjectId",
+        "mongoose.Schema.Types.Mixed",
     }
 
-    _FIELD_DEF_SIMPLE = re.compile(r"^\s*(\w+)\s*:\s*(String|Number|Date|Boolean|Mixed|Buffer|ObjectId|Decimal128|BigInt|Map)\s*[,\)]?\s*$", re.MULTILINE)
+    _FIELD_DEF_SIMPLE = re.compile(
+        r"^\s*(\w+)\s*:\s*(String|Number|Date|Boolean|Mixed|Buffer|ObjectId|Decimal128|BigInt|Map)\s*[,\)]?\s*$",
+        re.MULTILINE,
+    )
     _FIELD_DEF_COMPLEX = re.compile(r"^\s*(\w+)\s*:\s*\{", re.MULTILINE)
     _FIELD_DEF_ARRAY = re.compile(r"^\s*(\w+)\s*:\s*\[")
 
@@ -415,7 +460,10 @@ class MernParser(AbstractParser):
 
             ftype = "Mixed"
             constraints: dict[str, object] = {}
-            type_match = re.search(r"type\s*:\s*(String|Number|Date|Boolean|Mixed|Buffer|ObjectId|Decimal128|BigInt|Map|Schema\.Types\.\w+|mongoose\.Schema\.Types\.\w+)", field_body)
+            type_match = re.search(
+                r"type\s*:\s*(String|Number|Date|Boolean|Mixed|Buffer|ObjectId|Decimal128|BigInt|Map|Schema\.Types\.\w+|mongoose\.Schema\.Types\.\w+)",
+                field_body,
+            )
             if type_match:
                 ftype = type_match.group(1)
             if re.search(r"required\s*:\s*true", field_body):
@@ -477,7 +525,9 @@ class MernParser(AbstractParser):
         components: list[str] = []
         for func in parsed.functions:
             if self._JSX_TAG.search(content) or func.name[0].isupper():
-                body = self._extract_body(content, content.find(func.name) + len(func.name))
+                body = self._extract_body(
+                    content, content.find(func.name) + len(func.name)
+                )
                 if self._JSX_TAG.search(body):
                     components.append(func.name)
 

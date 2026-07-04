@@ -22,9 +22,7 @@ class Report:
     findings: list[Finding] = field(default_factory=list)
 
     duration_seconds: int | None = None
-    completed_at: datetime = field(
-        default_factory=lambda: datetime.now(UTC)
-    )
+    completed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     s3_key: str = ""
 
     def to_dict(self) -> dict[str, object]:

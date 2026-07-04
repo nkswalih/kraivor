@@ -10,30 +10,25 @@ class AbstractJobRepository(ABC):
     """Contract for analysis job persistence."""
 
     @abstractmethod
-    async def create(self, job_data: dict[str, object]) -> dict[str, object]:
-        ...
+    async def create(self, job_data: dict[str, object]) -> dict[str, object]: ...
 
     @abstractmethod
-    async def get_by_id(self, job_id: UUID) -> dict[str, object] | None:
-        ...
+    async def get_by_id(self, job_id: UUID) -> dict[str, object] | None: ...
 
     @abstractmethod
     async def update_status(
         self, job_id: UUID, status: str, progress_pct: int = 0, **kwargs: object
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @abstractmethod
     async def list_by_repo(
         self, repo_id: UUID, limit: int = 10, offset: int = 0
-    ) -> tuple[list[dict[str, object]], int]:
-        ...
+    ) -> tuple[list[dict[str, object]], int]: ...
 
     @abstractmethod
     async def list_by_workspace(
         self, workspace_id: UUID, limit: int = 10, offset: int = 0
-    ) -> tuple[list[dict[str, object]], int]:
-        ...
+    ) -> tuple[list[dict[str, object]], int]: ...
 
     @abstractmethod
     async def hard_delete(self, job_id: UUID) -> dict[str, object] | None:
@@ -93,7 +88,10 @@ class AbstractFindingRepository(ABC):
 
     @abstractmethod
     async def update_ai_fields(
-        self, finding_id: UUID, is_ai_enriched: bool, ai_explanation: str,
+        self,
+        finding_id: UUID,
+        is_ai_enriched: bool,
+        ai_explanation: str,
     ) -> None:
         """Update AI enrichment fields on a single finding."""
         ...
@@ -113,12 +111,10 @@ class AbstractReportRepository(ABC):
     """Contract for report persistence."""
 
     @abstractmethod
-    async def save(self, report: Report) -> None:
-        ...
+    async def save(self, report: Report) -> None: ...
 
     @abstractmethod
-    async def get_by_job(self, job_id: UUID) -> Report | None:
-        ...
+    async def get_by_job(self, job_id: UUID) -> Report | None: ...
 
     @abstractmethod
     async def get_latest_by_repo(

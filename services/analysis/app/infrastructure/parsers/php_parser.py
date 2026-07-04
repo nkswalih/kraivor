@@ -73,7 +73,9 @@ class PhpParser(AbstractParser):
         match = self._NAMESPACE.search(content)
         if match:
             parsed.imports.append(
-                ParsedImport(name="namespace", source=match.group(1), line=1, is_from=False)
+                ParsedImport(
+                    name="namespace", source=match.group(1), line=1, is_from=False
+                )
             )
 
     def _extract_imports(self, content: str, parsed: ParsedFile) -> None:
@@ -82,7 +84,11 @@ class PhpParser(AbstractParser):
             alias = match.group(2) or ""
             line = content[: match.start()].count("\n") + 1
             name = source.split("\\")[-1]
-            parsed.imports.append(ParsedImport(name=name, alias=alias, source=source, line=line, is_from=False))
+            parsed.imports.append(
+                ParsedImport(
+                    name=name, alias=alias, source=source, line=line, is_from=False
+                )
+            )
 
     def _extract_classes(self, content: str, parsed: ParsedFile) -> None:
         for match in self._CLASS_DECL.finditer(content):
@@ -105,7 +111,13 @@ class PhpParser(AbstractParser):
                 method_names.append(m.group(1))
 
             parsed.classes.append(
-                ParsedClass(name=name, line_start=line_start, line_end=line_end, bases=bases, methods=method_names)
+                ParsedClass(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_end,
+                    bases=bases,
+                    methods=method_names,
+                )
             )
 
     def _extract_interfaces(self, content: str, parsed: ParsedFile) -> None:
@@ -123,7 +135,13 @@ class PhpParser(AbstractParser):
             line_end = content[:body_end].count("\n") + 1
 
             parsed.classes.append(
-                ParsedClass(name=name, line_start=line_start, line_end=line_end, bases=bases, decorators=["interface"])
+                ParsedClass(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_end,
+                    bases=bases,
+                    decorators=["interface"],
+                )
             )
 
     def _extract_traits(self, content: str, parsed: ParsedFile) -> None:
@@ -131,7 +149,12 @@ class PhpParser(AbstractParser):
             name = match.group(1)
             line_start = content[: match.start()].count("\n") + 1
             parsed.classes.append(
-                ParsedClass(name=name, line_start=line_start, line_end=line_start, decorators=["trait"])
+                ParsedClass(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_start,
+                    decorators=["trait"],
+                )
             )
 
     def _extract_enums(self, content: str, parsed: ParsedFile) -> None:
@@ -139,7 +162,12 @@ class PhpParser(AbstractParser):
             name = match.group(1)
             line_start = content[: match.start()].count("\n") + 1
             parsed.classes.append(
-                ParsedClass(name=name, line_start=line_start, line_end=line_start, decorators=["enum"])
+                ParsedClass(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_start,
+                    decorators=["enum"],
+                )
             )
 
     def _extract_functions(self, content: str, parsed: ParsedFile) -> None:
@@ -158,7 +186,12 @@ class PhpParser(AbstractParser):
                 complexity = self._calculate_complexity(body)
 
             parsed.functions.append(
-                ParsedFunction(name=name, line_start=line_start, line_end=line_end, complexity=complexity)
+                ParsedFunction(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_end,
+                    complexity=complexity,
+                )
             )
 
     def _extract_routes(self, content: str, parsed: ParsedFile) -> None:
@@ -167,14 +200,26 @@ class PhpParser(AbstractParser):
             method = match.group(0).split("::")[1].split("(")[0].upper()
             line_start = content[: match.start()].count("\n") + 1
             parsed.routes.append(
-                ParsedRoute(path=path, method=method, handler_name="", line_start=line_start, line_end=line_start)
+                ParsedRoute(
+                    path=path,
+                    method=method,
+                    handler_name="",
+                    line_start=line_start,
+                    line_end=line_start,
+                )
             )
 
         for match in self._SYMFONY_ROUTE.finditer(content):
             path = match.group(1)
             line_start = content[: match.start()].count("\n") + 1
             parsed.routes.append(
-                ParsedRoute(path=path, method="GET", handler_name="", line_start=line_start, line_end=line_start)
+                ParsedRoute(
+                    path=path,
+                    method="GET",
+                    handler_name="",
+                    line_start=line_start,
+                    line_end=line_start,
+                )
             )
 
     @staticmethod

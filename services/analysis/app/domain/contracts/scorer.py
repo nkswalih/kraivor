@@ -38,7 +38,7 @@ class CapacityMetrics:
     """
 
     has_data: bool = False
-    simulation_status: str | None = None   # "stable", "degraded", "failing"
+    simulation_status: str | None = None  # "stable", "degraded", "failing"
     breaks_at_users: int | None = None
     overall_rpm: int | None = None
     bottlenecks: list[str] = field(default_factory=list)

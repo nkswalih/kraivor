@@ -15,9 +15,7 @@ class QualityHighComplexityRule(BaseRule):
     rule_id: str = "QUAL-COMPLEX"
     category: Category = Category.MAINTAINABILITY
     severity: Severity = Severity.MEDIUM
-    description: str = (
-        "Flags functions with cyclomatic complexity above threshold"
-    )
+    description: str = "Flags functions with cyclomatic complexity above threshold"
 
     _COMPLEXITY_THRESHOLD: int = 15
     _HIGH_COMPLEXITY_THRESHOLD: int = 30
@@ -26,7 +24,9 @@ class QualityHighComplexityRule(BaseRule):
         self, file_path: str, content: str, ast_data: dict[str, object]
     ) -> list[RuleViolation]:
         violations: list[RuleViolation] = []
-        functions: list[dict[str, object]] = cast(list[dict[str, object]], ast_data.get("functions", []))
+        functions: list[dict[str, object]] = cast(
+            list[dict[str, object]], ast_data.get("functions", [])
+        )
 
         for func in functions:
             complexity = self._calculate_complexity(func)
@@ -106,7 +106,9 @@ class QualityLongFunctionRule(BaseRule):
         self, file_path: str, content: str, ast_data: dict[str, object]
     ) -> list[RuleViolation]:
         violations: list[RuleViolation] = []
-        functions: list[dict[str, object]] = cast(list[dict[str, object]], ast_data.get("functions", []))
+        functions: list[dict[str, object]] = cast(
+            list[dict[str, object]], ast_data.get("functions", [])
+        )
 
         for func in functions:
             start: int = cast(int, func.get("line_start", 0))

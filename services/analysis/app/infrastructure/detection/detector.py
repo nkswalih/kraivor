@@ -90,7 +90,9 @@ class FrameworkDetector:
             self._detect_infra_files(repo_path, result)
             self._detect_ci(repo_path, result)
         except Exception:
-            logger.warning("framework_detection_error", repo_path=repo_path, exc_info=True)
+            logger.warning(
+                "framework_detection_error", repo_path=repo_path, exc_info=True
+            )
 
         result.frameworks = self._deduplicate(result.frameworks)
         result.databases = self._deduplicate(result.databases)
@@ -221,19 +223,27 @@ class FrameworkDetector:
             lower = dep_name.lower()
             if lower in ("actix-web", "actix_web"):
                 result.frameworks.append(
-                    DetectedTechnology(name="Actix", category="framework", detected_from="Cargo.toml")
+                    DetectedTechnology(
+                        name="Actix", category="framework", detected_from="Cargo.toml"
+                    )
                 )
             elif lower in ("axum",):
                 result.frameworks.append(
-                    DetectedTechnology(name="Axum", category="framework", detected_from="Cargo.toml")
+                    DetectedTechnology(
+                        name="Axum", category="framework", detected_from="Cargo.toml"
+                    )
                 )
             elif lower in ("rocket",):
                 result.frameworks.append(
-                    DetectedTechnology(name="Rocket", category="framework", detected_from="Cargo.toml")
+                    DetectedTechnology(
+                        name="Rocket", category="framework", detected_from="Cargo.toml"
+                    )
                 )
             elif lower == "tokio":
                 result.tools.append(
-                    DetectedTechnology(name="Tokio", category="tool", detected_from="Cargo.toml")
+                    DetectedTechnology(
+                        name="Tokio", category="tool", detected_from="Cargo.toml"
+                    )
                 )
 
     def _detect_from_gemfile(self, result: DetectionResult) -> None:
@@ -245,14 +255,22 @@ class FrameworkDetector:
             lower = dep_name.lower()
             if lower in ("rails", "rails"):
                 result.frameworks.append(
-                    DetectedTechnology(name="Ruby on Rails", category="framework", detected_from="Gemfile")
+                    DetectedTechnology(
+                        name="Ruby on Rails",
+                        category="framework",
+                        detected_from="Gemfile",
+                    )
                 )
             elif lower in ("sinatra",):
                 result.frameworks.append(
-                    DetectedTechnology(name="Sinatra", category="framework", detected_from="Gemfile")
+                    DetectedTechnology(
+                        name="Sinatra", category="framework", detected_from="Gemfile"
+                    )
                 )
 
-    def _detect_from_csproj_files(self, repo_path: str, result: DetectionResult) -> None:
+    def _detect_from_csproj_files(
+        self, repo_path: str, result: DetectionResult
+    ) -> None:
         root = Path(repo_path)
         for csproj_file in root.rglob("*.csproj"):
             deps = read_csproj(str(csproj_file))
@@ -265,7 +283,9 @@ class FrameworkDetector:
                         resolved = self._clone_with_version(tech, dep_version)
                         self._categorize(result, resolved)
 
-    def _detect_from_pom_xml_files(self, repo_path: str, result: DetectionResult) -> None:
+    def _detect_from_pom_xml_files(
+        self, repo_path: str, result: DetectionResult
+    ) -> None:
         root = Path(repo_path)
         for pom_file in root.rglob("pom.xml"):
             deps = read_pom_xml(str(pom_file))
@@ -278,7 +298,13 @@ class FrameworkDetector:
                 artifact_id = parts[1] if len(parts) > 1 else dep_key
 
                 for sig_name, tech in ALL_JAVA_SIGNATURES.items():
-                    if sig_name in dep_key or dep_key.startswith(sig_name) or sig_name == artifact_id or sig_name.endswith("." + artifact_id) or sig_name in group_id:
+                    if (
+                        sig_name in dep_key
+                        or dep_key.startswith(sig_name)
+                        or sig_name == artifact_id
+                        or sig_name.endswith("." + artifact_id)
+                        or sig_name in group_id
+                    ):
                         resolved = self._clone_with_version(tech, dep_version)
                         self._categorize(result, resolved)
 
@@ -289,7 +315,9 @@ class FrameworkDetector:
             result.infra.append(self._clone_with_version(INFRA_SIGNALS["dockerfile"]))
         for compose_name in ("docker-compose.yml", "docker-compose.yaml"):
             if (root / compose_name).exists():
-                result.infra.append(self._clone_with_version(INFRA_SIGNALS["docker_compose"]))
+                result.infra.append(
+                    self._clone_with_version(INFRA_SIGNALS["docker_compose"])
+                )
 
         has_k8s = False
         for k8s_dir in ("k8s", "kubernetes", "deploy", "manifests"):
@@ -300,7 +328,8 @@ class FrameworkDetector:
         if not has_k8s:
             for f in root.iterdir():
                 if f.suffix in self.K8S_EXTENSIONS and f.name not in (
-                    "docker-compose.yml", "docker-compose.yaml",
+                    "docker-compose.yml",
+                    "docker-compose.yaml",
                 ):
                     content = self._safe_read(f)
                     if content and ("apiVersion:" in content and "kind:" in content):
@@ -308,19 +337,34 @@ class FrameworkDetector:
                         break
         if has_k8s:
             result.infra.append(
-                DetectedTechnology(name="Kubernetes", category="infra", detected_from="manifests", confidence=0.8)
+                DetectedTechnology(
+                    name="Kubernetes",
+                    category="infra",
+                    detected_from="manifests",
+                    confidence=0.8,
+                )
             )
 
         for tf_file in root.rglob("*.tf"):
             if tf_file.is_file():
                 result.infra.append(
-                    DetectedTechnology(name="Terraform", category="infra", detected_from="*.tf", confidence=0.9)
+                    DetectedTechnology(
+                        name="Terraform",
+                        category="infra",
+                        detected_from="*.tf",
+                        confidence=0.9,
+                    )
                 )
                 break
 
         if (root / "nginx.conf").exists() or (root / "nginx/nginx.conf").exists():
             result.infra.append(
-                DetectedTechnology(name="Nginx", category="infra", detected_from="nginx.conf", confidence=0.9)
+                DetectedTechnology(
+                    name="Nginx",
+                    category="infra",
+                    detected_from="nginx.conf",
+                    confidence=0.9,
+                )
             )
 
         self._detect_databases_from_env(repo_path, result)
@@ -329,10 +373,14 @@ class FrameworkDetector:
         ci_name = detect_ci_platform(repo_path)
         if ci_name:
             result.infra.append(
-                DetectedTechnology(name=ci_name, category="infra", detected_from="CI config")
+                DetectedTechnology(
+                    name=ci_name, category="infra", detected_from="CI config"
+                )
             )
 
-    def _detect_databases_from_env(self, repo_path: str, result: DetectionResult) -> None:
+    def _detect_databases_from_env(
+        self, repo_path: str, result: DetectionResult
+    ) -> None:
         for env_file in (".env", ".env.example"):
             path = Path(repo_path) / env_file
             if not path.exists():
@@ -343,20 +391,57 @@ class FrameworkDetector:
 
             lower = content.lower()
             db_signals: list[tuple[tuple[str, ...], DetectedTechnology]] = [
-                (("postgresql", "postgres", "psql", "pg"),
-                    DetectedTechnology(name="PostgreSQL", category="database", detected_from=".env", confidence=0.7)),
-                (("mongodb", "mongo"),
-                    DetectedTechnology(name="MongoDB", category="database", detected_from=".env", confidence=0.7)),
-                (("redis://",),
-                    DetectedTechnology(name="Redis", category="database", detected_from=".env", confidence=0.7)),
-                (("kafka://",),
-                    DetectedTechnology(name="Kafka", category="infra", detected_from=".env", confidence=0.6)),
-                (("rabbitmq://", "amqp://"),
-                    DetectedTechnology(name="RabbitMQ", category="infra", detected_from=".env", confidence=0.6)),
+                (
+                    ("postgresql", "postgres", "psql", "pg"),
+                    DetectedTechnology(
+                        name="PostgreSQL",
+                        category="database",
+                        detected_from=".env",
+                        confidence=0.7,
+                    ),
+                ),
+                (
+                    ("mongodb", "mongo"),
+                    DetectedTechnology(
+                        name="MongoDB",
+                        category="database",
+                        detected_from=".env",
+                        confidence=0.7,
+                    ),
+                ),
+                (
+                    ("redis://",),
+                    DetectedTechnology(
+                        name="Redis",
+                        category="database",
+                        detected_from=".env",
+                        confidence=0.7,
+                    ),
+                ),
+                (
+                    ("kafka://",),
+                    DetectedTechnology(
+                        name="Kafka",
+                        category="infra",
+                        detected_from=".env",
+                        confidence=0.6,
+                    ),
+                ),
+                (
+                    ("rabbitmq://", "amqp://"),
+                    DetectedTechnology(
+                        name="RabbitMQ",
+                        category="infra",
+                        detected_from=".env",
+                        confidence=0.6,
+                    ),
+                ),
             ]
 
             for keywords, tech in db_signals:
-                if any(kw in lower for kw in keywords) and not any(t.name == tech.name for t in result.databases + result.infra):
+                if any(kw in lower for kw in keywords) and not any(
+                    t.name == tech.name for t in result.databases + result.infra
+                ):
                     if tech.category == "database":
                         result.databases.append(tech)
                     else:
@@ -388,7 +473,9 @@ class FrameworkDetector:
             result.frameworks.append(tech)
 
     @staticmethod
-    def _clone_with_version(tech: DetectedTechnology, version: str | None = None) -> DetectedTechnology:
+    def _clone_with_version(
+        tech: DetectedTechnology, version: str | None = None
+    ) -> DetectedTechnology:
         return DetectedTechnology(
             name=tech.name,
             category=tech.category,

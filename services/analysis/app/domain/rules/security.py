@@ -39,7 +39,9 @@ class SecurityNoAuthRule(BaseRule):
         self, file_path: str, content: str, ast_data: dict[str, object]
     ) -> list[RuleViolation]:
         violations: list[RuleViolation] = []
-        routes: list[dict[str, object]] = cast(list[dict[str, object]], ast_data.get("routes", []))
+        routes: list[dict[str, object]] = cast(
+            list[dict[str, object]], ast_data.get("routes", [])
+        )
 
         for route in routes:
             if not route.get("has_auth"):
@@ -62,8 +64,7 @@ class SecurityNoAuthRule(BaseRule):
                         line_end=cast(int | None, route.get("line_end")),
                         code_snippet=cast(str, route.get("snippet", "")),
                         recommendation=(
-                            "Add @login_required or equivalent "
-                            "authentication decorator"
+                            "Add @login_required or equivalent authentication decorator"
                         ),
                         enterprise_pattern=(
                             "Defense in depth — authenticate at "
@@ -84,25 +85,49 @@ class SecurityHardcodedSecretRule(BaseRule):
     severity: Severity = Severity.CRITICAL
     description: str = "Detects hardcoded secrets and credentials"
     file_patterns: list[str] = [
-        "*.py", "*.js", "*.ts", "*.go", "*.java", "*.rb", "*.rs",
-        "*.yml", "*.yaml", "*.env*", "*.json", "*.toml",
-        "*.cfg", "*.ini", "*.conf", "*.config",
+        "*.py",
+        "*.js",
+        "*.ts",
+        "*.go",
+        "*.java",
+        "*.rb",
+        "*.rs",
+        "*.yml",
+        "*.yaml",
+        "*.env*",
+        "*.json",
+        "*.toml",
+        "*.cfg",
+        "*.ini",
+        "*.conf",
+        "*.config",
     ]
     exclude_patterns: list[str] = [
-        "*fixture*", "*mock*", "*seed*", "*sqlite_data*", "*.sql",
+        "*fixture*",
+        "*mock*",
+        "*seed*",
+        "*sqlite_data*",
+        "*.sql",
     ]
 
     _SECRET_PATTERNS: list[re.Pattern[str]] = [
-        re.compile(r'(["\'])(api[_-]?key)\1\s*[:=]\s*(["\'])([^"\']+)\3', re.IGNORECASE),
+        re.compile(
+            r'(["\'])(api[_-]?key)\1\s*[:=]\s*(["\'])([^"\']+)\3', re.IGNORECASE
+        ),
         re.compile(r'(["\'])password\1\s*[:=]\s*(["\'])([^"\']+)\2', re.IGNORECASE),
         re.compile(r'(["\'])secret\1\s*[:=]\s*(["\'])([^"\']+)\2', re.IGNORECASE),
         re.compile(r'(["\'])token\1\s*[:=]\s*(["\'])([^"\']+)\2', re.IGNORECASE),
-        re.compile(r'(["\'])(access[_-]?key|secret[_-]?key)\1\s*[:=]\s*(["\'])([^"\']+)\3', re.IGNORECASE),
+        re.compile(
+            r'(["\'])(access[_-]?key|secret[_-]?key)\1\s*[:=]\s*(["\'])([^"\']+)\3',
+            re.IGNORECASE,
+        ),
         re.compile(r'\b(api[_-]?key)\s*=\s*(["\'])([^"\']+)\2', re.IGNORECASE),
         re.compile(r'\bpassword\s*=\s*(["\'])([^"\']+)\1', re.IGNORECASE),
         re.compile(r'\b(secret)\s*=\s*(["\'])([^"\']+)\2', re.IGNORECASE),
         re.compile(r'\b(token)\s*=\s*(["\'])([^"\']+)\2', re.IGNORECASE),
-        re.compile(r'\b(access[_-]?key|secret[_-]?key)\s*=\s*(["\'])([^"\']+)\2', re.IGNORECASE),
+        re.compile(
+            r'\b(access[_-]?key|secret[_-]?key)\s*=\s*(["\'])([^"\']+)\2', re.IGNORECASE
+        ),
     ]
     _ENTROPY_THRESHOLD: float = 3.0
 
@@ -111,13 +136,19 @@ class SecurityHardcodedSecretRule(BaseRule):
     ) -> list[RuleViolation]:
         violations: list[RuleViolation] = []
         lines = content.split("\n")
-        effective_severity = Severity.INFO if self.matches_exclude_pattern(file_path) else self.severity
+        effective_severity = (
+            Severity.INFO if self.matches_exclude_pattern(file_path) else self.severity
+        )
 
         for line_num, line in enumerate(lines, 1):
             for pattern in self._SECRET_PATTERNS:
                 match = pattern.search(line)
                 if match:
-                    value = match.group(match.lastindex) if match.lastindex else match.group(0)
+                    value = (
+                        match.group(match.lastindex)
+                        if match.lastindex
+                        else match.group(0)
+                    )
                     if self._entropy(value) > self._ENTROPY_THRESHOLD:
                         violations.append(
                             RuleViolation(
@@ -156,7 +187,15 @@ class SecuritySQLInjectionRule(BaseRule):
     category: Category = Category.SECURITY
     severity: Severity = Severity.CRITICAL
     description: str = "Detects SQL injection vulnerabilities from unsanitized input"
-    file_patterns: list[str] = ["*.py", "*.js", "*.ts", "*.java", "*.go", "*.rb", "*.php"]
+    file_patterns: list[str] = [
+        "*.py",
+        "*.js",
+        "*.ts",
+        "*.java",
+        "*.go",
+        "*.rb",
+        "*.php",
+    ]
 
     async def analyze(
         self, file_path: str, content: str, ast_data: dict[str, object]
@@ -192,8 +231,18 @@ class SecurityCommandInjectionRule(BaseRule):
     rule_id: str = "SEC-CMDI"
     category: Category = Category.SECURITY
     severity: Severity = Severity.CRITICAL
-    description: str = "Detects command injection from unsanitized input in system commands"
-    file_patterns: list[str] = ["*.py", "*.js", "*.ts", "*.java", "*.go", "*.rb", "*.php"]
+    description: str = (
+        "Detects command injection from unsanitized input in system commands"
+    )
+    file_patterns: list[str] = [
+        "*.py",
+        "*.js",
+        "*.ts",
+        "*.java",
+        "*.go",
+        "*.rb",
+        "*.php",
+    ]
 
     async def analyze(
         self, file_path: str, content: str, ast_data: dict[str, object]
@@ -230,7 +279,15 @@ class SecurityPathTraversalRule(BaseRule):
     category: Category = Category.SECURITY
     severity: Severity = Severity.HIGH
     description: str = "Detects path traversal from unsanitized file path operations"
-    file_patterns: list[str] = ["*.py", "*.js", "*.ts", "*.java", "*.go", "*.rb", "*.php"]
+    file_patterns: list[str] = [
+        "*.py",
+        "*.js",
+        "*.ts",
+        "*.java",
+        "*.go",
+        "*.rb",
+        "*.php",
+    ]
 
     async def analyze(
         self, file_path: str, content: str, ast_data: dict[str, object]
@@ -267,7 +324,15 @@ class SecuritySSRFRule(BaseRule):
     category: Category = Category.SECURITY
     severity: Severity = Severity.HIGH
     description: str = "Detects SSRF from user-controlled URLs in HTTP clients"
-    file_patterns: list[str] = ["*.py", "*.js", "*.ts", "*.java", "*.go", "*.rb", "*.php"]
+    file_patterns: list[str] = [
+        "*.py",
+        "*.js",
+        "*.ts",
+        "*.java",
+        "*.go",
+        "*.rb",
+        "*.php",
+    ]
 
     async def analyze(
         self, file_path: str, content: str, ast_data: dict[str, object]
@@ -304,7 +369,16 @@ class SecurityXXERule(BaseRule):
     category: Category = Category.SECURITY
     severity: Severity = Severity.HIGH
     description: str = "Detects insecure XML parsers vulnerable to XXE attacks"
-    file_patterns: list[str] = ["*.py", "*.js", "*.ts", "*.java", "*.go", "*.rb", "*.php", "*.xml"]
+    file_patterns: list[str] = [
+        "*.py",
+        "*.js",
+        "*.ts",
+        "*.java",
+        "*.go",
+        "*.rb",
+        "*.php",
+        "*.xml",
+    ]
 
     async def analyze(
         self, file_path: str, content: str, ast_data: dict[str, object]
@@ -316,7 +390,15 @@ class SecurityXXERule(BaseRule):
                 if pattern.search(line):
                     has_defensive = any(
                         kw in line.lower()
-                        for kw in ("defusedxml", "resolveentity", "setfeatur", "disallow", "secure", "xxe", "external_entity")
+                        for kw in (
+                            "defusedxml",
+                            "resolveentity",
+                            "setfeatur",
+                            "disallow",
+                            "secure",
+                            "xxe",
+                            "external_entity",
+                        )
                     )
                     if not has_defensive:
                         violations.append(
@@ -346,7 +428,16 @@ class SecurityWeakCryptoRule(BaseRule):
     category: Category = Category.SECURITY
     severity: Severity = Severity.HIGH
     description: str = "Detects weak or deprecated cryptographic algorithms"
-    file_patterns: list[str] = ["*.py", "*.js", "*.ts", "*.java", "*.go", "*.rb", "*.php", "*.kt"]
+    file_patterns: list[str] = [
+        "*.py",
+        "*.js",
+        "*.ts",
+        "*.java",
+        "*.go",
+        "*.rb",
+        "*.php",
+        "*.kt",
+    ]
 
     async def analyze(
         self, file_path: str, content: str, ast_data: dict[str, object]
@@ -438,7 +529,15 @@ class SecurityDeserializationRule(BaseRule):
     category: Category = Category.SECURITY
     severity: Severity = Severity.CRITICAL
     description: str = "Detects unsafe deserialization of untrusted data"
-    file_patterns: list[str] = ["*.py", "*.js", "*.ts", "*.java", "*.go", "*.rb", "*.php"]
+    file_patterns: list[str] = [
+        "*.py",
+        "*.js",
+        "*.ts",
+        "*.java",
+        "*.go",
+        "*.rb",
+        "*.php",
+    ]
 
     async def analyze(
         self, file_path: str, content: str, ast_data: dict[str, object]
@@ -475,7 +574,15 @@ class SecurityXSSRule(BaseRule):
     category: Category = Category.SECURITY
     severity: Severity = Severity.CRITICAL
     description: str = "Detects Cross-Site Scripting from unsanitized user input in output/execution contexts"
-    file_patterns: list[str] = ["*.py", "*.js", "*.ts", "*.java", "*.go", "*.rb", "*.php"]
+    file_patterns: list[str] = [
+        "*.py",
+        "*.js",
+        "*.ts",
+        "*.java",
+        "*.go",
+        "*.rb",
+        "*.php",
+    ]
 
     async def analyze(
         self, file_path: str, content: str, ast_data: dict[str, object]
@@ -513,19 +620,35 @@ class SecurityMissingAuthzRule(BaseRule):
     severity: Severity = Severity.HIGH
     description: str = "Detects API endpoints missing authorization checks"
     file_patterns: list[str] = [
-        "*route*", "*view*", "*controller*", "*api*", "*handler*", "*endpoint*",
+        "*route*",
+        "*view*",
+        "*controller*",
+        "*api*",
+        "*handler*",
+        "*endpoint*",
     ]
 
     _AUTHZ_KEYWORDS: set[str] = {
-        "role", "permission", "authorize", "authz", "allow", "access",
-        "can_", "has_", "is_admin", "is_owner", "is_member",
+        "role",
+        "permission",
+        "authorize",
+        "authz",
+        "allow",
+        "access",
+        "can_",
+        "has_",
+        "is_admin",
+        "is_owner",
+        "is_member",
     }
 
     async def analyze(
         self, file_path: str, content: str, ast_data: dict[str, object]
     ) -> list[RuleViolation]:
         violations: list[RuleViolation] = []
-        routes: list[dict[str, object]] = cast(list[dict[str, object]], ast_data.get("routes", []))
+        routes: list[dict[str, object]] = cast(
+            list[dict[str, object]], ast_data.get("routes", [])
+        )
 
         for route in routes:
             if route.get("has_auth") is True:
@@ -562,20 +685,30 @@ class SecurityCSRFRule(BaseRule):
     category: Category = Category.SECURITY
     severity: Severity = Severity.HIGH
     description: str = "Detects endpoints missing CSRF protection"
-    file_patterns: list[str] = ["*route*", "*view*", "*controller*", "*api*", "*handler*", "*middleware*", "*.py", "*.js", "*.ts"]
+    file_patterns: list[str] = [
+        "*route*",
+        "*view*",
+        "*controller*",
+        "*api*",
+        "*handler*",
+        "*middleware*",
+        "*.py",
+        "*.js",
+        "*.ts",
+    ]
 
     async def analyze(
         self, file_path: str, content: str, ast_data: dict[str, object]
     ) -> list[RuleViolation]:
         violations: list[RuleViolation] = []
-        has_csrf_protection = any(
-            pattern.search(content)
-            for pattern in CSRF_PATTERNS
-        )
+        has_csrf_protection = any(pattern.search(content) for pattern in CSRF_PATTERNS)
 
-        routes: list[dict[str, object]] = cast(list[dict[str, object]], ast_data.get("routes", []))
+        routes: list[dict[str, object]] = cast(
+            list[dict[str, object]], ast_data.get("routes", [])
+        )
         mutating_routes = [
-            r for r in routes
+            r
+            for r in routes
             if r.get("method", "GET") in ("POST", "PUT", "DELETE", "PATCH")
         ]
 
@@ -609,7 +742,15 @@ class SecurityCORSMisconfigRule(BaseRule):
     category: Category = Category.SECURITY
     severity: Severity = Severity.HIGH
     description: str = "Detects permissive CORS configurations"
-    file_patterns: list[str] = ["*.py", "*.js", "*.ts", "*.yml", "*.yaml", "*.json", "*.toml"]
+    file_patterns: list[str] = [
+        "*.py",
+        "*.js",
+        "*.ts",
+        "*.yml",
+        "*.yaml",
+        "*.json",
+        "*.toml",
+    ]
 
     async def analyze(
         self, file_path: str, content: str, ast_data: dict[str, object]

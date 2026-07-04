@@ -68,14 +68,21 @@ class RubyParser(AbstractParser):
         for match in self._REQUIRE.finditer(content):
             source = match.group(1)
             line = content[: match.start()].count("\n") + 1
-            parsed.imports.append(ParsedImport(name="", source=source, line=line, is_from=False))
+            parsed.imports.append(
+                ParsedImport(name="", source=source, line=line, is_from=False)
+            )
 
     def _extract_modules(self, content: str, parsed: ParsedFile) -> None:
         for match in self._MODULE_DECL.finditer(content):
             name = match.group(1)
             line_start = content[: match.start()].count("\n") + 1
             parsed.classes.append(
-                ParsedClass(name=name, line_start=line_start, line_end=line_start, decorators=["module"])
+                ParsedClass(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_start,
+                    decorators=["module"],
+                )
             )
 
     def _extract_classes(self, content: str, parsed: ParsedFile) -> None:
@@ -91,11 +98,17 @@ class RubyParser(AbstractParser):
                 body_end = self._find_class_end(content, body_start)
 
             method_names = []
-            for m in self._METHOD_DECL.finditer(content[match.end():body_end]):
+            for m in self._METHOD_DECL.finditer(content[match.end() : body_end]):
                 method_names.append(m.group(1))
 
             parsed.classes.append(
-                ParsedClass(name=name, line_start=line_start, line_end=body_end, bases=bases, methods=method_names)
+                ParsedClass(
+                    name=name,
+                    line_start=line_start,
+                    line_end=body_end,
+                    bases=bases,
+                    methods=method_names,
+                )
             )
 
     def _extract_methods(self, content: str, parsed: ParsedFile) -> None:
@@ -105,7 +118,12 @@ class RubyParser(AbstractParser):
             body = self._extract_method_body(content, match.end())
             line_end = line_start + body.count("\n")
             parsed.functions.append(
-                ParsedFunction(name=name, line_start=line_start, line_end=line_end, complexity=self._calculate_complexity(body))
+                ParsedFunction(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_end,
+                    complexity=self._calculate_complexity(body),
+                )
             )
 
     def _extract_routes(self, content: str, parsed: ParsedFile) -> None:
@@ -115,7 +133,13 @@ class RubyParser(AbstractParser):
             method = match.group(0).split()[0].upper()
             line_start = content[: match.start()].count("\n") + 1
             parsed.routes.append(
-                ParsedRoute(path=path, method=method, handler_name=handler, line_start=line_start, line_end=line_start)
+                ParsedRoute(
+                    path=path,
+                    method=method,
+                    handler_name=handler,
+                    line_start=line_start,
+                    line_end=line_start,
+                )
             )
 
         for match in self._RAILS_ROUTE_BLOCK.finditer(content):
@@ -124,7 +148,13 @@ class RubyParser(AbstractParser):
             handler = match.group(2) or ""
             line_start = content[: match.start()].count("\n") + 1
             parsed.routes.append(
-                ParsedRoute(path=path, method=method, handler_name=handler, line_start=line_start, line_end=line_start)
+                ParsedRoute(
+                    path=path,
+                    method=method,
+                    handler_name=handler,
+                    line_start=line_start,
+                    line_end=line_start,
+                )
             )
 
     def _extract_method_body(self, content: str, start_pos: int) -> str:
@@ -137,7 +167,7 @@ class RubyParser(AbstractParser):
                 body_lines.append(stripped)
                 continue
             if indent is None and stripped.startswith((" ", "\t")):
-                indent = line[:len(line) - len(line.lstrip())]
+                indent = line[: len(line) - len(line.lstrip())]
                 body_lines.append(stripped)
             elif indent is not None and not stripped.startswith((" ", "\t")):
                 break
@@ -154,12 +184,16 @@ class RubyParser(AbstractParser):
         depth = 1
         for i, line in enumerate(lines):
             stripped = line.strip()
-            if stripped.startswith("class ") or stripped.startswith("module ") or stripped.startswith("def "):
+            if (
+                stripped.startswith("class ")
+                or stripped.startswith("module ")
+                or stripped.startswith("def ")
+            ):
                 depth += 1
             elif stripped == "end":
                 depth -= 1
                 if depth == 0:
-                    return start_pos + sum(len(line) + 1 for line in lines[:i + 1])
+                    return start_pos + sum(len(line) + 1 for line in lines[: i + 1])
         return start_pos + len(content) - 1
 
     @staticmethod

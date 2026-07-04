@@ -1,7 +1,5 @@
 """Tests for handler-level functions — dedup, save_findings, stage_score."""
 
-
-
 from typing import cast
 
 from app.application.analysis.handler import _dedup_violations

@@ -20,7 +20,11 @@ end
 """
         result = await parser.parse("test.ex", content)
         assert any(c.name == "MyApp.UserService" for c in result.classes)
-        assert any("module" in c.decorators for c in result.classes if c.name == "MyApp.UserService")
+        assert any(
+            "module" in c.decorators
+            for c in result.classes
+            if c.name == "MyApp.UserService"
+        )
 
     async def test_parse_functions(self, parser: ElixirParser) -> None:
         content = """

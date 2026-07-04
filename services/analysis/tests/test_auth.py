@@ -12,7 +12,9 @@ import pytest
 from fastapi import HTTPException
 
 
-def generate_test_jwt(private_key_pem: bytes, payload: dict[str, object], algorithm: str = "RS256") -> str:
+def generate_test_jwt(
+    private_key_pem: bytes, payload: dict[str, object], algorithm: str = "RS256"
+) -> str:
     return jwt.encode(payload, private_key_pem, algorithm=algorithm)
 
 
@@ -73,7 +75,10 @@ class TestGetCurrentUser:
         mock_request.headers = {"Authorization": "Bearer invalid.token.here"}
 
         with (
-            patch("app.dependencies.auth._verify_token", side_effect=jwt.InvalidTokenError("bad token")),
+            patch(
+                "app.dependencies.auth._verify_token",
+                side_effect=jwt.InvalidTokenError("bad token"),
+            ),
             pytest.raises(HTTPException) as exc_info,
         ):
             get_current_user(mock_request)
@@ -87,7 +92,10 @@ class TestGetCurrentUser:
         mock_request.headers = {"Authorization": "Bearer expired.token.here"}
 
         with (
-            patch("app.dependencies.auth._verify_token", side_effect=jwt.ExpiredSignatureError("expired")),
+            patch(
+                "app.dependencies.auth._verify_token",
+                side_effect=jwt.ExpiredSignatureError("expired"),
+            ),
             pytest.raises(HTTPException) as exc_info,
         ):
             get_current_user(mock_request)
@@ -101,7 +109,7 @@ class TestGetCurrentUser:
         mock_request.headers = {
             "X-Internal-Request": "true",
             "X-User-ID": "user-456",
-            "X-Email": "internal@example.com"
+            "X-Email": "internal@example.com",
         }
 
         user = get_current_user(mock_request)
@@ -200,7 +208,9 @@ class TestVerifyToken:
         import app.dependencies.auth as auth_module
 
         mock_client = MagicMock()
-        mock_client.get_signing_key_from_jwt.side_effect = jwt.InvalidTokenError("bad kid")
+        mock_client.get_signing_key_from_jwt.side_effect = jwt.InvalidTokenError(
+            "bad kid"
+        )
 
         with (
             patch.object(auth_module, "_get_jwks_client", return_value=mock_client),

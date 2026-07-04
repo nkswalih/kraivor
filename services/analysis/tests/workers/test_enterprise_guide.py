@@ -1,4 +1,3 @@
-
 from app.core.constants import Category, Severity
 from app.domain.entities.score import Score
 from app.domain.rules.base import RuleViolation
@@ -37,7 +36,14 @@ def _make_violation(
 
 class TestEnterpriseGuideGenerator:
     async def test_executive_summary_generated(self) -> None:
-        score = Score(overall=85, security=90, performance=80, reliability=85, maintainability=80, devops=90)
+        score = Score(
+            overall=85,
+            security=90,
+            performance=80,
+            reliability=85,
+            maintainability=80,
+            devops=90,
+        )
         findings = [_make_violation()]
         generator = EnterpriseGuideGenerator()
         guide = await generator.generate(findings=findings, scores=score)
@@ -70,13 +76,16 @@ class TestEnterpriseGuideGenerator:
 
     async def test_capacity_analysis_with_metrics(self) -> None:
         perf_metrics = PerformanceMetrics(
-            overall_rpm=1500, breaks_at_concurrent_users=5000,
+            overall_rpm=1500,
+            breaks_at_concurrent_users=5000,
             bottlenecks=["n_plus_one"],
         )
         score = Score(overall=85)
         generator = EnterpriseGuideGenerator()
         guide = await generator.generate(
-            findings=[], scores=score, perf_metrics=perf_metrics,
+            findings=[],
+            scores=score,
+            perf_metrics=perf_metrics,
         )
         assert guide.capacity_analysis is not None
         assert guide.capacity_analysis["estimated_rpm"] == 1500
@@ -90,8 +99,18 @@ class TestEnterpriseGuideGenerator:
 
     async def test_migration_path_sorted_by_priority(self) -> None:
         findings = [
-            _make_violation(severity=Severity.CRITICAL, title="Critical fix", rpm_impact=500, score_impact=15.0),
-            _make_violation(severity=Severity.HIGH, title="High fix", rpm_impact=50, score_impact=8.0),
+            _make_violation(
+                severity=Severity.CRITICAL,
+                title="Critical fix",
+                rpm_impact=500,
+                score_impact=15.0,
+            ),
+            _make_violation(
+                severity=Severity.HIGH,
+                title="High fix",
+                rpm_impact=50,
+                score_impact=8.0,
+            ),
         ]
         score = Score(overall=60)
         generator = EnterpriseGuideGenerator()
@@ -113,7 +132,9 @@ class TestEnterpriseGuideGenerator:
         score = Score(overall=85)
         generator = EnterpriseGuideGenerator()
         guide = await generator.generate(
-            findings=[], scores=score, dead_code=dead_code,
+            findings=[],
+            scores=score,
+            dead_code=dead_code,
         )
         total_issues = len(guide.medium_issues)
         assert total_issues >= 1
@@ -132,7 +153,9 @@ class TestEnterpriseGuideGenerator:
         score = Score(overall=85)
         generator = EnterpriseGuideGenerator()
         guide = await generator.generate(
-            findings=[], scores=score, errors=errors,
+            findings=[],
+            scores=score,
+            errors=errors,
         )
         high_count = len(guide.high_issues)
         assert high_count >= 1
@@ -141,13 +164,17 @@ class TestEnterpriseGuideGenerator:
         score = Score(overall=85)
         sim_results = [
             SimulationResult(
-                concurrent_users=5000, status="degraded",
-                overall_rpm=800, error_rate_pct=5.0,
+                concurrent_users=5000,
+                status="degraded",
+                overall_rpm=800,
+                error_rate_pct=5.0,
             ),
         ]
         generator = EnterpriseGuideGenerator()
         guide = await generator.generate(
-            findings=[], scores=score, simulation=sim_results,
+            findings=[],
+            scores=score,
+            simulation=sim_results,
         )
         assert "5000" in guide.executive_summary
 

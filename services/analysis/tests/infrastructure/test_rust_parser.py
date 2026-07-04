@@ -42,7 +42,9 @@ pub trait Repository {
 """
         result = await parser.parse("test.rs", content)
         assert any(c.name == "Repository" for c in result.classes)
-        assert any("trait" in c.decorators for c in result.classes if c.name == "Repository")
+        assert any(
+            "trait" in c.decorators for c in result.classes if c.name == "Repository"
+        )
 
     async def test_parse_function(self, parser: RustParser) -> None:
         content = """

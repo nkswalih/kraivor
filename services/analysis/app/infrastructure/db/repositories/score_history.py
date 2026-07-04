@@ -15,7 +15,9 @@ class ScoreHistoryRepository:
         self._session.add(model)
         await self._session.flush()
 
-    async def get_by_repo(self, repo_id: UUID, limit: int = 50) -> list[dict[str, object]]:
+    async def get_by_repo(
+        self, repo_id: UUID, limit: int = 50
+    ) -> list[dict[str, object]]:
         stmt = (
             select(ScoreHistoryModel)
             .where(ScoreHistoryModel.repo_id == repo_id)

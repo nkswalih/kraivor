@@ -32,10 +32,14 @@ public interface IUserRepository {
 """
         result = await parser.parse("test.cs", content)
         assert any(c.name == "IUserRepository" for c in result.classes)
-        assert any("interface" in c.decorators for c in result.classes if c.name == "IUserRepository")
+        assert any(
+            "interface" in c.decorators
+            for c in result.classes
+            if c.name == "IUserRepository"
+        )
 
     async def test_parse_record(self, parser: CSharpParser) -> None:
-        content = 'public record UserDto(string Name, string Email);'
+        content = "public record UserDto(string Name, string Email);"
         result = await parser.parse("test.cs", content)
         assert any(c.name == "UserDto" for c in result.classes)
 
@@ -111,7 +115,9 @@ public class Config {
 }
 """
         result = await parser.parse("test.cs", content)
-        assert any(c.name == "Name" and "property" in c.decorators for c in result.classes)
+        assert any(
+            c.name == "Name" and "property" in c.decorators for c in result.classes
+        )
 
     async def test_calculate_complexity(self, parser: CSharpParser) -> None:
         content = """

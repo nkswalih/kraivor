@@ -30,7 +30,11 @@ public interface UserRepository {
 """
         result = await parser.parse("test.java", content)
         assert any(c.name == "UserRepository" for c in result.classes)
-        assert any("interface" in c.decorators for c in result.classes if c.name == "UserRepository")
+        assert any(
+            "interface" in c.decorators
+            for c in result.classes
+            if c.name == "UserRepository"
+        )
 
     async def test_parse_methods(self, parser: JavaParser) -> None:
         content = """
@@ -96,7 +100,9 @@ public class UserController {
         assert "PUT" in methods
         assert "DELETE" in methods
         assert "/{id}" in paths
-        assert "/api/users" not in paths  # @RequestMapping is class-level, not extracted as route
+        assert (
+            "/api/users" not in paths
+        )  # @RequestMapping is class-level, not extracted as route
 
     async def test_parse_annotations(self, parser: JavaParser) -> None:
         content = """
@@ -154,7 +160,9 @@ public record UserDto(Long id, String name, String email) { }
         assert parser.language == "java"
         assert ".java" in parser.supported_extensions
 
-    async def test_parse_class_with_extends_implements(self, parser: JavaParser) -> None:
+    async def test_parse_class_with_extends_implements(
+        self, parser: JavaParser
+    ) -> None:
         content = """
 public class UserServiceImpl extends BaseService implements UserService {
     public void execute() { }

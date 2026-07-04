@@ -162,6 +162,7 @@ def read_csproj(file_path: str) -> dict[str, str | None] | None:
     """Parse a .csproj file for PackageReference items."""
     try:
         import xml.etree.ElementTree as ET  # nosec - parse trusted local .csproj files
+
         tree = ET.parse(file_path)  # nosec - parses trusted local .csproj files
         root = tree.getroot()
     except (FileNotFoundError, ET.ParseError, PermissionError, ImportError):
@@ -170,8 +171,14 @@ def read_csproj(file_path: str) -> dict[str, str | None] | None:
     ns = {"ns": "http://schemas.microsoft.com/developer/msbuild/2003"}
     deps: dict[str, str | None] = {}
 
-    has_ns = root.tag.startswith("{http://schemas.microsoft.com/developer/msbuild/2003}")
-    tag = "{http://schemas.microsoft.com/developer/msbuild/2003}PackageReference" if has_ns else "PackageReference"
+    has_ns = root.tag.startswith(
+        "{http://schemas.microsoft.com/developer/msbuild/2003}"
+    )
+    tag = (
+        "{http://schemas.microsoft.com/developer/msbuild/2003}PackageReference"
+        if has_ns
+        else "PackageReference"
+    )
 
     for ref in root.iter(tag):
         name = ref.get("Include")
@@ -194,6 +201,7 @@ def read_pom_xml(file_path: str) -> dict[str, str | None] | None:
     """Parse a Maven pom.xml for dependencies."""
     try:
         import xml.etree.ElementTree as ET  # nosec - parse trusted local pom.xml files
+
         tree = ET.parse(file_path)  # nosec - parses trusted local pom.xml files
         root = tree.getroot()
     except (FileNotFoundError, ET.ParseError, PermissionError, ImportError):
@@ -205,10 +213,19 @@ def read_pom_xml(file_path: str) -> dict[str, str | None] | None:
     for dep in root.iter("{http://maven.apache.org/POM/4.0.0}dependency"):
         group_id = dep.find("ns:groupId", ns)
         artifact_id = dep.find("ns:artifactId", ns)
-        if group_id is not None and group_id.text and artifact_id is not None and artifact_id.text:
+        if (
+            group_id is not None
+            and group_id.text
+            and artifact_id is not None
+            and artifact_id.text
+        ):
             key = f"{group_id.text.strip()}:{artifact_id.text.strip()}"
             version_elem = dep.find("ns:version", ns)
-            version = version_elem.text.strip() if version_elem is not None and version_elem.text else None
+            version = (
+                version_elem.text.strip()
+                if version_elem is not None and version_elem.text
+                else None
+            )
             deps[key.lower()] = version
 
     return deps

@@ -39,7 +39,9 @@ class AiEnrichmentClient:
             logger.warning("ai_enrichment_timeout", url=url)
             return None
         except httpx.HTTPStatusError as e:
-            logger.warning("ai_enrichment_http_error", status=e.response.status_code, url=url)
+            logger.warning(
+                "ai_enrichment_http_error", status=e.response.status_code, url=url
+            )
             return None
         except Exception as e:
             logger.warning("ai_enrichment_failed", error=str(e), url=url)

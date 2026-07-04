@@ -15,7 +15,10 @@ class AnalysisMetadataModel(Base):
 
     id: Mapped[UUID] = UUIDColumn()
     job_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("analysis.analysis_jobs.id", ondelete="CASCADE"), nullable=False, index=True
+        PG_UUID(as_uuid=True),
+        ForeignKey("analysis.analysis_jobs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     class_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     function_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

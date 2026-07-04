@@ -21,9 +21,7 @@ class FindingModel(Base):
     repo_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True), nullable=False, index=True
     )
-    workspace_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), nullable=False
-    )
+    workspace_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
 
     category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     severity: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
@@ -44,7 +42,9 @@ class FindingModel(Base):
     rpm_impact: Mapped[int | None] = mapped_column(Integer, nullable=True)
     breaks_at_users: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active", index=True)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="active", index=True
+    )
     is_ai_enriched: Mapped[bool] = mapped_column(Boolean, default=False)
     ai_explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
 

@@ -14,24 +14,12 @@ class GoParser(AbstractParser):
     language: str = "go"
     supported_extensions: list[str] = [".go"]
 
-    _FUNC_DECL = re.compile(
-        r"func\s+(?:\([^)]*\)\s+)?(\w+)\s*\("
-    )
-    _STRUCT_DECL = re.compile(
-        r"type\s+(\w+)\s+struct\s*\{"
-    )
-    _INTERFACE_DECL = re.compile(
-        r"type\s+(\w+)\s+interface\s*\{"
-    )
-    _TYPE_ALIAS = re.compile(
-        r"type\s+(\w+)\s+(?!struct|interface)"
-    )
-    _IMPORT_SINGLE = re.compile(
-        r'import\s+[\'"]([^\'"]+)[\'"]'
-    )
-    _IMPORT_MULTI = re.compile(
-        r'\s+[\'"]([^\'"]+)[\'"]'
-    )
+    _FUNC_DECL = re.compile(r"func\s+(?:\([^)]*\)\s+)?(\w+)\s*\(")
+    _STRUCT_DECL = re.compile(r"type\s+(\w+)\s+struct\s*\{")
+    _INTERFACE_DECL = re.compile(r"type\s+(\w+)\s+interface\s*\{")
+    _TYPE_ALIAS = re.compile(r"type\s+(\w+)\s+(?!struct|interface)")
+    _IMPORT_SINGLE = re.compile(r'import\s+[\'"]([^\'"]+)[\'"]')
+    _IMPORT_MULTI = re.compile(r'\s+[\'"]([^\'"]+)[\'"]')
     _GIN_ROUTE = re.compile(
         r"(?:r|router|engine|g)\.(?:GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS|Any|StaticFile|Static)\([\"']([^\"']+)[\"']"
     )
@@ -41,9 +29,7 @@ class GoParser(AbstractParser):
     _ECHO_ROUTE = re.compile(
         r"(?:e|echo|g)\.(?:GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS|Any)\([\"']([^\"']+)[\"']"
     )
-    _COMPLEXITY_KEYWORDS = re.compile(
-        r"\b(?:if|for|switch|select|range)\b"
-    )
+    _COMPLEXITY_KEYWORDS = re.compile(r"\b(?:if|for|switch|select|range)\b")
     _CASE_KEYWORD = re.compile(r"\bcase\s")
 
     async def parse(self, file_path: str, content: str) -> ParsedFile:
@@ -151,7 +137,9 @@ class GoParser(AbstractParser):
                 source = stripped.strip('"')
                 if source:
                     parsed.imports.append(
-                        ParsedImport(name="", source=source, line=line_no, is_from=False)
+                        ParsedImport(
+                            name="", source=source, line=line_no, is_from=False
+                        )
                     )
 
     def _extract_routes(self, content: str, parsed: ParsedFile) -> None:
@@ -160,7 +148,13 @@ class GoParser(AbstractParser):
             method = match.group(0).split(".")[1].split("(")[0]
             line_start = content[: match.start()].count("\n") + 1
             parsed.routes.append(
-                ParsedRoute(path=path, method=method.upper(), handler_name="", line_start=line_start, line_end=line_start)
+                ParsedRoute(
+                    path=path,
+                    method=method.upper(),
+                    handler_name="",
+                    line_start=line_start,
+                    line_end=line_start,
+                )
             )
 
         for match in self._FIBER_ROUTE.finditer(content):
@@ -168,7 +162,13 @@ class GoParser(AbstractParser):
             method = match.group(0).split(".")[1].split("(")[0]
             line_start = content[: match.start()].count("\n") + 1
             parsed.routes.append(
-                ParsedRoute(path=path, method=method.upper(), handler_name="", line_start=line_start, line_end=line_start)
+                ParsedRoute(
+                    path=path,
+                    method=method.upper(),
+                    handler_name="",
+                    line_start=line_start,
+                    line_end=line_start,
+                )
             )
 
         for match in self._ECHO_ROUTE.finditer(content):
@@ -176,7 +176,13 @@ class GoParser(AbstractParser):
             method = match.group(0).split(".")[1].split("(")[0]
             line_start = content[: match.start()].count("\n") + 1
             parsed.routes.append(
-                ParsedRoute(path=path, method=method.upper(), handler_name="", line_start=line_start, line_end=line_start)
+                ParsedRoute(
+                    path=path,
+                    method=method.upper(),
+                    handler_name="",
+                    line_start=line_start,
+                    line_end=line_start,
+                )
             )
 
     def _extract_body(self, content: str, start_pos: int) -> str:

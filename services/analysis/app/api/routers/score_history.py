@@ -25,6 +25,6 @@ async def list_score_history(
 ) -> ScoreHistoryListResponse:
     entries = await uow.score_history.get_by_repo(repo_id, limit=limit)
     return ScoreHistoryListResponse(
-        entries=[ScoreHistoryEntryResponse(**e)  for e in entries],  # type: ignore[arg-type]
+        entries=[ScoreHistoryEntryResponse(**e) for e in entries],  # type: ignore[arg-type]
         total=len(entries),
     )

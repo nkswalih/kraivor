@@ -32,7 +32,7 @@ jobs:
         service: [auth, core, ai, analysis]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
         with:
@@ -57,7 +57,7 @@ jobs:
         service: [auth, core, ai, analysis]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
         with:
@@ -79,7 +79,7 @@ jobs:
         service: [auth, core, ai, analysis]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
         with:
@@ -101,7 +101,7 @@ jobs:
         service: [auth, core, ai, analysis]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
         with:
@@ -126,7 +126,7 @@ jobs:
         service: [auth, core, ai, analysis]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
         with:
@@ -207,7 +207,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
         with:

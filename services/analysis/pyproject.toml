@@ -22,7 +22,7 @@ dependencies = [
     "opentelemetry-api>=1.25.0",
     "opentelemetry-sdk>=1.25.0",
     "opentelemetry-instrumentation-fastapi>=0.50b0",
-    "pyjwt>=2.8.0",
+    "pyjwt>=2.13.0",
 ]
 
 [project.optional-dependencies]
@@ -115,6 +115,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["N803"]
+"migrations/*" = ["I"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

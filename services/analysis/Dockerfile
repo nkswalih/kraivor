@@ -4,10 +4,9 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y gcc git curl && rm -rf /var/lib/apt/lists/*
 
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.local/bin:$PATH"
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-COPY pyproject.toml /app/
+COPY pyproject.toml uv.lock /app/
 RUN uv sync --frozen --no-dev
 
 COPY . /app/

@@ -55,7 +55,7 @@ jobs:
           scan-type: "fs"
           scan-ref: services/${{ matrix.service }}
           format: "sarif"
-          output: trivy-${{ matrix.service }}.sarif
+          output: services/${{ matrix.service }}/trivy-${{ matrix.service }}.sarif
           severity: "CRITICAL,HIGH"
           exit-code: "1"
 

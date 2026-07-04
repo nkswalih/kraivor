@@ -31,7 +31,7 @@ jobs:
       - name: Run Bandit
         working-directory: services/${{ matrix.service }}
         run: |
-          uv run bandit -r . -x ./tests,./.venv -f sarif -o bandit-${{ matrix.service }}.sarif || true
+          uv run bandit -r . -x ./tests,./.venv --configfile pyproject.toml -f sarif -o bandit-${{ matrix.service }}.sarif || true
 
       - name: Upload Bandit SARIF
         uses: github/codeql-action/upload-sarif@v3

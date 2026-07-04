@@ -982,7 +982,25 @@ prod = [
 [package.dev-dependencies]
 dev = [
     { name = "aiosqlite" },
+    { name = "bandit" },
+    { name = "black" },
     { name = "cryptography" },
+    { name = "flake8" },
+    { name = "flake8-bugbear" },
+    { name = "flake8-builtins" },
+    { name = "flake8-comprehensions" },
+    { name = "flake8-docstrings" },
+    { name = "flake8-import-order" },
+    { name = "httptools" },
+    { name = "isort" },
+    { name = "mypy" },
+    { name = "pep8-naming" },
+    { name = "pip-audit" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "pytest-mock" },
+    { name = "ruff" },
 ]
 
 [package.metadata]
@@ -1032,7 +1050,25 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "aiosqlite", specifier = ">=0.22.1" },
+    { name = "bandit", specifier = ">=1.7" },
+    { name = "black", specifier = ">=24.0" },
     { name = "cryptography", specifier = ">=49.0.0" },
+    { name = "flake8", specifier = ">=7.0" },
+    { name = "flake8-bugbear", specifier = ">=24.0" },
+    { name = "flake8-builtins", specifier = ">=2.2" },
+    { name = "flake8-comprehensions", specifier = ">=3.14" },
+    { name = "flake8-docstrings", specifier = ">=1.7" },
+    { name = "flake8-import-order", specifier = ">=0.18" },
+    { name = "httptools", specifier = ">=0.6.0" },
+    { name = "isort", specifier = ">=5.13" },
+    { name = "mypy", specifier = ">=1.10.0" },
+    { name = "pep8-naming", specifier = ">=0.14" },
+    { name = "pip-audit", specifier = ">=2.7" },
+    { name = "pytest", specifier = ">=8.0.0" },
+    { name = "pytest-asyncio", specifier = ">=0.24.0" },
+    { name = "pytest-cov", specifier = ">=5.0.0" },
+    { name = "pytest-mock", specifier = ">=3.14.0" },
+    { name = "ruff", specifier = ">=0.5.0" },
 ]
 
 [[package]]

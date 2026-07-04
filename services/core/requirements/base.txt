@@ -15,7 +15,7 @@ channels>=4.0
 channels-redis>=4.0
 confluent-kafka>=2.3
 boto3>=1.34
-firebase-admin>=6.5
+firebase-admin>=7.5.0
 
 # API schema generation
 drf-spectacular>=0.29.0

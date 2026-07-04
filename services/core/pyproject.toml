@@ -20,7 +20,7 @@ dependencies = [
     "confluent-kafka>=2.3",
     "boto3>=1.34",
     "django-storages>=1.14",
-    "firebase-admin>=6.5",
+    "firebase-admin>=7.5.0",
     "factory-boy>=3.3.3",
     "drf-spectacular>=0.29.0",
     "drf-spectacular-sidecar",

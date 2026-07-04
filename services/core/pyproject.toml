@@ -5,7 +5,7 @@ description = "Core service — workspaces, repositories, chat, knowledge, and n
 requires-python = ">=3.11"
 dependencies = [
     "django>=4.2",
-    "djangorestframework>=3.14",
+    "djangorestframework>=3.17.1",
     "psycopg2-binary>=2.9",
     "django-environ>=0.13.0",
     "pyjwt>=2.13.0",

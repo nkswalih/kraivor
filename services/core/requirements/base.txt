@@ -1,7 +1,7 @@
 # Core dependencies — generated from pyproject.toml
 # Install via: uv sync  or  pip install -r base.txt
 django>=4.2
-djangorestframework>=3.14
+djangorestframework>=3.17.1
 psycopg2-binary>=2.9
 django-environ>=0.13.0
 pyjwt>=2.8

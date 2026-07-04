@@ -2,12 +2,13 @@
 Tests for KRV-012 — AI Service JWT Dependency
 """
 
-import jwt
-import pytest
 import time
 from datetime import UTC, datetime, timedelta
-from fastapi import HTTPException
 from unittest.mock import MagicMock, patch
+
+import jwt
+import pytest
+from fastapi import HTTPException
 
 
 def generate_test_jwt(private_key_pem: bytes, payload: dict, algorithm: str = "RS256") -> str:

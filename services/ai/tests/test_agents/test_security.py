@@ -1,8 +1,9 @@
-import pytest
 from unittest.mock import AsyncMock, patch
-from app.application.agents.security import SecurityAnalystNode
-from app.application.agents.explainer import ExplainerNode
 
+import pytest
+
+from app.application.agents.explainer import ExplainerNode
+from app.application.agents.security import SecurityAnalystNode
 
 pytestmark = pytest.mark.unit
 

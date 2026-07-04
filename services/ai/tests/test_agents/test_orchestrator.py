@@ -1,10 +1,9 @@
-import pytest
 from unittest.mock import AsyncMock, patch
-from app.application.agents.orchestrator import OrchestratorNode
-from app.application.agents.code_analyst import CodeAnalystNode
-from app.application.agents.explainer import ExplainerNode
-from app.application.agents.graph import build_agent_graph
 
+import pytest
+
+from app.application.agents.graph import build_agent_graph
+from app.application.agents.orchestrator import OrchestratorNode
 
 pytestmark = pytest.mark.unit
 

@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from prometheus_client import Counter, Histogram, Gauge, make_asgi_app
+from prometheus_client import Counter, Gauge, Histogram, make_asgi_app
 
 http_requests = Counter(
     "ai_http_requests_total",

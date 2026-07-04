@@ -1,7 +1,12 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
-from app.api.dependencies.auth import get_current_user, JWTPayload
-from app.application.analysis.enrichment import EnrichmentService
 from pydantic import BaseModel
+
+from app.api.dependencies.auth import JWTPayload, get_current_user
+from app.application.analysis.enrichment import EnrichmentService
+
+CurrentUser = Annotated[JWTPayload, Depends(get_current_user)]
 
 router = APIRouter(tags=["analysis"])
 
@@ -60,7 +65,7 @@ class EnrichResponse(BaseModel):
 @router.post("/v1/analysis/enrich", response_model=EnrichResponse)
 async def enrich_analysis(
     request: EnrichRequest,
-    _user: JWTPayload = Depends(get_current_user),
+    _user: CurrentUser,
 ) -> EnrichResponse:
     service = _get_enrichment()
     result = await service.enrich(

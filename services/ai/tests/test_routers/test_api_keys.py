@@ -1,7 +1,7 @@
-import pytest
-from unittest.mock import AsyncMock
-from app.api.schemas.api_key import CreateKeyRequest, ProvisionRequest, KeyResponse
 
+import pytest
+
+from app.api.schemas.api_key import CreateKeyRequest, ProvisionRequest
 
 pytestmark = pytest.mark.unit
 

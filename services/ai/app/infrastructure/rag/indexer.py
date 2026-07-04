@@ -1,6 +1,7 @@
+from sqlalchemy import text
+
 from app.infrastructure.rag.chunker import SemanticChunker
 from app.infrastructure.rag.embedder import Embedder
-from sqlalchemy import text
 
 
 class Indexer:
@@ -22,7 +23,7 @@ class Indexer:
         embeddings = await self.embedder.embed_batch(texts)
 
         indexed = []
-        for chunk, emb in zip(chunks, embeddings):
+        for chunk, emb in zip(chunks, embeddings, strict=True):
             chunk_id = f"{repo_id}_{chunk['file_path']}_{chunk['start_line']}"
             await db_session.execute(
                 text("""

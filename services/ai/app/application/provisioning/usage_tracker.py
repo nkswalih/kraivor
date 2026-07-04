@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from app.infrastructure.db.models.usage_log import UsageLog
 
 
@@ -26,7 +27,7 @@ class UsageTracker:
             latency_ms=latency_ms,
             agent_name=agent_name,
             status=status,
-            logged_at=datetime.now(timezone.utc),
+            logged_at=datetime.now(UTC),
         )
         db_session.add(log)
 
@@ -42,7 +43,7 @@ class UsageTracker:
             select(func.sum(UsageLog.tokens_input + UsageLog.tokens_output))
             .where(
                 UsageLog.user_id == user_id,
-                UsageLog.logged_at >= datetime.now(timezone.utc).replace(day=1),
+                UsageLog.logged_at >= datetime.now(UTC).replace(day=1),
             )
         )
         total = result.scalar() or 0

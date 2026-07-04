@@ -11,7 +11,7 @@ class FileReaderTool(BaseTool):
     async def _arun(self, file_path: str) -> str:
         try:
             import asyncio
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 return await asyncio.to_thread(f.read)
         except Exception as e:
             return f"Error reading {file_path}: {e}"

@@ -1,9 +1,11 @@
-import logging
 import base64
+import logging
 import os
+
 from cryptography.fernet import Fernet
-from app.core.exceptions import InsufficientQuotaError
+
 from app.core.config import settings
+from app.core.exceptions import InsufficientQuotaError
 
 logger = logging.getLogger(__name__)
 
@@ -35,13 +37,14 @@ async def resolve_provider_key(
     user_id: str,
     preferred_model: str | None = None,
 ) -> tuple[str, str]:
-    from app.infrastructure.db.models.api_key import ApiKey
     from sqlalchemy import select
+
+    from app.infrastructure.db.models.api_key import ApiKey
 
     result = await db_session.execute(
         select(ApiKey).where(
             ApiKey.user_id == user_id,
-            ApiKey.revoked == False,
+            not ApiKey.revoked,
         )
     )
     key_record = result.scalar_one_or_none()

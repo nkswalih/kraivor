@@ -1,8 +1,9 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from cryptography.fernet import Fernet
-from app.application.provisioning.key_provisioning import KeyProvisioner
 
+import pytest
+from cryptography.fernet import Fernet
+
+from app.application.provisioning.key_provisioning import KeyProvisioner
 
 pytestmark = pytest.mark.unit
 

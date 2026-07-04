@@ -1,4 +1,5 @@
 import logging
+
 from app.application.chat.chat_service import ChatService
 
 logger = logging.getLogger(__name__)
@@ -11,7 +12,7 @@ async def handle_event(topic: str, event: dict) -> None:
         conv_id = event.get("conversation_id")
 
         svc = ChatService()
-        result = await svc.chat(
+        await svc.chat(
             user_id=user_id,
             message=message,
             conversation_id=conv_id,

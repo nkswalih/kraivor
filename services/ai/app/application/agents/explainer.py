@@ -1,7 +1,7 @@
 from app.application.agents.prompts.specialist import EXPLAINER_SYSTEM_PROMPT
+from app.application.provisioning.key_resolver import KeyResolver
 from app.infrastructure.llm.client import LLMClient
 from app.infrastructure.llm.router import ModelRouter
-from app.application.provisioning.key_resolver import KeyResolver
 
 
 class ExplainerNode:
@@ -43,7 +43,7 @@ class ExplainerNode:
             parts.append(f"Repository context:\n{context}")
 
         if findings:
-            parts.append(f"Analysis findings:\n" + "\n\n".join(findings))
+            parts.append("Analysis findings:\n" + "\n\n".join(findings))
 
         if history:
             brief = "\n".join(

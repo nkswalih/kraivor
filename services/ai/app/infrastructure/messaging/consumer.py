@@ -1,6 +1,8 @@
 import json
 import logging
+
 from aiokafka import AIOKafkaConsumer
+
 from app.core.config import settings
 from app.infrastructure.messaging.kafka_handler import handle_event
 

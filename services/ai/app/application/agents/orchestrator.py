@@ -1,14 +1,15 @@
 import json
 import logging
+
 from app.application.agents.prompts.orchestrator import (
+    CODE_GENERATION_PROMPT,
     ORCHESTRATOR_SYSTEM_PROMPT,
     RESPOND_DIRECT_PROMPT,
-    CODE_GENERATION_PROMPT,
     WRITING_PROMPT,
 )
+from app.application.provisioning.key_resolver import KeyResolver
 from app.infrastructure.llm.client import LLMClient
 from app.infrastructure.llm.router import ModelRouter
-from app.application.provisioning.key_resolver import KeyResolver
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,6 @@ class OrchestratorNode:
     async def __call__(self, state: dict) -> dict:
         user_id = state.get("user_id", "")
         message = state.get("message", "")
-        stream = state.get("stream", False)
         route = self.router.get_route("intent_classify")
         history = state.get("context_history") or []
 

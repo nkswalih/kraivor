@@ -1,8 +1,10 @@
 import time
+
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.types import ASGIApp
-from app.monitoring.metrics import http_requests, http_duration
+
+from app.monitoring.metrics import http_duration, http_requests
 
 
 class PrometheusMiddleware(BaseHTTPMiddleware):

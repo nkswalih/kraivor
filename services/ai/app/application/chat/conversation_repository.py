@@ -1,11 +1,15 @@
 import uuid
-from datetime import datetime, timezone, timedelta
-from sqlalchemy import select, func, desc, update as sa_update
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy import desc, func, select
+from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.domain.entities.conversation import Conversation as ConversationEntity
+from app.domain.entities.message import Message as MessageEntity
+from app.domain.entities.message import MessageRole
 from app.infrastructure.db.models.conversation import Conversation
 from app.infrastructure.db.models.message import Message
-from app.domain.entities.conversation import Conversation as ConversationEntity
-from app.domain.entities.message import Message as MessageEntity, MessageRole
 
 
 async def ensure_conversation(
@@ -34,7 +38,7 @@ async def ensure_conversation(
 
 
 async def save_message(db: AsyncSession, msg: MessageEntity) -> Message:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Enforce strictly increasing timestamps within a conversation so that
     # ORDER BY created_at ASC never encounters ties. Query the most recent
@@ -82,7 +86,7 @@ async def update_conversation_after_message(
         return
 
     conv.message_count = (conv.message_count or 0) + 2
-    conv.last_message_at = last_message_ts or datetime.now(timezone.utc)
+    conv.last_message_at = last_message_ts or datetime.now(UTC)
 
     if title:
         first_msg_result = await db.execute(

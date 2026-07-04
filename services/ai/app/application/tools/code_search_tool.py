@@ -1,6 +1,5 @@
 from app.application.tools.base import BaseTool
 from app.infrastructure.rag.retriever import Retriever
-from app.infrastructure.rag.embedder import Embedder
 
 
 class CodeSearchTool(BaseTool):

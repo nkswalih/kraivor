@@ -1,6 +1,7 @@
-from sqlalchemy import Integer, JSON, String
-from app.infrastructure.db.models.base import Base, UUIDMixin, TimestampMixin
+from sqlalchemy import JSON, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
+
+from app.infrastructure.db.models.base import Base, TimestampMixin, UUIDMixin
 
 
 class IndexJob(Base, UUIDMixin, TimestampMixin):

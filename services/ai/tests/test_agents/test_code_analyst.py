@@ -1,5 +1,4 @@
 import pytest
-from app.application.agents.code_analyst import CodeAnalystNode
 
 pytestmark = pytest.mark.unit
 

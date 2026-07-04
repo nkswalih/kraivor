@@ -1,6 +1,7 @@
 from sqlalchemy import JSON, Boolean, String, Text
-from app.infrastructure.db.models.base import Base, UUIDMixin, TimestampMixin
 from sqlalchemy.orm import Mapped, mapped_column
+
+from app.infrastructure.db.models.base import Base, TimestampMixin, UUIDMixin
 
 
 class AgentConfig(Base, UUIDMixin, TimestampMixin):

@@ -1,7 +1,7 @@
-import pytest
-from unittest.mock import AsyncMock
-from app.api.schemas.embeddings import EmbeddingRequest, EmbeddingResponse
 
+import pytest
+
+from app.api.schemas.embeddings import EmbeddingRequest, EmbeddingResponse
 
 pytestmark = pytest.mark.unit
 

@@ -1,4 +1,5 @@
 import aiohttp
+
 from app.application.tools.base import BaseTool
 
 
@@ -8,8 +9,7 @@ class WebFetchTool(BaseTool):
 
     async def run(self, url: str) -> str:
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, timeout=aiohttp.ClientTimeout(15)) as resp:
+            async with aiohttp.ClientSession() as session, session.get(url, timeout=aiohttp.ClientTimeout(15)) as resp:
                     text = await resp.text()
                     import re
                     text = re.sub(r"<[^>]+>", " ", text)

@@ -2,19 +2,16 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Sparkles,
-  ChevronDown,
-  MessageSquare,
-  Shield,
-  FileText,
-  Gauge,
-  CheckCircle,
-} from 'lucide-react';
+import { ChevronDown, Pin, PinOff, Pencil } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
-import { workspaceEndpoints } from '@/lib/api/endpoints';
-import { aiApi } from '@/lib/api/ai-api';
+import { useAiConversationStore } from '@/lib/stores/ai-conversation-store';
+import { workspaceEndpoints, repositoryEndpoints } from '@/lib/api/endpoints';
+import { aiApi, AiApiError } from '@/lib/api/ai-api';
+import type { HistoryMessage } from '@/lib/api/ai-api';
 import { AiInput } from '@/components/features/ai-input';
+import { AiMessage } from '@/components/features/ai-message';
+import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
+import { AiWelcome } from '@/components/features/ai-welcome';
 import { UpgradeCard } from '@/components/features/upgrade-card';
 import type { ChatMessage } from '@/types/domain/ai';
 import { MessageRole, MessageStatus } from '@/types/domain/ai';
@@ -22,35 +19,32 @@ import { MessageRole, MessageStatus } from '@/types/domain/ai';
 interface StreamChunk {
   content?: string;
   done?: boolean;
+  conversation_id?: string;
+  title?: string;
   [key: string]: unknown;
 }
 
-const RECENT_CHATS = [
-  { id: '1', title: 'auth-service codebase check' },
-  { id: '2', title: 'API security audit results' },
-  { id: '3', title: 'This is a brilliant pivot. You are movin...' },
-];
-
-const SUGGESTIONS = [
-  { id: 's1', icon: Shield, text: 'Analyze repository security vulnerabilities' },
-  { id: 's2', icon: FileText, text: 'Generate full architecture blueprint (.md)' },
-  { id: 's3', icon: Gauge, text: 'Audit component rendering performance' },
-  { id: 's4', icon: CheckCircle, text: 'Review code style consistency' },
-];
-
 export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
   const workspaceId = useAuthStore(s => s.workspaceId);
+  const storeSetActiveConversation = useAiConversationStore(s => s.setActiveConversation);
+  const storeSetConversationTitle = useAiConversationStore(s => s.setConversationTitle);
+  const storeSetPinned = useAiConversationStore(s => s.setPinned);
 
-  /* ─── Messages state ────────────────────────────────────────── */
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('sonnet-4.6');
+  const [rateLimited, setRateLimited] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('krait-2.0');
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversationTitle, setConversationTitle] = useState('');
+  const [isPinned, setIsPinned] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  useDetailBreadcrumb(conversationId ? conversationTitle || 'Untitled' : null);
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const shouldAutoScroll = useRef(true);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
-  /* ─── Fetch workspace plan for upgrade gating ──────────────── */
   const { data: workspace } = useQuery({
     queryKey: ['workspace', workspaceId],
     queryFn: () => workspaceEndpoints.get(workspaceId!),
@@ -58,10 +52,27 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
     staleTime: 60_000,
   });
 
-  const isFreePlan = workspace?.plan === 'free';
+  const { data: reposData } = useQuery({
+    queryKey: ['repositories', workspaceId],
+    queryFn: () => repositoryEndpoints.list(workspaceId!),
+    enabled: !!workspaceId,
+    staleTime: 60_000,
+  });
+
+  const repoIds = reposData?.map(r => r.id) ?? [];
+
+  const convListQuery = useQuery({
+    queryKey: ['ai-conversations', workspaceId],
+    queryFn: () => aiApi.listConversations(workspaceId ?? undefined),
+    enabled: !!workspaceId,
+    staleTime: 30_000,
+  });
+
+  const conversations = convListQuery.data?.conversations ?? [];
   const workspaceAvatar = workspace?.avatar_url;
 
-  /* ─── Scroll helpers ───────────────────────────────────────── */
+  /* ─── Scroll management ───────────────────────────────── */
+
   const scrollToBottom = useCallback((smooth = true) => {
     bottomRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
   }, []);
@@ -77,7 +88,46 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
     if (shouldAutoScroll.current) scrollToBottom(isStreaming);
   }, [messages, isStreaming, scrollToBottom]);
 
-  /* ─── Send message ─────────────────────────────────────────── */
+  /* ─── Load previous conversation ──────────────────────── */
+
+  const loadConversation = useCallback(async (convId: string) => {
+    setConversationId(convId);
+    setEditingTitle(false);
+    try {
+      const [res, convData] = await Promise.all([
+        aiApi.getMessages(convId),
+        aiApi.listConversations(workspaceId ?? undefined),
+      ]);
+      const loaded: ChatMessage[] = res.messages.map((m: HistoryMessage) => ({
+        id: m.id,
+        role: m.role as MessageRole,
+        content: m.content,
+        timestamp: m.created_at,
+        status: MessageStatus.SENT,
+      }));
+      setMessages(loaded);
+      const match = convData.conversations.find(c => c.id === convId);
+      if (match) {
+        setConversationTitle(match.title);
+        setIsPinned(match.is_pinned);
+        storeSetActiveConversation(convId, match.title, match.is_pinned);
+      }
+    } catch {
+      setMessages([]);
+    }
+  }, [storeSetActiveConversation]);
+
+  /* ─── Regenerate last response ────────────────────────── */
+
+  const handleRegenerate = useCallback(() => {
+    const lastUserMsg = [...messages].reverse().find(m => m.role === MessageRole.USER);
+    if (!lastUserMsg) return;
+    handleSend(lastUserMsg.content);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
+
+  /* ─── Send message (also used for regeneration) ───────── */
+
   const handleSend = useCallback(
     async (overrideContent?: string) => {
       const trimmed = (overrideContent ?? input).trim();
@@ -103,17 +153,36 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
       setInput('');
       setIsStreaming(true);
       shouldAutoScroll.current = true;
+      if (!conversationId) {
+        const tempTitle = trimmed.length > 60 ? trimmed.slice(0, 60) + '...' : trimmed;
+        setConversationTitle(tempTitle);
+        storeSetConversationTitle(tempTitle);
+      }
 
       try {
         let accumulated = '';
+        let newConvId = conversationId;
         const stream = aiApi.streamMessage({
           content: trimmed,
           context: {},
+          model: selectedModel,
+          sessionId: newConvId ?? undefined,
+          repo_ids: repoIds,
         });
 
         for await (const chunk of stream) {
           const c = chunk as StreamChunk;
-          if (c.done) break;
+          if (c.done) {
+            if (c.conversation_id && !newConvId) {
+              newConvId = c.conversation_id;
+              setConversationId(c.conversation_id);
+            }
+            if (c.title && typeof c.title === 'string') {
+              setConversationTitle(c.title);
+              storeSetConversationTitle(c.title);
+            }
+            break;
+          }
           const text = typeof c.content === 'string' ? c.content : typeof c === 'string' ? c : '';
           if (text) accumulated += text;
 
@@ -135,14 +204,18 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
           }
           return next;
         });
-      } catch {
+      } catch (err) {
+        const isRateLimit = err instanceof AiApiError && err.status === 429;
+        if (isRateLimit) setRateLimited(true);
         setMessages(prev => {
           const next = [...prev];
           const last = next[next.length - 1];
           if (last && last.id === assistantMsg.id) {
             next[next.length - 1] = {
               ...last,
-              content: last.content || 'Sorry, something went wrong.',
+              content: isRateLimit
+                ? "You've hit the rate limit. Upgrade to Kraivor Pro for higher limits."
+                : last.content || 'Sorry, something went wrong.',
               status: MessageStatus.ERROR,
             };
           }
@@ -152,8 +225,25 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
         setIsStreaming(false);
       }
     },
-    [input, isStreaming]
+    [input, isStreaming, conversationId, selectedModel, storeSetConversationTitle]
   );
+
+  /* ─── Edit user message ──────────────────────────────── */
+
+  const handleEditMessage = useCallback((content: string) => {
+    setInput(content);
+    // Remove the user + assistant messages from the list so user can resend
+    setMessages(prev => {
+      const idx = [...prev].reverse().findIndex(m => m.role === MessageRole.USER);
+      if (idx === -1) return prev;
+      const userIdx = prev.length - 1 - idx;
+      // Remove user message and any following assistant message
+      const endIdx = userIdx + 1 < prev.length && prev[userIdx + 1].role === MessageRole.ASSISTANT
+        ? userIdx + 2
+        : userIdx + 1;
+      return prev.slice(0, userIdx).concat(prev.slice(endIdx));
+    });
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent, overrideContent?: string) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -162,197 +252,149 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
     }
   };
 
-  /* ─── Render ───────────────────────────────────────────────── */
+  /* ─── Render ──────────────────────────────────────────── */
+
+  const isEmpty = messages.length === 0;
+
   return (
-    <div className="flex flex-col h-full bg-[#0A0A0B] relative">
-      {messages.length === 0 ? (
-        /* ── Empty State: Hero + Input + Grid ──────────────────── */
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[720px] mx-auto px-6 pt-16 pb-8">
-            {/* Hero */}
-            <div className="text-center mb-8">
-              {workspaceAvatar ? (
-                <img
-                  src={workspaceAvatar}
-                  alt=""
-                  className="w-14 h-14 rounded-full object-cover mx-auto mb-5 bg-[#1C1C1F]"
-                />
-              ) : (
-                <div className="w-14 h-14 rounded-2xl bg-[#1C1C1F] border border-[#27272A] flex items-center justify-center mx-auto mb-5">
-                  <Sparkles className="w-7 h-7 text-venom-yellow" />
-                </div>
-              )}
-              <h1 className="text-[22px] font-bold text-[#f2f2f3] tracking-tight">
-                How can I help you today?
-              </h1>
-            </div>
-
-            {/* Input */}
-            <AiInput
-              value={input}
-              onChange={setInput}
-              onSend={() => handleSend()}
-              onKeyDown={e => handleKeyDown(e)}
-              isStreaming={isStreaming}
-              selectedModel={selectedModel}
-              onModelSelect={setSelectedModel}
-              showBanner={false}
-            />
-
-            {/* Two-column grid */}
-            <div className="grid grid-cols-2 gap-8 mt-12">
-              {/* Left: Recent Chats */}
-              <div>
-                <div className="text-[10px] uppercase tracking-[0.12em] font-medium text-[#5e5e72] mb-3">
-                  RECENT CHATS
-                </div>
-                <div className="space-y-0.5">
-                  {RECENT_CHATS.map(chat => (
-                    <button
-                      key={chat.id}
-                      onClick={() => handleSend(chat.title)}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[#1C1C1F] transition-colors text-left group"
-                    >
-                      <MessageSquare
-                        className="w-4 h-4 text-[#5e5e72] shrink-0 group-hover:text-[#9898a6] transition-colors"
-                        strokeWidth={1.5}
-                      />
-                      <span className="text-[13px] text-[#9898a6] truncate group-hover:text-[#d1d5db] transition-colors">
-                        {chat.title}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Right: Suggested Analysis */}
-              <div>
-                <div className="text-[10px] uppercase tracking-[0.12em] font-medium text-[#5e5e72] mb-3">
-                  SUGGESTED ANALYSIS
-                </div>
-                <div className="space-y-0.5">
-                  {SUGGESTIONS.map(s => {
-                    const Icon = s.icon;
-                    return (
-                      <button
-                        key={s.id}
-                        onClick={() => handleSend(s.text)}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[#1C1C1F] transition-colors text-left group"
-                      >
-                        <Icon
-                          className="w-4 h-4 text-[#5e5e72] shrink-0 group-hover:text-[#9898a6] transition-colors"
-                          strokeWidth={1.5}
-                        />
-                        <span className="text-[13px] text-[#9898a6] group-hover:text-[#d1d5db] transition-colors">
-                          {s.text}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div className="flex flex-col h-full bg-krait-void relative">
+      {isEmpty ? (
+        <AiWelcome
+          workspaceAvatar={workspaceAvatar}
+          conversations={conversations}
+          input={input}
+          onInputChange={setInput}
+          onSend={() => handleSend()}
+          onKeyDown={e => handleKeyDown(e)}
+          onSuggestion={text => handleSend(text)}
+          onLoadConversation={loadConversation}
+          onRefreshConversations={() => { convListQuery.refetch() }}
+          isStreaming={isStreaming}
+          selectedModel={selectedModel}
+          onModelSelect={setSelectedModel}
+          showBanner={false}
+        />
       ) : (
-        /* ── Messages State ───────────────────────────────────── */
         <>
-          {/* Messages Area */}
-          <div ref={listRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
-            <div className="max-w-[720px] mx-auto px-6 py-4">
-              <div className="space-y-1">
-                {messages.map((msg, idx) => {
-                  const isUser = msg.role === MessageRole.USER;
-                  const isAssistant = msg.role === MessageRole.ASSISTANT;
-                  const isStreamingMsg = isAssistant && msg.status === MessageStatus.SENDING;
-                  const prev = idx > 0 ? messages[idx - 1] : undefined;
-                  const isNewGroup = !prev || prev.role !== msg.role;
+          {/* Message list */}
+          <div
+            ref={listRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto scroll-smooth"
+          >
+            {/* Chat header — editable title + pin */}
+            <div className="px-4 pt-4 pb-1">
+              <div className="max-w-[720px] mx-auto flex items-center gap-2">
+                {editingTitle ? (
+                  <input
+                    ref={titleInputRef}
+                    type="text"
+                    defaultValue={conversationTitle}
+                    className="flex-1 bg-transparent border-b border-venom-yellow/50 text-[15px] font-semibold text-text-primary outline-none py-0.5"
+                    onBlur={async (e) => {
+                      const val = e.target.value.trim();
+                      if (val && conversationId) {
+                        await aiApi.updateConversation(conversationId, { title: val });
+                        setConversationTitle(val);
+                        storeSetConversationTitle(val);
+                      }
+                      setEditingTitle(false);
+                    }}
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Enter') {
+                        (e.target as HTMLInputElement).blur();
+                      }
+                      if (e.key === 'Escape') {
+                        setEditingTitle(false);
+                      }
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <button
+                    onClick={() => setEditingTitle(true)}
+                    className="flex-1 flex items-center gap-2 text-left group/title min-w-0"
+                  >
+                    <span className="text-[15px] font-semibold text-text-primary truncate">
+                      {conversationTitle}
+                    </span>
+                    <Pencil className="w-3.5 h-3.5 text-text-tertiary opacity-0 group-hover/title:opacity-100 transition-opacity shrink-0" strokeWidth={1.5} />
+                  </button>
+                )}
 
-                  return (
-                    <div key={msg.id} className="py-2">
-                      {isNewGroup && (
-                        <div className="flex items-center gap-2 mb-2 mt-3 first:mt-0">
-                          <div
-                            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                              isUser
-                                ? 'bg-[#27272A]'
-                                : 'bg-venom-yellow/10 border border-venom-yellow/20'
-                            }`}
-                          >
-                            {isUser ? (
-                              <span className="text-[11px] font-bold text-[#9898a6]">ME</span>
-                            ) : (
-                              <Sparkles className="w-3.5 h-3.5 text-venom-yellow" />
-                            )}
-                          </div>
-                          <span className="text-[13px] font-semibold text-[#f2f2f3]">
-                            {isUser ? 'You' : 'Kraivor AI'}
-                          </span>
-                          {!isStreamingMsg && msg.timestamp && (
-                            <span className="text-[11px] text-[#5e5e72]">
-                              {new Date(msg.timestamp).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      <div className={`ml-9 ${isUser ? 'pr-0' : ''}`}>
-                        {isStreamingMsg ? (
-                          <div className="flex items-center gap-2 text-[14px] text-[#9898a6]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-venom-yellow animate-pulse-venom" />
-                            Thinking...
-                          </div>
-                        ) : isUser ? (
-                          <p className="text-[14px] text-[#f2f2f3] leading-relaxed whitespace-pre-wrap break-words">
-                            {msg.content}
-                          </p>
-                        ) : (
-                          <div className="text-[14px] text-[#d1d5db] leading-relaxed whitespace-pre-wrap break-words">
-                            {formatAssistantContent(msg.content)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                {conversationId && (
+                  <button
+                    onClick={async () => {
+                      const next = !isPinned;
+                      await aiApi.updateConversation(conversationId, { is_pinned: next });
+                      setIsPinned(next);
+                      storeSetPinned(next);
+                    }}
+                    className="p-1.5 rounded-md text-text-tertiary hover:text-venom-yellow hover:bg-krait-surface3 transition-all"
+                    title={isPinned ? 'Unpin' : 'Pin'}
+                  >
+                    {isPinned ? (
+                      <PinOff className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    ) : (
+                      <Pin className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    )}
+                  </button>
+                )}
               </div>
-
-              <UpgradeCard show={isFreePlan && messages.length > 0} />
-
-              <div ref={bottomRef} />
             </div>
 
-            {!shouldAutoScroll.current && messages.length > 0 && (
-              <div className="sticky bottom-2 flex justify-center">
-                <button
-                  onClick={() => {
-                    scrollToBottom();
-                    shouldAutoScroll.current = true;
-                  }}
-                  className="bg-[#27272A] border border-[#3A3A3D] rounded-full px-3 py-1.5 text-[12px] text-[#f2f2f3] hover:bg-[#3A3A3D] shadow-lg flex items-center gap-1.5 transition-colors"
-                >
-                  <ChevronDown className="w-3.5 h-3.5" /> New messages
-                </button>
-              </div>
-            )}
+            <div className="py-4 pb-6">
+              {messages.map((msg) => {
+                const isAssistant = msg.role === MessageRole.ASSISTANT;
+                const isStreamingMsg = isAssistant && msg.status === MessageStatus.SENDING;
+
+                return (
+                  <AiMessage
+                    key={msg.id}
+                    message={msg}
+                    isStreaming={isStreamingMsg}
+                    onRegenerate={isAssistant && msg.status === MessageStatus.ERROR ? handleRegenerate : undefined}
+                    onEdit={msg.role === MessageRole.USER ? handleEditMessage : undefined}
+                  />
+                );
+              })}
+            </div>
+
+            <UpgradeCard show={rateLimited} />
+
+            <div ref={bottomRef} />
           </div>
 
-          {/* Input Area */}
-          <div className="px-4 pb-4 pt-3 shrink-0 border-t border-[#27272A] bg-[#0A0A0B]">
-            <AiInput
-              value={input}
-              onChange={setInput}
-              onSend={() => handleSend()}
-              onKeyDown={e => handleKeyDown(e)}
-              isStreaming={isStreaming}
-              selectedModel={selectedModel}
-              onModelSelect={setSelectedModel}
-              showBanner={isFreePlan}
-            />
-            <p className="text-center text-[11px] text-[#5e5e72] mt-1.5">
+          {/* New messages button */}
+          {!shouldAutoScroll.current && messages.length > 0 && (
+            <div className="flex justify-center py-3">
+              <button
+                onClick={() => {
+                  scrollToBottom();
+                  shouldAutoScroll.current = true;
+                }}
+                className="bg-krait-surface3 border border-krait-border rounded-full px-3 py-1.5 text-[12px] text-text-secondary hover:text-text-primary hover:bg-krait-surface4 shadow-lg flex items-center gap-1.5 transition-colors"
+              >
+                <ChevronDown className="w-3.5 h-3.5" /> New messages
+              </button>
+            </div>
+          )}
+
+          {/* Input area — continuous with conversation */}
+          <div className="shrink-0 pb-3 pt-1">
+            <div className="px-4">
+              <AiInput
+                value={input}
+                onChange={setInput}
+                onSend={() => handleSend()}
+                onKeyDown={e => handleKeyDown(e)}
+                isStreaming={isStreaming}
+                selectedModel={selectedModel}
+                onModelSelect={setSelectedModel}
+                showBanner={rateLimited}
+              />
+            </div>
+            <p className="text-center text-[11px] text-text-tertiary mt-2.5 px-4">
               AI can make mistakes. Verify critical code architectures.
             </p>
           </div>
@@ -360,51 +402,4 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
       )}
     </div>
   );
-}
-
-/* ─── Helper: render assistant content with code block formatting ─── */
-function formatAssistantContent(content: string) {
-  const parts = content.split(/(```[\s\S]*?```)/g);
-  if (parts.length === 1) {
-    return applyInlineCode(content);
-  }
-  return parts.map((part, i) => {
-    if (part.startsWith('```') && part.endsWith('```')) {
-      const code = part.slice(3, -3);
-      const langEnd = code.indexOf('\n');
-      const lang = langEnd > 0 ? code.slice(0, langEnd).trim() : '';
-      const body = langEnd > 0 ? code.slice(langEnd + 1) : code;
-      return (
-        <div key={i} className="my-2 border-l-2 border-venom-yellow/30 pl-4 py-1">
-          {lang && (
-            <div className="text-[11px] text-[#5e5e72] font-mono uppercase tracking-wider mb-1">
-              {lang}
-            </div>
-          )}
-          <pre className="text-[13px] text-[#d1d5db] font-mono leading-relaxed whitespace-pre-wrap overflow-x-auto">
-            {body}
-          </pre>
-        </div>
-      );
-    }
-    return <span key={i}>{applyInlineCode(part)}</span>;
-  });
-}
-
-function applyInlineCode(text: string) {
-  const parts = text.split(/(`[^`]+`)/g);
-  if (parts.length === 1) return text;
-  return parts.map((part, i) => {
-    if (part.startsWith('`') && part.endsWith('`')) {
-      return (
-        <code
-          key={i}
-          className="bg-[#1C1C1F] border border-[#27272A] px-1.5 py-0.5 rounded text-[13px] text-venom-yellow/90 font-mono"
-        >
-          {part.slice(1, -1)}
-        </code>
-      );
-    }
-    return part;
-  });
 }

@@ -27,9 +27,7 @@ class AbstractStorage(ABC):
         ...
 
     @abstractmethod
-    async def get_presigned_url(
-        self, key: str, expiration: int = 3600
-    ) -> str:
+    async def get_presigned_url(self, key: str, expiration: int = 3600) -> str:
         """Generate a presigned URL for temporary access."""
         ...
 

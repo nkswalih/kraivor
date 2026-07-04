@@ -19,8 +19,15 @@ depends_on: str | None = None
 def upgrade() -> None:
     op.create_table(
         "maintainability_findings",
-        sa.Column("id", sa.Uuid(), server_default=sa.text("gen_random_uuid()"), nullable=False),
-        sa.Column("job_id", sa.Uuid(), sa.ForeignKey("analysis.analysis_jobs.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "id", sa.Uuid(), server_default=sa.text("gen_random_uuid()"), nullable=False
+        ),
+        sa.Column(
+            "job_id",
+            sa.Uuid(),
+            sa.ForeignKey("analysis.analysis_jobs.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("repo_id", sa.Uuid(), nullable=False),
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
         sa.Column("maintainability_type", sa.String(50), nullable=False),
@@ -32,7 +39,9 @@ def upgrade() -> None:
         sa.Column("line_end", sa.Integer(), nullable=True),
         sa.Column("code_snippet", sa.Text(), nullable=True),
         sa.Column("recommendation", sa.Text(), nullable=True),
-        sa.Column("confidence", sa.Float(), server_default=sa.text("0.8"), nullable=True),
+        sa.Column(
+            "confidence", sa.Float(), server_default=sa.text("0.8"), nullable=True
+        ),
         sa.Column("estimated_effort_hours", sa.Float(), nullable=True),
         sa.Column("metrics", JSON(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
@@ -53,6 +62,14 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("idx_maintainability_type", table_name="maintainability_findings", schema="analysis")
-    op.drop_index("idx_maintainability_job", table_name="maintainability_findings", schema="analysis")
+    op.drop_index(
+        "idx_maintainability_type",
+        table_name="maintainability_findings",
+        schema="analysis",
+    )
+    op.drop_index(
+        "idx_maintainability_job",
+        table_name="maintainability_findings",
+        schema="analysis",
+    )
     op.drop_table("maintainability_findings", schema="analysis")

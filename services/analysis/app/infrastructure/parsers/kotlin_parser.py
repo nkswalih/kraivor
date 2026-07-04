@@ -72,13 +72,19 @@ class KotlinParser(AbstractParser):
     def _extract_package(self, content: str, parsed: ParsedFile) -> None:
         match = self._PACKAGE.search(content)
         if match:
-            parsed.imports.append(ParsedImport(name="package", source=match.group(1), line=1, is_from=False))
+            parsed.imports.append(
+                ParsedImport(
+                    name="package", source=match.group(1), line=1, is_from=False
+                )
+            )
 
     def _extract_imports(self, content: str, parsed: ParsedFile) -> None:
         for match in self._IMPORT.finditer(content):
             source = match.group(1).rstrip(".")
             line = content[: match.start()].count("\n") + 1
-            parsed.imports.append(ParsedImport(name="", source=source, line=line, is_from=False))
+            parsed.imports.append(
+                ParsedImport(name="", source=source, line=line, is_from=False)
+            )
 
     def _extract_classes(self, content: str, parsed: ParsedFile) -> None:
         for match in self._CLASS_DECL.finditer(content):
@@ -99,7 +105,13 @@ class KotlinParser(AbstractParser):
                 method_names.append(m.group(1))
 
             parsed.classes.append(
-                ParsedClass(name=name, line_start=line_start, line_end=line_end, bases=bases, methods=method_names)
+                ParsedClass(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_end,
+                    bases=bases,
+                    methods=method_names,
+                )
             )
 
     def _extract_interfaces(self, content: str, parsed: ParsedFile) -> None:
@@ -117,7 +129,13 @@ class KotlinParser(AbstractParser):
             line_end = content[:body_end].count("\n") + 1
 
             parsed.classes.append(
-                ParsedClass(name=name, line_start=line_start, line_end=line_end, bases=bases, decorators=["interface"])
+                ParsedClass(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_end,
+                    bases=bases,
+                    decorators=["interface"],
+                )
             )
 
     def _extract_functions(self, content: str, parsed: ParsedFile) -> None:
@@ -141,7 +159,12 @@ class KotlinParser(AbstractParser):
                 complexity = self._calculate_complexity(body)
 
             parsed.functions.append(
-                ParsedFunction(name=name, line_start=line_start, line_end=line_end, complexity=complexity)
+                ParsedFunction(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_end,
+                    complexity=complexity,
+                )
             )
 
     def _extract_routes(self, content: str, parsed: ParsedFile) -> None:
@@ -150,7 +173,13 @@ class KotlinParser(AbstractParser):
             path = match.group(2) if match.group(2) else "/"
             line_start = content[: match.start()].count("\n") + 1
             parsed.routes.append(
-                ParsedRoute(path=path, method=method_str, handler_name="", line_start=line_start, line_end=line_start)
+                ParsedRoute(
+                    path=path,
+                    method=method_str,
+                    handler_name="",
+                    line_start=line_start,
+                    line_end=line_start,
+                )
             )
 
         for match in self._KTOR_ROUTE_SIMPLE.finditer(content):
@@ -158,7 +187,13 @@ class KotlinParser(AbstractParser):
             method = match.group(0).split("(")[0].upper()
             line_start = content[: match.start()].count("\n") + 1
             parsed.routes.append(
-                ParsedRoute(path=path, method=method, handler_name="", line_start=line_start, line_end=line_start)
+                ParsedRoute(
+                    path=path,
+                    method=method,
+                    handler_name="",
+                    line_start=line_start,
+                    line_end=line_start,
+                )
             )
 
     @staticmethod

@@ -15,21 +15,27 @@ class EnterpriseGuideModel(Base):
 
     id: Mapped[UUID] = UUIDColumn()
     job_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("analysis.analysis_jobs.id"), nullable=False, unique=True, index=True
+        PG_UUID(as_uuid=True),
+        ForeignKey("analysis.analysis_jobs.id"),
+        nullable=False,
+        unique=True,
+        index=True,
     )
     repo_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True), nullable=False, index=True
     )
-    workspace_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), nullable=False
-    )
+    workspace_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
 
     executive_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     critical_issues: Mapped[list[object] | None] = mapped_column(JSONB, nullable=True)
     high_issues: Mapped[list[object] | None] = mapped_column(JSONB, nullable=True)
     medium_issues: Mapped[list[object] | None] = mapped_column(JSONB, nullable=True)
-    architecture_review: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
-    capacity_analysis: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    architecture_review: Mapped[dict[str, object] | None] = mapped_column(
+        JSONB, nullable=True
+    )
+    capacity_analysis: Mapped[dict[str, object] | None] = mapped_column(
+        JSONB, nullable=True
+    )
     migration_path: Mapped[list[object] | None] = mapped_column(JSONB, nullable=True)
     ai_executive_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 

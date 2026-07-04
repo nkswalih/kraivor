@@ -34,9 +34,15 @@ class TestLongMethod:
     async def test_detects_long_method(self) -> None:
         lines = "\n".join(f"print({i})" for i in range(55))
         content = f"def long_func():\n{lines}\n"
-        pf = _make_pf("long.py", content, functions=[
-            ParsedFunction(name="long_func", line_start=1, line_end=57, complexity=1),
-        ])
+        pf = _make_pf(
+            "long.py",
+            content,
+            functions=[
+                ParsedFunction(
+                    name="long_func", line_start=1, line_end=57, complexity=1
+                ),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         types = [r.maintainability_type for r in results]
@@ -45,9 +51,15 @@ class TestLongMethod:
     async def test_skips_short_method(self) -> None:
         lines = "\n".join(f"print({i})" for i in range(10))
         content = f"def short_func():\n{lines}\n"
-        pf = _make_pf("short.py", content, functions=[
-            ParsedFunction(name="short_func", line_start=1, line_end=12, complexity=1),
-        ])
+        pf = _make_pf(
+            "short.py",
+            content,
+            functions=[
+                ParsedFunction(
+                    name="short_func", line_start=1, line_end=12, complexity=1
+                ),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         types = [r.maintainability_type for r in results]
@@ -58,9 +70,15 @@ class TestLongMethod:
 class TestTooManyParameters:
     async def test_detects_too_many_parameters(self) -> None:
         content = "def overloaded(a, b, c, d, e, f, g):\n    pass\n"
-        pf = _make_pf("params.py", content, functions=[
-            ParsedFunction(name="overloaded", line_start=1, line_end=2, complexity=1),
-        ])
+        pf = _make_pf(
+            "params.py",
+            content,
+            functions=[
+                ParsedFunction(
+                    name="overloaded", line_start=1, line_end=2, complexity=1
+                ),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         types = [r.maintainability_type for r in results]
@@ -68,9 +86,13 @@ class TestTooManyParameters:
 
     async def test_skips_few_parameters(self) -> None:
         content = "def simple(a, b, c):\n    pass\n"
-        pf = _make_pf("params.py", content, functions=[
-            ParsedFunction(name="simple", line_start=1, line_end=2, complexity=1),
-        ])
+        pf = _make_pf(
+            "params.py",
+            content,
+            functions=[
+                ParsedFunction(name="simple", line_start=1, line_end=2, complexity=1),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         types = [r.maintainability_type for r in results]
@@ -80,18 +102,28 @@ class TestTooManyParameters:
 @pytest.mark.asyncio
 class TestHighCyclomaticComplexity:
     async def test_detects_high_complexity(self) -> None:
-        pf = _make_pf("complex.py", "def complex_func():\n    pass\n", functions=[
-            ParsedFunction(name="complex_func", line_start=1, line_end=2, complexity=15),
-        ])
+        pf = _make_pf(
+            "complex.py",
+            "def complex_func():\n    pass\n",
+            functions=[
+                ParsedFunction(
+                    name="complex_func", line_start=1, line_end=2, complexity=15
+                ),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         types = [r.maintainability_type for r in results]
         assert "high_cyclomatic_complexity" in types
 
     async def test_skips_low_complexity(self) -> None:
-        pf = _make_pf("simple.py", "def simple():\n    pass\n", functions=[
-            ParsedFunction(name="simple", line_start=1, line_end=2, complexity=3),
-        ])
+        pf = _make_pf(
+            "simple.py",
+            "def simple():\n    pass\n",
+            functions=[
+                ParsedFunction(name="simple", line_start=1, line_end=2, complexity=3),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         types = [r.maintainability_type for r in results]
@@ -117,12 +149,7 @@ class TestDeepNesting:
         assert "deep_nesting" in types
 
     async def test_skips_shallow_nesting(self) -> None:
-        content = (
-            "if a:\n"
-            "    if b:\n"
-            "        if c:\n"
-            "            print('ok')\n"
-        )
+        content = "if a:\n    if b:\n        if c:\n            print('ok')\n"
         pf = _make_pf("nest.py", content)
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
@@ -149,11 +176,7 @@ class TestDuplicateCode:
         assert "duplicate_code" in types
 
     async def test_skips_no_duplicates(self) -> None:
-        content = (
-            "save_record(record)\n"
-            "update_cache(record)\n"
-            "log_action(record)\n"
-        )
+        content = "save_record(record)\nupdate_cache(record)\nlog_action(record)\n"
         pf = _make_pf("dup.py", content)
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
@@ -164,18 +187,26 @@ class TestDuplicateCode:
 @pytest.mark.asyncio
 class TestLargeClass:
     async def test_detects_large_class(self) -> None:
-        pf = _make_pf("large.py", "class Large:\n    pass\n", classes=[
-            ParsedClass(name="Large", line_start=1, line_end=350, methods=["a"]),
-        ])
+        pf = _make_pf(
+            "large.py",
+            "class Large:\n    pass\n",
+            classes=[
+                ParsedClass(name="Large", line_start=1, line_end=350, methods=["a"]),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         types = [r.maintainability_type for r in results]
         assert "large_class" in types
 
     async def test_skips_small_class(self) -> None:
-        pf = _make_pf("small.py", "class Small:\n    pass\n", classes=[
-            ParsedClass(name="Small", line_start=1, line_end=50, methods=["a"]),
-        ])
+        pf = _make_pf(
+            "small.py",
+            "class Small:\n    pass\n",
+            classes=[
+                ParsedClass(name="Small", line_start=1, line_end=50, methods=["a"]),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         types = [r.maintainability_type for r in results]
@@ -185,18 +216,36 @@ class TestLargeClass:
 @pytest.mark.asyncio
 class TestTooManyMethods:
     async def test_detects_too_many_methods(self) -> None:
-        pf = _make_pf("big.py", "class Big:\n    pass\n", classes=[
-            ParsedClass(name="Big", line_start=1, line_end=100, methods=[f"m{i}" for i in range(20)]),
-        ])
+        pf = _make_pf(
+            "big.py",
+            "class Big:\n    pass\n",
+            classes=[
+                ParsedClass(
+                    name="Big",
+                    line_start=1,
+                    line_end=100,
+                    methods=[f"m{i}" for i in range(20)],
+                ),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         types = [r.maintainability_type for r in results]
         assert "too_many_methods" in types
 
     async def test_skips_reasonable_methods(self) -> None:
-        pf = _make_pf("ok.py", "class Ok:\n    pass\n", classes=[
-            ParsedClass(name="Ok", line_start=1, line_end=50, methods=[f"m{i}" for i in range(5)]),
-        ])
+        pf = _make_pf(
+            "ok.py",
+            "class Ok:\n    pass\n",
+            classes=[
+                ParsedClass(
+                    name="Ok",
+                    line_start=1,
+                    line_end=50,
+                    methods=[f"m{i}" for i in range(5)],
+                ),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         types = [r.maintainability_type for r in results]
@@ -225,27 +274,53 @@ class TestLongLine:
 @pytest.mark.asyncio
 class TestMissingDocstrings:
     async def test_detects_missing_docstring_on_function(self) -> None:
-        pf = _make_pf("mod.py", "def public_func():\n    pass\n", functions=[
-            ParsedFunction(name="public_func", line_start=1, line_end=2, complexity=1, docstring=""),
-        ])
+        pf = _make_pf(
+            "mod.py",
+            "def public_func():\n    pass\n",
+            functions=[
+                ParsedFunction(
+                    name="public_func",
+                    line_start=1,
+                    line_end=2,
+                    complexity=1,
+                    docstring="",
+                ),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         types = [r.maintainability_type for r in results]
         assert "missing_docstring" in types
 
     async def test_skips_function_with_docstring(self) -> None:
-        pf = _make_pf("mod.py", "def doc_func():\n    '''Has docs.'''\n    pass\n", functions=[
-            ParsedFunction(name="doc_func", line_start=1, line_end=3, complexity=1, docstring="Has docs."),
-        ])
+        pf = _make_pf(
+            "mod.py",
+            "def doc_func():\n    '''Has docs.'''\n    pass\n",
+            functions=[
+                ParsedFunction(
+                    name="doc_func",
+                    line_start=1,
+                    line_end=3,
+                    complexity=1,
+                    docstring="Has docs.",
+                ),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         types = [r.maintainability_type for r in results]
         assert "missing_docstring" not in types
 
     async def test_skips_private_function(self) -> None:
-        pf = _make_pf("mod.py", "def _helper():\n    pass\n", functions=[
-            ParsedFunction(name="_helper", line_start=1, line_end=2, complexity=1, docstring=""),
-        ])
+        pf = _make_pf(
+            "mod.py",
+            "def _helper():\n    pass\n",
+            functions=[
+                ParsedFunction(
+                    name="_helper", line_start=1, line_end=2, complexity=1, docstring=""
+                ),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         types = [r.maintainability_type for r in results]
@@ -255,10 +330,7 @@ class TestMissingDocstrings:
 @pytest.mark.asyncio
 class TestMagicNumbers:
     async def test_detects_magic_number(self) -> None:
-        content = (
-            "def calc():\n"
-            "    return 42\n"
-        )
+        content = "def calc():\n    return 42\n"
         pf = _make_pf("magic.py", content)
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
@@ -266,10 +338,7 @@ class TestMagicNumbers:
         assert "magic_number" in types
 
     async def test_skips_common_values(self) -> None:
-        content = (
-            "for i in range(10):\n"
-            "    print(i)\n"
-        )
+        content = "for i in range(10):\n    print(i)\n"
         pf = _make_pf("range.py", content)
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
@@ -280,12 +349,7 @@ class TestMagicNumbers:
 @pytest.mark.asyncio
 class TestEmptyCatchBlocks:
     async def test_detects_empty_except(self) -> None:
-        content = (
-            "try:\n"
-            "    risky()\n"
-            "except:\n"
-            "    pass\n"
-        )
+        content = "try:\n    risky()\nexcept:\n    pass\n"
         pf = _make_pf("except.py", content)
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
@@ -294,10 +358,7 @@ class TestEmptyCatchBlocks:
 
     async def test_skips_except_with_handling(self) -> None:
         content = (
-            "try:\n"
-            "    risky()\n"
-            "except Exception as e:\n"
-            "    logger.exception('error')\n"
+            "try:\n    risky()\nexcept Exception as e:\n    logger.exception('error')\n"
         )
         pf = _make_pf("except.py", content)
         detector = MaintainabilityDetector([pf])
@@ -336,18 +397,38 @@ class TestTodoComments:
 @pytest.mark.asyncio
 class TestDeepInheritance:
     async def test_detects_deep_inheritance(self) -> None:
-        pf = _make_pf("inherits.py", "class A(B, C, D, E):\n    pass\n", classes=[
-            ParsedClass(name="A", line_start=1, line_end=2, bases=["B", "C", "D", "E"], methods=["method"]),
-        ])
+        pf = _make_pf(
+            "inherits.py",
+            "class A(B, C, D, E):\n    pass\n",
+            classes=[
+                ParsedClass(
+                    name="A",
+                    line_start=1,
+                    line_end=2,
+                    bases=["B", "C", "D", "E"],
+                    methods=["method"],
+                ),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         types = [r.maintainability_type for r in results]
         assert "deep_inheritance" in types
 
     async def test_skips_shallow_inheritance(self) -> None:
-        pf = _make_pf("inherits.py", "class A(Base):\n    pass\n", classes=[
-            ParsedClass(name="A", line_start=1, line_end=2, bases=["Base"], methods=["method"]),
-        ])
+        pf = _make_pf(
+            "inherits.py",
+            "class A(Base):\n    pass\n",
+            classes=[
+                ParsedClass(
+                    name="A",
+                    line_start=1,
+                    line_end=2,
+                    bases=["Base"],
+                    methods=["method"],
+                ),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         types = [r.maintainability_type for r in results]
@@ -357,11 +438,7 @@ class TestDeepInheritance:
 @pytest.mark.asyncio
 class TestCircularImports:
     async def test_detects_import_inside_function(self) -> None:
-        content = (
-            "def handler():\n"
-            "    from app.models import User\n"
-            "    return User()\n"
-        )
+        content = "def handler():\n    from app.models import User\n    return User()\n"
         pf = _make_pf("circular.py", content)
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
@@ -369,11 +446,7 @@ class TestCircularImports:
         assert "circular_import" in types
 
     async def test_skips_imports_at_top(self) -> None:
-        content = (
-            "from app.models import User\n"
-            "def handler():\n"
-            "    return User()\n"
-        )
+        content = "from app.models import User\ndef handler():\n    return User()\n"
         pf = _make_pf("top.py", content)
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
@@ -381,11 +454,7 @@ class TestCircularImports:
         assert "circular_import" not in types
 
     async def test_skips_typing_import_inside_function(self) -> None:
-        content = (
-            "def handler():\n"
-            "    from typing import List\n"
-            "    return []\n"
-        )
+        content = "def handler():\n    from typing import List\n    return []\n"
         pf = _make_pf("typing.py", content)
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
@@ -431,9 +500,13 @@ class TestMetricsComputation:
         assert metrics.total_findings == 0
 
     async def test_metrics_with_findings(self) -> None:
-        pf = _make_pf("test.py", "def f():\n    pass\n", functions=[
-            ParsedFunction(name="f", line_start=1, line_end=60, complexity=15),
-        ])
+        pf = _make_pf(
+            "test.py",
+            "def f():\n    pass\n",
+            functions=[
+                ParsedFunction(name="f", line_start=1, line_end=60, complexity=15),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         metrics = detector.compute_metrics(results)
@@ -443,9 +516,13 @@ class TestMetricsComputation:
         assert metrics.complexity_score < 100.0
 
     async def test_metrics_maintainability_index_formula(self) -> None:
-        pf = _make_pf("test.py", "def f():\n    pass\n", functions=[
-            ParsedFunction(name="f", line_start=1, line_end=60, complexity=12),
-        ])
+        pf = _make_pf(
+            "test.py",
+            "def f():\n    pass\n",
+            functions=[
+                ParsedFunction(name="f", line_start=1, line_end=60, complexity=12),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         metrics = detector.compute_metrics(results)
@@ -453,13 +530,19 @@ class TestMetricsComputation:
         assert 0 <= metrics.maintainability_index <= 100
 
     async def test_metrics_exact_values(self) -> None:
-        pf = _make_pf("test.py", "x = 1\n", functions=[
-            ParsedFunction(name="f", line_start=1, line_end=2, complexity=1),
-        ])
+        pf = _make_pf(
+            "test.py",
+            "x = 1\n",
+            functions=[
+                ParsedFunction(name="f", line_start=1, line_end=2, complexity=1),
+            ],
+        )
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
         metrics = detector.compute_metrics(results)
-        long_methods = sum(1 for f in results if f.maintainability_type == "long_method")
+        long_methods = sum(
+            1 for f in results if f.maintainability_type == "long_method"
+        )
         assert long_methods == 0
         assert metrics.maintainability_index >= 90
 
@@ -478,6 +561,7 @@ class TestMetricsComputation:
 
     async def test_finding_to_dict(self) -> None:
         from app.workers.maintainability.models import MaintainabilityFinding
+
         finding = MaintainabilityFinding(
             maintainability_type="long_method",
             severity="medium",

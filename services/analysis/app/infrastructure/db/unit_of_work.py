@@ -1,4 +1,3 @@
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.db.repositories.analysis_job import JobRepository
@@ -66,7 +65,8 @@ class UnitOfWork:
     async def __aenter__(self) -> "UnitOfWork":
         if self._session is None:
             self._session = async_session_factory()
-        assert self._session is not None
+        if self._session is None:
+            raise RuntimeError("Database session was not initialized")
         self.jobs = JobRepository(self._session)
         self.findings = FindingRepository(self._session)
         self.reports = ReportRepository(self._session)
@@ -89,7 +89,8 @@ class UnitOfWork:
         exc_val: BaseException | None,
         exc_tb: type[BaseException] | None,
     ) -> None:
-        assert self._session is not None
+        if self._session is None:
+            raise RuntimeError("Database session was not initialized")
         try:
             if exc_type is None:
                 await self._session.commit()
@@ -101,12 +102,14 @@ class UnitOfWork:
 
     async def commit(self) -> None:
         """Explicitly commit the current transaction."""
-        assert self._session is not None
+        if self._session is None:
+            raise RuntimeError("Database session was not initialized")
         await self._session.commit()
 
     async def rollback(self) -> None:
         """Rollback the current transaction."""
-        assert self._session is not None
+        if self._session is None:
+            raise RuntimeError("Database session was not initialized")
         await self._session.rollback()
 
     @property

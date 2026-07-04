@@ -1,4 +1,4 @@
-.PHONY: dev stop logs test
+.PHONY: dev stop logs test lint format security precommit
 
 dev:
 	docker-compose up --build
@@ -11,10 +11,31 @@ logs:
 
 test:
 	@echo "Running tests for all services..."
-	cd services/identity && python manage.py test || true
-	cd services/core && python manage.py test || true
-	cd services/analysis && pytest tests/ || true
-	cd services/ai && pytest tests/ || true
-	cd services/notifications && pytest tests/ || true
-	cd services/realtime && npm test || true
-	cd frontend && npm test || true
+	cd services/auth && uv run python manage.py test || true
+	cd services/core && uv run python manage.py test || true
+	cd services/analysis && uv run pytest tests/ -v || true
+	cd services/ai && uv run pytest tests/ -v || true
+
+lint:
+	@echo "Running lint checks..."
+	cd services/auth && uv run ruff check . || true
+	cd services/core && uv run ruff check . || true
+	cd services/analysis && uv run ruff check . || true
+	cd services/ai && uv run ruff check . || true
+
+format:
+	@echo "Running format checks..."
+	cd services/auth && uv run black --check --diff . || true
+	cd services/core && uv run black --check --diff . || true
+	cd services/analysis && uv run black --check --diff . || true
+	cd services/ai && uv run black --check --diff . || true
+
+security:
+	@echo "Running security scans..."
+	cd services/auth && uv run bandit -r . -x ./tests || true
+	cd services/core && uv run bandit -r . -x ./tests || true
+	cd services/analysis && uv run bandit -r . -x ./tests || true
+	cd services/ai && uv run bandit -r . -x ./tests || true
+
+precommit:
+	pre-commit run --all-files

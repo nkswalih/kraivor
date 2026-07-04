@@ -77,6 +77,7 @@ export const API_ENDPOINTS = {
     FINDINGS_SUMMARY: '/api/v1/findings/summary',
     FINDINGS_DISMISS: '/api/v1/findings/dismiss',
     REPORT_BY_JOB: (id: string) => `/api/v1/reports/by-job/${id}`,
+    REPORT_METADATA_BY_JOB: (id: string) => `/api/v1/reports/by-job/${id}/metadata`,
     DEAD_CODE: '/api/v1/dead-code',
     ERROR_FINDINGS: '/api/v1/error-findings',
     PERF_METRICS: '/api/v1/performance-metrics',

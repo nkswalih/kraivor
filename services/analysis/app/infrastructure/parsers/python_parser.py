@@ -117,9 +117,7 @@ class PythonParser(AbstractParser):
             ast_node=node,
         )
 
-    def _parse_class(
-        self, node: ast.ClassDef, content: str
-    ) -> ParsedClass:
+    def _parse_class(self, node: ast.ClassDef, content: str) -> ParsedClass:
         bases = []
         for base in node.bases:
             if isinstance(base, ast.Name):
@@ -143,9 +141,7 @@ class PythonParser(AbstractParser):
             ast_node=node,
         )
 
-    def _extract_routes(
-        self, tree: ast.AST, content: str
-    ) -> list[ParsedRoute]:
+    def _extract_routes(self, tree: ast.AST, content: str) -> list[ParsedRoute]:
         routes: list[ParsedRoute] = []
         lines = content.split("\n")
 
@@ -171,9 +167,7 @@ class PythonParser(AbstractParser):
                         # Also check other decorators
                         for d in node.decorator_list:
                             d_str = self._decorator_to_string(d).lower()
-                            if any(
-                                ad in d_str for ad in self._AUTH_DECORATORS
-                            ):
+                            if any(ad in d_str for ad in self._AUTH_DECORATORS):
                                 has_auth = True
 
                         start = max(0, node.lineno - 1)
@@ -189,8 +183,7 @@ class PythonParser(AbstractParser):
                                 line_end=node.end_lineno or node.lineno,
                                 has_auth=has_auth,
                                 decorators=[
-                                    self._decorator_name(d)
-                                    for d in node.decorator_list
+                                    self._decorator_name(d) for d in node.decorator_list
                                 ],
                                 code=snippet,
                             )
@@ -240,7 +233,11 @@ class PythonParser(AbstractParser):
         if isinstance(node, ast.Name):
             return node.id
         if isinstance(node, ast.Attribute):
-            return f"{node.value.id}.{node.attr}" if hasattr(node.value, "id") else node.attr
+            return (
+                f"{node.value.id}.{node.attr}"
+                if hasattr(node.value, "id")
+                else node.attr
+            )
         if isinstance(node, ast.Call):
             if isinstance(node.func, ast.Name):
                 return node.func.id

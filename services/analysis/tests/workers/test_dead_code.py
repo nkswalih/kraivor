@@ -1,4 +1,3 @@
-
 from app.domain.contracts.parser import (
     ParsedClass,
     ParsedFile,
@@ -40,7 +39,9 @@ class TestDeadCodeDetector:
             path="src/app.py",
             content="import os\nimport sys\n\ndef hello():\n    print('hello')\n",
             imports=[ParsedImport(name="os", line=1), ParsedImport(name="sys", line=2)],
-            functions=[ParsedFunction(name="hello", line_start=4, line_end=5, calls=["print"])],
+            functions=[
+                ParsedFunction(name="hello", line_start=4, line_end=5, calls=["print"])
+            ],
             function_calls=["print"],
         )
         detector = DeadCodeDetector([pf])
@@ -83,7 +84,11 @@ class TestDeadCodeDetector:
         pf = _make_pf(
             path="src/routes.py",
             content="def get_users():\n    pass\n",
-            functions=[ParsedFunction(name="get_users", line_start=1, line_end=2, decorators=["@app.get"])],
+            functions=[
+                ParsedFunction(
+                    name="get_users", line_start=1, line_end=2, decorators=["@app.get"]
+                )
+            ],
             routes=[],
         )
         detector = DeadCodeDetector([pf])
@@ -95,9 +100,15 @@ class TestDeadCodeDetector:
         pf = _make_pf(
             path="src/models.py",
             content="class OldModel:\n    pass\n",
-            classes=[__import__("app.domain.contracts.parser", fromlist=["ParsedClass"]).ParsedClass(
-                name="OldModel", line_start=1, line_end=2,
-            )],
+            classes=[
+                __import__(
+                    "app.domain.contracts.parser", fromlist=["ParsedClass"]
+                ).ParsedClass(
+                    name="OldModel",
+                    line_start=1,
+                    line_end=2,
+                )
+            ],
         )
         detector = DeadCodeDetector([pf])
         results = await detector.detect_all()

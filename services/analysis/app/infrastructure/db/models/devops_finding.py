@@ -14,9 +14,14 @@ class DevOpsFindingModel(Base):
 
     id: Mapped[UUID] = UUIDColumn()
     job_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("analysis.analysis_jobs.id"), nullable=False, index=True
+        PG_UUID(as_uuid=True),
+        ForeignKey("analysis.analysis_jobs.id"),
+        nullable=False,
+        index=True,
     )
-    repo_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False, index=True)
+    repo_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True), nullable=False, index=True
+    )
     workspace_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
 
     devops_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)

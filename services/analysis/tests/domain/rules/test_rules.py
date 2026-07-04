@@ -76,22 +76,57 @@ class TestRuleRegistry:
 
 
 class TestQualityHighComplexityRule:
-    @pytest.mark.parametrize("func_data,expected_violations", [
-        ({"name": "low", "line_start": 1, "line_end": 2, "snippet": "def low(): pass", "complexity": 5}, 0),
-        ({"name": "high", "line_start": 1, "line_end": 20, "snippet": "def high():\n" + "\n".join([f"    if a{i}: pass" for i in range(16)]), "complexity": 16}, 1),
-    ])
-    async def test_complexity_threshold(self, func_data: dict[str, object], expected_violations: int) -> None:
+    @pytest.mark.parametrize(
+        "func_data,expected_violations",
+        [
+            (
+                {
+                    "name": "low",
+                    "line_start": 1,
+                    "line_end": 2,
+                    "snippet": "def low(): pass",
+                    "complexity": 5,
+                },
+                0,
+            ),
+            (
+                {
+                    "name": "high",
+                    "line_start": 1,
+                    "line_end": 20,
+                    "snippet": "def high():\n"
+                    + "\n".join([f"    if a{i}: pass" for i in range(16)]),
+                    "complexity": 16,
+                },
+                1,
+            ),
+        ],
+    )
+    async def test_complexity_threshold(
+        self, func_data: dict[str, object], expected_violations: int
+    ) -> None:
         rule = QualityHighComplexityRule()
         result = await rule.analyze("test.py", "", {"functions": [func_data]})
         assert len(result) == expected_violations
 
     async def test_high_complexity_severity(self) -> None:
         rule = QualityHighComplexityRule()
-        result = await rule.analyze("test.py", "", {"functions": [{
-            "name": "very_high", "line_start": 1, "line_end": 50,
-            "snippet": "def f():\n" + "\n".join([f"    if a{i}: pass" for i in range(35)]),
-            "complexity": 35,
-        }]})
+        result = await rule.analyze(
+            "test.py",
+            "",
+            {
+                "functions": [
+                    {
+                        "name": "very_high",
+                        "line_start": 1,
+                        "line_end": 50,
+                        "snippet": "def f():\n"
+                        + "\n".join([f"    if a{i}: pass" for i in range(35)]),
+                        "complexity": 35,
+                    }
+                ]
+            },
+        )
         assert len(result) == 1
         assert result[0].severity == "high"
 
@@ -104,18 +139,30 @@ class TestQualityHighComplexityRule:
 class TestQualityLongFunctionRule:
     async def test_short_function_no_violation(self) -> None:
         rule = QualityLongFunctionRule()
-        result = await rule.analyze("test.py", "", {"functions": [{"name": "short", "line_start": 1, "line_end": 10}]})
+        result = await rule.analyze(
+            "test.py",
+            "",
+            {"functions": [{"name": "short", "line_start": 1, "line_end": 10}]},
+        )
         assert len(result) == 0
 
     async def test_long_function_violation(self) -> None:
         rule = QualityLongFunctionRule()
-        result = await rule.analyze("test.py", "", {"functions": [{"name": "long", "line_start": 1, "line_end": 60}]})
+        result = await rule.analyze(
+            "test.py",
+            "",
+            {"functions": [{"name": "long", "line_start": 1, "line_end": 60}]},
+        )
         assert len(result) == 1
         assert "long" in result[0].title
 
     async def test_very_long_function_medium_severity(self) -> None:
         rule = QualityLongFunctionRule()
-        result = await rule.analyze("test.py", "", {"functions": [{"name": "very_long", "line_start": 1, "line_end": 150}]})
+        result = await rule.analyze(
+            "test.py",
+            "",
+            {"functions": [{"name": "very_long", "line_start": 1, "line_end": 150}]},
+        )
         assert len(result) == 1
         assert result[0].severity == "medium"
 
@@ -123,21 +170,27 @@ class TestQualityLongFunctionRule:
 class TestSecurityNoAuthRule:
     async def test_missing_auth_on_get(self) -> None:
         rule = SecurityNoAuthRule()
-        routes = [{"path": "/api/test", "method": "GET", "has_auth": False, "line_start": 1}]
+        routes = [
+            {"path": "/api/test", "method": "GET", "has_auth": False, "line_start": 1}
+        ]
         result = await rule.analyze("routes.py", "", {"routes": routes})
         assert len(result) == 1
         assert result[0].severity == "high"
 
     async def test_missing_auth_on_post_is_critical(self) -> None:
         rule = SecurityNoAuthRule()
-        routes = [{"path": "/api/data", "method": "POST", "has_auth": False, "line_start": 1}]
+        routes = [
+            {"path": "/api/data", "method": "POST", "has_auth": False, "line_start": 1}
+        ]
         result = await rule.analyze("routes.py", "", {"routes": routes})
         assert len(result) == 1
         assert result[0].severity == "critical"
 
     async def test_authenticated_route_no_violation(self) -> None:
         rule = SecurityNoAuthRule()
-        routes = [{"path": "/api/secure", "method": "GET", "has_auth": True, "line_start": 1}]
+        routes = [
+            {"path": "/api/secure", "method": "GET", "has_auth": True, "line_start": 1}
+        ]
         result = await rule.analyze("routes.py", "", {"routes": routes})
         assert len(result) == 0
 
@@ -148,6 +201,7 @@ class TestSecurityNoAuthRule:
 
     async def test_file_pattern_filter(self) -> None:
         import fnmatch
+
         rule = SecurityNoAuthRule()
         assert fnmatch.fnmatch("routes.py", rule.file_patterns[0])
         assert not fnmatch.fnmatch("models.py", rule.file_patterns[0])
@@ -180,10 +234,12 @@ class TestSecurityHardcodedSecretRule:
 
     async def test_multiple_secrets(self) -> None:
         rule = SecurityHardcodedSecretRule()
-        content = '\n'.join([
-            'API_KEY = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8g9h0"',
-            'SECRET = "x9y8z7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1g0f"',
-        ])
+        content = "\n".join(
+            [
+                'API_KEY = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8g9h0"',
+                'SECRET = "x9y8z7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1g0f"',
+            ]
+        )
         result = await rule.analyze("config.py", content, {})
         assert len(result) == 2
 
@@ -196,7 +252,9 @@ class TestStructureDeepNestingRule:
 
     async def test_deep_nesting_violation(self) -> None:
         rule = StructureDeepNestingRule()
-        result = await rule.analyze("src/level1/level2/level3/level4/level5/file.py", "", {})
+        result = await rule.analyze(
+            "src/level1/level2/level3/level4/level5/file.py", "", {}
+        )
         assert len(result) == 1
         assert "Deep directory nesting" in result[0].title
 

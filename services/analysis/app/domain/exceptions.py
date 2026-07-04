@@ -1,6 +1,3 @@
-
-
-
 class DomainError(Exception):
     """Base exception for domain-level errors."""
 
@@ -42,9 +39,7 @@ class RuleExecutionError(DomainError):
         details: dict[str, object] | None = None,
     ) -> None:
         detail = {"rule_id": rule_id, **(details or {})}
-        super().__init__(
-            message=message, code="rule_execution_error", details=detail
-        )
+        super().__init__(message=message, code="rule_execution_error", details=detail)
 
 
 class ParserError(DomainError):

@@ -22,19 +22,28 @@ _background_tasks: set[asyncio.Task[None]] = set()
 
 
 _EXT_TO_LANG: dict[str, str] = {
-    ".py": "python", ".pyi": "python", ".pyx": "python",
-    ".js": "javascript", ".mjs": "javascript", ".cjs": "javascript",
-    ".ts": "typescript", ".tsx": "typescript",
+    ".py": "python",
+    ".pyi": "python",
+    ".pyx": "python",
+    ".js": "javascript",
+    ".mjs": "javascript",
+    ".cjs": "javascript",
+    ".ts": "typescript",
+    ".tsx": "typescript",
     ".go": "go",
     ".java": "java",
     ".rs": "rust",
     ".rb": "ruby",
-    ".yml": "yaml", ".yaml": "yaml",
+    ".yml": "yaml",
+    ".yaml": "yaml",
     ".json": "json",
-    ".md": "markdown", ".mdx": "markdown",
-    ".sh": "shell", ".bash": "shell",
+    ".md": "markdown",
+    ".mdx": "markdown",
+    ".sh": "shell",
+    ".bash": "shell",
     ".sql": "sql",
-    "Dockerfile": "dockerfile", ".dockerfile": "dockerfile",
+    "Dockerfile": "dockerfile",
+    ".dockerfile": "dockerfile",
 }
 
 logger = get_logger(__name__)
@@ -64,9 +73,7 @@ async def upload_file(
         )
 
     job_id = uuid4()
-    s3_key = (
-        f"uploads/{workspace_id}/{job_id}/{file.filename}"
-    )
+    s3_key = f"uploads/{workspace_id}/{job_id}/{file.filename}"
 
     storage = S3Storage()
     content_type = file.content_type or "application/octet-stream"
@@ -75,15 +82,19 @@ async def upload_file(
     ext = os.path.splitext(file.filename)[1].lower()
     language = _EXT_TO_LANG.get(ext, "unknown")
 
-    await uow.file_analyses.save_many([{
-        "job_id": job_id,
-        "workspace_id": UUID(workspace_id),
-        "original_filename": file.filename,
-        "file_size_bytes": len(contents),
-        "language": language,
-        "s3_key": s3_key,
-        "id": uuid4(),
-    }])
+    await uow.file_analyses.save_many(
+        [
+            {
+                "job_id": job_id,
+                "workspace_id": UUID(workspace_id),
+                "original_filename": file.filename,
+                "file_size_bytes": len(contents),
+                "language": language,
+                "s3_key": s3_key,
+                "id": uuid4(),
+            }
+        ]
+    )
 
     settings = get_settings()
     cmd = StartAnalysisCommand(
@@ -99,17 +110,21 @@ async def upload_file(
     await handle_start_analysis(cmd, uow)
     await uow.commit()
 
-    background_task = asyncio.create_task(_run_analysis_safe({
-        "job_id": str(job_id),
-        "repo_id": str(cmd.repo_id),
-        "workspace_id": workspace_id,
-        "triggered_by": user.sub,
-        "trigger_type": TriggerType.API,
-        "repo_url": cmd.repo_url,
-        "branch": cmd.branch,
-        "deep_scan": False,
-        "depth": 1,
-    }))
+    background_task = asyncio.create_task(
+        _run_analysis_safe(
+            {
+                "job_id": str(job_id),
+                "repo_id": str(cmd.repo_id),
+                "workspace_id": workspace_id,
+                "triggered_by": user.sub,
+                "trigger_type": TriggerType.API,
+                "repo_url": cmd.repo_url,
+                "branch": cmd.branch,
+                "deep_scan": False,
+                "depth": 1,
+            }
+        )
+    )
     _background_tasks.add(background_task)
     background_task.add_done_callback(lambda t: _background_tasks.discard(t))
 
@@ -128,6 +143,7 @@ async def _run_analysis_safe(cmd_dict: dict[str, object]) -> None:
                 async with UnitOfWork() as uow:
                     producer = EventProducer()
                     from app.application.analysis.handler import handle_analysis_failure
+
                     await handle_analysis_failure(
                         UUID(cast(str, job_id)),
                         "init",
@@ -142,5 +158,5 @@ async def _run_analysis_safe(cmd_dict: dict[str, object]) -> None:
 
 def _job_to_response(job: dict[str, object] | None) -> JobStatusResponse:
     from app.api.routers.jobs import _job_to_response as jtr
-    return jtr(cast(dict[str, object], job))
 
+    return jtr(cast(dict[str, object], job))

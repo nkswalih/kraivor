@@ -31,6 +31,7 @@ import {
   useStartAnalysis,
   useFindings,
 } from '@/lib/hooks/use-analysis';
+import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { JobStatusBadge } from '@/components/analysis/job-status-badge';
 import { ProgressBar } from '@/components/analysis/progress-bar';
 import { BlockedOverall } from '@/components/analysis/blocked-overall';
@@ -56,6 +57,7 @@ export default function JobDetailPage() {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'all'>('all');
 
   const { data: job, isLoading, error } = useJob(jobId);
+  useDetailBreadcrumb(job ? `Analysis ${job.job_id.slice(0, 8)}` : null);
   const { data: report } = useReport(jobId);
   const { data: summary, isLoading: isSummaryLoading, error: summaryError } = useFindingsSummary(jobId);
   const { data: findingsData } = useFindings(jobId);

@@ -53,7 +53,11 @@ class JobRepository(AbstractJobRepository):
         count_result = await self._session.execute(count_stmt)
         total = count_result.scalar() or 0
 
-        stmt = base.order_by(AnalysisJobModel.created_at.desc()).offset(offset).limit(limit)
+        stmt = (
+            base.order_by(AnalysisJobModel.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
         result = await self._session.execute(stmt)
         return [self._to_dict(m) for m in result.scalars().all()], total
 
@@ -68,7 +72,11 @@ class JobRepository(AbstractJobRepository):
         count_result = await self._session.execute(count_stmt)
         total = count_result.scalar() or 0
 
-        stmt = base.order_by(AnalysisJobModel.created_at.desc()).offset(offset).limit(limit)
+        stmt = (
+            base.order_by(AnalysisJobModel.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
         result = await self._session.execute(stmt)
         return [self._to_dict(m) for m in result.scalars().all()], total
 
@@ -95,9 +103,13 @@ class JobRepository(AbstractJobRepository):
         return job
 
     async def count_by_workspace(self, workspace_id: UUID) -> int:
-        stmt = select(func.count()).select_from(AnalysisJobModel).where(
-            AnalysisJobModel.workspace_id == workspace_id,
-            AnalysisJobModel.deleted_at.is_(None),
+        stmt = (
+            select(func.count())
+            .select_from(AnalysisJobModel)
+            .where(
+                AnalysisJobModel.workspace_id == workspace_id,
+                AnalysisJobModel.deleted_at.is_(None),
+            )
         )
         result = await self._session.execute(stmt)
         return result.scalar() or 0

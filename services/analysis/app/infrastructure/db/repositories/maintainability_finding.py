@@ -19,7 +19,9 @@ class MaintainabilityFindingRepository:
         return len(models)
 
     async def get_by_job(self, job_id: UUID) -> list[dict[str, object]]:
-        stmt = select(MaintainabilityFindingModel).where(MaintainabilityFindingModel.job_id == job_id)
+        stmt = select(MaintainabilityFindingModel).where(
+            MaintainabilityFindingModel.job_id == job_id
+        )
         result = await self._session.execute(stmt)
         return [
             {
@@ -40,9 +42,11 @@ class MaintainabilityFindingRepository:
         ]
 
     async def get_metrics_by_job(self, job_id: UUID) -> dict[str, object] | None:
-        stmt = select(MaintainabilityFindingModel.metrics).where(
-            MaintainabilityFindingModel.job_id == job_id
-        ).limit(1)
+        stmt = (
+            select(MaintainabilityFindingModel.metrics)
+            .where(MaintainabilityFindingModel.job_id == job_id)
+            .limit(1)
+        )
         result = await self._session.execute(stmt)
         row = result.scalar_one_or_none()
         if row is not None:

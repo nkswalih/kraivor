@@ -21,7 +21,7 @@ services:
   # ── Infrastructure ──────────────────────────────────────────────────────────
 
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: kraivor-postgres-dev
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-kraivor}
@@ -108,9 +108,10 @@ services:
     extra_hosts:
     - "host.docker.internal:host-gateway"
     depends_on:
-    - identity
-    - core
-    - analysis
+      - identity
+      - core
+      - analysis
+      - ai
     restart: unless-stopped
 
 
@@ -360,6 +361,102 @@ services:
         alembic -c migrations/alembic.ini upgrade head &&
         exec uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
       "
+
+  # ── AI Service ──────────────────────────────────────────────────────────────
+
+  ai:
+    build:
+      context: ./services/ai
+      dockerfile: Dockerfile.dev
+    container_name: kraivor-ai-dev
+    env_file:
+      - .env
+    environment:
+      AI_DATABASE__URL: postgresql+asyncpg://${POSTGRES_USER:-kraivor}:${POSTGRES_PASSWORD:-kraivor}@postgres:5432/${POSTGRES_DB:-kraivor}
+      AI_REDIS__URL: redis://redis:6379/0
+      AI_CELERY__BROKER__URL: redis://redis:6379/1
+      AI_CELERY__RESULT__BACKEND: redis://redis:6379/1
+      AI_KAFKA__BOOTSTRAP__SERVERS: kafka:9094
+      AI_IDENTITY__JWKS__URL: http://identity:8001/.well-known/jwks.json
+      AI_OPENROUTER__MASTER__KEY: ${OPENROUTER_API_KEY}
+      AI_KEY_ENCRYPTION_KEY: ${AI_KEY_ENCRYPTION_KEY:-dev-encryption-key-32chars!}
+      UV_LINK_MODE: copy
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8004:8004"
+    volumes:
+      - ./services/ai:/app
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    command: >
+      sh -c "
+        alembic -c alembic.ini upgrade head &&
+        exec uvicorn app.api.main:app --host 0.0.0.0 --port 8004 --reload
+      "
+
+  ai-worker:
+    build:
+      context: ./services/ai
+      dockerfile: Dockerfile.dev
+    container_name: kraivor-ai-worker-dev
+    command: celery -A app.core.celery_app worker -Q ai.inference,ai.indexing,ai.maintenance --loglevel=info
+    env_file:
+      - .env
+    environment:
+      AI_DATABASE__URL: postgresql+asyncpg://${POSTGRES_USER:-kraivor}:${POSTGRES_PASSWORD:-kraivor}@postgres:5432/${POSTGRES_DB:-kraivor}
+      AI_REDIS__URL: redis://redis:6379/0
+      AI_CELERY__BROKER__URL: redis://redis:6379/1
+      AI_CELERY__RESULT__BACKEND: redis://redis:6379/1
+      AI_KAFKA__BOOTSTRAP__SERVERS: kafka:9094
+      AI_OPENROUTER__MASTER__KEY: ${OPENROUTER_API_KEY}
+      AI_KEY_ENCRYPTION_KEY: ${AI_KEY_ENCRYPTION_KEY:-dev-encryption-key-32chars!}
+      UV_LINK_MODE: copy
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ai-beat:
+    build:
+      context: ./services/ai
+      dockerfile: Dockerfile.dev
+    container_name: kraivor-ai-beat-dev
+    command: celery -A app.core.celery_app beat --loglevel=info
+    env_file:
+      - .env
+    environment:
+      AI_DATABASE__URL: postgresql+asyncpg://${POSTGRES_USER:-kraivor}:${POSTGRES_PASSWORD:-kraivor}@postgres:5432/${POSTGRES_DB:-kraivor}
+      AI_REDIS__URL: redis://redis:6379/0
+      AI_CELERY__BROKER__URL: redis://redis:6379/1
+      AI_CELERY__RESULT__BACKEND: redis://redis:6379/1
+      AI_KAFKA__BOOTSTRAP__SERVERS: kafka:9094
+      AI_OPENROUTER__MASTER__KEY: ${OPENROUTER_API_KEY}
+      UV_LINK_MODE: copy
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres_data_dev:

@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -11,13 +11,14 @@ repos:
       - id: check-added-large-files
         args: [--maxkb=500]
       - id: check-merge-conflict
+      - id: detect-private-key
       - id: debug-statements
 
   - repo: https://github.com/psf/black
-    rev: 24.4.2
+    rev: 24.10.0
     hooks:
       - id: black
-        language_version: python3.11
+        language_version: python3.12
         args: [--line-length=88]
 
   - repo: https://github.com/PyCQA/isort
@@ -26,8 +27,14 @@ repos:
       - id: isort
         args: [--profile=black, --line-length=88]
 
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.0
+    hooks:
+      - id: ruff
+      - id: ruff-format
+
   - repo: https://github.com/PyCQA/flake8
-    rev: 7.0.0
+    rev: 7.1.1
     hooks:
       - id: flake8
         additional_dependencies:
@@ -37,23 +44,17 @@ repos:
           - flake8-docstrings>=1.7
           - flake8-import-order>=0.18
           - pep8-naming>=0.14
-        args: [--config=.flake8]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.9.0
+    rev: v1.13.0
     hooks:
       - id: mypy
-        language_version: python3.11
-        additional_dependencies:
-          - django-stubs>=4.2
-          - djangorestframework-stubs>=3.14
-          - types-requests>=2.31
-          - typing-extensions>=4.9
+        language_version: python3.12
         args: [--strict, --ignore-missing-imports]
         exclude: ^tests/
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.8
+    rev: 1.7.10
     hooks:
       - id: bandit
         args: [-r, -x, tests]

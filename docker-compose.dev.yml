@@ -367,7 +367,7 @@ services:
   ai:
     build:
       context: ./services/ai
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: kraivor-ai-dev
     env_file:
       - .env
@@ -410,7 +410,7 @@ services:
   ai-worker:
     build:
       context: ./services/ai
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: kraivor-ai-worker-dev
     command: celery -A app.core.celery_app worker -Q ai.inference,ai.indexing,ai.maintenance --loglevel=info
     env_file:
@@ -436,7 +436,7 @@ services:
   ai-beat:
     build:
       context: ./services/ai
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: kraivor-ai-beat-dev
     command: celery -A app.core.celery_app beat --loglevel=info
     env_file:

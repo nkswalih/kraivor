@@ -34,7 +34,7 @@ faker>=22.0
 
 # Security
 bandit>=1.7
-pip-audit>=2.7
+pip-audit>=2.10.1
 
 # DevX
 pre-commit>=3.6

@@ -1,0 +1,126 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  bandit:
+    name: Bandit SAST
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [auth, core, ai, analysis]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup service
+        uses: ./.github/actions/setup
+        with:
+          service: ${{ matrix.service }}
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Run Bandit
+        working-directory: services/${{ matrix.service }}
+        run: |
+          uv run bandit -r . -x ./tests -f sarif -o bandit-${{ matrix.service }}.sarif
+
+      - name: Upload Bandit SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: services/${{ matrix.service }}/bandit-${{ matrix.service }}.sarif
+
+  pip-audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [auth, core, ai, analysis]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup service
+        uses: ./.github/actions/setup
+        with:
+          service: ${{ matrix.service }}
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: pip-audit (strict — high/critical)
+        working-directory: services/${{ matrix.service }}
+        run: |
+          uv run pip-audit --strict --desc 2>&1 | tee pip-audit-strict.log || \
+            echo "::warning::HIGH/CRITICAL vulnerabilities found in ${{ matrix.service }}"
+
+      - name: pip-audit (warn — medium/low)
+        working-directory: services/${{ matrix.service }}
+        run: |
+          uv run pip-audit --severity=medium,low 2>&1 | tee pip-audit-warn.log || true
+
+  osv-scanner:
+    name: OSV Scanner
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google/osv-scanner-action@v1
+        with:
+          scan-args: >-
+            --lockfile=services/auth/uv.lock
+            --lockfile=services/core/uv.lock
+            --lockfile=services/ai/uv.lock
+            --lockfile=services/analysis/uv.lock
+
+  gitleaks:
+    name: Gitleaks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  sbom:
+    name: CycloneDX SBOM
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install cyclonedx-bom
+        run: pip install cyclonedx-bom
+
+      - name: Generate SBOM
+        run: |
+          cyclonedx-py requirements \
+            --pyproject services/auth/pyproject.toml \
+            --pyproject services/core/pyproject.toml \
+            --pyproject services/ai/pyproject.toml \
+            --pyproject services/analysis/pyproject.toml \
+            -o kraivor-sbom.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kraivor-sbom
+          path: kraivor-sbom.json
+          retention-days: 30

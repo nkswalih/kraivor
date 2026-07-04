@@ -274,7 +274,7 @@ class EnterpriseGuideGenerator:
             "bare_except": 5,
             "n_plus_one": 15,
             "missing_auth": 20,
-            "hardcoded_secret": 10,
+            "hardcoded_secret": 10,  # nosec
             "swallowed_exception": 10,
             "sync_in_async": 30,
             "high_complexity": 45,

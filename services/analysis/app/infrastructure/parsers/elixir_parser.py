@@ -83,22 +83,38 @@ class ElixirParser(AbstractParser):
         for match in self._ALIAS.finditer(content):
             source = match.group(1)
             line = content[: match.start()].count("\n") + 1
-            parsed.imports.append(ParsedImport(name="", source=source, line=line, is_from=False, alias="alias"))
+            parsed.imports.append(
+                ParsedImport(
+                    name="", source=source, line=line, is_from=False, alias="alias"
+                )
+            )
 
         for match in self._IMPORT.finditer(content):
             source = match.group(1)
             line = content[: match.start()].count("\n") + 1
-            parsed.imports.append(ParsedImport(name="", source=source, line=line, is_from=False, alias="import"))
+            parsed.imports.append(
+                ParsedImport(
+                    name="", source=source, line=line, is_from=False, alias="import"
+                )
+            )
 
         for match in self._REQUIRE.finditer(content):
             source = match.group(1)
             line = content[: match.start()].count("\n") + 1
-            parsed.imports.append(ParsedImport(name="", source=source, line=line, is_from=False, alias="require"))
+            parsed.imports.append(
+                ParsedImport(
+                    name="", source=source, line=line, is_from=False, alias="require"
+                )
+            )
 
         for match in self._USE.finditer(content):
             source = match.group(1)
             line = content[: match.start()].count("\n") + 1
-            parsed.imports.append(ParsedImport(name="", source=source, line=line, is_from=False, alias="use"))
+            parsed.imports.append(
+                ParsedImport(
+                    name="", source=source, line=line, is_from=False, alias="use"
+                )
+            )
 
     def _extract_modules(self, content: str, parsed: ParsedFile) -> None:
         for match in self._MODULE_DECL.finditer(content):
@@ -116,7 +132,13 @@ class ElixirParser(AbstractParser):
                 func_names.append(m.group(1))
 
             parsed.classes.append(
-                ParsedClass(name=name, line_start=line_start, line_end=line_end, decorators=["module"], methods=func_names)
+                ParsedClass(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_end,
+                    decorators=["module"],
+                    methods=func_names,
+                )
             )
 
     def _extract_functions(self, content: str, parsed: ParsedFile) -> None:
@@ -126,7 +148,12 @@ class ElixirParser(AbstractParser):
             body = self._extract_function_body(content, match.end())
             line_end = line_start + body.count("\n")
             parsed.functions.append(
-                ParsedFunction(name=name, line_start=line_start, line_end=line_end, complexity=self._calculate_complexity(body))
+                ParsedFunction(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_end,
+                    complexity=self._calculate_complexity(body),
+                )
             )
 
     def _extract_routes(self, content: str, parsed: ParsedFile) -> None:
@@ -139,17 +166,31 @@ class ElixirParser(AbstractParser):
         ]:
             for match in pattern.finditer(content):
                 path = match.group(1)
-                handler = match.group(2) if match.lastindex and match.lastindex >= 2 else ""
+                handler = (
+                    match.group(2) if match.lastindex and match.lastindex >= 2 else ""
+                )
                 line_start = content[: match.start()].count("\n") + 1
                 parsed.routes.append(
-                    ParsedRoute(path=path, method=method, handler_name=handler, line_start=line_start, line_end=line_start)
+                    ParsedRoute(
+                        path=path,
+                        method=method,
+                        handler_name=handler,
+                        line_start=line_start,
+                        line_end=line_start,
+                    )
                 )
 
         for match in self._PHOENIX_RESOURCES.finditer(content):
             path = match.group(1)
             line_start = content[: match.start()].count("\n") + 1
             parsed.routes.append(
-                ParsedRoute(path=path, method="RESOURCE", handler_name="", line_start=line_start, line_end=line_start)
+                ParsedRoute(
+                    path=path,
+                    method="RESOURCE",
+                    handler_name="",
+                    line_start=line_start,
+                    line_end=line_start,
+                )
             )
 
     def _extract_function_body(self, content: str, start_pos: int) -> str:
@@ -157,7 +198,11 @@ class ElixirParser(AbstractParser):
         body_lines: list[str] = []
         for line in lines:
             stripped = line.strip()
-            if stripped.startswith("def") or stripped.startswith("defp") or stripped.startswith("defmacro"):
+            if (
+                stripped.startswith("def")
+                or stripped.startswith("defp")
+                or stripped.startswith("defmacro")
+            ):
                 break
             body_lines.append(line)
         return "\n".join(body_lines)
@@ -168,12 +213,16 @@ class ElixirParser(AbstractParser):
         depth = 1
         for i, line in enumerate(lines):
             stripped = line.strip()
-            if stripped.startswith("defmodule ") or stripped.startswith("def ") or stripped.startswith("defp "):
+            if (
+                stripped.startswith("defmodule ")
+                or stripped.startswith("def ")
+                or stripped.startswith("defp ")
+            ):
                 depth += 1
             if stripped == "end":
                 depth -= 1
                 if depth == 0:
-                    return start_pos + sum(len(line) + 1 for line in lines[:i + 1])
+                    return start_pos + sum(len(line) + 1 for line in lines[: i + 1])
         return start_pos + len(content) - 1
 
     @staticmethod

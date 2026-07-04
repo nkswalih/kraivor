@@ -30,5 +30,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("idx_results_status", table_name="analysis_results", schema="analysis")
+    op.drop_index(
+        "idx_results_status", table_name="analysis_results", schema="analysis"
+    )
     op.drop_column("analysis_results", "status", schema="analysis")

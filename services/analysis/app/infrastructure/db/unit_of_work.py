@@ -1,4 +1,3 @@
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.db.repositories.analysis_job import JobRepository

@@ -117,11 +117,15 @@ class RepositoryFetcher:
             )
 
         cmd = [
-            "git", "clone",
-            "--depth", str(depth),
-            "--branch", branch,
+            "git",
+            "clone",
+            "--depth",
+            str(depth),
+            "--branch",
+            branch,
             "--single-branch",
-            clone_url, dest,
+            clone_url,
+            dest,
         ]
 
         stderr_fd: int | None = None
@@ -180,10 +184,14 @@ class RepositoryFetcher:
                         detected.add(lang)
         return sorted(detected)
 
-    async def build_file_tree(self, repo_path: str) -> dict[str, list[dict[str, object]]]:
+    async def build_file_tree(
+        self, repo_path: str
+    ) -> dict[str, list[dict[str, object]]]:
         return await asyncio.to_thread(self._build_file_tree_sync, repo_path)
 
-    def _build_file_tree_sync(self, repo_path: str) -> dict[str, list[dict[str, object]]]:
+    def _build_file_tree_sync(
+        self, repo_path: str
+    ) -> dict[str, list[dict[str, object]]]:
         tree: dict[str, list[dict[str, object]]] = {}
         for root, dirs, files in os.walk(repo_path):
             dirs[:] = [d for d in dirs if d not in _EXCLUDED_DIRS]
@@ -231,14 +239,10 @@ class RepositoryFetcher:
                     continue
         return total
 
-    async def get_source_files(
-        self, repo_path: str
-    ) -> list[dict[str, object]]:
+    async def get_source_files(self, repo_path: str) -> list[dict[str, object]]:
         return await asyncio.to_thread(self._get_source_files_sync, repo_path)
 
-    def _get_source_files_sync(
-        self, repo_path: str
-    ) -> list[dict[str, object]]:
+    def _get_source_files_sync(self, repo_path: str) -> list[dict[str, object]]:
         files: list[dict[str, object]] = []
         for root, dirs, _ in os.walk(repo_path):
             dirs[:] = [d for d in dirs if d not in _EXCLUDED_DIRS]

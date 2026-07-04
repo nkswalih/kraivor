@@ -31,9 +31,7 @@ class CSharpParser(AbstractParser):
     _PROPERTY_DECL = re.compile(
         r"(?:public|private|protected|internal|static|virtual|override|new|required|readonly)\s+(\w+(?:<[^>]*>)?(?:\?|\[\])?)\s+(\w+)\s*\{\s*(?:get|set|init)\s*(?:;\s*(?:get|set|init)\s*)*;?\s*\}"
     )
-    _USING = re.compile(
-        r"using\s+(?:static\s+)?([\w.]+(?:\.\*)?)\s*(?:=\s*\w+)?\s*;"
-    )
+    _USING = re.compile(r"using\s+(?:static\s+)?([\w.]+(?:\.\*)?)\s*(?:=\s*\w+)?\s*;")
     _ROUTE = re.compile(
         r"\[Http(Get|Post|Put|Delete|Patch|Options|Head)"
         r"(?:\s*\(\s*[\"']([^\"']+)[\"']?\s*\))?\]"
@@ -42,9 +40,7 @@ class CSharpParser(AbstractParser):
         r"(?:app|builder)\.(?:MapGet|MapPost|MapPut|MapDelete|MapPatch|MapMethods)\([\"']([^\"']+)[\"']"
     )
     _ATTRIBUTE = re.compile(r"\[(\w+(?:\([^)]*\))?)\]")
-    _COMPLEXITY_KW = re.compile(
-        r"\b(?:if|for|foreach|while|switch|case|catch)\b"
-    )
+    _COMPLEXITY_KW = re.compile(r"\b(?:if|for|foreach|while|switch|case|catch)\b")
 
     async def parse(self, file_path: str, content: str) -> ParsedFile:
         parsed = ParsedFile(
@@ -116,7 +112,9 @@ class CSharpParser(AbstractParser):
             line_end = content[:body_end].count("\n") + 1
 
             sigs = []
-            for sig_match in re.finditer(r"(\w+)\s*\([^)]*\)\s*;", content[body_start:body_end], re.MULTILINE):
+            for sig_match in re.finditer(
+                r"(\w+)\s*\([^)]*\)\s*;", content[body_start:body_end], re.MULTILINE
+            ):
                 sigs.append(sig_match.group(1))
 
             parsed.classes.append(
@@ -193,7 +191,13 @@ class CSharpParser(AbstractParser):
             path = match.group(2) if match.group(2) else "/"
             line_start = content[: match.start()].count("\n") + 1
             parsed.routes.append(
-                ParsedRoute(path=path, method=method, handler_name="", line_start=line_start, line_end=line_start)
+                ParsedRoute(
+                    path=path,
+                    method=method,
+                    handler_name="",
+                    line_start=line_start,
+                    line_end=line_start,
+                )
             )
 
         for match in self._MINIMAL_ROUTE.finditer(content):
@@ -201,7 +205,13 @@ class CSharpParser(AbstractParser):
             line_start = content[: match.start()].count("\n") + 1
             method_str = match.group(0).split(".")[1].split("(")[0].upper()
             parsed.routes.append(
-                ParsedRoute(path=path, method=method_str, handler_name="", line_start=line_start, line_end=line_start)
+                ParsedRoute(
+                    path=path,
+                    method=method_str,
+                    handler_name="",
+                    line_start=line_start,
+                    line_end=line_start,
+                )
             )
 
     @staticmethod

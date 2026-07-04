@@ -63,7 +63,18 @@ class DeadCodeDetector:
         for pf in self.parsed_files:
             for func in pf.functions:
                 for dec in func.decorators:
-                    if any(kw in dec.lower() for kw in ("route", "app.", "router.", "api.", "celery", "task", "on_")):
+                    if any(
+                        kw in dec.lower()
+                        for kw in (
+                            "route",
+                            "app.",
+                            "router.",
+                            "api.",
+                            "celery",
+                            "task",
+                            "on_",
+                        )
+                    ):
                         self.entry_points.add(f"{func.name}:{pf.path}")
             for route in pf.routes:
                 self.entry_points.add(f"{route.handler_name}:{pf.path}")
@@ -81,7 +92,7 @@ class DeadCodeDetector:
                 for line_num, line in enumerate(lines, 1):
                     if line_num <= import_line:
                         continue
-                    pattern = rf'(?<![a-zA-Z_]){re.escape(import_name)}(?![a-zA-Z_])'
+                    pattern = rf"(?<![a-zA-Z_]){re.escape(import_name)}(?![a-zA-Z_])"
                     if re.search(pattern, line):
                         usage_found = True
                         break
@@ -90,22 +101,24 @@ class DeadCodeDetector:
                     for line_num, line in enumerate(lines, 1):
                         if line_num <= import_line:
                             continue
-                        pattern = rf'(?<![a-zA-Z_]){re.escape(alias)}(?![a-zA-Z_])'
+                        pattern = rf"(?<![a-zA-Z_]){re.escape(alias)}(?![a-zA-Z_])"
                         if re.search(pattern, line):
                             usage_found = True
                             break
                 if not usage_found:
                     ctx_start = max(0, import_line - 2)
                     ctx_end = min(len(lines), import_line + 1)
-                    self.dead_code.append(DeadCodeFinding(
-                        code_type=DeadCodeType.UNUSED_IMPORT,
-                        name=import_name,
-                        file_path=pf.path,
-                        line_start=import_line,
-                        context="\n".join(lines[ctx_start:ctx_end]),
-                        evidence=f"Import '{import_name}' is never used in this file",
-                        confidence=0.95,
-                    ))
+                    self.dead_code.append(
+                        DeadCodeFinding(
+                            code_type=DeadCodeType.UNUSED_IMPORT,
+                            name=import_name,
+                            file_path=pf.path,
+                            line_start=import_line,
+                            context="\n".join(lines[ctx_start:ctx_end]),
+                            evidence=f"Import '{import_name}' is never used in this file",
+                            confidence=0.95,
+                        )
+                    )
 
     def _detect_unused_functions(self) -> None:
         all_functions: dict[str, ParsedFile] = {}
@@ -114,7 +127,9 @@ class DeadCodeDetector:
             for func in pf.functions:
                 key = f"{func.name}:{pf.path}"
                 all_functions[key] = pf
-                func_name_to_path.setdefault(func.name, []).append((pf.path, func.line_start, func.line_end))
+                func_name_to_path.setdefault(func.name, []).append(
+                    (pf.path, func.line_start, func.line_end)
+                )
 
         all_calls: set[str] = set()
         for pf in self.parsed_files:
@@ -135,43 +150,47 @@ class DeadCodeDetector:
                 continue
             for fp, ls, le in func_name_to_path.get(func_name, []):
                 if fp == pf.path:
-                    self.dead_code.append(DeadCodeFinding(
-                        code_type=DeadCodeType.UNUSED_FUNCTION,
-                        name=func_name,
-                        file_path=fp,
-                        line_start=ls,
-                        line_end=le,
-                        evidence=f"Function '{func_name}' is defined but never called",
-                        confidence=0.90,
-                    ))
+                    self.dead_code.append(
+                        DeadCodeFinding(
+                            code_type=DeadCodeType.UNUSED_FUNCTION,
+                            name=func_name,
+                            file_path=fp,
+                            line_start=ls,
+                            line_end=le,
+                            evidence=f"Function '{func_name}' is defined but never called",
+                            confidence=0.90,
+                        )
+                    )
 
     def _detect_unused_variables(self) -> None:
         for pf in self.parsed_files:
             content = pf.content
-            assign_pattern = re.compile(r'^\s+(\w+)\s*=\s*', re.MULTILINE)
+            assign_pattern = re.compile(r"^\s+(\w+)\s*=\s*", re.MULTILINE)
             for match in assign_pattern.finditer(content):
                 var_name = match.group(1)
                 if var_name.startswith("_") or var_name.isupper():
                     continue
                 lines = content.split("\n")
-                assign_line = content[:match.start()].count("\n") + 1
+                assign_line = content[: match.start()].count("\n") + 1
                 usage_found = False
                 for ln, line in enumerate(lines, 1):
                     if ln <= assign_line:
                         continue
-                    var_pattern = rf'(?<![a-zA-Z_]){re.escape(var_name)}(?![a-zA-Z_])'
+                    var_pattern = rf"(?<![a-zA-Z_]){re.escape(var_name)}(?![a-zA-Z_])"
                     if re.search(var_pattern, line):
                         usage_found = True
                         break
                 if not usage_found:
-                    self.dead_code.append(DeadCodeFinding(
-                        code_type=DeadCodeType.UNUSED_VARIABLE,
-                        name=var_name,
-                        file_path=pf.path,
-                        line_start=assign_line,
-                        evidence=f"Variable '{var_name}' is assigned but never used",
-                        confidence=0.85,
-                    ))
+                    self.dead_code.append(
+                        DeadCodeFinding(
+                            code_type=DeadCodeType.UNUSED_VARIABLE,
+                            name=var_name,
+                            file_path=pf.path,
+                            line_start=assign_line,
+                            evidence=f"Variable '{var_name}' is assigned but never used",
+                            confidence=0.85,
+                        )
+                    )
 
     def _detect_orphan_classes(self) -> None:
         all_classes: dict[str, list[tuple[str, ParsedFile]]] = {}
@@ -189,7 +208,9 @@ class DeadCodeDetector:
                 for ln, line in enumerate(lines, 1):
                     if cls.line_start and ln == cls.line_start:
                         continue
-                    class_ref_pattern = re.compile(rf'(?<![a-zA-Z_.]){re.escape(cls.name)}(?![a-zA-Z_])')
+                    class_ref_pattern = re.compile(
+                        rf"(?<![a-zA-Z_.]){re.escape(cls.name)}(?![a-zA-Z_])"
+                    )
                     if class_ref_pattern.search(line):
                         usages += 1
                 import_usages = 0
@@ -197,39 +218,61 @@ class DeadCodeDetector:
                     if cls.name in imp.name or cls.name in imp.alias:
                         import_usages += 1
                 if usages <= import_usages:
-                    self.dead_code.append(DeadCodeFinding(
-                        code_type=DeadCodeType.ORPHAN_CLASS,
-                        name=cls.name,
-                        file_path=pf.path,
-                        line_start=cls.line_start,
-                        line_end=cls.line_end,
-                        evidence=f"Class '{cls.name}' is defined but may be unused",
-                        confidence=0.75,
-                    ))
+                    self.dead_code.append(
+                        DeadCodeFinding(
+                            code_type=DeadCodeType.ORPHAN_CLASS,
+                            name=cls.name,
+                            file_path=pf.path,
+                            line_start=cls.line_start,
+                            line_end=cls.line_end,
+                            evidence=f"Class '{cls.name}' is defined but may be unused",
+                            confidence=0.75,
+                        )
+                    )
 
     def _detect_unreachable_code(self) -> None:
         [
-            re.compile(r'return\s+.*\n\s+(?!return|raise|pass|$)'),
+            re.compile(r"return\s+.*\n\s+(?!return|raise|pass|$)"),
         ]
         for pf in self.parsed_files:
             content = pf.content
             lines = content.split("\n")
             for i, line in enumerate(lines, 1):
                 stripped = line.strip()
-                if (stripped.startswith("return") or stripped.startswith("raise")) and i < len(lines):
-                        next_line = lines[i]
-                        next_stripped = next_line.strip()
-                        indent_match = re.match(r'^(\s*)', line)
-                        next_indent_match = re.match(r'^(\s*)', next_line)
-                        if (indent_match and next_indent_match
-                                and len(next_indent_match.group(1)) >= len(indent_match.group(1))
-                                and next_stripped
-                                and not next_stripped.startswith(("return", "raise", "pass", "#", "def ", "class ", "@", "except", "finally"))):
-                            self.dead_code.append(DeadCodeFinding(
+                if (
+                    stripped.startswith("return") or stripped.startswith("raise")
+                ) and i < len(lines):
+                    next_line = lines[i]
+                    next_stripped = next_line.strip()
+                    indent_match = re.match(r"^(\s*)", line)
+                    next_indent_match = re.match(r"^(\s*)", next_line)
+                    if (
+                        indent_match
+                        and next_indent_match
+                        and len(next_indent_match.group(1))
+                        >= len(indent_match.group(1))
+                        and next_stripped
+                        and not next_stripped.startswith(
+                            (
+                                "return",
+                                "raise",
+                                "pass",
+                                "#",
+                                "def ",
+                                "class ",
+                                "@",
+                                "except",
+                                "finally",
+                            )
+                        )
+                    ):
+                        self.dead_code.append(
+                            DeadCodeFinding(
                                 code_type=DeadCodeType.UNREACHABLE_CODE,
                                 name="unreachable_statement",
                                 file_path=pf.path,
                                 line_start=i + 1,
                                 evidence=f"Code after '{stripped.split(' ')[0]}' on line {i} is unreachable",
                                 confidence=0.95,
-                            ))
+                            )
+                        )

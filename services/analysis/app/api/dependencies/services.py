@@ -18,7 +18,7 @@ async def get_uow(
     try:
         yield uow
     except BaseException:
-        await uow.__aexit__(*__import__('sys').exc_info())
+        await uow.__aexit__(*__import__("sys").exc_info())
         raise
     await uow.__aexit__(None, None, None)
 

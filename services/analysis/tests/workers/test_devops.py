@@ -34,7 +34,9 @@ class TestAnalyzeDockerfile:
         assert "missing_healthcheck" in types
 
     async def test_detects_running_as_root(self) -> None:
-        content = "FROM python:3.11-slim\nRUN apt-get update\nCMD ['python', 'app.py']\n"
+        content = (
+            "FROM python:3.11-slim\nRUN apt-get update\nCMD ['python', 'app.py']\n"
+        )
         pfs = [_make_pf("Dockerfile", content)]
         analyzer = DevopsAnalyzer(pfs)
         results = await analyzer.scan_all()
@@ -45,7 +47,9 @@ class TestAnalyzeDockerfile:
         pfs = [_make_pf("app.py", "print('hello')")]
         analyzer = DevopsAnalyzer(pfs)
         results = await analyzer.scan_all()
-        dockerfile_types = [r.devops_type for r in results if r.category == "containerization"]
+        dockerfile_types = [
+            r.devops_type for r in results if r.category == "containerization"
+        ]
         assert len(dockerfile_types) == 0
 
 
@@ -246,8 +250,14 @@ class TestEdgeCases:
     async def test_mixed_content_all_modules_run(self) -> None:
         pfs = [
             _make_pf("Dockerfile", "FROM python:3.11-slim\nCMD python app.py\n"),
-            _make_pf("docker-compose.yml", "version: '3'\nservices:\n  web:\n    image: nginx\n"),
-            _make_pf(".github/workflows/ci.yml", "name: CI\non: [push]\njobs:\n  build:\n    steps:\n      - run: build\n"),
+            _make_pf(
+                "docker-compose.yml",
+                "version: '3'\nservices:\n  web:\n    image: nginx\n",
+            ),
+            _make_pf(
+                ".github/workflows/ci.yml",
+                "name: CI\non: [push]\njobs:\n  build:\n    steps:\n      - run: build\n",
+            ),
         ]
         analyzer = DevopsAnalyzer(pfs)
         results = await analyzer.scan_all()

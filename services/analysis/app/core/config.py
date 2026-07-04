@@ -42,8 +42,12 @@ class S3Settings(BaseModel):
 class JWTSettings(BaseModel):
     jwks_url: str = "http://identity:8001/.well-known/jwks.json"
     algorithm: Literal[
-        "RS256", "RS384", "RS512",
-        "ES256", "ES384", "ES512",
+        "RS256",
+        "RS384",
+        "RS512",
+        "ES256",
+        "ES384",
+        "ES512",
     ] = "RS256"
     audience: str = "kraivor"
     issuer: str = "kraivor-identity"

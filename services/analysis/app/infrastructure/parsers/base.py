@@ -1,4 +1,3 @@
-
 from app.core.logging import get_logger
 from app.domain.contracts.parser import AbstractParser, ParsedFile
 

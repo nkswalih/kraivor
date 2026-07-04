@@ -8,9 +8,7 @@ class DomainEvent:
     """Base domain event."""
 
     event_id: UUID = field(default_factory=uuid4)
-    occurred_at: datetime = field(
-        default_factory=lambda: datetime.now(UTC)
-    )
+    occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     event_type: str = ""
     version: int = 1
 

@@ -38,7 +38,9 @@ class EndpointMetric:
             "bottleneck_severity": "high" if self.estimated_rpm < 500 else "medium",
             "bottleneck_detail": "; ".join(
                 f"{d['type']}: -{d['rpm_impact']} RPM" for d in self.deductions
-            ) if self.deductions else None,
+            )
+            if self.deductions
+            else None,
             "confidence": self.confidence,
         }
 
@@ -63,15 +65,11 @@ class RPMCalculator:
                 endpoint_metric = self._analyze_endpoint(route, pf)
                 metrics.endpoints.append(endpoint_metric)
         if metrics.endpoints:
-            metrics.overall_rpm = min(
-                em.estimated_rpm for em in metrics.endpoints
-            )
+            metrics.overall_rpm = min(em.estimated_rpm for em in metrics.endpoints)
             metrics.breaks_at_concurrent_users = min(
                 em.max_concurrent_users for em in metrics.endpoints
             )
-            metrics.overall_confidence = min(
-                em.confidence for em in metrics.endpoints
-            )
+            metrics.overall_confidence = min(em.confidence for em in metrics.endpoints)
             all_bottlenecks: list[str] = []
             for em in metrics.endpoints:
                 all_bottlenecks.extend(em.bottlenecks)
@@ -88,20 +86,32 @@ class RPMCalculator:
 
         sync_calls = self._count_sync_external_calls(code)
         if sync_calls > 0:
-            deductions.append(("sync_external_call", RPM_DEDUCTIONS["sync_external_call"] * sync_calls))
+            deductions.append(
+                (
+                    "sync_external_call",
+                    RPM_DEDUCTIONS["sync_external_call"] * sync_calls,
+                )
+            )
 
         if self._has_unbounded_query(code):
             deductions.append(("unbounded_query", RPM_DEDUCTIONS["unbounded_query"]))
 
         db_queries = self._count_db_queries(code)
         if db_queries > 5:
-            deductions.append(("many_db_queries", RPM_DEDUCTIONS["many_db_queries"] * (db_queries - 5)))
+            deductions.append(
+                (
+                    "many_db_queries",
+                    RPM_DEDUCTIONS["many_db_queries"] * (db_queries - 5),
+                )
+            )
 
         if self._has_sync_in_async(route, code):
             deductions.append(("sync_in_async", RPM_DEDUCTIONS["sync_in_async"]))
 
         if self._has_file_io(code):
-            deductions.append(("file_io_in_request", RPM_DEDUCTIONS["file_io_in_request"]))
+            deductions.append(
+                ("file_io_in_request", RPM_DEDUCTIONS["file_io_in_request"])
+            )
 
         # New detections
         if self._has_high_cpu_complexity(code):
@@ -112,7 +122,12 @@ class RPMCalculator:
 
         serialization = self._count_serialization(code)
         if serialization > 0:
-            deductions.append(("serialization_bottleneck", RPM_DEDUCTIONS["serialization_bottleneck"] * serialization))
+            deductions.append(
+                (
+                    "serialization_bottleneck",
+                    RPM_DEDUCTIONS["serialization_bottleneck"] * serialization,
+                )
+            )
 
         if self._has_no_caching(code):
             deductions.append(("no_caching", RPM_DEDUCTIONS["no_caching"]))
@@ -131,8 +146,12 @@ class RPMCalculator:
 
         has_route_code = bool(route.code and len(route.code.strip()) > 0)
         has_content = bool(pf.content and len(pf.content.strip()) > 0)
-        signal_count = len([d for d, _ in deductions if d not in ("no_caching", "memory_pressure")])
-        confidence = self._compute_confidence(has_route_code, has_content, db_queries, sync_calls, signal_count)
+        signal_count = len(
+            [d for d, _ in deductions if d not in ("no_caching", "memory_pressure")]
+        )
+        confidence = self._compute_confidence(
+            has_route_code, has_content, db_queries, sync_calls, signal_count
+        )
 
         return EndpointMetric(
             endpoint=route.path,
@@ -148,7 +167,12 @@ class RPMCalculator:
         )
 
     def _compute_confidence(
-        self, has_code: bool, has_content: bool, db_queries: int, sync_calls: int, signals: int,
+        self,
+        has_code: bool,
+        has_content: bool,
+        db_queries: int,
+        sync_calls: int,
+        signals: int,
     ) -> float:
         base = 0.5
         if has_code:
@@ -167,17 +191,19 @@ class RPMCalculator:
         target = code or full_content
         if not target:
             return False
-        loop_pattern = r'for\s+\w+\s+in\s+\w+\s*:'
-        query_pattern = r'\.(?:get|filter|all|first|fetch|select)\s*\('
-        return bool(re.search(loop_pattern, target)) and bool(re.search(query_pattern, target))
+        loop_pattern = r"for\s+\w+\s+in\s+\w+\s*:"
+        query_pattern = r"\.(?:get|filter|all|first|fetch|select)\s*\("
+        return bool(re.search(loop_pattern, target)) and bool(
+            re.search(query_pattern, target)
+        )
 
     def _count_sync_external_calls(self, code: str) -> int:
         if not code:
             return 0
         patterns = [
-            r'requests\.(?:get|post|put|delete)\(',
-            r'urllib\.request\.urlopen\(',
-            r'httpx\.(?:get|post|put|delete)\(',
+            r"requests\.(?:get|post|put|delete)\(",
+            r"urllib\.request\.urlopen\(",
+            r"httpx\.(?:get|post|put|delete)\(",
         ]
         count = 0
         for p in patterns:
@@ -187,17 +213,19 @@ class RPMCalculator:
     def _has_unbounded_query(self, code: str) -> bool:
         if not code:
             return False
-        has_all = bool(re.search(r'\.all\s*\(\)', code))
-        has_limit = bool(re.search(r'\.limit\s*\(', code)) or bool(re.search(r':limit\s*=>', code))
+        has_all = bool(re.search(r"\.all\s*\(\)", code))
+        has_limit = bool(re.search(r"\.limit\s*\(", code)) or bool(
+            re.search(r":limit\s*=>", code)
+        )
         return has_all and not has_limit
 
     def _count_db_queries(self, code: str) -> int:
         if not code:
             return 0
         patterns = [
-            r'\.(?:get|filter|all|first|fetch|select|query|execute)\s*\(',
-            r'\.(?:save|create|update|delete|bulk_create)\s*\(',
-            r'\.(?:filter|exclude|annotate|aggregate)\s*\(',
+            r"\.(?:get|filter|all|first|fetch|select|query|execute)\s*\(",
+            r"\.(?:save|create|update|delete|bulk_create)\s*\(",
+            r"\.(?:filter|exclude|annotate|aggregate)\s*\(",
         ]
         count = 0
         for p in patterns:
@@ -207,7 +235,9 @@ class RPMCalculator:
     def _has_sync_in_async(self, route: ParsedRoute, code: str) -> bool:
         if not code:
             return False
-        is_async = bool(re.search(r'async\s+def\s+' + re.escape(route.handler_name), code))
+        is_async = bool(
+            re.search(r"async\s+def\s+" + re.escape(route.handler_name), code)
+        )
         sync_calls = self._count_sync_external_calls(code)
         return is_async and sync_calls > 0
 
@@ -215,35 +245,40 @@ class RPMCalculator:
         if not code:
             return False
         patterns = [
-            r'open\s*\(',
-            r'\.read\s*\(',
-            r'\.write\s*\(',
-            r'Path\(',
-            r'os\.path\.',
+            r"open\s*\(",
+            r"\.read\s*\(",
+            r"\.write\s*\(",
+            r"Path\(",
+            r"os\.path\.",
         ]
         return any(re.search(p, code) for p in patterns)
 
     def _has_high_cpu_complexity(self, code: str) -> bool:
         if not code:
             return False
-        nested_loops = len(re.findall(r'for\s+\w+\s+in\s+\w+\s*:', code))
-        heavy_ops = len(re.findall(r'(?:sorted|filter|map|reduce|comprehension)', code))
+        nested_loops = len(re.findall(r"for\s+\w+\s+in\s+\w+\s*:", code))
+        heavy_ops = len(re.findall(r"(?:sorted|filter|map|reduce|comprehension)", code))
         return (nested_loops >= 2) or (nested_loops >= 1 and heavy_ops >= 2)
 
     def _has_memory_pressure(self, code: str) -> bool:
         if not code:
             return False
-        large_alloc = bool(re.search(r'\[\s*\]\s*=\s*\[\s*\]|list\s*\(\s*range|\[\s*\w+\s+for\s+\w+\s+in\s+range', code))
-        file_read = bool(re.search(r'\.read\s*\(\s*\)', code))
+        large_alloc = bool(
+            re.search(
+                r"\[\s*\]\s*=\s*\[\s*\]|list\s*\(\s*range|\[\s*\w+\s+for\s+\w+\s+in\s+range",
+                code,
+            )
+        )
+        file_read = bool(re.search(r"\.read\s*\(\s*\)", code))
         return large_alloc or file_read
 
     def _memory_pressure_impact(self, code: str) -> int:
         impact = 0
-        if re.search(r'\.read\s*\(\s*\)', code):
+        if re.search(r"\.read\s*\(\s*\)", code):
             impact += 100
-        if re.search(r'list\s*\(\s*range', code):
+        if re.search(r"list\s*\(\s*range", code):
             impact += 50
-        if re.search(r'\[\s*\w+\s+for\s+\w+\s+in\s+range', code):
+        if re.search(r"\[\s*\w+\s+for\s+\w+\s+in\s+range", code):
             impact += 50
         return impact
 
@@ -251,14 +286,14 @@ class RPMCalculator:
         if not code:
             return 0
         patterns = [
-            r'json\.(?:dumps|loads)\(',
-            r'pickle\.(?:dump|load|dumps|loads)\(',
-            r'marshal\.(?:dump|load)\(',
-            r'yaml\.(?:dump|load|safe_load)\(',
-            r'xml\.(?:etree|dom|sax)',
-            r'serialize|deserialize',
-            r'\.serialize\(',
-            r'\.to_json\(',
+            r"json\.(?:dumps|loads)\(",
+            r"pickle\.(?:dump|load|dumps|loads)\(",
+            r"marshal\.(?:dump|load)\(",
+            r"yaml\.(?:dump|load|safe_load)\(",
+            r"xml\.(?:etree|dom|sax)",
+            r"serialize|deserialize",
+            r"\.serialize\(",
+            r"\.to_json\(",
         ]
         count = 0
         for p in patterns:
@@ -268,17 +303,21 @@ class RPMCalculator:
     def _has_no_caching(self, code: str) -> bool:
         if not code:
             return False
-        has_cache = bool(re.search(r'\b(?:cache|memoize|lru_cache|redis|memcache)\b', code, re.IGNORECASE))
+        has_cache = bool(
+            re.search(
+                r"\b(?:cache|memoize|lru_cache|redis|memcache)\b", code, re.IGNORECASE
+            )
+        )
         has_db_or_compute = bool(
-            re.search(r'\.(?:get|filter|all|fetch|select|query)\s*\(', code)
-            or re.search(r'(?:sorted|filter|map|reduce|comprehension)', code)
+            re.search(r"\.(?:get|filter|all|fetch|select|query)\s*\(", code)
+            or re.search(r"(?:sorted|filter|map|reduce|comprehension)", code)
         )
         return has_db_or_compute and not has_cache
 
     def _loop_complexity(self, code: str) -> int:
         if not code:
             return 0
-        loops = re.findall(r'for\s+\w+\s+in\s+\w+\s*:', code)
+        loops = re.findall(r"for\s+\w+\s+in\s+\w+\s*:", code)
         nested = len(loops)
         if nested >= 3:
             return 5
@@ -288,18 +327,28 @@ class RPMCalculator:
             return 1
         return 0
 
-    def _estimate_p50_latency(self, db_queries: int, sync_calls: int, code: str, loop_score: int = 0) -> int:
+    def _estimate_p50_latency(
+        self, db_queries: int, sync_calls: int, code: str, loop_score: int = 0
+    ) -> int:
         base = LATENCY_BASE_MS
         unindexed = 0
         if code:
-            unindexed = len(re.findall(r'\.(?:all|filter)\s*\(', code))
+            unindexed = len(re.findall(r"\.(?:all|filter)\s*\(", code))
         db_latency = (db_queries - unindexed) * 5 + unindexed * 20
         sync_latency = sync_calls * 50
         loop_latency = loop_score * 15
         serialization = self._count_serialization(code) * 10
         memory = 20 if self._has_memory_pressure(code) else 0
         complexity = 30 if self._has_high_cpu_complexity(code) else 0
-        return base + db_latency + sync_latency + loop_latency + serialization + memory + complexity
+        return (
+            base
+            + db_latency
+            + sync_latency
+            + loop_latency
+            + serialization
+            + memory
+            + complexity
+        )
 
     def _calculate_breakpoint(self, rpm: int, p50_ms: int) -> int:
         response_time_sec = p50_ms / 1000

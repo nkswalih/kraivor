@@ -17,7 +17,9 @@ class ReliabilityFindingRepository:
         return len(models)
 
     async def get_by_job(self, job_id: UUID) -> list[dict[str, object]]:
-        stmt = select(ReliabilityFindingModel).where(ReliabilityFindingModel.job_id == job_id)
+        stmt = select(ReliabilityFindingModel).where(
+            ReliabilityFindingModel.job_id == job_id
+        )
         result = await self._session.execute(stmt)
         return [
             {

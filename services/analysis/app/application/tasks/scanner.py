@@ -99,7 +99,12 @@ async def task_parse(prev_result: dict[str, object]) -> dict[str, object]:
     async with UnitOfWork() as uow:
         producer = EventProducer()
         metadata = await handle_stage_parse(
-            cmd, parser, uow, producer, repo_path, files,
+            cmd,
+            parser,
+            uow,
+            producer,
+            repo_path,
+            files,
         )
         await uow.commit()
 
@@ -121,7 +126,11 @@ async def task_rules(prev_result: dict[str, object]) -> dict[str, object]:
 
         producer = EventProducer()
         summary = await handle_stage_rules(
-            cmd, _REGISTRY, uow, producer, parsed_files,
+            cmd,
+            _REGISTRY,
+            uow,
+            producer,
+            parsed_files,
         )
         await uow.commit()
 
@@ -154,8 +163,10 @@ async def task_save_findings(prev_result: dict[str, object]) -> dict[str, object
                     violations.extend(v)
                 except Exception:
                     logger.warning(
-                        "rule_failed", rule_id=rule.rule_id,
-                        file=pf.path, job_id=job_id,
+                        "rule_failed",
+                        rule_id=rule.rule_id,
+                        file=pf.path,
+                        job_id=job_id,
                     )
 
         findings = await handle_save_findings(cmd, uow, violations, job)
@@ -183,9 +194,13 @@ async def task_save_findings(prev_result: dict[str, object]) -> dict[str, object
 
 async def task_score(prev_result: dict[str, object]) -> dict[str, object]:
     job_id = cast(str, prev_result["job_id"])
-    rule_violations = cast(list[dict[str, object]], prev_result.get("rule_violations", []))
+    rule_violations = cast(
+        list[dict[str, object]], prev_result.get("rule_violations", [])
+    )
     total_files = cast(int, prev_result.get("total_files", 0))
-    cmd = ProcessStageCommand(job_id=UUID(job_id), stage="score", total_files=total_files)
+    cmd = ProcessStageCommand(
+        job_id=UUID(job_id), stage="score", total_files=total_files
+    )
 
     from app.domain.rules.base import RuleViolation as RuleV
 
@@ -235,8 +250,17 @@ async def task_finalize(prev_result: dict[str, object]) -> dict[str, object]:
         producer = EventProducer()
         storage = S3Storage()
         report = await handle_stage_finalize(
-            cmd, uow, producer, storage, job, score, findings,
-            languages, total_files, total_lines, duration_seconds,
+            cmd,
+            uow,
+            producer,
+            storage,
+            job,
+            score,
+            findings,
+            languages,
+            total_files,
+            total_lines,
+            duration_seconds,
         )
         await uow.commit()
 
@@ -288,7 +312,11 @@ async def task_perf(prev_result: dict[str, object]) -> dict[str, object]:
 async def task_simulation(prev_result: dict[str, object]) -> dict[str, object]:
     job_id = cast(str, prev_result["job_id"])
     perf_metrics_raw = prev_result.get("perf_metrics")
-    perf_metrics = cast(PerformanceMetrics, perf_metrics_raw) if perf_metrics_raw is not None else None
+    perf_metrics = (
+        cast(PerformanceMetrics, perf_metrics_raw)
+        if perf_metrics_raw is not None
+        else None
+    )
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="simulation")
 
     async with UnitOfWork() as uow:
@@ -302,7 +330,9 @@ async def task_simulation(prev_result: dict[str, object]) -> dict[str, object]:
 
 async def task_guide_gen(prev_result: dict[str, object]) -> dict[str, object]:
     job_id = cast(str, prev_result["job_id"])
-    violations_raw = cast(list[dict[str, object]], prev_result.get("rule_violations", []))
+    violations_raw = cast(
+        list[dict[str, object]], prev_result.get("rule_violations", [])
+    )
     score_raw = prev_result.get("score")
     perf_metrics_raw = prev_result.get("perf_metrics")
     simulation_results_raw = prev_result.get("simulation_results")
@@ -326,17 +356,37 @@ async def task_guide_gen(prev_result: dict[str, object]) -> dict[str, object]:
     ]
 
     score = Score(**score_raw) if score_raw else Score(overall=100)  # type: ignore[arg-type]
-    perf_metrics = cast(PerformanceMetrics, perf_metrics_raw) if perf_metrics_raw is not None else None
-    simulation_results = cast(list[dict[str, object]], simulation_results_raw) if simulation_results_raw is not None else None
-    dead_code_results = cast(list[DeadCodeFinding], dead_code_results_raw) if dead_code_results_raw is not None else None
-    error_results = cast(list[ErrorFinding], error_results_raw) if error_results_raw is not None else None
+    perf_metrics = (
+        cast(PerformanceMetrics, perf_metrics_raw)
+        if perf_metrics_raw is not None
+        else None
+    )
+    simulation_results = (
+        cast(list[dict[str, object]], simulation_results_raw)
+        if simulation_results_raw is not None
+        else None
+    )
+    dead_code_results = (
+        cast(list[DeadCodeFinding], dead_code_results_raw)
+        if dead_code_results_raw is not None
+        else None
+    )
+    error_results = (
+        cast(list[ErrorFinding], error_results_raw)
+        if error_results_raw is not None
+        else None
+    )
 
     cmd = ProcessStageCommand(job_id=UUID(job_id), stage="guide_gen")
 
     async with UnitOfWork() as uow:
         producer = EventProducer()
         guide = await handle_stage_guide_gen(
-            cmd, uow, producer, violations, score,
+            cmd,
+            uow,
+            producer,
+            violations,
+            score,
             perf_metrics=perf_metrics,
             simulation_results=simulation_results,
             dead_code_results=dead_code_results,

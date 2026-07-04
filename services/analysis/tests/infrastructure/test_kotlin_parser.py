@@ -30,7 +30,11 @@ interface UserRepository {
 """
         result = await parser.parse("test.kt", content)
         assert any(c.name == "UserRepository" for c in result.classes)
-        assert any("interface" in c.decorators for c in result.classes if c.name == "UserRepository")
+        assert any(
+            "interface" in c.decorators
+            for c in result.classes
+            if c.name == "UserRepository"
+        )
 
     async def test_parse_functions(self, parser: KotlinParser) -> None:
         content = """

@@ -1,4 +1,3 @@
-
 # mypy: disable-error-code="unused-ignore"
 import redis.asyncio as aioredis
 
@@ -52,9 +51,7 @@ class RedisCache:
         result = await self._client.get(key)
         return result.decode() if isinstance(result, bytes) else result
 
-    async def set(
-        self, key: str, value: str, ttl: int | None = None
-    ) -> None:
+    async def set(self, key: str, value: str, ttl: int | None = None) -> None:
         if self._client is None:
             return
         if ttl:
@@ -92,9 +89,7 @@ class RedisCache:
             return 0
         return await self._client.lpush(key, *values)  # type: ignore[no-any-return,misc]
 
-    async def lrange(
-        self, key: str, start: int = 0, end: int = -1
-    ) -> list[str]:
+    async def lrange(self, key: str, start: int = 0, end: int = -1) -> list[str]:
         if self._client is None:
             return []
         result = await self._client.lrange(key, start, end)  # type: ignore[misc]

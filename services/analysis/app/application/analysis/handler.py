@@ -64,21 +64,23 @@ async def handle_start_analysis(
     job_id = uuid4()
     settings = get_settings()
 
-    await uow.jobs.create({
-        "id": job_id,
-        "repo_id": cmd.repo_id,
-        "workspace_id": cmd.workspace_id,
-        "triggered_by": cmd.triggered_by,
-        "trigger_type": cmd.trigger_type,
-        "repo_url": cmd.repo_url,
-        "branch": cmd.branch,
-        "deep_scan": cmd.deep_scan,
-        "simulate_users": cmd.simulate_users or settings.analysis.simulate_users,
-        "status": JobStatus.QUEUED,
-        "progress_pct": 0,
-        "progress_message": "Analysis queued",
-        "total_findings": 0,
-    })
+    await uow.jobs.create(
+        {
+            "id": job_id,
+            "repo_id": cmd.repo_id,
+            "workspace_id": cmd.workspace_id,
+            "triggered_by": cmd.triggered_by,
+            "trigger_type": cmd.trigger_type,
+            "repo_url": cmd.repo_url,
+            "branch": cmd.branch,
+            "deep_scan": cmd.deep_scan,
+            "simulate_users": cmd.simulate_users or settings.analysis.simulate_users,
+            "status": JobStatus.QUEUED,
+            "progress_pct": 0,
+            "progress_message": "Analysis queued",
+            "total_findings": 0,
+        }
+    )
 
     if producer:
         event = AnalysisRequested(
@@ -107,15 +109,23 @@ async def handle_stage_clone(
         raise NotFoundError(f"Job {cmd.job_id} not found")
 
     await uow.jobs.update_status(
-        cmd.job_id, JobStatus.CLONING, progress_pct=10,
+        cmd.job_id,
+        JobStatus.CLONING,
+        progress_pct=10,
         progress_message="Cloning repository...",
     )
 
-    await producer.publish(AnalysisProgressed(
-        job_id=cmd.job_id, status=JobStatus.CLONING, progress_pct=10,
-    ))
+    await producer.publish(
+        AnalysisProgressed(
+            job_id=cmd.job_id,
+            status=JobStatus.CLONING,
+            progress_pct=10,
+        )
+    )
 
-    token = get_settings().git.token.get_secret_value() if get_settings().git.token else ""
+    token = (
+        get_settings().git.token.get_secret_value() if get_settings().git.token else ""
+    )
     repo_path = await fetcher.clone(
         clone_url=cast(str, job["repo_url"]),
         branch=cast(str, job["branch"]),
@@ -132,7 +142,9 @@ async def handle_stage_clone(
     detection = await detector.detect(repo_path)
 
     await uow.jobs.update_status(
-        cmd.job_id, JobStatus.CLONING, progress_pct=10,
+        cmd.job_id,
+        JobStatus.CLONING,
+        progress_pct=10,
         progress_message=f"Found {len(files)} files across {len(languages)} languages",
         total_files=len(files),
         total_lines=loc,
@@ -194,13 +206,18 @@ async def handle_stage_parse(
         if (i + 1) % 5 == 0 or i == total - 1:
             pct = 25 + int(35 * (i + 1) / total)
             await _push_progress(
-                cmd.job_id, JobStatus.PARSING, pct,
+                cmd.job_id,
+                JobStatus.PARSING,
+                pct,
                 f"Parsing files... ({i + 1}/{total})",
             )
 
     if errors:
         logger.warning(
-            "parse_errors", count=errors, total=len(files), job_id=str(cmd.job_id),
+            "parse_errors",
+            count=errors,
+            total=len(files),
+            job_id=str(cmd.job_id),
         )
 
     metadata = [
@@ -218,8 +235,12 @@ async def handle_stage_parse(
     ]
 
     await _push_progress(
-        cmd.job_id, JobStatus.PARSING, 60,
-        f"Parsed {len(parsed)} files ({errors} errors)" if errors else f"Parsed {len(parsed)} files",
+        cmd.job_id,
+        JobStatus.PARSING,
+        60,
+        f"Parsed {len(parsed)} files ({errors} errors)"
+        if errors
+        else f"Parsed {len(parsed)} files",
     )
 
     return metadata, parsed
@@ -245,18 +266,24 @@ async def handle_stage_rules(
         for rule in applicable:
             try:
                 rule_violations = await rule.analyze(
-                    pf.path, pf.content, ast_data,
+                    pf.path,
+                    pf.content,
+                    ast_data,
                 )
                 violations.extend(rule_violations)
             except Exception:
                 logger.warning(
-                    "rule_failed", rule_id=rule.rule_id,
-                    file=pf.path, job_id=str(cmd.job_id),
+                    "rule_failed",
+                    rule_id=rule.rule_id,
+                    file=pf.path,
+                    job_id=str(cmd.job_id),
                 )
 
         if (i + 1) % 5 == 0 or i == total - 1:
             await _push_progress(
-                cmd.job_id, JobStatus.RULES, 50 + int(10 * (i + 1) / total),
+                cmd.job_id,
+                JobStatus.RULES,
+                50 + int(10 * (i + 1) / total),
                 f"Analyzing {pf.path.split('/')[-1]}... ({i + 1}/{total})",
             )
 
@@ -266,7 +293,9 @@ async def handle_stage_rules(
             severity_counts[v.severity] += 1
 
     await uow.jobs.update_status(
-        cmd.job_id, JobStatus.RULES, progress_pct=60,
+        cmd.job_id,
+        JobStatus.RULES,
+        progress_pct=60,
         progress_message=f"Found {len(violations)} issues",
         total_findings=len(violations),
         critical_count=severity_counts.get(Severity.CRITICAL, 0),
@@ -291,7 +320,9 @@ async def handle_stage_rules(
         for v in violations
     ]
 
-    return cast(tuple[list[dict[str, object]], list[RuleViolation]], (summary, violations))
+    return cast(
+        tuple[list[dict[str, object]], list[RuleViolation]], (summary, violations)
+    )
 
 
 def _dedup_violations(violations: list[RuleViolation]) -> list[RuleViolation]:
@@ -386,80 +417,90 @@ async def handle_stage_score(
     # Dead code findings → maintainability violations (medium severity)
     if dead_code_results:
         for d in dead_code_results:
-            scorer_violations.append(Violation(
-                rule_id=f"DEAD-{d.code_type.upper()}",
-                category="maintainability",
-                severity="medium",
-                title=f"Dead code: {d.name}",
-                description=f"Unused {d.code_type}: {d.name}",
-                file_path=d.file_path,
-                line_start=d.line_start,
-                line_end=d.line_end,
-            ))
+            scorer_violations.append(
+                Violation(
+                    rule_id=f"DEAD-{d.code_type.upper()}",
+                    category="maintainability",
+                    severity="medium",
+                    title=f"Dead code: {d.name}",
+                    description=f"Unused {d.code_type}: {d.name}",
+                    file_path=d.file_path,
+                    line_start=d.line_start,
+                    line_end=d.line_end,
+                )
+            )
 
     # Error scanner findings → reliability violations
     if error_results:
         for e in error_results:
-            scorer_violations.append(Violation(
-                rule_id=f"ERR-{e.error_type.upper()}",
-                category="reliability",
-                severity=e.severity,
-                title=e.title,
-                description=e.description,
-                file_path=e.file_path,
-                line_start=e.line_start,
-                line_end=e.line_end,
-                code_snippet=e.code_snippet or "",
-                recommendation=e.recommendation or "",
-            ))
+            scorer_violations.append(
+                Violation(
+                    rule_id=f"ERR-{e.error_type.upper()}",
+                    category="reliability",
+                    severity=e.severity,
+                    title=e.title,
+                    description=e.description,
+                    file_path=e.file_path,
+                    line_start=e.line_start,
+                    line_end=e.line_end,
+                    code_snippet=e.code_snippet or "",
+                    recommendation=e.recommendation or "",
+                )
+            )
 
     # Dedicated reliability detector findings
     if reliability_results:
         for r in reliability_results:
-            scorer_violations.append(Violation(
-                rule_id=f"REL-{r.reliability_type.upper()}",
-                category="reliability",
-                severity=r.severity,
-                title=r.title,
-                description=r.description,
-                file_path=r.file_path,
-                line_start=r.line_start,
-                line_end=r.line_end,
-                code_snippet=r.code_snippet or "",
-                recommendation=r.recommendation or "",
-            ))
+            scorer_violations.append(
+                Violation(
+                    rule_id=f"REL-{r.reliability_type.upper()}",
+                    category="reliability",
+                    severity=r.severity,
+                    title=r.title,
+                    description=r.description,
+                    file_path=r.file_path,
+                    line_start=r.line_start,
+                    line_end=r.line_end,
+                    code_snippet=r.code_snippet or "",
+                    recommendation=r.recommendation or "",
+                )
+            )
 
     # DevOps engine findings
     if devops_results:
         for devops_item in devops_results:
-            scorer_violations.append(Violation(
-                rule_id=f"DEVOPS-{devops_item.devops_type.upper()}",
-                category="devops",
-                severity=devops_item.severity,
-                title=devops_item.title,
-                description=devops_item.description,
-                file_path=devops_item.file_path,
-                line_start=devops_item.line_start,
-                line_end=devops_item.line_end,
-                code_snippet=devops_item.code_snippet or "",
-                recommendation=devops_item.recommendation or "",
-            ))
+            scorer_violations.append(
+                Violation(
+                    rule_id=f"DEVOPS-{devops_item.devops_type.upper()}",
+                    category="devops",
+                    severity=devops_item.severity,
+                    title=devops_item.title,
+                    description=devops_item.description,
+                    file_path=devops_item.file_path,
+                    line_start=devops_item.line_start,
+                    line_end=devops_item.line_end,
+                    code_snippet=devops_item.code_snippet or "",
+                    recommendation=devops_item.recommendation or "",
+                )
+            )
 
     # Maintainability engine findings
     if maintainability_results:
         for m in maintainability_results:
-            scorer_violations.append(Violation(
-                rule_id=f"MAINT-{m.maintainability_type.upper()}",
-                category="maintainability",
-                severity=m.severity,
-                title=m.title,
-                description=m.description,
-                file_path=m.file_path,
-                line_start=m.line_start,
-                line_end=m.line_end,
-                code_snippet=m.code_snippet or "",
-                recommendation=m.recommendation or "",
-            ))
+            scorer_violations.append(
+                Violation(
+                    rule_id=f"MAINT-{m.maintainability_type.upper()}",
+                    category="maintainability",
+                    severity=m.severity,
+                    title=m.title,
+                    description=m.description,
+                    file_path=m.file_path,
+                    line_start=m.line_start,
+                    line_end=m.line_end,
+                    code_snippet=m.code_snippet or "",
+                    recommendation=m.recommendation or "",
+                )
+            )
 
     # Build capacity metrics from perf + simulation data
     from app.domain.contracts.scorer import CapacityMetrics
@@ -482,13 +523,17 @@ async def handle_stage_score(
         capacity = CapacityMetrics(
             has_data=True,
             simulation_status=sim_status,
-            breaks_at_users=perf_metrics.breaks_at_concurrent_users if perf_metrics else None,
+            breaks_at_users=perf_metrics.breaks_at_concurrent_users
+            if perf_metrics
+            else None,
             overall_rpm=perf_metrics.overall_rpm if perf_metrics else None,
             bottlenecks=bottlenecks,
         )
 
     score = scorer.calculate(
-        scorer_violations, capacity=capacity, engine_statuses=engine_statuses,
+        scorer_violations,
+        capacity=capacity,
+        engine_statuses=engine_statuses,
         total_files=cmd.total_files,
     )
     return score
@@ -523,12 +568,12 @@ async def handle_stage_finalize(
     )
 
     report_json = json.dumps(
-        report.to_dict(), indent=2, default=str,
+        report.to_dict(),
+        indent=2,
+        default=str,
     ).encode("utf-8")
 
-    s3_key = (
-        f"reports/{job['workspace_id']}/{cmd.job_id}/report.json"
-    )
+    s3_key = f"reports/{job['workspace_id']}/{cmd.job_id}/report.json"
     try:
         await storage.upload(s3_key, report_json)
         report.s3_key = s3_key
@@ -537,19 +582,21 @@ async def handle_stage_finalize(
 
     await uow.reports.save(report)
 
-    await uow.score_history.save({
-        "time": datetime.now(UTC),
-        "repo_id": job["repo_id"],
-        "workspace_id": job["workspace_id"],
-        "overall_score": score.overall if score.overall is not None else 0,
-        "performance_score": score.performance,
-        "security_score": score.security,
-        "reliability_score": score.reliability,
-        "maintainability_score": score.maintainability,
-        "devops_score": score.devops,
-        "findings_count": len(findings),
-        "job_id": cmd.job_id,
-    })
+    await uow.score_history.save(
+        {
+            "time": datetime.now(UTC),
+            "repo_id": job["repo_id"],
+            "workspace_id": job["workspace_id"],
+            "overall_score": score.overall if score.overall is not None else 0,
+            "performance_score": score.performance,
+            "security_score": score.security,
+            "reliability_score": score.reliability,
+            "maintainability_score": score.maintainability,
+            "devops_score": score.devops,
+            "findings_count": len(findings),
+            "job_id": cmd.job_id,
+        }
+    )
 
     severity_counts = dict.fromkeys(Severity, 0)
     for f in findings:
@@ -557,7 +604,9 @@ async def handle_stage_finalize(
             severity_counts[f.severity] += 1
 
     await uow.jobs.update_status(
-        cmd.job_id, JobStatus.COMPLETED, progress_pct=100,
+        cmd.job_id,
+        JobStatus.COMPLETED,
+        progress_pct=100,
         progress_message="Analysis complete",
         overall_score=score.overall,
         blocked_by=score.blocked_by,
@@ -576,16 +625,18 @@ async def handle_stage_finalize(
         completed_at=datetime.now(UTC).replace(tzinfo=None),
     )
 
-    await producer.publish(AnalysisCompleted(
-        job_id=cmd.job_id,
-        repo_id=cast(UUID, job["repo_id"]),
-        workspace_id=cast(UUID, job["workspace_id"]),
-        overall_score=score.overall,
-        findings_count=len(findings),
-        duration_seconds=duration_seconds,
-        engine_statuses=score.engine_statuses,
-        blocked_by=score.blocked_by,
-    ))
+    await producer.publish(
+        AnalysisCompleted(
+            job_id=cmd.job_id,
+            repo_id=cast(UUID, job["repo_id"]),
+            workspace_id=cast(UUID, job["workspace_id"]),
+            overall_score=score.overall,
+            findings_count=len(findings),
+            duration_seconds=duration_seconds,
+            engine_statuses=score.engine_statuses,
+            blocked_by=score.blocked_by,
+        )
+    )
 
     logger.info(
         "analysis_completed",
@@ -611,19 +662,23 @@ async def handle_analysis_failure(
 
     if job:
         await uow.jobs.update_status(
-            job_id, JobStatus.FAILED, progress_pct=0,
+            job_id,
+            JobStatus.FAILED,
+            progress_pct=0,
             progress_message=f"Failed at stage: {stage}",
             error_message=error_message,
         )
 
     try:
         await asyncio.wait_for(
-            producer.publish(AnalysisFailed(
-                job_id=job_id,
-                repo_id=cast(UUID, job["repo_id"]) if job else UUID(int=0),
-                error_message=error_message,
-                stage=stage,
-            )),
+            producer.publish(
+                AnalysisFailed(
+                    job_id=job_id,
+                    repo_id=cast(UUID, job["repo_id"]) if job else UUID(int=0),
+                    error_message=error_message,
+                    stage=stage,
+                )
+            ),
             timeout=5,
         )
     except Exception:
@@ -631,7 +686,9 @@ async def handle_analysis_failure(
 
     logger.error(
         "analysis_failed",
-        job_id=str(job_id), stage=stage, error=error_message,
+        job_id=str(job_id),
+        stage=stage,
+        error=error_message,
     )
 
 
@@ -656,11 +713,15 @@ async def handle_stage_dead_code(
             e["workspace_id"] = job["workspace_id"]
         await uow.dead_code.save_many(entries)
         logger.info(
-            "dead_code_saved", count=len(entries), job_id=str(cmd.job_id),
+            "dead_code_saved",
+            count=len(entries),
+            job_id=str(cmd.job_id),
         )
 
     await uow.jobs.update_status(
-        cmd.job_id, JobStatus.DEAD_CODE, progress_pct=83,
+        cmd.job_id,
+        JobStatus.DEAD_CODE,
+        progress_pct=83,
         progress_message=f"Found {len(dead_code_results)} dead code instances",
     )
 
@@ -688,11 +749,15 @@ async def handle_stage_errors(
             e["workspace_id"] = job["workspace_id"]
         await uow.error_findings.save_many(entries)
         logger.info(
-            "errors_saved", count=len(entries), job_id=str(cmd.job_id),
+            "errors_saved",
+            count=len(entries),
+            job_id=str(cmd.job_id),
         )
 
     await uow.jobs.update_status(
-        cmd.job_id, JobStatus.ERRORS, progress_pct=86,
+        cmd.job_id,
+        JobStatus.ERRORS,
+        progress_pct=86,
         progress_message=f"Found {len(error_results)} error patterns",
     )
 
@@ -720,11 +785,15 @@ async def handle_stage_reliability(
             e["workspace_id"] = job["workspace_id"]
         await uow.reliability_findings.save_many(entries)
         logger.info(
-            "reliability_findings_saved", count=len(entries), job_id=str(cmd.job_id),
+            "reliability_findings_saved",
+            count=len(entries),
+            job_id=str(cmd.job_id),
         )
 
     await uow.jobs.update_status(
-        cmd.job_id, "reliability", progress_pct=84,
+        cmd.job_id,
+        "reliability",
+        progress_pct=84,
         progress_message=f"Found {len(reliability_results)} reliability issues",
     )
 
@@ -754,11 +823,15 @@ async def handle_stage_maintainability(
             e["metrics"] = metrics.to_dict()
         await uow.maintainability_findings.save_many(entries)
         logger.info(
-            "maintainability_findings_saved", count=len(entries), job_id=str(cmd.job_id),
+            "maintainability_findings_saved",
+            count=len(entries),
+            job_id=str(cmd.job_id),
         )
 
     await uow.jobs.update_status(
-        cmd.job_id, "maintainability", progress_pct=82,
+        cmd.job_id,
+        "maintainability",
+        progress_pct=82,
         progress_message=f"Found {len(maintainability_results)} maintainability issues",
     )
 
@@ -786,11 +859,15 @@ async def handle_stage_devops(
             e["workspace_id"] = job["workspace_id"]
         await uow.devops_findings.save_many(entries)
         logger.info(
-            "devops_findings_saved", count=len(entries), job_id=str(cmd.job_id),
+            "devops_findings_saved",
+            count=len(entries),
+            job_id=str(cmd.job_id),
         )
 
     await uow.jobs.update_status(
-        cmd.job_id, "devops", progress_pct=86,
+        cmd.job_id,
+        "devops",
+        progress_pct=86,
         progress_message=f"Found {len(devops_results)} DevOps issues",
     )
 
@@ -819,11 +896,15 @@ async def handle_stage_perf(
                 e["workspace_id"] = job["workspace_id"]
             await uow.performance_metrics.save_many(entries)
             logger.info(
-                "perf_metrics_saved", count=len(entries), job_id=str(cmd.job_id),
+                "perf_metrics_saved",
+                count=len(entries),
+                job_id=str(cmd.job_id),
             )
 
         await uow.jobs.update_status(
-            cmd.job_id, JobStatus.PERF, progress_pct=90,
+            cmd.job_id,
+            JobStatus.PERF,
+            progress_pct=90,
             progress_message=f"Estimated RPM: {perf_metrics.overall_rpm}, "
             f"breaks at {perf_metrics.breaks_at_concurrent_users} users",
         )
@@ -832,7 +913,9 @@ async def handle_stage_perf(
     except Exception:
         logger.warning("perf_analysis_failed", job_id=str(cmd.job_id))
         await uow.jobs.update_status(
-            cmd.job_id, JobStatus.PERF, progress_pct=90,
+            cmd.job_id,
+            JobStatus.PERF,
+            progress_pct=90,
             progress_message="Performance analysis skipped due to error",
         )
         return None
@@ -850,7 +933,9 @@ async def handle_stage_simulation(
 
     if not perf_metrics:
         await uow.jobs.update_status(
-            cmd.job_id, JobStatus.SIMULATION, progress_pct=93,
+            cmd.job_id,
+            JobStatus.SIMULATION,
+            progress_pct=93,
             progress_message="Simulation skipped (no performance data)",
         )
         return []
@@ -869,11 +954,14 @@ async def handle_stage_simulation(
             statuses = [s.status for s in sim_results]
             logger.info(
                 "simulation_complete",
-                job_id=str(cmd.job_id), statuses=statuses,
+                job_id=str(cmd.job_id),
+                statuses=statuses,
             )
 
         await uow.jobs.update_status(
-            cmd.job_id, JobStatus.SIMULATION, progress_pct=93,
+            cmd.job_id,
+            JobStatus.SIMULATION,
+            progress_pct=93,
             progress_message=f"Simulated {len(sim_results)} load levels",
         )
 
@@ -930,14 +1018,18 @@ async def handle_stage_guide_gen(
         logger.info("enterprise_guide_saved", job_id=str(cmd.job_id))
 
         await uow.jobs.update_status(
-            cmd.job_id, JobStatus.GUIDE_GEN, progress_pct=97,
+            cmd.job_id,
+            JobStatus.GUIDE_GEN,
+            progress_pct=97,
             progress_message="Enterprise guide generated",
         )
 
         return guide_dict
     except Exception as exc:
         logger.warning(
-            "guide_gen_failed", job_id=str(cmd.job_id), error=str(exc),
+            "guide_gen_failed",
+            job_id=str(cmd.job_id),
+            error=str(exc),
         )
         return None
 
@@ -959,21 +1051,25 @@ async def handle_stage_ai_enrich(
 
     finding_dicts = []
     for f in findings:
-        finding_dicts.append({
-            "title": f.title,
-            "category": str(f.category),
-            "severity": str(f.severity),
-            "description": f.description or "",
-            "recommendation": f.recommendation or "",
-            "file_path": f.file_path or "",
-            "line_start": f.line_start,
-            "line_end": f.line_end,
-            "code_snippet": f.code_snippet or "",
-        })
+        finding_dicts.append(
+            {
+                "title": f.title,
+                "category": str(f.category),
+                "severity": str(f.severity),
+                "description": f.description or "",
+                "recommendation": f.recommendation or "",
+                "file_path": f.file_path or "",
+                "line_start": f.line_start,
+                "line_end": f.line_end,
+                "code_snippet": f.code_snippet or "",
+            }
+        )
 
     if not finding_dicts:
         await uow.jobs.update_status(
-            job_id, JobStatus.AI_ENRICH, progress_pct=98,
+            job_id,
+            JobStatus.AI_ENRICH,
+            progress_pct=98,
             progress_message="AI enrichment skipped (no findings)",
         )
         return {"findings": [], "ai_executive_summary": ""}
@@ -990,7 +1086,9 @@ async def handle_stage_ai_enrich(
     if not result:
         logger.info("ai_enrichment_unavailable", job_id=str(job_id))
         await uow.jobs.update_status(
-            job_id, JobStatus.AI_ENRICH, progress_pct=98,
+            job_id,
+            JobStatus.AI_ENRICH,
+            progress_pct=98,
             progress_message="AI enrichment skipped (service unavailable)",
         )
         return None
@@ -998,7 +1096,9 @@ async def handle_stage_ai_enrich(
     enriched_findings_map: dict[str, dict[str, object]] = {}
     enrich_data = result.get("findings", [])
     if not isinstance(enrich_data, list):
-        raise RuntimeError(f"Expected enrich_data to be a list, got {type(enrich_data).__name__}")
+        raise RuntimeError(
+            f"Expected enrich_data to be a list, got {type(enrich_data).__name__}"
+        )
     for item in enrich_data:
         title = item.get("title", "")
         file_path = item.get("file_path", "")
@@ -1025,7 +1125,9 @@ async def handle_stage_ai_enrich(
             await uow.enterprise_guides.save(guide)
 
     await uow.jobs.update_status(
-        job_id, JobStatus.AI_ENRICH, progress_pct=98,
+        job_id,
+        JobStatus.AI_ENRICH,
+        progress_pct=98,
         progress_message=f"AI enrichment complete ({updated_count} findings enriched)",
     )
 
@@ -1095,12 +1197,16 @@ async def list_jobs(
 ) -> dict[str, object]:
     if query.repo_id:
         jobs, total = await uow.jobs.list_by_repo(
-            query.repo_id, limit=query.limit, offset=query.offset,
+            query.repo_id,
+            limit=query.limit,
+            offset=query.offset,
         )
         return {"jobs": jobs, "total": total}
     if query.workspace_id:
         jobs, total = await uow.jobs.list_by_workspace(
-            query.workspace_id, limit=query.limit, offset=query.offset,
+            query.workspace_id,
+            limit=query.limit,
+            offset=query.offset,
         )
         return {"jobs": jobs, "total": total}
     return {"jobs": [], "total": 0}
@@ -1124,7 +1230,9 @@ async def handle_delete_job(
             for key in s3_keys:
                 await storage.delete(key)
         except Exception:
-            logger.warning("s3_cleanup_failed", job_id=str(cmd.job_id), prefix=s3_prefix)
+            logger.warning(
+                "s3_cleanup_failed", job_id=str(cmd.job_id), prefix=s3_prefix
+            )
 
     logger.info("job_deleted", job_id=str(cmd.job_id))
     return job

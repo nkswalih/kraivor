@@ -36,10 +36,10 @@ class ScoreHistoryModel(Base):
     performance_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     security_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     reliability_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
-    maintainability_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    maintainability_score: Mapped[int | None] = mapped_column(
+        SmallInteger, nullable=True
+    )
     devops_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
 
     findings_count: Mapped[int] = mapped_column(Integer, default=0)
-    job_id: Mapped[UUID | None] = mapped_column(
-        PG_UUID(as_uuid=True), nullable=True
-    )
+    job_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)

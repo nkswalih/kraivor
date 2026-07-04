@@ -63,12 +63,16 @@ class TestChainedParser:
         result = await chained_parser.parse("Foo.java", content)
         assert result.language == "java"
 
-    async def test_unknown_extension_returns_unknown(self, chained_parser: ChainedParser) -> None:
+    async def test_unknown_extension_returns_unknown(
+        self, chained_parser: ChainedParser
+    ) -> None:
         content = "some content"
         result = await chained_parser.parse("file.xyz", content)
         assert result.language == "unknown"
 
-    async def test_csharp_parser_extracts_classes(self, chained_parser: ChainedParser) -> None:
+    async def test_csharp_parser_extracts_classes(
+        self, chained_parser: ChainedParser
+    ) -> None:
         content = """
 using System;
 
@@ -79,7 +83,9 @@ public class UserService {
         result = await chained_parser.parse("UserService.cs", content)
         assert any(c.name == "UserService" for c in result.classes)
 
-    async def test_java_parser_extracts_routes(self, chained_parser: ChainedParser) -> None:
+    async def test_java_parser_extracts_routes(
+        self, chained_parser: ChainedParser
+    ) -> None:
         content = """
 @RestController
 public class Ctrl {
@@ -91,7 +97,9 @@ public class Ctrl {
         assert any(r.path == "/hello" for r in result.routes)
         assert any(r.method == "GET" for r in result.routes)
 
-    async def test_go_parser_extracts_routes(self, chained_parser: ChainedParser) -> None:
+    async def test_go_parser_extracts_routes(
+        self, chained_parser: ChainedParser
+    ) -> None:
         content = """
 package main
 import "github.com/gin-gonic/gin"
@@ -103,7 +111,9 @@ func main() {
         result = await chained_parser.parse("main.go", content)
         assert any(r.path == "/ping" for r in result.routes)
 
-    async def test_js_parser_extracts_routes(self, chained_parser: ChainedParser) -> None:
+    async def test_js_parser_extracts_routes(
+        self, chained_parser: ChainedParser
+    ) -> None:
         content = """
 const express = require('express');
 const router = express.Router();
@@ -112,7 +122,9 @@ router.get('/hello', (req, res) => res.json({}));
         result = await chained_parser.parse("routes.js", content)
         assert any(r.path == "/hello" for r in result.routes)
 
-    async def test_python_parser_extracts_functions(self, chained_parser: ChainedParser) -> None:
+    async def test_python_parser_extracts_functions(
+        self, chained_parser: ChainedParser
+    ) -> None:
         content = "def greet(name): return f'Hello {name}'"
         result = await chained_parser.parse("greet.py", content)
         assert any(f.name == "greet" for f in result.functions)
@@ -142,12 +154,16 @@ router.get('/hello', (req, res) => res.json({}));
         result = await chained_parser.parse("Foo.ex", content)
         assert result.language == "elixir"
 
-    async def test_case_insensitive_extension(self, chained_parser: ChainedParser) -> None:
+    async def test_case_insensitive_extension(
+        self, chained_parser: ChainedParser
+    ) -> None:
         content = "public class Foo {}"
         result = await chained_parser.parse("Foo.CS", content)
         assert result.language == "csharp"
 
-    async def test_php_parser_extracts_routes(self, chained_parser: ChainedParser) -> None:
+    async def test_php_parser_extracts_routes(
+        self, chained_parser: ChainedParser
+    ) -> None:
         content = """<?php
 Route::get('/products', [ProductController::class, 'index']);
 """
@@ -155,7 +171,9 @@ Route::get('/products', [ProductController::class, 'index']);
         assert any(r.path == "/products" for r in result.routes)
         assert any(r.method == "GET" for r in result.routes)
 
-    async def test_ruby_parser_extracts_routes(self, chained_parser: ChainedParser) -> None:
+    async def test_ruby_parser_extracts_routes(
+        self, chained_parser: ChainedParser
+    ) -> None:
         content = """
 Rails.application.routes.draw do
     get '/items' => 'items#index'
@@ -164,7 +182,9 @@ end
         result = await chained_parser.parse("routes.rb", content)
         assert any(r.path == "/items" for r in result.routes)
 
-    async def test_elixir_parser_extracts_routes(self, chained_parser: ChainedParser) -> None:
+    async def test_elixir_parser_extracts_routes(
+        self, chained_parser: ChainedParser
+    ) -> None:
         content = """
 scope "/" do
     get "/pages", PageController, :index

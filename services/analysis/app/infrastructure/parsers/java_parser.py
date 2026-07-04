@@ -31,16 +31,10 @@ class JavaParser(AbstractParser):
         r"@(GetMapping|PostMapping|PutMapping|DeleteMapping|PatchMapping)"
         r"(?:\(\s*(?:value\s*=\s*)?[\"']([^\"']+)[\"']\s*\))?"
     )
-    _IMPORT = re.compile(
-        r"import\s+(?:static\s+)?([\w.*]+)\s*;"
-    )
-    _PACKAGE = re.compile(
-        r"^package\s+([\w.]+)\s*;", re.MULTILINE
-    )
+    _IMPORT = re.compile(r"import\s+(?:static\s+)?([\w.*]+)\s*;")
+    _PACKAGE = re.compile(r"^package\s+([\w.]+)\s*;", re.MULTILINE)
 
-    _COMPLEXITY_KW = re.compile(
-        r"\b(?:if|for|while|do|switch|case|catch)\b"
-    )
+    _COMPLEXITY_KW = re.compile(r"\b(?:if|for|while|do|switch|case|catch)\b")
 
     async def parse(self, file_path: str, content: str) -> ParsedFile:
         parsed = ParsedFile(
@@ -64,7 +58,9 @@ class JavaParser(AbstractParser):
         match = self._PACKAGE.search(content)
         if match:
             parsed.imports.append(
-                ParsedImport(name="package", source=match.group(1), line=1, is_from=False)
+                ParsedImport(
+                    name="package", source=match.group(1), line=1, is_from=False
+                )
             )
 
     def _extract_imports(self, content: str, parsed: ParsedFile) -> None:
@@ -90,7 +86,7 @@ class JavaParser(AbstractParser):
             line_end = content[:body_end].count("\n") + 1
 
             method_names = []
-            for m in self._METHOD_DECL.finditer(content[body_start:body_end + 1]):
+            for m in self._METHOD_DECL.finditer(content[body_start : body_end + 1]):
                 method_names.append(m.group(2))
 
             parsed.classes.append(
@@ -118,7 +114,7 @@ class JavaParser(AbstractParser):
             sigs = []
             for sig_match in re.finditer(
                 r"(?:\w+(?:<[^>]*>)?(?:\[\])*\s+)?(\w+)\s*\([^)]*\)\s*;",
-                content[body_start:body_end + 1],
+                content[body_start : body_end + 1],
                 re.MULTILINE,
             ):
                 sigs.append(sig_match.group(1))
@@ -168,7 +164,13 @@ class JavaParser(AbstractParser):
             path = match.group(2) if match.group(2) else "/"
             line_start = content[: match.start()].count("\n") + 1
             parsed.routes.append(
-                ParsedRoute(path=path, method=method_str, handler_name="", line_start=line_start, line_end=line_start)
+                ParsedRoute(
+                    path=path,
+                    method=method_str,
+                    handler_name="",
+                    line_start=line_start,
+                    line_end=line_start,
+                )
             )
 
     @staticmethod

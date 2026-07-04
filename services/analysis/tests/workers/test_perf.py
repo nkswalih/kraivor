@@ -2,7 +2,9 @@ from app.domain.contracts.parser import ParsedFile, ParsedRoute
 from app.workers.perf.rpm_calculator import RPMCalculator
 
 
-def _make_pf(path: str, content: str = "", routes: list[ParsedRoute] | None = None) -> ParsedFile:
+def _make_pf(
+    path: str, content: str = "", routes: list[ParsedRoute] | None = None
+) -> ParsedFile:
     return ParsedFile(
         path=path,
         language="python",
@@ -23,8 +25,11 @@ class TestRPMCalculator:
 
     async def test_clean_endpoint_full_rpm(self) -> None:
         route = ParsedRoute(
-            path="/api/health", method="GET", handler_name="health",
-            line_start=1, line_end=3,
+            path="/api/health",
+            method="GET",
+            handler_name="health",
+            line_start=1,
+            line_end=3,
             code="def health():\n    return {'ok': True}\n",
         )
         pf = _make_pf("routes.py", routes=[route])
@@ -36,8 +41,11 @@ class TestRPMCalculator:
 
     async def test_n_plus_one_deduction(self) -> None:
         route = ParsedRoute(
-            path="/api/users", method="GET", handler_name="get_users",
-            line_start=1, line_end=5,
+            path="/api/users",
+            method="GET",
+            handler_name="get_users",
+            line_start=1,
+            line_end=5,
             code="def get_users():\n    users = User.all()\n    for u in users:\n        u.profile.get()\n",
         )
         pf = _make_pf("routes.py", routes=[route])
@@ -49,8 +57,11 @@ class TestRPMCalculator:
 
     async def test_sync_external_call_deduction(self) -> None:
         route = ParsedRoute(
-            path="/api/data", method="GET", handler_name="get_data",
-            line_start=1, line_end=3,
+            path="/api/data",
+            method="GET",
+            handler_name="get_data",
+            line_start=1,
+            line_end=3,
             code="def get_data():\n    resp = requests.get('https://api.example.com')\n    return resp.json()\n",
         )
         pf = _make_pf("routes.py", routes=[route])
@@ -62,8 +73,11 @@ class TestRPMCalculator:
 
     async def test_unbounded_query_deduction(self) -> None:
         route = ParsedRoute(
-            path="/api/items", method="GET", handler_name="get_items",
-            line_start=1, line_end=3,
+            path="/api/items",
+            method="GET",
+            handler_name="get_items",
+            line_start=1,
+            line_end=3,
             code="def get_items():\n    items = Item.all()\n    return items\n",
         )
         pf = _make_pf("routes.py", routes=[route])
@@ -76,12 +90,19 @@ class TestRPMCalculator:
     async def test_multiple_endpoints_system_rpm_min(self) -> None:
         routes = [
             ParsedRoute(
-                path="/api/fast", method="GET", handler_name="fast",
-                line_start=1, line_end=2, code="def fast():\n    return 'ok'\n",
+                path="/api/fast",
+                method="GET",
+                handler_name="fast",
+                line_start=1,
+                line_end=2,
+                code="def fast():\n    return 'ok'\n",
             ),
             ParsedRoute(
-                path="/api/slow", method="GET", handler_name="slow",
-                line_start=4, line_end=6,
+                path="/api/slow",
+                method="GET",
+                handler_name="slow",
+                line_start=4,
+                line_end=6,
                 code="def slow():\n    resp = requests.get('https://api.example.com')\n    Item.all()\n    return resp\n",
             ),
         ]
@@ -93,8 +114,12 @@ class TestRPMCalculator:
 
     async def test_p50_latency_estimate(self) -> None:
         route = ParsedRoute(
-            path="/api/test", method="GET", handler_name="test",
-            line_start=1, line_end=2, code="def test():\n    return 'ok'\n",
+            path="/api/test",
+            method="GET",
+            handler_name="test",
+            line_start=1,
+            line_end=2,
+            code="def test():\n    return 'ok'\n",
         )
         pf = _make_pf("routes.py", routes=[route])
         calculator = RPMCalculator([pf])
@@ -106,8 +131,12 @@ class TestRPMCalculator:
 
     async def test_breakpoint_calculation(self) -> None:
         route = ParsedRoute(
-            path="/api/test", method="GET", handler_name="test",
-            line_start=1, line_end=2, code="def test():\n    return 'ok'\n",
+            path="/api/test",
+            method="GET",
+            handler_name="test",
+            line_start=1,
+            line_end=2,
+            code="def test():\n    return 'ok'\n",
         )
         pf = _make_pf("routes.py", routes=[route])
         calculator = RPMCalculator([pf])
@@ -116,8 +145,11 @@ class TestRPMCalculator:
 
     async def test_sync_in_async_detection(self) -> None:
         route = ParsedRoute(
-            path="/api/data", method="GET", handler_name="get_data",
-            line_start=1, line_end=4,
+            path="/api/data",
+            method="GET",
+            handler_name="get_data",
+            line_start=1,
+            line_end=4,
             code="async def get_data():\n    resp = requests.get('https://api.example.com')\n    return resp.json()\n",
         )
         pf = _make_pf("routes.py", routes=[route])
@@ -128,8 +160,11 @@ class TestRPMCalculator:
 
     async def test_high_cpu_complexity_deduction(self) -> None:
         route = ParsedRoute(
-            path="/api/complex", method="GET", handler_name="complex",
-            line_start=1, line_end=4,
+            path="/api/complex",
+            method="GET",
+            handler_name="complex",
+            line_start=1,
+            line_end=4,
             code="def complex():\n    for x in items:\n        for y in x:\n            sorted(y)\n    return result\n",
         )
         pf = _make_pf("routes.py", routes=[route])
@@ -141,8 +176,11 @@ class TestRPMCalculator:
 
     async def test_serialization_deduction(self) -> None:
         route = ParsedRoute(
-            path="/api/serialize", method="GET", handler_name="serialize",
-            line_start=1, line_end=3,
+            path="/api/serialize",
+            method="GET",
+            handler_name="serialize",
+            line_start=1,
+            line_end=3,
             code="def serialize():\n    data = json.dumps(payload)\n    return data\n",
         )
         pf = _make_pf("routes.py", routes=[route])
@@ -153,8 +191,11 @@ class TestRPMCalculator:
 
     async def test_no_caching_detected(self) -> None:
         route = ParsedRoute(
-            path="/api/nocache", method="GET", handler_name="nocache",
-            line_start=1, line_end=3,
+            path="/api/nocache",
+            method="GET",
+            handler_name="nocache",
+            line_start=1,
+            line_end=3,
             code="def nocache():\n    items = Item.all()\n    return items\n",
         )
         pf = _make_pf("routes.py", routes=[route])
@@ -165,8 +206,11 @@ class TestRPMCalculator:
 
     async def test_caching_present_no_false_positive(self) -> None:
         route = ParsedRoute(
-            path="/api/cached", method="GET", handler_name="cached",
-            line_start=1, line_end=4,
+            path="/api/cached",
+            method="GET",
+            handler_name="cached",
+            line_start=1,
+            line_end=4,
             code="def cached():\n    result = cache.get('key')\n    if not result:\n        result = Item.all()\n    return result\n",
         )
         pf = _make_pf("routes.py", routes=[route])
@@ -177,8 +221,11 @@ class TestRPMCalculator:
 
     async def test_memory_pressure_detected(self) -> None:
         route = ParsedRoute(
-            path="/api/memory", method="GET", handler_name="memory",
-            line_start=1, line_end=3,
+            path="/api/memory",
+            method="GET",
+            handler_name="memory",
+            line_start=1,
+            line_end=3,
             code="def memory():\n    data = list(range(100000))\n    return data\n",
         )
         pf = _make_pf("routes.py", routes=[route])
@@ -189,8 +236,11 @@ class TestRPMCalculator:
 
     async def test_loop_complexity_deduction(self) -> None:
         route = ParsedRoute(
-            path="/api/loops", method="GET", handler_name="loops",
-            line_start=1, line_end=5,
+            path="/api/loops",
+            method="GET",
+            handler_name="loops",
+            line_start=1,
+            line_end=5,
             code="def loops():\n    for a in xs:\n        for b in a:\n            for c in b:\n                print(c)\n",
         )
         pf = _make_pf("routes.py", routes=[route])
@@ -201,8 +251,12 @@ class TestRPMCalculator:
 
     async def test_confidence_score_with_code(self) -> None:
         route = ParsedRoute(
-            path="/api/test", method="GET", handler_name="test",
-            line_start=1, line_end=2, code="def test():\n    return 'ok'\n",
+            path="/api/test",
+            method="GET",
+            handler_name="test",
+            line_start=1,
+            line_end=2,
+            code="def test():\n    return 'ok'\n",
         )
         pf = _make_pf("routes.py", routes=[route])
         calculator = RPMCalculator([pf])
@@ -218,12 +272,19 @@ class TestRPMCalculator:
     async def test_overall_confidence_min_across_endpoints(self) -> None:
         routes = [
             ParsedRoute(
-                path="/api/a", method="GET", handler_name="a",
-                line_start=1, line_end=2, code="def a():\n    return 'ok'\n",
+                path="/api/a",
+                method="GET",
+                handler_name="a",
+                line_start=1,
+                line_end=2,
+                code="def a():\n    return 'ok'\n",
             ),
             ParsedRoute(
-                path="/api/b", method="GET", handler_name="b",
-                line_start=4, line_end=6,
+                path="/api/b",
+                method="GET",
+                handler_name="b",
+                line_start=4,
+                line_end=6,
                 code="def b():\n    for x in items:\n        for y in x:\n            sorted(y)\n    return r\n",
             ),
         ]
@@ -234,8 +295,12 @@ class TestRPMCalculator:
 
     async def test_empty_code_handling(self) -> None:
         route = ParsedRoute(
-            path="/api/empty", method="GET", handler_name="empty",
-            line_start=1, line_end=1, code="",
+            path="/api/empty",
+            method="GET",
+            handler_name="empty",
+            line_start=1,
+            line_end=1,
+            code="",
         )
         pf = _make_pf("routes.py", routes=[route])
         calculator = RPMCalculator([pf])
@@ -246,8 +311,12 @@ class TestRPMCalculator:
 
     async def test_no_bottlenecks_for_simple_response(self) -> None:
         route = ParsedRoute(
-            path="/api/ping", method="GET", handler_name="ping",
-            line_start=1, line_end=2, code="def ping():\n    return 'pong'\n",
+            path="/api/ping",
+            method="GET",
+            handler_name="ping",
+            line_start=1,
+            line_end=2,
+            code="def ping():\n    return 'pong'\n",
         )
         pf = _make_pf("routes.py", routes=[route])
         calculator = RPMCalculator([pf])
@@ -257,8 +326,11 @@ class TestRPMCalculator:
 
     async def test_file_io_detected(self) -> None:
         route = ParsedRoute(
-            path="/api/read", method="GET", handler_name="read_file",
-            line_start=1, line_end=3,
+            path="/api/read",
+            method="GET",
+            handler_name="read_file",
+            line_start=1,
+            line_end=3,
             code="def read_file():\n    with open('data.txt') as f:\n        return f.read()\n",
         )
         pf = _make_pf("routes.py", routes=[route])

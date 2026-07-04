@@ -31,8 +31,10 @@ class FindingRepository(AbstractFindingRepository):
         offset: int = 0,
     ) -> tuple[list[Finding], int]:
         stmt = select(FindingModel).where(FindingModel.job_id == job_id)
-        count_stmt = select(func.count()).select_from(FindingModel).where(
-            FindingModel.job_id == job_id
+        count_stmt = (
+            select(func.count())
+            .select_from(FindingModel)
+            .where(FindingModel.job_id == job_id)
         )
 
         if not include_dismissed:
@@ -48,10 +50,14 @@ class FindingRepository(AbstractFindingRepository):
         count_result = await self._session.execute(count_stmt)
         total = count_result.scalar() or 0
 
-        stmt = stmt.order_by(
-            FindingModel.severity.asc(),
-            FindingModel.line_start.asc(),
-        ).offset(offset).limit(limit)
+        stmt = (
+            stmt.order_by(
+                FindingModel.severity.asc(),
+                FindingModel.line_start.asc(),
+            )
+            .offset(offset)
+            .limit(limit)
+        )
 
         result = await self._session.execute(stmt)
         findings = [self._to_domain(m) for m in result.scalars().all()]
@@ -67,8 +73,10 @@ class FindingRepository(AbstractFindingRepository):
         offset: int = 0,
     ) -> tuple[list[Finding], int]:
         stmt = select(FindingModel).where(FindingModel.repo_id == repo_id)
-        count_stmt = select(func.count()).select_from(FindingModel).where(
-            FindingModel.repo_id == repo_id
+        count_stmt = (
+            select(func.count())
+            .select_from(FindingModel)
+            .where(FindingModel.repo_id == repo_id)
         )
 
         if not include_dismissed:
@@ -118,7 +126,10 @@ class FindingRepository(AbstractFindingRepository):
         return dict(result.all())  # type: ignore[arg-type]
 
     async def update_ai_fields(
-        self, finding_id: UUID, is_ai_enriched: bool, ai_explanation: str,
+        self,
+        finding_id: UUID,
+        is_ai_enriched: bool,
+        ai_explanation: str,
     ) -> None:
         stmt = (
             update(FindingModel)
@@ -176,7 +187,9 @@ class FindingRepository(AbstractFindingRepository):
             rule_id=model.rule_id or "",
             category=Category(model.category),
             severity=Severity(model.severity),
-            status=FindingStatus(model.status) if model.status else FindingStatus.ACTIVE,
+            status=FindingStatus(model.status)
+            if model.status
+            else FindingStatus.ACTIVE,
             title=model.title,
             description=model.description or "",
             recommendation=model.recommendation or "",

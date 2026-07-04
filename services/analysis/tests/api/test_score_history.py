@@ -32,8 +32,10 @@ def app_with_auth_override(app: FastAPI) -> Generator[FastAPI, None, None]:
             workspace_ids=["ws-123"],
             email="test@example.com",
         )
+
     app.dependency_overrides = {}
     from app.dependencies.auth import get_current_user
+
     app.dependency_overrides[get_current_user] = mock_get_current_user
     yield app
     app.dependency_overrides = {}
@@ -101,7 +103,9 @@ class TestScoreHistoryHandler:
         assert saved["findings_count"] == 0
         assert saved["job_id"] == job_id
 
-    async def test_saves_score_history_with_none_scores(self, mocker: MockerFixture) -> None:
+    async def test_saves_score_history_with_none_scores(
+        self, mocker: MockerFixture
+    ) -> None:
         job_id = uuid4()
         repo_id = uuid4()
         ws_id = uuid4()
@@ -161,7 +165,9 @@ class TestScoreHistoryHandler:
 
 @pytest.mark.asyncio
 class TestScoreHistoryAPI:
-    async def test_get_score_history_returns_list(self, app_with_auth_override: FastAPI, mocker: MockerFixture) -> None:
+    async def test_get_score_history_returns_list(
+        self, app_with_auth_override: FastAPI, mocker: MockerFixture
+    ) -> None:
         repo_id = uuid4()
         mock_uow = mocker.AsyncMock()
         mock_uow.score_history.get_by_repo.return_value = [
@@ -189,14 +195,17 @@ class TestScoreHistoryAPI:
         app = app_with_auth_override
         app.dependency_overrides = {}
         from app.api.dependencies.services import get_uow
+
         app.dependency_overrides[get_uow] = lambda: mock_uow
         from app.dependencies.auth import get_current_user
+
         async def mock_user() -> JWTPayload:
             return JWTPayload(
                 sub="user-123",
                 workspace_ids=["ws-123"],
                 email="test@example.com",
             )
+
         app.dependency_overrides[get_current_user] = mock_user
 
         transport = ASGITransport(app=app)
@@ -210,21 +219,26 @@ class TestScoreHistoryAPI:
         assert data["entries"][0]["overall_score"] == 85
         assert data["entries"][1]["overall_score"] == 88
 
-    async def test_get_score_history_respects_limit(self, app_with_auth_override: FastAPI, mocker: MockerFixture) -> None:
+    async def test_get_score_history_respects_limit(
+        self, app_with_auth_override: FastAPI, mocker: MockerFixture
+    ) -> None:
         repo_id = uuid4()
         mock_uow = mocker.AsyncMock()
         mock_uow.score_history.get_by_repo.return_value = []
         app = app_with_auth_override
         app.dependency_overrides = {}
         from app.api.dependencies.services import get_uow
+
         app.dependency_overrides[get_uow] = lambda: mock_uow
         from app.dependencies.auth import get_current_user
+
         async def mock_user() -> JWTPayload:
             return JWTPayload(
                 sub="user-123",
                 workspace_ids=["ws-123"],
                 email="test@example.com",
             )
+
         app.dependency_overrides[get_current_user] = mock_user
 
         transport = ASGITransport(app=app)

@@ -26,6 +26,7 @@ async def get_report_by_job(
     report = await get_report(query, uow)
     if not report:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail="Report not found")
     return _report_to_response(report)
 
@@ -39,6 +40,7 @@ async def get_report_metadata_by_job(
     metadata = await get_analysis_metadata(job_id, uow)
     if not metadata:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail="Analysis metadata not found")
     return AnalysisMetadataResponse(
         job_id=metadata.job_id,

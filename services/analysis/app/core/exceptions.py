@@ -1,4 +1,3 @@
-
 class AppBaseError(Exception):
     """Base exception for all application errors."""
 
@@ -40,9 +39,7 @@ class ValidationError(AppBaseError):
         code: str = "validation_error",
         details: dict[str, object] | None = None,
     ) -> None:
-        super().__init__(
-            message=message, code=code, status_code=422, details=details
-        )
+        super().__init__(message=message, code=code, status_code=422, details=details)
 
 
 class ConfigurationError(AppBaseError):
@@ -52,9 +49,7 @@ class ConfigurationError(AppBaseError):
         code: str = "configuration_error",
         details: dict[str, object] | None = None,
     ) -> None:
-        super().__init__(
-            message=message, code=code, status_code=500, details=details
-        )
+        super().__init__(message=message, code=code, status_code=500, details=details)
 
 
 class ConflictError(AppBaseError):
@@ -74,6 +69,4 @@ class ServiceUnavailableError(AppBaseError):
         code: str = "service_unavailable",
         details: dict[str, object] | None = None,
     ) -> None:
-        super().__init__(
-            message=message, code=code, status_code=503, details=details
-        )
+        super().__init__(message=message, code=code, status_code=503, details=details)

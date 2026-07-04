@@ -1,5 +1,3 @@
-
-
 from app.core.constants import Category, Severity
 from app.domain.rules.base import BaseRule, RuleViolation
 

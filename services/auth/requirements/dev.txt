@@ -25,7 +25,7 @@ typing-extensions>=4.9
 # Testing
 pytest>=8.0
 pytest-django>=4.5
-pytest-cov>=5.0
+pytest-cov>=7.1.0
 pytest-mock>=3.12
 pytest-xdist>=3.5
 pytest-sugar>=1.1

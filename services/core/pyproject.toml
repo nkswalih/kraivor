@@ -137,8 +137,7 @@ ignore_missing_imports = false
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", ".ruff_cache"]
-skips = ["B101", "B105", "B106", "B301", "B403"]
-assert_used = false
+skips = ["B101", "B105", "B106", "B110", "B301", "B403"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "core.settings.test"

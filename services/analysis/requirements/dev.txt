@@ -17,7 +17,7 @@ ruff>=0.3.0
 
 # Type checking
 mypy>=1.8
-types-requests>=2.31
+types-requests>=2.33.0.20260518
 typing-extensions>=4.9
 
 # Testing

@@ -81,9 +81,7 @@ class S3Storage(AbstractStorage):
             logger.error("storage_delete_failed", key=key, error=str(e))
             raise
 
-    async def get_presigned_url(
-        self, key: str, expiration: int = 3600
-    ) -> str:
+    async def get_presigned_url(self, key: str, expiration: int = 3600) -> str:
         try:
             url = self._client.generate_presigned_url(
                 "get_object",
@@ -99,9 +97,7 @@ class S3Storage(AbstractStorage):
         try:
             keys: list[str] = []
             paginator = self._client.get_paginator("list_objects_v2")
-            for page in paginator.paginate(
-                Bucket=self._bucket, Prefix=prefix
-            ):
+            for page in paginator.paginate(Bucket=self._bucket, Prefix=prefix):
                 if "Contents" in page:
                     for obj in page["Contents"]:
                         keys.append(obj["Key"])

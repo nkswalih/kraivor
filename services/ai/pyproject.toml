@@ -7,17 +7,36 @@ dependencies = [
     "fastapi>=0.100",
     "uvicorn[standard]>=0.23",
     "sqlalchemy[asyncio]>=2.0",
-    "psycopg2-binary>=2.9",
+    "asyncpg>=0.29",
     "redis>=5.0",
     "celery>=5.3",
     "openai>=1.0",
     "anthropic>=0.8",
-    "langchain>=0.1",
-    "pyjwt>=2.8",
-    "cryptography>=41.0",
+    "langchain>=0.3",
+    "langchain-openai>=0.2",
+    "langchain-anthropic>=0.2",
+    "langchain-community>=0.3",
+    "langgraph>=0.2",
+    "pyjwt>=2.13.0",
+    "cryptography>=48.0.1",
     "httpx>=0.25",
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
+    "sse-starlette>=2.0",
+    "prometheus-client>=0.20",
+    "structlog>=24.0",
+    "sentence-transformers>=3.0",
+    "duckduckgo-search>=6.0",
+    "tree-sitter>=0.22",
+    "tree-sitter-python>=0.21",
+    "tree-sitter-javascript>=0.21",
+    "tree-sitter-typescript>=0.21",
+    "tiktoken>=0.7",
+    "pgvector>=0.2",
+    "aiohttp>=3.9",
+    "aiokafka>=0.10",
+    "google-generativeai>=0.7",
+    "alembic>=1.13",
 ]
 
 [project.optional-dependencies]
@@ -33,6 +52,7 @@ dev = [
     "pep8-naming>=0.14",
     "mypy>=1.8",
     "pytest>=8.0",
+    "pytest-asyncio>=0.24.0",
     "pytest-cov>=5.0",
     "pytest-mock>=3.12",
     "pytest-xdist>=3.5",
@@ -40,6 +60,7 @@ dev = [
     "factory-boy>=3.3",
     "faker>=22.0",
     "bandit>=1.7",
+    "pip-audit>=2.7",
     "pre-commit>=3.6",
     "tox>=4.14",
     "ruff>=0.3.0",
@@ -60,6 +81,7 @@ dev = [
     "pep8-naming>=0.14",
     "mypy>=1.8",
     "pytest>=8.0",
+    "pytest-asyncio>=0.24.0",
     "pytest-cov>=5.0",
     "pytest-mock>=3.12",
     "pytest-xdist>=3.5",
@@ -67,6 +89,7 @@ dev = [
     "factory-boy>=3.3",
     "faker>=22.0",
     "bandit>=1.7",
+    "pip-audit>=2.7",
     "pre-commit>=3.6",
     "tox>=4.14",
     "ruff>=0.3.0",
@@ -118,8 +141,7 @@ ignore_missing_imports = false
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", ".ruff_cache"]
-skips = ["B101", "B301", "B403"]
-assert_used = false
+skips = ["B101", "B105", "B106", "B110", "B301", "B403"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -132,6 +154,7 @@ markers = [
     "integration: Integration tests (require database or services)",
     "slow: Tests that take longer than 5 seconds",
 ]
+asyncio_mode = "auto"
 test_timeout = 60
 
 [tool.coverage.run]

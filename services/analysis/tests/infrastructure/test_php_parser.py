@@ -32,7 +32,11 @@ interface UserRepository {
 """
         result = await parser.parse("test.php", content)
         assert any(c.name == "UserRepository" for c in result.classes)
-        assert any("interface" in c.decorators for c in result.classes if c.name == "UserRepository")
+        assert any(
+            "interface" in c.decorators
+            for c in result.classes
+            if c.name == "UserRepository"
+        )
 
     async def test_parse_trait(self, parser: PhpParser) -> None:
         content = """
@@ -43,7 +47,9 @@ trait Loggable {
 """
         result = await parser.parse("test.php", content)
         assert any(c.name == "Loggable" for c in result.classes)
-        assert any("trait" in c.decorators for c in result.classes if c.name == "Loggable")
+        assert any(
+            "trait" in c.decorators for c in result.classes if c.name == "Loggable"
+        )
 
     async def test_parse_enum(self, parser: PhpParser) -> None:
         content = """

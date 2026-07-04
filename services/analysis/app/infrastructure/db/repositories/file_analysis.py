@@ -17,9 +17,7 @@ class FileAnalysisRepository:
         return len(models)
 
     async def get_by_job(self, job_id: UUID) -> list[dict[str, object]]:
-        stmt = select(FileAnalysisModel).where(
-            FileAnalysisModel.job_id == job_id
-        )
+        stmt = select(FileAnalysisModel).where(FileAnalysisModel.job_id == job_id)
         result = await self._session.execute(stmt)
         return [
             {

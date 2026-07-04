@@ -29,18 +29,16 @@ class DetectionResult:
 
     def all_technologies(self) -> list[DetectedTechnology]:
         return (
-            self.frameworks
-            + self.databases
-            + self.tools
-            + self.infra
-            + self.languages
+            self.frameworks + self.databases + self.tools + self.infra + self.languages
         )
 
     def has_framework(self, name: str) -> bool:
         return any(f.name == name for f in self.frameworks)
 
     def to_dict(self) -> dict[str, object]:
-        def _ser(items: list[DetectedTechnology]) -> list[dict[str, str | float | None]]:
+        def _ser(
+            items: list[DetectedTechnology],
+        ) -> list[dict[str, str | float | None]]:
             return [
                 {
                     "name": t.name,

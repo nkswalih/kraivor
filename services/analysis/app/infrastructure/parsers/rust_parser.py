@@ -66,7 +66,9 @@ class RustParser(AbstractParser):
         for match in self._USE_PATH.finditer(content):
             source = match.group(1).strip()
             line = content[: match.start()].count("\n") + 1
-            parsed.imports.append(ParsedImport(name="", source=source, line=line, is_from=False))
+            parsed.imports.append(
+                ParsedImport(name="", source=source, line=line, is_from=False)
+            )
 
     def _extract_structs(self, content: str, parsed: ParsedFile) -> None:
         for match in self._STRUCT_DECL.finditer(content):
@@ -81,7 +83,12 @@ class RustParser(AbstractParser):
                 line_end = content[:body_end].count("\n") + 1
 
             parsed.classes.append(
-                ParsedClass(name=name, line_start=line_start, line_end=line_end, decorators=["struct"])
+                ParsedClass(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_end,
+                    decorators=["struct"],
+                )
             )
 
     def _extract_enums(self, content: str, parsed: ParsedFile) -> None:
@@ -94,11 +101,19 @@ class RustParser(AbstractParser):
             line_end = content[:body_end].count("\n") + 1
 
             variants = []
-            for v in re.finditer(r"^\s*(\w+)", content[body_start + 1 : body_end], re.MULTILINE):
+            for v in re.finditer(
+                r"^\s*(\w+)", content[body_start + 1 : body_end], re.MULTILINE
+            ):
                 variants.append(v.group(1))
 
             parsed.classes.append(
-                ParsedClass(name=name, line_start=line_start, line_end=line_end, decorators=["enum"], methods=variants)
+                ParsedClass(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_end,
+                    decorators=["enum"],
+                    methods=variants,
+                )
             )
 
     def _extract_traits(self, content: str, parsed: ParsedFile) -> None:
@@ -116,7 +131,13 @@ class RustParser(AbstractParser):
             line_end = content[:body_end].count("\n") + 1
 
             parsed.classes.append(
-                ParsedClass(name=name, line_start=line_start, line_end=line_end, bases=bases, decorators=["trait"])
+                ParsedClass(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_end,
+                    bases=bases,
+                    decorators=["trait"],
+                )
             )
 
     def _extract_functions(self, content: str, parsed: ParsedFile) -> None:
@@ -135,7 +156,12 @@ class RustParser(AbstractParser):
                 complexity = self._calculate_complexity(body)
 
             parsed.functions.append(
-                ParsedFunction(name=name, line_start=line_start, line_end=line_end, complexity=complexity)
+                ParsedFunction(
+                    name=name,
+                    line_start=line_start,
+                    line_end=line_end,
+                    complexity=complexity,
+                )
             )
 
     @staticmethod

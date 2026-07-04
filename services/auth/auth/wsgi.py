@@ -1,7 +1,6 @@
-from pathlib import Path
-
 import os
 import sys
+from pathlib import Path
 
 # Add apps/ to Python path
 apps_dir = Path(__file__).resolve().parent.parent / "apps"

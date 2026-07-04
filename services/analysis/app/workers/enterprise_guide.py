@@ -1,5 +1,3 @@
-
-
 from app.core.constants import Severity, Tiers
 from app.core.logging import get_logger
 from app.domain.entities.score import Score
@@ -54,7 +52,9 @@ class EnterpriseGuideGenerator:
     ) -> EnterpriseGuide:
         guide = EnterpriseGuide()
         self._generate_executive_summary(guide, scores, perf_metrics, simulation)
-        self._group_findings_by_severity(guide, findings, dead_code, errors, reliability, devops, maintainability)
+        self._group_findings_by_severity(
+            guide, findings, dead_code, errors, reliability, devops, maintainability
+        )
         self._generate_architecture_review(guide, findings)
         self._generate_capacity_analysis(guide, perf_metrics, simulation)
         self._generate_migration_path(guide, findings, perf_metrics)
@@ -67,7 +67,10 @@ class EnterpriseGuideGenerator:
         perf_metrics: PerformanceMetrics | None,
         simulation: list[SimulationResult] | None,
     ) -> None:
-        tier_label = scores.tier.value if isinstance(scores.tier, Tiers) else str(scores.tier)
+        tier_label = (
+            scores.tier.value if isinstance(scores.tier, Tiers) else str(scores.tier)
+        )
+
         def _fmt(v: int | None) -> str:
             return str(v) if v is not None else "N/A"
 
@@ -79,10 +82,14 @@ class EnterpriseGuideGenerator:
         ]
         if perf_metrics:
             parts.append(f"Estimated System RPM: {perf_metrics.overall_rpm}")
-            parts.append(f"Breaks at: {perf_metrics.breaks_at_concurrent_users} concurrent users")
+            parts.append(
+                f"Breaks at: {perf_metrics.breaks_at_concurrent_users} concurrent users"
+            )
         if simulation and len(simulation) > 0:
             last = simulation[-1]
-            parts.append(f"Simulation status at {last.concurrent_users} users: {last.status}")
+            parts.append(
+                f"Simulation status at {last.concurrent_users} users: {last.status}"
+            )
         guide.executive_summary = "\n".join(parts)
 
     def _group_findings_by_severity(
@@ -110,71 +117,103 @@ class EnterpriseGuideGenerator:
 
         if dead_code:
             for dc in dead_code:
-                all_entries.append((
-                    Severity.MEDIUM,
-                    f"Dead code: {dc.name}",
-                    f"{dc.file_path}:{dc.line_start}" if dc.line_start else dc.file_path,
-                    Severity.MEDIUM,
-                    dc.evidence or dc.name,
-                    "Remove unused code to improve maintainability",
-                    f"Dead code pattern: {dc.code_type}",
-                    0,
-                ))
+                all_entries.append(
+                    (
+                        Severity.MEDIUM,
+                        f"Dead code: {dc.name}",
+                        f"{dc.file_path}:{dc.line_start}"
+                        if dc.line_start
+                        else dc.file_path,
+                        Severity.MEDIUM,
+                        dc.evidence or dc.name,
+                        "Remove unused code to improve maintainability",
+                        f"Dead code pattern: {dc.code_type}",
+                        0,
+                    )
+                )
 
         if errors:
             for err in errors:
-                all_entries.append((
-                    err.severity,
-                    err.title,
-                    f"{err.file_path}:{err.line_start}" if err.line_start else err.file_path,
-                    err.severity,
-                    (err.description or "")[:200],
-                    err.recommendation or "",
-                    "",
-                    self._estimate_fix_effort_from_title(err.title),
-                ))
+                all_entries.append(
+                    (
+                        err.severity,
+                        err.title,
+                        f"{err.file_path}:{err.line_start}"
+                        if err.line_start
+                        else err.file_path,
+                        err.severity,
+                        (err.description or "")[:200],
+                        err.recommendation or "",
+                        "",
+                        self._estimate_fix_effort_from_title(err.title),
+                    )
+                )
 
         if reliability:
             for r in reliability:
-                sev = Severity.HIGH if r.severity in ("critical", "high") else Severity.MEDIUM
-                all_entries.append((
-                    sev,
-                    r.title,
-                    f"{r.file_path}:{r.line_start}" if r.line_start else r.file_path,
-                    sev,
-                    (r.description or "")[:200],
-                    r.recommendation or "",
-                    f"Pattern: {r.reliability_type}",
-                    self._estimate_fix_effort_from_title(r.title),
-                ))
+                sev = (
+                    Severity.HIGH
+                    if r.severity in ("critical", "high")
+                    else Severity.MEDIUM
+                )
+                all_entries.append(
+                    (
+                        sev,
+                        r.title,
+                        f"{r.file_path}:{r.line_start}"
+                        if r.line_start
+                        else r.file_path,
+                        sev,
+                        (r.description or "")[:200],
+                        r.recommendation or "",
+                        f"Pattern: {r.reliability_type}",
+                        self._estimate_fix_effort_from_title(r.title),
+                    )
+                )
 
         if devops:
             for d in devops:
-                sev = Severity.HIGH if d.severity in ("critical", "high") else Severity.MEDIUM
-                all_entries.append((
-                    sev,
-                    d.title,
-                    f"{d.file_path}:{d.line_start}" if d.line_start else d.file_path,
-                    sev,
-                    (d.description or "")[:200],
-                    d.recommendation or "",
-                    f"Pattern: {d.devops_type}",
-                    self._estimate_fix_effort_from_title(d.title),
-                ))
+                sev = (
+                    Severity.HIGH
+                    if d.severity in ("critical", "high")
+                    else Severity.MEDIUM
+                )
+                all_entries.append(
+                    (
+                        sev,
+                        d.title,
+                        f"{d.file_path}:{d.line_start}"
+                        if d.line_start
+                        else d.file_path,
+                        sev,
+                        (d.description or "")[:200],
+                        d.recommendation or "",
+                        f"Pattern: {d.devops_type}",
+                        self._estimate_fix_effort_from_title(d.title),
+                    )
+                )
 
         if maintainability:
             for m in maintainability:
-                sev = Severity.HIGH if m.severity in ("critical", "high", "medium") else Severity.MEDIUM
-                all_entries.append((
-                    sev,
-                    m.title,
-                    f"{m.file_path}:{m.line_start}" if m.line_start else m.file_path,
-                    sev,
-                    (m.description or "")[:200],
-                    m.recommendation or "",
-                    f"Pattern: {m.maintainability_type}",
-                    self._estimate_fix_effort_from_title(m.title),
-                ))
+                sev = (
+                    Severity.HIGH
+                    if m.severity in ("critical", "high", "medium")
+                    else Severity.MEDIUM
+                )
+                all_entries.append(
+                    (
+                        sev,
+                        m.title,
+                        f"{m.file_path}:{m.line_start}"
+                        if m.line_start
+                        else m.file_path,
+                        sev,
+                        (m.description or "")[:200],
+                        m.recommendation or "",
+                        f"Pattern: {m.maintainability_type}",
+                        self._estimate_fix_effort_from_title(m.title),
+                    )
+                )
 
         for _severity, title, file_ref, sev, desc, rec, ep, effort in all_entries:  # type: ignore[assignment]
             issue_entry = {
@@ -194,7 +233,9 @@ class EnterpriseGuideGenerator:
                 guide.medium_issues.append(issue_entry)
 
     def _generate_architecture_review(
-        self, guide: EnterpriseGuide, findings: list[RuleViolation],
+        self,
+        guide: EnterpriseGuide,
+        findings: list[RuleViolation],
     ) -> None:
         total = len(findings)
         by_category: dict[str, int] = {}
@@ -209,7 +250,8 @@ class EnterpriseGuideGenerator:
             ],
             "summary": f"Found {total} issues across {len(by_category)} categories. "
             f"Primary concerns: {', '.join(c for c, _ in most_affected)}."
-            if most_affected else "No significant architectural concerns detected.",
+            if most_affected
+            else "No significant architectural concerns detected.",
         }
 
     def _generate_capacity_analysis(
@@ -252,15 +294,19 @@ class EnterpriseGuideGenerator:
             rpm_gain = abs(f.rpm_impact) if f.rpm_impact else 50
             score_gain = abs(f.score_impact)
             priority_score = (rpm_gain + score_gain * 10) / max(effort, 1)
-            steps.append({
-                "action": f.title,
-                "file": f"{f.file_path}:{f.line_start}" if f.file_path else "unknown",
-                "effort_minutes": effort,
-                "rpm_impact": f"+{rpm_gain} RPM",
-                "score_impact": f"+{score_gain} points",
-                "fix_snippet": f.recommendation,
-                "priority_score": priority_score,
-            })
+            steps.append(
+                {
+                    "action": f.title,
+                    "file": f"{f.file_path}:{f.line_start}"
+                    if f.file_path
+                    else "unknown",
+                    "effort_minutes": effort,
+                    "rpm_impact": f"+{rpm_gain} RPM",
+                    "score_impact": f"+{score_gain} points",
+                    "fix_snippet": f.recommendation,
+                    "priority_score": priority_score,
+                }
+            )
         steps.sort(key=lambda s: s["priority_score"], reverse=True)  # type: ignore[arg-type, return-value]
         for i, step in enumerate(steps, 1):
             step["step"] = i
@@ -274,7 +320,7 @@ class EnterpriseGuideGenerator:
             "bare_except": 5,
             "n_plus_one": 15,
             "missing_auth": 20,
-            "hardcoded_secret": 10,
+            "hardcoded_secret": 10,  # nosec
             "swallowed_exception": 10,
             "sync_in_async": 30,
             "high_complexity": 45,

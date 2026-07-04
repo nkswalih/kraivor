@@ -13,12 +13,19 @@ class ReliabilityFindingModel(Base):
 
     id: Mapped[UUID] = UUIDColumn()
     job_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("analysis.analysis_jobs.id"), nullable=False, index=True
+        PG_UUID(as_uuid=True),
+        ForeignKey("analysis.analysis_jobs.id"),
+        nullable=False,
+        index=True,
     )
-    repo_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False, index=True)
+    repo_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True), nullable=False, index=True
+    )
     workspace_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
 
-    reliability_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    reliability_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, index=True
+    )
     severity: Mapped[str] = mapped_column(String(20), nullable=False)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

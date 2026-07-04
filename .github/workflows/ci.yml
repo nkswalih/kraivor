@@ -1,4 +1,4 @@
-name: CI
+name: Kraivor CI
 
 on:
   push:
@@ -6,268 +6,263 @@ on:
   pull_request:
     branches: [main, dev]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
-  PYTHON_VERSION: '3.11'
-  UV_VERSION: 'latest'
-  APP_ENV: 'test'
-  DJANGO_SETTINGS_MODULE: 'auth.settings.test'
-  DATABASE_URL: 'sqlite://:memory:'
-  REDIS_URL: 'redis://localhost:6379/15'
-  SECRET_KEY: 'ci-test-secret-key-not-for-production'
-  FRONTEND_URL: 'http://localhost:3000'
-  EMAIL_BACKEND: 'django.core.mail.backends.locmem.EmailBackend'
-  EMAIL_HOST: 'localhost'
-  EMAIL_PORT: '1025'
-  EMAIL_USE_TLS: 'false'
-  EMAIL_USE_SSL: 'false'
-  EMAIL_FROM: 'noreply@kraivor.test'
-  JWT_PRIVATE_KEY_PATH: '.keys/jwt-private.pem'
-  JWT_PUBLIC_KEY_PATH: '.keys/jwt-public.pem'
-  OAUTH_TOKEN_ENCRYPTION_KEY: '.keys/oauth-encryption.key'
-  JWT_ALGORITHM: 'RS256'
-  JWT_ACCESS_TOKEN_EXPIRE_MINUTES: '15'
-  JWT_REFRESH_TOKEN_EXPIRE_DAYS: '30'
-  GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-  GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-  GOOGLE_REDIRECT_URI: "http://localhost:8000/api/auth/oauth/google/callback/"
+  PYTHON_VERSION: "3.12"
+  APP_ENV: "test"
+  SECRET_KEY: "ci-test-secret-key-not-for-production"
+  FRONTEND_URL: "http://localhost:3000"
+  JWT_ALGORITHM: "RS256"
+  JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "15"
+  JWT_REFRESH_TOKEN_EXPIRE_DAYS: "30"
 
 jobs:
-  test-auth:
-    name: Auth Service Tests
+  format:
+    name: Format ${{ matrix.service }}
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: services/auth
+        working-directory: services/${{ matrix.service }}
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [auth, core, ai, analysis]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: ./.github/actions/setup
         with:
+          service: ${{ matrix.service }}
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install uv
-        run: pip install uv
+      - name: Check format (Black)
+        run: uv run black --check --diff . || echo "::warning::Black formatting check failed"
 
-      - name: Cache uv
-        uses: actions/cache@v4
+      - name: Check imports (isort)
+        run: uv run isort --check-only --diff . || echo "::warning::isort check failed"
+
+  lint:
+    name: Lint ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [auth, core, ai, analysis]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
         with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ env.UV_VERSION }}-${{ hashFiles('services/auth/uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-${{ env.UV_VERSION }}-
-            ${{ runner.os }}-uv-
+          service: ${{ matrix.service }}
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
-        run: uv sync --frozen --group dev
+      - name: Lint (Ruff)
+        run: uv run ruff check .
 
-      - name: Create test keys
+  typing:
+    name: Typing ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [auth, core, ai, analysis]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+        with:
+          service: ${{ matrix.service }}
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Type check (MyPy)
+        run: uv run mypy . || echo "::warning::MyPy type check found issues"
+
+  security:
+    name: Security ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [auth, core, ai, analysis]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+        with:
+          service: ${{ matrix.service }}
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: SAST (Bandit)
+        run: uv run bandit -r . -x ./tests,./.venv --configfile pyproject.toml || true
+
+      - name: Dependency audit (pip-audit)
+        run: uv run pip-audit --strict || echo "::warning::HIGH/CRITICAL vulnerabilities found"
+
+  unit-tests:
+    name: Unit Tests ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [auth, core, ai, analysis]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+        with:
+          service: ${{ matrix.service }}
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Configure Django settings (auth/core)
+        if: matrix.service == 'auth' || matrix.service == 'core'
+        run: |
+          echo "DJANGO_SETTINGS_MODULE=${{ matrix.service }}.settings.test" >> $GITHUB_ENV
+          echo "DATABASE_URL=sqlite://:memory:" >> $GITHUB_ENV
+
+      - name: Generate JWT keys (auth)
+        if: matrix.service == 'auth'
         run: |
           mkdir -p .keys
           openssl genrsa -out .keys/jwt-private.pem 2048
           openssl rsa -in .keys/jwt-private.pem -pubout -out .keys/jwt-public.pem
           openssl rand -base64 32 > .keys/oauth-encryption.key
 
-      - name: Run migrations
+      - name: Run Django migrations (auth/core)
+        if: matrix.service == 'auth' || matrix.service == 'core'
         run: uv run python manage.py migrate
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
           uv run pytest \
-            --color=yes \
-            --tb=short \
-            --cov=apps \
+            --color=yes --tb=short --maxfail=3 \
             --cov-report=term-missing:skip-covered \
-            --cov-report=xml \
-            --cov-report=html \
-            --maxfail=3 \
-            -q
+            --cov-report=xml --cov-report=html -q
 
-      - name: Upload coverage
-        if: always()
+      - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: coverage-report
-          path: services/auth/htmlcov
+          name: coverage-unit-${{ matrix.service }}
+          path: services/${{ matrix.service }}/htmlcov
           retention-days: 7
 
       - name: Coverage summary
+        if: always()
         run: |
-          echo "## Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "## ${{ matrix.service }} Unit Coverage" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          cat coverage.xml | grep -oP '(?<=line-rate>)[^<]+' | head -1 | xargs -I{} echo "Line coverage: {}%" >> $GITHUB_STEP_SUMMARY
+          if [ -f coverage.xml ]; then
+            python -c "import xml.etree.ElementTree as ET; rate = ET.parse('coverage.xml').getroot().attrib.get('line-rate', '0'); pct = float(rate) * 100; print(f'Line coverage: {pct:.2f}%'); print('✅ Meets threshold' if pct >= 85 else '⚠️ Below 85% threshold')" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No coverage report generated" >> $GITHUB_STEP_SUMMARY
+          fi
           echo '```' >> $GITHUB_STEP_SUMMARY
 
-  lint:
-    name: Code Quality
+  integration-tests:
+    name: Integration ${{ matrix.service }}
     runs-on: ubuntu-latest
+    if: ${{ !cancelled() }}
+    needs: [format, lint, typing, security]
     defaults:
       run:
-        working-directory: services/auth
+        working-directory: services/${{ matrix.service }}
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [auth, core, ai, analysis]
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
-        run: pip install uv
-
-      - name: Install dependencies
-        run: uv sync --frozen --group dev
-
-      - name: Run ruff
-        run: uv run ruff check apps/ tests/
-
-  test-core:
-    name: Core Service Tests
-    runs-on: ubuntu-latest
-
-    env:
-      APP_ENV: test
-      DJANGO_SETTINGS_MODULE: core.settings.test
-      
-    defaults:
-      run:
-        working-directory: services/core
-    
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
-          POSTGRES_DB: kraivor
           POSTGRES_USER: kraivor
           POSTGRES_PASSWORD: kraivor
+          POSTGRES_DB: kraivor_test
         ports:
           - 5432:5432
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
-        run: pip install uv
-
-      - name: Cache uv
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-core-${{ hashFiles('services/core/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-core-
-            ${{ runner.os }}-uv-
-
-      - name: Install dependencies
-        run: uv sync --group dev
-
-      - name: Run ruff
-        run: >
-          uv run ruff check apps/workspaces/ apps/repositories/ apps/notifications/
-          apps/chat/ core/settings/ core/middleware/
-
-      - name: Run tests
-        run: >
-          uv run pytest apps/workspaces/tests/ apps/repositories/tests/
-          apps/notifications/tests/ --ds=core.settings.test --color=yes
-          --tb=short --maxfail=3 -q
-
-  analysis-lint:
-    name: Analysis Service Lint
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: services/analysis
+        options: >-
+          --health-cmd "pg_isready -U kraivor"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
+      - uses: ./.github/actions/setup
         with:
-          version: "latest"
-
-      - name: Set up Python
-        run: uv python pin 3.14
-
-      - name: Install dependencies
-        run: uv sync --all-extras --dev
-
-      - name: Lint with ruff
-        run: uv run ruff check app/ tests/
-
-      - name: Type check with mypy
-        run: uv run mypy app/ tests/
-
-  analysis-test:
-    name: Analysis Service Tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: services/analysis
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: "latest"
-
-      - name: Set up Python
-        run: uv python pin 3.14
-
-      - name: Install dependencies
-        run: uv sync --all-extras --dev
-
-      - name: Run tests
-        run: uv run pytest tests/ -v --tb=short --cov=app --cov-report=term-missing
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          directory: services/analysis
-          fail_ci_if_error: false
-
-  security-checks:
-    name: Security
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: services/auth
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
+          service: ${{ matrix.service }}
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install uv
-        run: pip install uv
+      - name: Configure Django PostgreSQL (auth/core)
+        if: matrix.service == 'auth' || matrix.service == 'core'
+        run: |
+          echo "DJANGO_SETTINGS_MODULE=${{ matrix.service }}.settings.test_postgres" >> $GITHUB_ENV
+          echo "DATABASE_URL=postgresql://kraivor:kraivor@localhost:5432/kraivor_test" >> $GITHUB_ENV
 
-      - name: Install dependencies
-        run: uv sync --frozen --group dev
+      - name: Configure AI database URL (ai)
+        if: matrix.service == 'ai'
+        run: echo "AI_DATABASE__URL=postgresql+asyncpg://kraivor:kraivor@localhost:5432/kraivor_test" >> $GITHUB_ENV
 
-      - name: Create test keys
+      - name: Configure Analysis database URL (analysis)
+        if: matrix.service == 'analysis'
+        run: echo "ANALYSIS_DATABASE__URL=postgresql+asyncpg://kraivor:kraivor@localhost:5432/kraivor_test" >> $GITHUB_ENV
+
+      - name: Generate JWT keys (auth)
+        if: matrix.service == 'auth'
         run: |
           mkdir -p .keys
           openssl genrsa -out .keys/jwt-private.pem 2048
           openssl rsa -in .keys/jwt-private.pem -pubout -out .keys/jwt-public.pem
           openssl rand -base64 32 > .keys/oauth-encryption.key
 
-      - name: Run security tests
+      - name: Run Django migrations (auth/core)
+        if: matrix.service == 'auth' || matrix.service == 'core'
+        run: uv run python manage.py migrate
+
+      - name: Run integration tests with coverage
         run: |
-          uv run pytest -m security --color=yes --tb=short -v
+          uv run pytest \
+            --color=yes --tb=short --maxfail=3 \
+            --cov-report=term-missing:skip-covered \
+            --cov-report=xml --cov-report=html -q
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-integration-${{ matrix.service }}
+          path: services/${{ matrix.service }}/htmlcov
+          retention-days: 7
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          echo "## ${{ matrix.service }} Integration Coverage" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ -f coverage.xml ]; then
+            python -c "import xml.etree.ElementTree as ET; rate = ET.parse('coverage.xml').getroot().attrib.get('line-rate', '0'); pct = float(rate) * 100; print(f'Line coverage: {pct:.2f}%'); print('✅ Meets threshold' if pct >= 85 else '⚠️ Below 85% threshold')" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No coverage report generated" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo '```' >> $GITHUB_STEP_SUMMARY

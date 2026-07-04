@@ -1,9 +1,9 @@
-import json
-from typing import Any
-
 import functools
 import hashlib
+import json
 import logging
+from typing import Any
+
 from django.conf import settings
 from django.core.cache import cache
 
@@ -13,7 +13,7 @@ _SENTINEL = object()
 
 
 def _make_key(prefix: str, *args, **kwargs) -> str:
-    raw = f"{prefix}:{hashlib.md5(json.dumps([args, kwargs], sort_keys=True, default=str).encode()).hexdigest()}"
+    raw = f"{prefix}:{hashlib.md5(json.dumps([args, kwargs], sort_keys=True, default=str).encode(), usedforsecurity=False).hexdigest()}"
     return raw
 
 

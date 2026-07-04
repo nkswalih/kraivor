@@ -1,5 +1,3 @@
-
-
 from app.core.constants import Category, Severity
 from app.domain.rules.base import BaseRule, RuleViolation
 
@@ -26,13 +24,8 @@ class StructureDeepNestingRule(BaseRule):
                 RuleViolation(
                     rule_id=self.rule_id,
                     category=self.category,
-                    severity=Severity.MEDIUM
-                    if depth > 6
-                    else self.severity,
-                    title=(
-                        f"Deep directory nesting "
-                        f"({depth} levels): {file_path}"
-                    ),
+                    severity=Severity.MEDIUM if depth > 6 else self.severity,
+                    title=(f"Deep directory nesting ({depth} levels): {file_path}"),
                     description=(
                         f"File is nested {depth} levels deep. "
                         f"Maximum recommended is {self._MAX_DEPTH}. "

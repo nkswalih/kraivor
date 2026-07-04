@@ -28,9 +28,7 @@ class RuleRegistry:
     def get_all(self) -> list[BaseRule]:
         return list(self._rules.values())
 
-    def filter_for_file(
-        self, file_path: str, language: str
-    ) -> list[BaseRule]:
+    def filter_for_file(self, file_path: str, language: str) -> list[BaseRule]:
         applicable: list[BaseRule] = []
         for rule in self._rules.values():
             if rule.languages and language not in rule.languages:

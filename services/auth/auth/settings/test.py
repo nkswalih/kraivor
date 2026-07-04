@@ -11,9 +11,8 @@ Usage:
     pytest tests/test_*.py   # Specific files
 """
 
-from pathlib import Path
-
 import os
+from pathlib import Path
 
 _keys_dir = Path(__file__).resolve().parent.parent.parent / ".keys"
 _keys_dir.mkdir(parents=True, exist_ok=True)
@@ -48,11 +47,18 @@ os.environ.setdefault("JWT_PRIVATE_KEY_PATH", str(_keys_dir / "jwt-private.pem")
 os.environ.setdefault("JWT_PUBLIC_KEY_PATH", str(_keys_dir / "jwt-public.pem"))
 os.environ.setdefault("OAUTH_TOKEN_ENCRYPTION_KEY", str(_oauth_key_path))
 
+# Required by base.py — must be set before import to satisfy required_env()
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-testing-only-do-not-use-in-production")
+os.environ.setdefault("FRONTEND_URL", "http://localhost")
+os.environ.setdefault("EMAIL_HOST", "localhost")
+os.environ.setdefault("EMAIL_PORT", "1025")
+os.environ.setdefault("EMAIL_USE_TLS", "False")
+os.environ.setdefault("EMAIL_FROM", "noreply@kraivor.test")
+
 from .base import *  # noqa: E402
 
 os.environ.setdefault("DJANGO_TEST_MODE", "1")
 os.environ.setdefault("APP_ENV", "test")
-os.environ.setdefault("SECRET_KEY", "test-secret-key-for-testing-only-do-not-use-in-production")
 os.environ.setdefault("DATABASE_URL", "sqlite://:memory:")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/15")
 os.environ.setdefault("JWT_PRIVATE_KEY_PATH", ".keys/jwt-private.pem")
@@ -60,13 +66,9 @@ os.environ.setdefault("JWT_PUBLIC_KEY_PATH", ".keys/jwt-public.pem")
 os.environ.setdefault("JWT_ALGORITHM", "RS256")
 os.environ.setdefault("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "15")
 os.environ.setdefault("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "30")
-os.environ.setdefault("FRONTEND_URL", "http://localhost")
 os.environ.setdefault("EMAIL_BACKEND", "django.core.mail.backends.locmem.EmailBackend")
-os.environ.setdefault("EMAIL_HOST", "localhost")
-os.environ.setdefault("EMAIL_PORT", "1025")
-os.environ.setdefault("EMAIL_USE_TLS", "False")
 os.environ.setdefault("EMAIL_USE_SSL", "False")
-os.environ.setdefault("EMAIL_FROM", "noreply@kraivor.test")
+os.environ.setdefault("EMAIL_USE_TLS", "False")
 
 DEBUG = True
 

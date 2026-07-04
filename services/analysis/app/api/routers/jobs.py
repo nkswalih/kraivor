@@ -32,6 +32,7 @@ logger = get_logger(__name__)
 
 _background_tasks: set[asyncio.Task[None]] = set()
 
+
 async def _run_analysis_safe(cmd_dict: dict[str, object]) -> None:
     """Run the full analysis pipeline and catch any silent task exceptions.
 
@@ -83,17 +84,21 @@ async def start_analysis(
     job_id = await handle_start_analysis(cmd, uow)
     await uow.commit()
 
-    background_task = asyncio.create_task(_run_analysis_safe({
-        "job_id": str(job_id),
-        "repo_id": str(body.repo_id),
-        "workspace_id": str(body.workspace_id),
-        "triggered_by": user.sub,
-        "trigger_type": TriggerType.API,
-        "repo_url": body.repo_url,
-        "branch": body.branch,
-        "deep_scan": body.deep_scan,
-        "depth": body.depth,
-    }))
+    background_task = asyncio.create_task(
+        _run_analysis_safe(
+            {
+                "job_id": str(job_id),
+                "repo_id": str(body.repo_id),
+                "workspace_id": str(body.workspace_id),
+                "triggered_by": user.sub,
+                "trigger_type": TriggerType.API,
+                "repo_url": body.repo_url,
+                "branch": body.branch,
+                "deep_scan": body.deep_scan,
+                "depth": body.depth,
+            }
+        )
+    )
     _background_tasks.add(background_task)
     background_task.add_done_callback(lambda t: _background_tasks.discard(t))
 
@@ -118,12 +123,15 @@ async def get_job(
 async def list_jobs_endpoint(
     page: int = 1,
     page_size: int = 20,
-    workspace_id: UUID | None = Query(None, description="Filter by workspace. Defaults to user's first workspace."),
+    workspace_id: UUID | None = Query(
+        None, description="Filter by workspace. Defaults to user's first workspace."
+    ),
     uow: UnitOfWork = Depends(get_uow),
     user: JWTPayload = Depends(get_current_user),
 ) -> JobListResponse:
     query = ListJobsQuery(
-        workspace_id=workspace_id or (UUID(user.workspace_ids[0]) if user.workspace_ids else None),
+        workspace_id=workspace_id
+        or (UUID(user.workspace_ids[0]) if user.workspace_ids else None),
         limit=page_size,
         offset=(page - 1) * page_size,
     )

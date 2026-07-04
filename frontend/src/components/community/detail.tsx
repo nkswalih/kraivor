@@ -1,6 +1,7 @@
 'use client';
 
 import { useDiscussion } from '@/lib/hooks/use-community';
+import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { Avatar } from '@/components/profiles/avatar';
 import { UpvoteButton } from './upvote-button';
 import { TagChip } from './tag-chip';
@@ -29,6 +30,7 @@ interface DiscussionDetailProps {
 
 export function DiscussionDetail({ discussionId }: DiscussionDetailProps) {
   const { data: discussion, isLoading, error } = useDiscussion(discussionId);
+  useDetailBreadcrumb(discussion?.title);
   const params = useParams();
   const workspace = params?.workspace as string;
 

@@ -1,0 +1,37 @@
+name: "Setup Kraivor Service"
+description: "Set up Python, uv, cache, and install dependencies for a Kraivor microservice"
+
+inputs:
+  service:
+    description: "Service name (auth, core, ai, analysis)"
+    required: true
+    type: string
+  python-version:
+    description: "Python version"
+    required: false
+    default: "3.12"
+  install-deps:
+    description: "Whether to install dependencies"
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+        enable-cache: true
+        cache-dependency-glob: services/${{ inputs.service }}/pyproject.toml
+
+    - name: Install dependencies
+      if: inputs.install-deps == 'true'
+      shell: bash
+      working-directory: services/${{ inputs.service }}
+      run: uv sync --frozen --group dev

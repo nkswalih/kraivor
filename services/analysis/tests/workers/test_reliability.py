@@ -26,7 +26,11 @@ def _make_pf(path: str, content: str) -> ParsedFile:
 @pytest.mark.asyncio
 class TestMissingRetries:
     async def test_detects_missing_retry(self) -> None:
-        pfs = [_make_pf("client.py", "def call():\n    requests.get('https://api.example.com')")]
+        pfs = [
+            _make_pf(
+                "client.py", "def call():\n    requests.get('https://api.example.com')"
+            )
+        ]
         detector = ReliabilityDetector(pfs)
         results = await detector.scan_all()
         types = [r.reliability_type for r in results]
@@ -49,11 +53,13 @@ class TestMissingRetries:
 @pytest.mark.asyncio
 class TestMissingCircuitBreaker:
     async def test_detects_missing_circuit_breaker(self) -> None:
-        content = "\n".join([
-            "def a(): requests.get('https://api1.com')",
-            "def b(): requests.get('https://api2.com')",
-            "def c(): requests.get('https://api3.com')",
-        ])
+        content = "\n".join(
+            [
+                "def a(): requests.get('https://api1.com')",
+                "def b(): requests.get('https://api2.com')",
+                "def c(): requests.get('https://api3.com')",
+            ]
+        )
         pfs = [_make_pf("client.py", content)]
         detector = ReliabilityDetector(pfs)
         results = await detector.scan_all()
@@ -135,7 +141,9 @@ class TestInfiniteLoops:
         assert "infinite_loop" in types
 
     async def test_skips_loop_with_break(self) -> None:
-        content = "while True:\n    if done:\n        break\n    process(data)\n" + "\n" * 20
+        content = (
+            "while True:\n    if done:\n        break\n    process(data)\n" + "\n" * 20
+        )
         pfs = [_make_pf("worker.py", content)]
         detector = ReliabilityDetector(pfs)
         results = await detector.scan_all()
@@ -203,7 +211,9 @@ class TestEventOrdering:
         assert "event_ordering" in types
 
     async def test_skips_event_with_ordering(self) -> None:
-        pfs = [_make_pf("events.py", "kafka_producer.send('topic', event, key=order_id)")]
+        pfs = [
+            _make_pf("events.py", "kafka_producer.send('topic', event, key=order_id)")
+        ]
         detector = ReliabilityDetector(pfs)
         results = await detector.scan_all()
         types = [r.reliability_type for r in results]
@@ -238,11 +248,7 @@ class TestTransactionMisuse:
 @pytest.mark.asyncio
 class TestRaceCondition:
     async def test_detects_race_in_async(self) -> None:
-        content = (
-            "async def handler():\n"
-            "    global counter\n"
-            "    counter += 1\n"
-        )
+        content = "async def handler():\n    global counter\n    counter += 1\n"
         pfs = [_make_pf("handler.py", content)]
         detector = ReliabilityDetector(pfs)
         results = await detector.scan_all()
@@ -308,7 +314,9 @@ class TestEmptyContent:
 @pytest.mark.asyncio
 class TestPerDetectorEdgeCases:
     async def test_comment_matching_retry_no_false_positive(self) -> None:
-        content = "# TODO: add retry logic here\nrequests.get('https://api.example.com')"
+        content = (
+            "# TODO: add retry logic here\nrequests.get('https://api.example.com')"
+        )
         pfs = [_make_pf("client.py", content)]
         detector = ReliabilityDetector(pfs)
         results = await detector.scan_all()

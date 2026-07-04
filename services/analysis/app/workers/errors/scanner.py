@@ -70,98 +70,112 @@ class ErrorScanner:
 
     def _detect_bare_except(self, file_path: str, content: str) -> list[ErrorFinding]:
         findings: list[ErrorFinding] = []
-        pattern = re.compile(r'^\s*except\s*:', re.MULTILINE)
+        pattern = re.compile(r"^\s*except\s*:", re.MULTILINE)
         for match in pattern.finditer(content):
-            line_num = content[:match.start()].count("\n") + 1
+            line_num = content[: match.start()].count("\n") + 1
             lines = content.split("\n")
             start = max(0, line_num - 3)
             end = min(len(lines), line_num + 5)
             snippet = "\n".join(lines[start:end])
-            findings.append(ErrorFinding(
-                error_type=ErrorType.BARE_EXCEPT,
-                severity="high",
-                title="Bare except clause catches all exceptions",
-                description="'except:' without an exception type catches EVERY exception, "
-                "including SystemExit and KeyboardInterrupt. This can mask "
-                "critical errors and make debugging impossible.",
-                file_path=file_path,
-                line_start=line_num,
-                line_end=line_num,
-                code_snippet=snippet,
-                recommendation="Use 'except Exception as e:' instead of bare 'except:'. "
-                "Catch only the exceptions you can handle.",
-            ))
+            findings.append(
+                ErrorFinding(
+                    error_type=ErrorType.BARE_EXCEPT,
+                    severity="high",
+                    title="Bare except clause catches all exceptions",
+                    description="'except:' without an exception type catches EVERY exception, "
+                    "including SystemExit and KeyboardInterrupt. This can mask "
+                    "critical errors and make debugging impossible.",
+                    file_path=file_path,
+                    line_start=line_num,
+                    line_end=line_num,
+                    code_snippet=snippet,
+                    recommendation="Use 'except Exception as e:' instead of bare 'except:'. "
+                    "Catch only the exceptions you can handle.",
+                )
+            )
         return findings
 
-    def _detect_swallowed_exceptions(self, file_path: str, content: str) -> list[ErrorFinding]:
+    def _detect_swallowed_exceptions(
+        self, file_path: str, content: str
+    ) -> list[ErrorFinding]:
         findings: list[ErrorFinding] = []
         pattern = re.compile(
-            r'except\s+(\w+(?:\s*,\s*\w+)*)\s*:\s*\n\s*pass',
+            r"except\s+(\w+(?:\s*,\s*\w+)*)\s*:\s*\n\s*pass",
             re.MULTILINE,
         )
         for match in pattern.finditer(content):
-            line_num = content[:match.start()].count("\n") + 1
+            line_num = content[: match.start()].count("\n") + 1
             exc_type = match.group(1)
-            findings.append(ErrorFinding(
-                error_type=ErrorType.SWALLOWED_EXCEPTION,
-                severity="critical" if "Exception" in exc_type else "high",
-                title="Exception swallowed with 'pass'",
-                description=f"Exception '{exc_type}' is caught but ignored. "
-                "The system continues running in an error state.",
-                file_path=file_path,
-                line_start=line_num,
-                recommendation="Handle the exception appropriately: log it, "
-                "return an error response, or recover the state. "
-                "Never 'pass' on exceptions.",
-            ))
+            findings.append(
+                ErrorFinding(
+                    error_type=ErrorType.SWALLOWED_EXCEPTION,
+                    severity="critical" if "Exception" in exc_type else "high",
+                    title="Exception swallowed with 'pass'",
+                    description=f"Exception '{exc_type}' is caught but ignored. "
+                    "The system continues running in an error state.",
+                    file_path=file_path,
+                    line_start=line_num,
+                    recommendation="Handle the exception appropriately: log it, "
+                    "return an error response, or recover the state. "
+                    "Never 'pass' on exceptions.",
+                )
+            )
         return findings
 
-    def _detect_missing_timeouts(self, file_path: str, content: str) -> list[ErrorFinding]:
+    def _detect_missing_timeouts(
+        self, file_path: str, content: str
+    ) -> list[ErrorFinding]:
         findings: list[ErrorFinding] = []
         http_patterns = [
-            r'requests\.(?:get|post|put|delete|patch)\(',
-            r'httpx\.(?:get|post|put|delete|patch)\(',
-            r'aiohttp\.ClientSession\(\)',
-            r'urllib\.request\.urlopen\(',
-            r'httpx\.AsyncClient\(',
+            r"requests\.(?:get|post|put|delete|patch)\(",
+            r"httpx\.(?:get|post|put|delete|patch)\(",
+            r"aiohttp\.ClientSession\(\)",
+            r"urllib\.request\.urlopen\(",
+            r"httpx\.AsyncClient\(",
         ]
         lines = content.split("\n")
         for line_num, line in enumerate(lines, 1):
             for pattern_str in http_patterns:
                 if re.search(pattern_str, line) and "timeout" not in line.lower():
-                    findings.append(ErrorFinding(
-                        error_type=ErrorType.MISSING_TIMEOUT,
-                        severity="high",
-                        title="External HTTP call without timeout",
-                        description="This external HTTP call has no timeout configured. "
-                        "If the remote service is slow, this request will "
-                        "block indefinitely and exhaust the connection pool.",
-                        file_path=file_path,
-                        line_start=line_num,
-                        line_end=line_num,
-                        code_snippet=line.strip(),
-                        recommendation="Add timeout parameter: requests.get(url, timeout=5)",
-                    ))
+                    findings.append(
+                        ErrorFinding(
+                            error_type=ErrorType.MISSING_TIMEOUT,
+                            severity="high",
+                            title="External HTTP call without timeout",
+                            description="This external HTTP call has no timeout configured. "
+                            "If the remote service is slow, this request will "
+                            "block indefinitely and exhaust the connection pool.",
+                            file_path=file_path,
+                            line_start=line_num,
+                            line_end=line_num,
+                            code_snippet=line.strip(),
+                            recommendation="Add timeout parameter: requests.get(url, timeout=5)",
+                        )
+                    )
         return findings
 
-    def _detect_silent_failures(self, file_path: str, content: str) -> list[ErrorFinding]:
+    def _detect_silent_failures(
+        self, file_path: str, content: str
+    ) -> list[ErrorFinding]:
         findings: list[ErrorFinding] = []
         pattern = re.compile(
-            r'except\s+(\w+(?:\s*,\s*\w+)*)\s*:\s*\n\s*(?:log|logger|logging|print)(?:\.\w+)?\s*\(',
+            r"except\s+(\w+(?:\s*,\s*\w+)*)\s*:\s*\n\s*(?:log|logger|logging|print)(?:\.\w+)?\s*\(",
             re.MULTILINE,
         )
         for match in pattern.finditer(content):
-            line_num = content[:match.start()].count("\n") + 1
+            line_num = content[: match.start()].count("\n") + 1
             exc_type = match.group(1)
-            findings.append(ErrorFinding(
-                error_type=ErrorType.SILENT_FAIL,
-                severity="medium",
-                title="Exception logged but not handled",
-                description=f"Exception '{exc_type}' is caught but only logged. "
-                "The system continues running in an inconsistent state.",
-                file_path=file_path,
-                line_start=line_num,
-                recommendation="After logging, handle the exception: return an error "
-                "response, recover state, or re-raise if appropriate.",
-            ))
+            findings.append(
+                ErrorFinding(
+                    error_type=ErrorType.SILENT_FAIL,
+                    severity="medium",
+                    title="Exception logged but not handled",
+                    description=f"Exception '{exc_type}' is caught but only logged. "
+                    "The system continues running in an inconsistent state.",
+                    file_path=file_path,
+                    line_start=line_num,
+                    recommendation="After logging, handle the exception: return an error "
+                    "response, recover state, or re-raise if appropriate.",
+                )
+            )
         return findings

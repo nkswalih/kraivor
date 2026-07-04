@@ -8,8 +8,8 @@ dependencies = [
     "djangorestframework>=3.14",
     "psycopg2-binary>=2.9",
     "django-environ>=0.13.0",
-    "pyjwt>=2.8",
-    "cryptography>=41.0",
+    "pyjwt>=2.13.0",
+    "cryptography>=48.0.1",
     "requests>=2.31",
     "gunicorn>=21.2.0",
     "celery>=5.3",
@@ -137,8 +137,7 @@ ignore_missing_imports = false
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", ".ruff_cache"]
-skips = ["B101", "B105", "B106", "B301", "B403"]
-assert_used = false
+skips = ["B101", "B105", "B106", "B110", "B301", "B403"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "core.settings.test"

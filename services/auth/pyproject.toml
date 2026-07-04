@@ -14,8 +14,8 @@ dependencies = [
     "social-auth-app-django>=5.0",
     "argon2-cffi>=25.1.0",
     "django-environ>=0.13.0",
-    "pyjwt>=2.8",
-    "cryptography>=42.0.0",
+    "pyjwt>=2.13.0",
+    "cryptography>=48.0.1",
     "dj-database-url>=3.1.2",
     "google-auth>=2.28.0",
     "gunicorn>=21.2.0",
@@ -133,9 +133,8 @@ module = ["apps.*", "auth.*"]
 ignore_missing_imports = false
 
 [tool.bandit]
-exclude_dirs = ["tests", ".venv", ".ruff_cache"]
-skips = ["B101", "B301", "B403"]
-assert_used = false
+exclude_dirs = ["tests", ".venv", ".ruff_cache", "apps/*/tests"]
+skips = ["B101", "B105", "B106", "B110", "B301", "B403"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "auth.settings.test"

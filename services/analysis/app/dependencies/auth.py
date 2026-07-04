@@ -31,12 +31,18 @@ def _get_jwks_client() -> PyJWKClient:
     global _jwks_client, _jwks_client_ttl
 
     now = time.time()
-    if _jwks_client is not None and (now - _jwks_client_ttl) < settings.jwt.jwks_cache_ttl:
+    if (
+        _jwks_client is not None
+        and (now - _jwks_client_ttl) < settings.jwt.jwks_cache_ttl
+    ):
         return _jwks_client
 
     with _jwks_client_lock:
         # Double-check inside lock
-        if _jwks_client is not None and (now - _jwks_client_ttl) < settings.jwt.jwks_cache_ttl:
+        if (
+            _jwks_client is not None
+            and (now - _jwks_client_ttl) < settings.jwt.jwks_cache_ttl
+        ):
             return _jwks_client
 
         try:
@@ -76,7 +82,7 @@ def _verify_token(token: str) -> dict[str, object]:
         algorithms=[settings.jwt.algorithm],
         audience=settings.jwt.audience,
         issuer=settings.jwt.issuer,
-        options={'verify_exp': settings.jwt.verify_expiration}
+        options={"verify_exp": settings.jwt.verify_expiration},
     )
     return payload
 
@@ -90,8 +96,10 @@ def get_current_user(request: Request) -> JWTPayload:
         return JWTPayload(
             sub=request.headers.get("X-User-ID", ""),
             email=request.headers.get("X-Email", ""),
-            workspace_ids=request.headers.get("X-Workspace-IDs", "").split(",") if request.headers.get("X-Workspace-IDs") else [],
-            roles={}
+            workspace_ids=request.headers.get("X-Workspace-IDs", "").split(",")
+            if request.headers.get("X-Workspace-IDs")
+            else [],
+            roles={},
         )
 
     # Get the Authorization header
@@ -100,7 +108,10 @@ def get_current_user(request: Request) -> JWTPayload:
     if not auth_header.startswith("Bearer "):
         raise HTTPException(
             status_code=401,
-            detail={"error": "missing_authorization", "message": "Authorization header required"}
+            detail={
+                "error": "missing_authorization",
+                "message": "Authorization header required",
+            },
         )
 
     token = auth_header[7:]  # Remove 'Bearer ' prefix
@@ -111,22 +122,25 @@ def get_current_user(request: Request) -> JWTPayload:
             sub=payload.get("sub") or payload.get("user_id") or "",  # type: ignore[arg-type]
             email=payload.get("email", ""),  # type: ignore[arg-type]
             workspace_ids=payload.get("workspace_ids", []),  # type: ignore[arg-type]
-            roles=payload.get("roles", {})  # type: ignore[arg-type]
+            roles=payload.get("roles", {}),  # type: ignore[arg-type]
         )
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=401,
-            detail={"error": "token_expired", "message": "Token has expired"}
+            detail={"error": "token_expired", "message": "Token has expired"},
         ) from None
     except jwt.InvalidTokenError as e:
         logger.warning(f"JWT validation failed: {e}")
         raise HTTPException(
             status_code=401,
-            detail={"error": "invalid_token", "message": "Invalid or malformed token"}
+            detail={"error": "invalid_token", "message": "Invalid or malformed token"},
         ) from e
     except Exception as e:
         logger.error(f"JWT verification error: {e}")
         raise HTTPException(
             status_code=401,
-            detail={"error": "verification_failed", "message": "Token verification failed"}
+            detail={
+                "error": "verification_failed",
+                "message": "Token verification failed",
+            },
         ) from e

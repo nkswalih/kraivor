@@ -11,4 +11,3 @@ __all__ = [
     "DetectionResult",
     "get_detector",
 ]
-

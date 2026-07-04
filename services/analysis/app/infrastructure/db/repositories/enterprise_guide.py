@@ -16,9 +16,7 @@ class EnterpriseGuideRepository:
         await self._session.flush()
 
     async def get_by_job(self, job_id: UUID) -> dict[str, object] | None:
-        stmt = select(EnterpriseGuideModel).where(
-            EnterpriseGuideModel.job_id == job_id
-        )
+        stmt = select(EnterpriseGuideModel).where(EnterpriseGuideModel.job_id == job_id)
         result = await self._session.execute(stmt)
         m = result.scalar_one_or_none()
         if not m:

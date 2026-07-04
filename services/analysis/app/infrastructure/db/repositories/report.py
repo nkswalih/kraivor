@@ -27,7 +27,9 @@ class ReportRepository(AbstractReportRepository):
                 performance_score=report.scores.performance if report.scores else None,
                 security_score=report.scores.security if report.scores else None,
                 reliability_score=report.scores.reliability if report.scores else None,
-                maintainability_score=report.scores.maintainability if report.scores else None,
+                maintainability_score=report.scores.maintainability
+                if report.scores
+                else None,
                 devops_score=report.scores.devops if report.scores else None,
                 critical_count=report.scores.critical_count if report.scores else 0,
                 high_count=report.scores.high_count if report.scores else 0,

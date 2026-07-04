@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Trash2 } from 'lucide-react';
 import { useProject, useProjectTasks, useDeleteProject } from '@/lib/hooks/use-projects';
+import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useProjectsStore } from '@/lib/stores/projects-store';
 import { TaskRow } from '@/components/features/tasks/task-row';
@@ -88,6 +89,7 @@ export default function ProjectDetailPage() {
   const workspaceId = useAuthStore(s => s.workspaceId) ?? workspace;
 
   const { data: project, isLoading: projectLoading } = useProject(workspaceId, projectId);
+  useDetailBreadcrumb(project?.name);
   const { data: tasksData, isLoading: tasksLoading } = useProjectTasks(workspaceId, projectId);
   const tasks: Task[] = tasksData?.results ?? [];
   const deleteProject = useDeleteProject(workspaceId);

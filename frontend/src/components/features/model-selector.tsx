@@ -1,9 +1,19 @@
 'use client';
 
-import { Check } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-/* ─── Brand SVG Icons ─────────────────────────────────── */
+/* ─── Brand SVG Icons (originals restored) ─────────────── */
+
+function KraitIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
+      <path
+        d="M12 2C8 2 4 5 4 9c0 2.5 1.3 4.7 3.3 6 .5.3 1 .7 1.3 1.1.3.4.4.8.4 1.3v3.1c0 .6.4 1 1 1s1-.4 1-1v-3.1c0-.5.1-.9.4-1.3.3-.4.8-.8 1.3-1.1 2-1.3 3.3-3.5 3.3-6 0-4-4-7-8-7zm0 10c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"
+        fill="#EAB308"
+      />
+    </svg>
+  );
+}
 
 function ClaudeIcon() {
   return (
@@ -70,7 +80,7 @@ function DeepSeekIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 60 60" fill="#4D6BFE" className="shrink-0">
       <g transform="translate(2, 6)">
-        <path d="M55.6128 3.4712c-.5953-.2917-.8517.2642-1.1998.5466-.1191.0911-.2198.2095-.3206.3188-.8701.9292-1.8867 1.5398-3.2148 1.4668-1.9417-.1094-3.5995.5012-5.065 1.9863-.3114-1.8313-1.3463-2.9248-2.9217-3.6262-.8242-.3645-1.6577-.729-2.2348-1.5217-.403-.5647-.5129-1.1934-.7144-1.813-.1283-.3735-.2565-.7563-.687-.8201-.4671-.0728-.6503.3188-.8335.647-.7327 1.3394-1.0166 2.8154-.9892 4.3096.0641 3.3621 1.4838 6.0406 4.3047 7.9449.3206.2187.403.4372.3023.7563-.1924.656-.4214 1.2937-.6228 1.9497-.1283.4192-.3207.5103-.7694.3279-1.5479-.6467-2.8852-1.6035-4.0667-2.7605-2.0058-1.9407-3.8193-4.0818-6.0815-5.7583-.5312-.3918-1.0625-.7561-1.6121-1.1025-2.3081-2.2412.3023-4.0818.9068-4.3003.6319-.2278.2198-1.0115-1.8227-1.0022-2.0425.009-3.9109.6924-6.2922 1.6035-.348.1367-.7145.2368-1.09.3188-2.1615-.4099-4.4055-.5012-6.7502-.2368-4.4147.4919-7.9408 2.5784-10.5328 6.1409C.1914 13.1289-.5413 17.9941.3563 23.0691c.9434 5.3481 3.6727 9.7761 7.8676 13.2385 4.3506 3.5896 9.3606 5.3481 15.0758 5.011 3.4713-.2004 7.3364-.665 11.6961-4.355 1.099.5467 2.2531.7652 4.1674.9292 1.4746.1367 2.8943-.0728 3.9933-.3005 1.7219-.3645 1.6029-1.959.9801-2.2505-5.0466-2.3506-3.9385-1.394-4.9459-2.1685 2.5645-3.0339 6.4297-6.1865 7.9409-16.4001.119-.8108.0183-1.3211 0-1.9771-.0092-.4008.0824-.5556.5404-.6013 1.2639-.1458 2.4912-.4919 3.6178-1.1115 3.2698-1.7857 4.5886-4.7195 4.9-8.2364.0459-.5376-.0091-1.0935-.577-1.3757ZM27.119 35.123c-4.8909-3.8447-7.263-5.1113-8.2431-5.0566-.9159.0547-.751 1.1025-.5496 1.7859.2107.6741.4855 1.1389.8701 1.731.2656.3918.4489.9748-.2655 1.4123-1.5754.9749-4.314-.3281-4.4423-.3918-3.1872-1.877-5.8525-4.3553-7.7302-7.7444-1.8135-3.262-2.8667-6.7605-3.0408-10.4961-.0458-.9019.2198-1.221 1.1174-1.3848 1.1815-.2187 2.3997-.2644 3.5812-.0913 4.9918.729 9.2415 2.9612 12.8043 6.4963 2.0333 2.0135 3.572 4.419 5.1566 6.7696 1.6852 2.4963 3.4987 4.8745 5.8068 6.8242.8151.6833 1.4654 1.2026 2.0882 1.5854-1.8775.2095-5.01.2552-7.1532-1.4397ZM29.4637 20.0442c0-.4009.3206-.7197.7237-.7197.0916 0 .174.018.2473.0453.1008.0366.1924.0913.2656.1731.1283.1277.2015.3098.2015.5012 0 .4009-.3205.7197-.7234.7197s-.7145-.3188-.7145-.7197ZM36.7452 23.7798c-.4671.1914-.9342.3552-1.383.3735-.6961.0364-1.4563-.2461-1.8684-.5923-.6411-.5376-1.0991-.8381-1.2914-1.7766-.0825-.4009-.0367-1.0205.0367-1.3757.1648-.7654-.0184-1.2573-.5587-1.7039-.4397-.3645-.9984-.4646-1.6121-.4646-.229 0-.4395-.1003-.5953-.1823-.2565-.1275-.467-.4464-.2656-.8382.0641-.1274.3756-.4373.4489-.4919.8335-.4739 1.7952-.3189 2.6836.0364.8244.3371 1.4472.9567 2.3447 1.8313.9159 1.0568 1.0807 1.3486 1.6028 2.1411.4123.6196.7878 1.2573 1.0442 1.9863.1557.4556-.0458.8291-.5862 1.0569Z" />
+        <path d="M55.6128 3.4712c-.5953-.2917-.8517.2642-1.1998.5466-.1191.0911-.2198.2095-.3206.3188-.8701.9292-1.8867 1.5398-3.2148 1.4668-1.9417-.1094-3.5995.5012-5.065 1.9863-.3114-1.8313-1.3463-2.9248-2.9217-3.6262-.8242-.3645-1.6577-.729-2.2348-1.5217-.403-.5647-.5129-1.1934-.7144-1.813-.1283-.3735-.2565-.7563-.687-.8201-.4671-.0728-.6503.3188-.8335.647-.7327 1.3394-1.0166 2.8154-.9892 4.3096.0641 3.3621 1.4838 6.0406 4.3047 7.9449.3206.2187.403.4372.3023.7563-.1924.656-.4214 1.2937-.6228 1.9497-.1283.4192-.3207.5103-.7694.3279-1.5479-.6467-2.8852-1.6035-4.0667-2.7605-2.0058-1.9407-3.8193-4.0818-6.0815-5.7583-.5312-.3918-1.0625-.7561-1.6121-1.1025-2.3081-2.2412.3023-4.0818.9068-4.3003.6319-.2278.2198-1.0115-1.8227-1.0022-2.0425.009-3.9109.6924-6.2922 1.6035-.348.1367-.7145.2368-1.09.3188-2.1615-.4099-4.4055-.5012-6.7502-.2368-4.4147.4919-7.9408 2.5784-10.5328 6.1409C.1914 13.1289-.5413 17.9941.3563 23.0691c.9434 5.3481 3.6727 9.7761 7.8676 13.2385 4.3506 3.5896 9.3606 5.3481 15.0758 5.011 3.4713-.2004 7.3364-.665 11.6961-4.355 1.099.5467 2.2531.7652 4.1674.9292 1.4746.1367 2.8943-.0728 3.9933-.3005 1.7219-.3645 1.6029-1.959.9801-2.2505-5.0466-2.3506-3.9385-1.394-4.9459-2.1685 2.5645-3.0339 6.4297-6.1865 7.9409-16.4001.119-.8108.0183-1.3211 0-1.9771-.0092-.4008.0824-.5556.5404-.6013 1.2639-.1458 2.4912-.4919 3.6178-1.1115 3.2698-1.7857 4.5886-4.7195 4.9-8.2364.0459-.5376-.0091-1.0935-.577-1.3757ZM27.119 35.123c-4.8909-3.8447-7.263-5.1113-8.2431-5.0566-.9159.0547-.751 1.1025-.5496 1.7859.2107.6741.4855 1.1389.8701 1.731.2656.3918.4489.9748-.2655 1.4123-1.5754.9749-4.314-.3281-4.4423-.3918-3.1872-1.877-5.8525-4.3553-7.7302-7.7444-1.8135-3.262-2.8667-6.7605-3.0408-10.4961-.0458-.9019.2198-1.221 1.1174-1.3848 1.1815-.2187 2.3997-.2644 3.5812-.0913 4.9918.729 9.2415 2.9612 12.8043 6.4963 2.0333 2.0135 3.572 4.419 5.1566 6.7696 1.6852 2.4963 3.4987 4.8745 5.8068 6.8242.8151.6833 1.4654 1.2026 2.0882 1.5854-1.8775.2095-5.01.2552-7.1532-1.4397Z" />
       </g>
     </svg>
   );
@@ -108,27 +118,42 @@ function MistralIcon() {
 interface ModelItem {
   id: string;
   name: string;
-  group: 'main' | 'open';
+  group: 'free' | 'api-key' | 'open';
   icon: ReactNode;
 }
 
 const MODELS: ModelItem[] = [
-  { id: 'claude-sonnet-4.6', name: 'Claude Sonnet 4.6', group: 'main', icon: <ClaudeIcon /> },
-  { id: 'claude-opus-4.7', name: 'Claude Opus 4.7', group: 'main', icon: <ClaudeIcon /> },
-  { id: 'gpt-5o', name: 'GPT-5o', group: 'main', icon: <OpenAIIcon /> },
-  { id: 'gemini-3.1-pro', name: 'Gemini 3.1 Pro', group: 'main', icon: <GeminiIcon /> },
-  { id: 'grok-4', name: 'Grok 4', group: 'main', icon: <GrokIcon /> },
-  { id: 'deepseek-r2', name: 'DeepSeek R2', group: 'main', icon: <DeepSeekIcon /> },
+  // ── Kraivor Free ──
+  { id: 'krait-2.0', name: 'Krait 2.0', group: 'free', icon: <KraitIcon /> },
+  { id: 'groq-llama', name: 'Groq Llama', group: 'free', icon: <GrokIcon /> },
+  { id: 'gemini-flash', name: 'Gemini Flash', group: 'free', icon: <GeminiIcon /> },
 
+  // ── API Key ──
+  { id: 'claude-sonnet', name: 'Claude Sonnet', group: 'api-key', icon: <ClaudeIcon /> },
+  { id: 'gpt-5o', name: 'GPT-5o', group: 'api-key', icon: <OpenAIIcon /> },
+  { id: 'deepseek-coder', name: 'DeepSeek Coder', group: 'api-key', icon: <DeepSeekIcon /> },
+  { id: 'grok-4', name: 'Grok 4', group: 'api-key', icon: <GrokIcon /> },
+
+  // ── Open Models ──
   { id: 'llama-4', name: 'Llama 4', group: 'open', icon: <LlamaIcon /> },
   { id: 'mistral-large', name: 'Mistral Large', group: 'open', icon: <MistralIcon /> },
 ];
 
-/* ─── Component ────────────────────────────────────────── */
+/* ─── Helpers ──────────────────────────────────────────── */
 
 export function getModelIcon(id: string) {
-  return MODELS.find(m => m.id === id)?.icon ?? <OpenAIIcon />;
+  return MODELS.find(m => m.id === id)?.icon ?? <KraitIcon />;
 }
+
+export function getModelName(id: string) {
+  return MODELS.find(m => m.id === id)?.name ?? id;
+}
+
+export function getModelGroup(id: string) {
+  return MODELS.find(m => m.id === id)?.group ?? 'free';
+}
+
+/* ─── Component ────────────────────────────────────────── */
 
 export function ModelSelector({
   selected,
@@ -139,62 +164,75 @@ export function ModelSelector({
 }) {
   return (
     <div className="w-56 bg-[#18181C] border border-[#27272A] rounded-lg shadow-xl z-50">
-      {/* ── Main models ─────────────────────────────────── */}
-      <div className="py-1">
-        {MODELS.filter(m => m.group === 'main').map(model => {
-          const active = selected === model.id;
-          return (
-            <button
-              key={model.id}
-              onClick={() => onSelect(model.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
-                active
-                  ? 'bg-[#1f1f24] text-venom-yellow'
-                  : 'text-[#9898a6] hover:bg-[#1f1f24] hover:text-[#f2f2f3]'
-              }`}
-            >
-              {model.icon}
-              <span className="text-[13px] font-medium flex-1 truncate">{model.name}</span>
-              {active && <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />}
-            </button>
-          );
-        })}
+      {/* ── Kraivor Free ─────────────────────────── */}
+      <div className="px-3 pt-3 pb-1">
+        <span className="text-[10px] uppercase tracking-[0.12em] font-medium text-[#5e5e72]">
+          Kraivor Free
+        </span>
+      </div>
+      <div className="pb-1">
+        {MODELS.filter(m => m.group === 'free').map(model => (
+          <ModelRow key={model.id} model={model} selected={selected} onSelect={onSelect} />
+        ))}
       </div>
 
-      {/* ── Divider ─────────────────────────────────────── */}
+      {/* ── Divider ──────────────────────────────── */}
       <div className="border-t border-neutral-800 mx-3" />
 
-      {/* ── Open models header ──────────────────────────── */}
+      {/* ── API Key ──────────────────────────────── */}
+      <div className="px-3 pt-3 pb-1">
+        <span className="text-[10px] uppercase tracking-[0.12em] font-medium text-[#5e5e72]">
+          API Key
+        </span>
+      </div>
+      <div className="pb-1">
+        {MODELS.filter(m => m.group === 'api-key').map(model => (
+          <ModelRow key={model.id} model={model} selected={selected} onSelect={onSelect} />
+        ))}
+      </div>
+
+      {/* ── Divider ──────────────────────────────── */}
+      <div className="border-t border-neutral-800 mx-3" />
+
+      {/* ── Open Models ──────────────────────────── */}
       <div className="flex items-center gap-1.5 px-3 pt-3 pb-1">
         <span className="text-[10px] uppercase tracking-[0.12em] font-medium text-[#5e5e72]">
-          Open models
+          Open Models
         </span>
         <span className="text-[9px] uppercase tracking-wider text-[#5e5e72]/60 font-medium border border-[#27272A] rounded px-1 leading-none py-0.5">
           Beta
         </span>
       </div>
-
-      {/* ── Open model rows ─────────────────────────────── */}
       <div className="pb-1.5">
-        {MODELS.filter(m => m.group === 'open').map(model => {
-          const active = selected === model.id;
-          return (
-            <button
-              key={model.id}
-              onClick={() => onSelect(model.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
-                active
-                  ? 'bg-[#1f1f24] text-venom-yellow'
-                  : 'text-[#9898a6] hover:bg-[#1f1f24] hover:text-[#f2f2f3]'
-              }`}
-            >
-              {model.icon}
-              <span className="text-[13px] font-medium flex-1 truncate">{model.name}</span>
-              {active && <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />}
-            </button>
-          );
-        })}
+        {MODELS.filter(m => m.group === 'open').map(model => (
+          <ModelRow key={model.id} model={model} selected={selected} onSelect={onSelect} />
+        ))}
       </div>
     </div>
+  );
+}
+
+function ModelRow({
+  model,
+  selected,
+  onSelect,
+}: {
+  model: ModelItem;
+  selected: string;
+  onSelect: (id: string) => void;
+}) {
+  const active = selected === model.id;
+  return (
+    <button
+      onClick={() => onSelect(model.id)}
+      className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
+        active
+          ? 'bg-[#1f1f24] text-venom-yellow'
+          : 'text-[#9898a6] hover:bg-[#1f1f24] hover:text-[#f2f2f3]'
+      }`}
+    >
+      {model.icon}
+      <span className="text-[13px] font-medium flex-1 truncate">{model.name}</span>
+    </button>
   );
 }

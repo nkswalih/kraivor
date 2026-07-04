@@ -18,7 +18,7 @@ ruff>=0.3.0
 # Type checking
 mypy>=1.8
 django-stubs>=4.2
-djangorestframework-stubs>=3.14
+djangorestframework-stubs>=3.17.0
 types-requests>=2.31
 typing-extensions>=4.9
 

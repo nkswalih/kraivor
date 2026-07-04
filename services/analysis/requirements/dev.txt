@@ -35,4 +35,4 @@ bandit>=1.7
 
 # DevX
 pre-commit>=3.6
-tox>=4.14
+tox>=4.56.1

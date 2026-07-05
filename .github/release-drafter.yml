@@ -1,0 +1,85 @@
+---
+# Release drafter configuration
+# https://github.com/release-drafter/release-drafter
+
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
+
+categories:
+  - title: "🚀 Features"
+    labels:
+      - "feature"
+      - "enhancement"
+      - "feat"
+
+  - title: "🐛 Bug Fixes"
+    labels:
+      - "fix"
+      - "bug"
+      - "bugfix"
+
+  - title: "♻️ Refactoring"
+    labels:
+      - "refactor"
+      - "refactoring"
+
+  - title: "⚡ Performance"
+    labels:
+      - "performance"
+      - "perf"
+
+  - title: "🔒 Security"
+    labels:
+      - "security"
+
+  - title: "📖 Documentation"
+    labels:
+      - "documentation"
+      - "docs"
+
+  - title: "🧪 Testing"
+    labels:
+      - "testing"
+      - "test"
+
+  - title: "🏗 Infrastructure"
+    labels:
+      - "infrastructure"
+      - "infra"
+
+  - title: "🔧 CI/CD"
+    labels:
+      - "ci"
+      - "cd"
+      - "devops"
+
+  - title: "📦 Dependencies"
+    labels:
+      - "dependencies"
+
+change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
+change-title-escapes: '\<*_&'
+
+version-resolver:
+  major:
+    labels:
+      - "breaking"
+      - "major"
+  minor:
+    labels:
+      - "feature"
+      - "enhancement"
+      - "feat"
+  patch:
+    labels:
+      - "fix"
+      - "bug"
+      - "bugfix"
+      - "security"
+      - "dependencies"
+  default: patch
+
+template: |
+  ## Changes
+
+  $CHANGES

@@ -1,46 +1,249 @@
 version: 2
+
 updates:
+  # ========================================
+  # GitHub Actions
+  # ========================================
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "dev"
+
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "monthly"
+
+    open-pull-requests-limit: 2
+
+    commit-message:
+      prefix: "chore(ci)"
+
     labels:
       - "dependencies"
       - "ci"
 
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # ========================================
+  # Frontend (Next.js)
+  # ========================================
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    target-branch: "dev"
+
+    schedule:
+      interval: "monthly"
+
+    open-pull-requests-limit: 3
+
+    commit-message:
+      prefix: "chore(frontend/deps)"
+
+    labels:
+      - "dependencies"
+      - "frontend"
+
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+
+    groups:
+      production:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+          - "minor"
+
+      development:
+        dependency-type: "development"
+        update-types:
+          - "patch"
+          - "minor"
+
+  # ========================================
+  # Auth Service
+  # ========================================
   - package-ecosystem: "pip"
     directory: "/services/auth"
+    target-branch: "dev"
+
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "monthly"
+
+    open-pull-requests-limit: 3
+
+    versioning-strategy: "increase-if-necessary"
+
+    commit-message:
+      prefix: "chore(auth/deps)"
+
     labels:
       - "dependencies"
-      - "python"
+      - "backend"
 
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+
+    groups:
+      production:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+          - "minor"
+
+      development:
+        dependency-type: "development"
+        update-types:
+          - "patch"
+          - "minor"
+
+  # ========================================
+  # Core Service
+  # ========================================
   - package-ecosystem: "pip"
     directory: "/services/core"
+    target-branch: "dev"
+
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "monthly"
+
+    open-pull-requests-limit: 3
+
+    versioning-strategy: "increase-if-necessary"
+
+    commit-message:
+      prefix: "chore(core/deps)"
+
     labels:
       - "dependencies"
-      - "python"
+      - "backend"
 
-  - package-ecosystem: "pip"
-    directory: "/services/ai"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    labels:
-      - "dependencies"
-      - "python"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
 
+    groups:
+      production:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+          - "minor"
+
+      development:
+        dependency-type: "development"
+        update-types:
+          - "patch"
+          - "minor"
+
+  # ========================================
+  # Analysis Service
+  # ========================================
   - package-ecosystem: "pip"
     directory: "/services/analysis"
+    target-branch: "dev"
+
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "monthly"
+
+    open-pull-requests-limit: 3
+
+    versioning-strategy: "increase-if-necessary"
+
+    commit-message:
+      prefix: "chore(analysis/deps)"
+
     labels:
       - "dependencies"
-      - "python"
+      - "backend"
+
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+
+    groups:
+      production:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+          - "minor"
+
+      development:
+        dependency-type: "development"
+        update-types:
+          - "patch"
+          - "minor"
+
+  # ========================================
+  # AI Service
+  # ========================================
+  - package-ecosystem: "pip"
+    directory: "/services/ai"
+    target-branch: "dev"
+
+    schedule:
+      interval: "monthly"
+
+    open-pull-requests-limit: 3
+
+    versioning-strategy: "increase-if-necessary"
+
+    commit-message:
+      prefix: "chore(ai/deps)"
+
+    labels:
+      - "dependencies"
+      - "backend"
+
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+
+    groups:
+      production:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+          - "minor"
+
+      development:
+        dependency-type: "development"
+        update-types:
+          - "patch"
+          - "minor"
+          
+  # ========================================
+  # Docker
+  # ========================================
+  - package-ecosystem: "docker"
+    directory: "/"
+
+    target-branch: "dev"
+
+    schedule:
+      interval: "monthly"
+
+    open-pull-requests-limit: 2
+
+    commit-message:
+      prefix: "chore(docker)"
+
+    labels:
+      - "dependencies"
+      - "docker"
+
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"

@@ -8,9 +8,10 @@ on:
   schedule:
     - cron: "0 0 * * 0"
 
-# Default permissions to read-only for security (open-source repo)
 permissions:
   contents: read
+  security-events: write
+  statuses: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

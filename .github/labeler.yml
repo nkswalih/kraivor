@@ -1,0 +1,52 @@
+---
+# Auto-label pull requests based on changed file paths.
+# https://github.com/actions/labeler
+
+frontend:
+  - frontend/**/*
+
+backend:
+  - services/auth/**/*
+  - services/core/**/*
+  - services/analysis/**/*
+  - services/ai/**/*
+
+auth:
+  - services/auth/**/*
+
+core:
+  - services/core/**/*
+
+analysis:
+  - services/analysis/**/*
+
+ai:
+  - services/ai/**/*
+
+documentation:
+  - docs/**/*
+  - "**/*.md"
+  - "**/README.md"
+
+ci:
+  - .github/**/*
+
+docker:
+  - Dockerfile*
+  - "**/Dockerfile*"
+  - docker-compose*
+  - "**/.dockerignore"
+  - .dockerignore
+
+infrastructure:
+  - infra/**/*
+  - k8s/**/*
+  - terraform/**/*
+  - helm/**/*
+
+dependencies:
+  - services/**/pyproject.toml
+  - services/**/uv.lock
+  - frontend/package.json
+  - frontend/package-lock.json
+  - .github/dependabot.yml

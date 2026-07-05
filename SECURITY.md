@@ -67,7 +67,13 @@ Send details to **security@kraivor.dev** (GPG key below).
 ```
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 
-FIXME: Insert your team's GPG public key here
+# TODO: Generate and paste your team's GPG public key here
+# before making this repository public. Instructions:
+# 1. gpg --full-generate-key (use "RSA and RSA", 4096 bits)
+# 2. gpg --armor --export <key-id> > kraivor-security.asc
+# 3. Paste the contents of kraivor-security.asc between the markers above
+# 4. Distribute the private key securely to your security team
+
 -----END PGP PUBLIC KEY BLOCK-----
 ```
 

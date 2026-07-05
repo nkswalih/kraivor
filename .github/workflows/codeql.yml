@@ -8,6 +8,10 @@ on:
   schedule:
     - cron: "0 0 * * 0"
 
+# Default permissions to read-only for security (open-source repo)
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -16,6 +20,10 @@ jobs:
   analyze:
     name: Analyze (${{ matrix.service }})
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
 
     strategy:
       fail-fast: false

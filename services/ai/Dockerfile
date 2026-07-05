@@ -25,6 +25,11 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY . /app/
 
+RUN groupadd --gid 1001 appgroup && \
+    useradd --uid 1001 --gid appgroup --shell /bin/bash --create-home appuser && \
+    chown -R appuser:appgroup /app
+USER appuser
+
 EXPOSE 8004
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \

@@ -1,0 +1,70 @@
+name: License Check
+
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - services/**/pyproject.toml
+      - services/**/uv.lock
+      - frontend/package.json
+      - frontend/package-lock.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  license-check:
+    name: Check licenses (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [auth, core, ai, analysis]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup service
+        uses: ./.github/actions/setup
+        with:
+          service: ${{ matrix.service }}
+          python-version: "3.12"
+
+      - name: Install license checker
+        working-directory: services/${{ matrix.service }}
+        run: uv pip install pip-licenses -q
+
+      - name: Scan for copyleft licenses
+        working-directory: services/${{ matrix.service }}
+        run: |
+          uv run pip-licenses --format=json 2>/dev/null | python -c "
+          import json, os, sys
+          try:
+              data = json.load(sys.stdin)
+          except json.JSONDecodeError:
+              print('::warning::Could not parse pip-licenses output')
+              sys.exit(0)
+
+          copyleft_keywords = ['gpl', 'agpl', 'lgpl', 'copyleft']
+          warnings = []
+          for dep in data:
+              license_name = (dep.get('License') or 'UNKNOWN').lower()
+              if any(k in license_name for k in copyleft_keywords):
+                  msg = f\"{dep['Name']} ({dep['Version']}): {dep['License']}\"
+                  warnings.append(msg)
+                  print(f'::warning title=Copyleft License::{msg}')
+
+          summary_path = os.environ.get('GITHUB_STEP_SUMMARY')
+          if warnings and summary_path:
+              with open(summary_path, 'a') as f:
+                  svc = '${{ matrix.service }}'
+                  f.write(f'## License Warnings — {svc}\\n')
+                  for w in warnings:
+                      f.write(f'- {w}\\n')
+          else:
+              print('No copyleft licenses detected')
+          "

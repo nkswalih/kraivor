@@ -8,13 +8,14 @@ on:
 
 permissions:
   contents: read
-  issues: write
-  pull-requests: write
 
 jobs:
   welcome:
     name: Welcome first-time contributor
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/first-interaction@fb2402657b4a28582200150d0a145671d0e50597 # v1
         with:

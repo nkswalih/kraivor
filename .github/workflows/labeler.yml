@@ -4,10 +4,8 @@ on:
   pull_request:
     branches: [dev]
 
-# Grant write permission for pull-requests to apply labels
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,6 +15,8 @@ jobs:
   label:
     name: Label PR
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
       - uses: actions/labeler@8558fd74291d67161a8a78ce36a881fa63b766a9 # v5
         with:

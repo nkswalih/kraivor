@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,6 +15,8 @@ jobs:
   size-label:
     name: Classify PR size
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
       - uses: pascalgn/size-label-action@f8edde36b3be04b4f65dcfead05dc8691b374348 # v0.5.5
         env:

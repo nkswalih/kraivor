@@ -1,52 +1,68 @@
 ---
 # Auto-label pull requests based on changed file paths.
-# https://github.com/actions/labeler
+# https://github.com/actions/labeler (v5 syntax)
 
 frontend:
-  - frontend/**/*
+  - changed-files:
+      - any: ["frontend/**/*"]
 
 backend:
-  - services/auth/**/*
-  - services/core/**/*
-  - services/analysis/**/*
-  - services/ai/**/*
+  - changed-files:
+      - any:
+          - services/auth/**/*
+          - services/core/**/*
+          - services/analysis/**/*
+          - services/ai/**/*
 
 auth:
-  - services/auth/**/*
+  - changed-files:
+      - any: ["services/auth/**/*"]
 
 core:
-  - services/core/**/*
+  - changed-files:
+      - any: ["services/core/**/*"]
 
 analysis:
-  - services/analysis/**/*
+  - changed-files:
+      - any: ["services/analysis/**/*"]
 
 ai:
-  - services/ai/**/*
+  - changed-files:
+      - any: ["services/ai/**/*"]
 
 documentation:
-  - docs/**/*
-  - "**/*.md"
-  - "**/README.md"
+  - changed-files:
+      - any:
+          - docs/**/*
+          - "**/*.md"
+          - "**/README.md"
 
 ci:
-  - .github/**/*
+  - changed-files:
+      - any: [".github/**/*"]
 
 docker:
-  - Dockerfile*
-  - "**/Dockerfile*"
-  - docker-compose*
-  - "**/.dockerignore"
-  - .dockerignore
+  - changed-files:
+      - any:
+          - Dockerfile*
+          - "**/Dockerfile*"
+          - docker-compose*
+          - "**/.dockerignore"
+          - .dockerignore
 
 infrastructure:
-  - infra/**/*
-  - k8s/**/*
-  - terraform/**/*
-  - helm/**/*
+  - changed-files:
+      - any:
+          - infra/**/*
+          - k8s/**/*
+          - terraform/**/*
+          - helm/**/*
 
 dependencies:
-  - services/**/pyproject.toml
-  - services/**/uv.lock
-  - frontend/package.json
-  - frontend/package-lock.json
-  - .github/dependabot.yml
+  - changed-files:
+      - any:
+          - services/**/pyproject.toml
+          - services/**/uv.lock
+          - frontend/package.json
+          - frontend/package-lock.json
+          - .github/dependabot.yml

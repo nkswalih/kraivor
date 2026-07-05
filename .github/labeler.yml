@@ -4,11 +4,11 @@
 
 frontend:
   - changed-files:
-      - any: ["frontend/**/*"]
+      - any-glob-to-any-file: ["frontend/**/*"]
 
 backend:
   - changed-files:
-      - any:
+      - any-glob-to-any-file:
           - services/auth/**/*
           - services/core/**/*
           - services/analysis/**/*
@@ -16,34 +16,34 @@ backend:
 
 auth:
   - changed-files:
-      - any: ["services/auth/**/*"]
+      - any-glob-to-any-file: ["services/auth/**/*"]
 
 core:
   - changed-files:
-      - any: ["services/core/**/*"]
+      - any-glob-to-any-file: ["services/core/**/*"]
 
 analysis:
   - changed-files:
-      - any: ["services/analysis/**/*"]
+      - any-glob-to-any-file: ["services/analysis/**/*"]
 
 ai:
   - changed-files:
-      - any: ["services/ai/**/*"]
+      - any-glob-to-any-file: ["services/ai/**/*"]
 
 documentation:
   - changed-files:
-      - any:
+      - any-glob-to-any-file:
           - docs/**/*
           - "**/*.md"
           - "**/README.md"
 
 ci:
   - changed-files:
-      - any: [".github/**/*"]
+      - any-glob-to-any-file: [".github/**/*"]
 
 docker:
   - changed-files:
-      - any:
+      - any-glob-to-any-file:
           - Dockerfile*
           - "**/Dockerfile*"
           - docker-compose*
@@ -52,7 +52,7 @@ docker:
 
 infrastructure:
   - changed-files:
-      - any:
+      - any-glob-to-any-file:
           - infra/**/*
           - k8s/**/*
           - terraform/**/*
@@ -60,7 +60,7 @@ infrastructure:
 
 dependencies:
   - changed-files:
-      - any:
+      - any-glob-to-any-file:
           - services/**/pyproject.toml
           - services/**/uv.lock
           - frontend/package.json

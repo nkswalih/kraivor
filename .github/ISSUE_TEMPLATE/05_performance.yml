@@ -1,0 +1,66 @@
+name: "⚡ Performance"
+description: Report a performance issue or bottleneck
+title: "perf: "
+labels: ["performance"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us make Kraivor faster!
+
+  - type: dropdown
+    id: service
+    attributes:
+      label: Affected Service
+      multiple: true
+      options:
+        - Auth
+        - Core
+        - Analysis
+        - AI
+        - Frontend
+        - CI/CD
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Performance Issue
+      description: Describe the performance problem
+      placeholder: API response times degrade significantly when analyzing repositories with more than 10,000 files
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction Steps
+      description: How can we reproduce the slow behavior?
+      placeholder: |
+        1. POST /v1/analyze with a large repo
+        2. Observe response time > 30s
+        3. CPU usage spikes to 100%
+
+  - type: textarea
+    id: benchmarks
+    attributes:
+      label: Benchmark Data
+      description: Include any timing data, profiles, or resource usage metrics
+      placeholder: |
+        Response time: 32.4s (expected < 5s)
+        Memory: 2.3 GB
+        CPU: 8 cores at 100%
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Deployment environment (local Docker, Kubernetes, cloud, etc.)
+      placeholder: Docker Compose on Ubuntu 24.04, 16 GB RAM
+
+  - type: textarea
+    id: suggestions
+    attributes:
+      label: Optimization Suggestions
+      description: Any ideas on what might be causing the slowdown?

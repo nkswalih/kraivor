@@ -12,6 +12,7 @@
   <br>
 
   <!-- Badges -->
+
   <p>
     <a href="https://github.com/nkswalih/kraivor/actions"><img src="https://img.shields.io/github/actions/workflow/status/nkswalih/kraivor/ci.yml?style=flat-square&logo=github&label=build" alt="Build Status"></a>
     <a href="https://github.com/nkswalih/kraivor/blob/dev/LICENSE"><img src="https://img.shields.io/github/license/nkswalih/kraivor?style=flat-square&color=blue" alt="License"></a>
@@ -41,6 +42,59 @@ Whether you're a solo developer looking to level up your code quality or a platf
 
 ---
 
+## ⚡ What is Kraivor?
+
+Engineering teams today juggle too many disconnected tools — repo analysis in one tab, AI copilots in another, project boards somewhere else, docs scattered across a wiki. **Kraivor collapses all of that into one authenticated workspace.**
+
+It combines three pillars into a single product:
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### 🔍 Repository Analyzer
+Deep structural analysis — not linting. Full **Production Readiness Scores** with prioritized, actionable remediation reports.
+
+</td>
+<td width="33%" valign="top">
+
+### 🤖 Agentic AI System
+Specialized agents — architecture, security, performance, codegen — sharing context via a RAG pipeline, collaborating on your actual codebase.
+
+</td>
+<td width="33%" valign="top">
+
+### 📋 Productivity Platform
+Notes, projects, Kanban boards, and real-time collaboration — all enriched with live AI context pulled from your repos.
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🌍 Mission & Vision
+
+### The Vision
+
+Kraivor isn't building another dev tool. It's building the **unified operating system for developer intelligence** — the layer that sits between your code and your team, remembering everything so nobody has to.
+
+Every context switch — tab to tab, tool to tool, Slack thread to stale wiki page — is time your team isn't shipping. Kraivor's vision is a world where a codebase has **infinite memory**: every architectural decision, every security finding, every performance regression, and every conversation about *why* the code looks the way it does, all queryable in one place, forever.
+
+We believe the next generation of engineering orgs won't be defined by how many tools they've integrated — they'll be defined by how little context they lose.
+
+### The Mission
+
+Our mission is **engineering resilience, democratized**:
+
+- 🧪 **Production-grade simulation for everyone** — not just teams with a dedicated platform org. A solo developer should get the same structural rigor as a 200-person engineering team.
+- 🤝 **Multi-agent collaboration as a default, not a luxury** — AI agents that specialize, share context, and hand off work the way a real team does.
+- 🏗️ **Structural analysis that scales with you** — from a single repo to a 100+ service monorepo sprawl, without losing signal in the noise.
+
+Kraivor exists so that code quality, security posture, and architectural health stop being things you *hope* are fine, and start being things you *know* are fine.
+
+---
+
 ## Features
 
 | Area | Description |
@@ -57,37 +111,60 @@ Whether you're a solo developer looking to level up your code quality or a platf
 
 Kraivor follows a **service-oriented architecture** with a single API Gateway (Nginx + Kong) as the entry point. Each service owns its data, communicates asynchronously via Kafka, and is independently deployable.
 
+```mermaid
+flowchart LR
+    subgraph Client
+        FE[Frontend<br/>Next.js 15 / React 19]
+    end
+ 
+    subgraph Gateway
+        GW[API Gateway<br/>Nginx + Kong]
+    end
+ 
+    subgraph Services
+        ID[Identity<br/>Django DRF]
+        CORE[Core API<br/>Django DRF]
+        AN[Analysis<br/>FastAPI]
+        AI[AI<br/>FastAPI]
+        NOTIF[Notifications<br/>FastAPI]
+    end
+ 
+    subgraph Realtime
+        WS[Realtime Service<br/>Node.js / WebSocket]
+    end
+ 
+    subgraph Async
+        Q[Kafka + Celery<br/>Event Bus & Task Queue]
+    end
+ 
+    subgraph Data
+        DB[(PostgreSQL)]
+        CACHE[(Redis)]
+    end
+ 
+    FE --> GW
+    FE <--> WS
+    GW --> ID
+    GW --> CORE
+    GW --> AN
+    GW --> AI
+    GW --> NOTIF
+ 
+    ID --> Q
+    CORE --> Q
+    AN --> Q
+    AI --> Q
+    NOTIF --> Q
+ 
+    Q --> WS
+    ID --> DB
+    CORE --> DB
+    AN --> DB
+    AI --> DB
+    ID --> CACHE
+    CORE --> CACHE
+    AN --> CACHE
 ```
-┌─────────────┐     ┌──────────────┐     ┌──────────────────────┐
-│  Frontend   │────▶│  API Gateway  │────▶│   Microservices      │
-│  (Next.js)  │     │  Nginx/Kong   │     │  Django DRF/FastAPI  │
-└─────────────┘     └──────────────┘     └──────────────────────┘
-                          │                        │
-                          ▼                        ▼
-                   ┌──────────────┐     ┌──────────────────────┐
-                   │   WebSocket  │     │   Kafka / Celery     │
-                   │   (Node.js)  │     │   (Async Tasks)      │
-                   └──────────────┘     └──────────────────────┘
-                                                │
-                                                ▼
-                                        ┌──────────────────┐
-                                        │  PostgreSQL/Redis │
-                                        │  (Data & Cache)   │
-                                        └──────────────────┘
-```
-
-**Primary Stack:**
-
-| Layer | Technology |
-|-------|-----------|
-| **Backend** | Django REST Framework, FastAPI, Node.js |
-| **Frontend** | Next.js 15, React 19, TypeScript, Tailwind CSS |
-| **Database & Cache** | PostgreSQL, Redis |
-| **Async & Events** | Celery, Kafka (MSK) |
-| **Infrastructure** | Docker, Kubernetes (EKS), Terraform, AWS |
-| **Observability** | Structured logging, Correlation IDs, Metrics |
-
----
 
 ## Services Overview
 
@@ -109,6 +186,17 @@ Kraivor follows a **service-oriented architecture** with a single API Gateway (N
 - **Everything observable** — correlation IDs, structured logs, metrics
 
 ---
+
+**Primary Stack:**
+
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | Django REST Framework, FastAPI, Node.js |
+| **Frontend** | Next.js 15, React 19, TypeScript, Tailwind CSS |
+| **Database & Cache** | PostgreSQL, Redis |
+| **Async & Events** | Celery, Kafka (MSK) |
+| **Infrastructure** | Docker, Kubernetes (EKS), Terraform, AWS |
+| **Observability** | Structured logging, Correlation IDs, Metrics |
 
 ## Getting Started
 
@@ -167,6 +255,20 @@ Full documentation is available at **[docs.kraivor.dev](https://docs.kraivor.dev
 - **Q3 2026** — VSCode & JetBrains IDE extensions, custom rule engine for analysis, GitHub Actions integration
 - **Q4 2026** — Self-hosted deployment mode, SSO/SAML support, advanced RAG with local LLM support
 - **Q1 2027** — API-first marketplace for community plugins, on-premise Kubernetes operator, SOC 2 compliance
+
+---
+ 
+## Star History
+ 
+<p align="center">
+  <a href="https://star-history.com/#nkswalih/kraivor&Date">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=nkswalih/kraivor&type=Date&theme=dark" />
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=nkswalih/kraivor&type=Date" />
+      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=nkswalih/kraivor&type=Date" />
+    </picture>
+  </a>
+</p>
 
 ---
 

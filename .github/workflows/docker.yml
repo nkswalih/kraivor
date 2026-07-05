@@ -60,8 +60,17 @@ jobs:
           severity: "CRITICAL,HIGH"
           exit-code: "0"
 
+      - name: Check Trivy SARIF exists
+        id: check-sarif
+        run: |
+          if [ -f "services/${{ matrix.service }}/trivy-${{ matrix.service }}.sarif" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Upload Trivy SARIF
-        if: always()
+        if: steps.check-sarif.outputs.exists == 'true'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: services/${{ matrix.service }}/trivy-${{ matrix.service }}.sarif

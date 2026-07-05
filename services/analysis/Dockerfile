@@ -4,12 +4,22 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y gcc git curl && rm -rf /var/lib/apt/lists/*
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+COPY --from=ghcr.io/astral-sh/uv:0.11.7 /uv /uvx /bin/
 
 COPY pyproject.toml uv.lock /app/
-RUN uv sync --frozen --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
 COPY . /app/
+
+RUN groupadd --gid 1001 appgroup && \
+    useradd --uid 1001 --gid appgroup --shell /bin/bash --create-home appuser && \
+    chown -R appuser:appgroup /app
+USER appuser
 
 EXPOSE 8003
 

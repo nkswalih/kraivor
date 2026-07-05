@@ -45,6 +45,8 @@ COPY . /app/
 
 EXPOSE 8004
 
+# Running as root intentionally for dev — volume mounts and hot reload
+
 # Healthcheck — docker-compose.dev.yml overrides this, but useful standalone
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8004/v1/health || exit 1

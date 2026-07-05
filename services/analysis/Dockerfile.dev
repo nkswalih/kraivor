@@ -9,7 +9,7 @@
 #   - All dependencies including dev (ruff, pytest, etc.)
 # =============================================================================
 
-FROM python:3.12-slim
+FROM python:3.12-slim@sha256:423ed6ab25b1921a477529254bfeeabf5855151dc2c3141699a1bfc852199fbf  # python:3.12-slim
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Install uv ──────────────────────────────────────────────────────────────
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.11.7@sha256:733b4042187702f832f7fdecb3aff14a61b288c4ca37af188bb5715c1caebaf8 /uv /usr/local/bin/uv  # uv:0.11.7
 
 # ── Environment ─────────────────────────────────────────────────────────────
 ENV UV_LINK_MODE=copy \
@@ -42,6 +42,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY . /app/
 
 EXPOSE 8003
+
+# Running as root intentionally for dev — volume mounts and hot reload
 
 # Healthcheck — docker-compose.dev.yml overrides this, but useful standalone
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \

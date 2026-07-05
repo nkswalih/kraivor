@@ -1,0 +1,41 @@
+name: "🔒 Security Report"
+description: Report a security vulnerability (private disclosure only)
+title: ""
+labels: ["security"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ⚠️ Important
+
+        **Do NOT file a public issue for security vulnerabilities.**
+
+        Please follow our [Security Policy](https://github.com/nkswalih/kraivor/blob/dev/SECURITY.md) to report vulnerabilities **privately**:
+
+        - **GitHub Private Security Advisory:** [Create advisory](https://github.com/nkswalih/kraivor/security/advisories/new)
+        - **Email:** security@kraivor.dev (GPG encrypted preferred)
+
+        This template is only for tracking publicly disclosed vulnerabilities that have already been reported through private channels.
+
+  - type: checkboxes
+    id: acknowledgment
+    attributes:
+      label: Disclosure Acknowledgment
+      options:
+        - label: I have already reported this vulnerability through a private channel
+          required: true
+        - label: This issue tracks a publicly disclosed CVE or advisory
+          required: false
+
+  - type: input
+    id: cve
+    attributes:
+      label: CVE Identifier
+      description: If this is a public CVE, provide the identifier
+      placeholder: CVE-2026-XXXX
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Brief description of the vulnerability (publicly known only)

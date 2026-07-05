@@ -1,0 +1,68 @@
+---
+# Auto-label pull requests based on changed file paths.
+# https://github.com/actions/labeler (v5 syntax)
+
+frontend:
+  - changed-files:
+      - any-glob-to-any-file: ["frontend/**/*"]
+
+backend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - services/auth/**/*
+          - services/core/**/*
+          - services/analysis/**/*
+          - services/ai/**/*
+
+auth:
+  - changed-files:
+      - any-glob-to-any-file: ["services/auth/**/*"]
+
+core:
+  - changed-files:
+      - any-glob-to-any-file: ["services/core/**/*"]
+
+analysis:
+  - changed-files:
+      - any-glob-to-any-file: ["services/analysis/**/*"]
+
+ai:
+  - changed-files:
+      - any-glob-to-any-file: ["services/ai/**/*"]
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - docs/**/*
+          - "**/*.md"
+          - "**/README.md"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: [".github/**/*"]
+
+docker:
+  - changed-files:
+      - any-glob-to-any-file:
+          - Dockerfile*
+          - "**/Dockerfile*"
+          - docker-compose*
+          - "**/.dockerignore"
+          - .dockerignore
+
+infrastructure:
+  - changed-files:
+      - any-glob-to-any-file:
+          - infra/**/*
+          - k8s/**/*
+          - terraform/**/*
+          - helm/**/*
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - services/**/pyproject.toml
+          - services/**/uv.lock
+          - frontend/package.json
+          - frontend/package-lock.json
+          - .github/dependabot.yml

@@ -1,0 +1,40 @@
+name: "❓ Question"
+description: Ask a question about Kraivor
+title: "question: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before asking, check our [documentation](https://kraivor.dev/docs) and [existing issues](https://github.com/nkswalih/kraivor/issues).
+
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Topic
+      options:
+        - Setup / Installation
+        - Configuration
+        - API Usage
+        - Architecture
+        - Deployment
+        - Contributing
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: How do I configure...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What are you trying to achieve? What have you tried?
+      placeholder: I'm trying to set up the development environment on macOS...

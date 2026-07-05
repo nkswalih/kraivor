@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://kraivor.dev/docs
+    about: Check the official documentation for guides and API references
+  - name: 💬 Community Discussions
+    url: https://github.com/nkswalih/kraivor/discussions
+    about: Ask questions, share ideas, and connect with the community
+  - name: 🔒 Security Policy
+    url: https://github.com/nkswalih/kraivor/blob/dev/SECURITY.md
+    about: Report security vulnerabilities privately

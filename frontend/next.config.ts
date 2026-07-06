@@ -1,9 +1,21 @@
 import type { NextConfig } from 'next';
+import createBundleAnalyzer from '@next/bundle-analyzer';
+
+const withBundleAnalyzer = createBundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   experimental: {
-    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons', '@phosphor-icons/react'],
+  },
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'kraivor-uploads.s3.amazonaws.com' },
+      { protocol: 'https', hostname: 'avatars.githubusercontent.com' },
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+    ],
   },
   logging: {
     fetches: {
@@ -26,4 +38,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

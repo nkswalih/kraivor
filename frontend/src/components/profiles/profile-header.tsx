@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { toast } from 'sonner';
 import { Avatar } from './avatar';
 import { FollowButton } from './follow-button';
@@ -13,16 +15,17 @@ import {
   Linkedin,
   Pencil,
   Share2,
-  MessageSquare,
+  Loader2,
 } from 'lucide-react';
 import { copyToClipboard } from '@/lib/utils';
 
 interface ProfileHeaderProps {
   profile: Profile;
   userAvatarUrl?: string;
+  workspaceSlug?: string;
 }
 
-export function ProfileHeader({ profile, userAvatarUrl }: ProfileHeaderProps) {
+export function ProfileHeader({ profile, userAvatarUrl, workspaceSlug }: ProfileHeaderProps) {
   const router = useRouter();
 
   const handleShare = async () => {
@@ -35,18 +38,35 @@ export function ProfileHeader({ profile, userAvatarUrl }: ProfileHeaderProps) {
     }
   };
 
+  const [bannerLoaded, setBannerLoaded] = useState(false);
+
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
+    <div className="bg-card border border-border rounded-lg">
       {/* Banner */}
-      <div className="h-32 bg-gradient-to-r from-primary/20 via-primary/10 to-background">
+      <div className="h-32 bg-gradient-to-r from-primary/20 via-primary/10 to-background relative overflow-hidden rounded-t-lg">
         {profile.banner_url && (
-          <img src={profile.banner_url} alt="" className="w-full h-full object-cover" />
+          <>
+            {!bannerLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                <Loader2 className="w-5 h-5 animate-spin" />
+              </div>
+            )}
+            <Image
+              src={profile.banner_url}
+              alt=""
+              fill
+              className={`object-cover transition-opacity duration-100 ${bannerLoaded ? 'opacity-100' : 'opacity-0'}`}
+              sizes="(max-width: 768px) 100vw, 720px"
+              onLoad={() => setBannerLoaded(true)}
+            />
+          </>
         )}
       </div>
 
       {/* Avatar & Info */}
       <div className="px-6 pb-6">
-        <div className="-mt-12 mb-4">
+        {/* Avatar container with relative stacking and ring separator */}
+        <div className="relative z-10 -mt-12 mb-4 inline-flex rounded-full ring-4 ring-card bg-card overflow-hidden">
           <Avatar
             src={profile.avatar_url}
             fallbackSrc={userAvatarUrl}
@@ -63,7 +83,7 @@ export function ProfileHeader({ profile, userAvatarUrl }: ProfileHeaderProps) {
           <div className="flex items-center gap-2">
             {profile.is_owner && (
               <button
-                onClick={() => router.push(`/profile/${profile.username}/edit`)}
+                onClick={() => router.push(workspaceSlug ? `/profile/${profile.username}/edit?from=${workspaceSlug}` : `/profile/${profile.username}/edit`)}
                 className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md border border-border hover:bg-accent transition-colors"
               >
                 <Pencil className="w-3.5 h-3.5" />

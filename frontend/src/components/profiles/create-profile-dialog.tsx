@@ -81,6 +81,7 @@ export function CreateProfileDialog() {
       }
 
       const result = await updateMutation.mutateAsync({
+        id: formUsername,
         username: formUsername,
         display_name: displayName.trim(),
         bio: bio.trim() || undefined,
@@ -130,7 +131,7 @@ export function CreateProfileDialog() {
               onClick={() => bannerInputRef.current?.click()}
             >
               {bannerPreview && (
-                <img src={bannerPreview} alt="" className="w-full h-full object-cover" />
+                <img src={bannerPreview} alt="" loading="lazy" className="w-full h-full object-cover" />
               )}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                 <Camera className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -152,7 +153,7 @@ export function CreateProfileDialog() {
               onClick={() => avatarInputRef.current?.click()}
             >
               {avatarPreview ? (
-                <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
+                <img src={avatarPreview} alt="" loading="lazy" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full bg-muted flex items-center justify-center text-xl font-medium text-muted-foreground">
                   {(displayName || 'U')[0].toUpperCase()}

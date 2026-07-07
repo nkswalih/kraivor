@@ -301,6 +301,7 @@ export default function ChatRoomPage() {
                             <img
                               src={src}
                               alt={msg.sender_name}
+                              loading="lazy"
                               className="w-9 h-9 rounded-full object-cover shrink-0 mt-0.5 bg-krait-surface3"
                             />
                           ) : (

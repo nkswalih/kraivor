@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
+import { DashboardNotificationSocket } from '@/components/layout/dashboard-notification-socket';
 
 export default async function WorkspaceLayout({
   children,
@@ -12,6 +13,8 @@ export default async function WorkspaceLayout({
   const { workspace } = await params;
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden text-foreground">
+      <DashboardNotificationSocket />
+
       {/* Client Component injected into Server Layout */}
       <Sidebar workspaceSlug={workspace} />
 

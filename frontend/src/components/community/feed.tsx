@@ -1,16 +1,35 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useDiscussions } from '@/lib/hooks/use-community';
-import { useCommunityStore } from '@/lib/stores/community-store';
+import { useCommunityStore, defaultSort } from '@/lib/stores/community-store';
+import { useAuthorProfiles } from '@/lib/hooks/use-profiles';
 import { DiscussionCard } from './discussion-card';
 
 export function Feed() {
-  const activeSort = useCommunityStore(s => s.activeSort);
+  const activeTab = useCommunityStore(s => s.activeTab);
+  const sortOption = useCommunityStore(s => s.sortOption);
   const activeTag = useCommunityStore(s => s.activeTag);
+  const searchQuery = useCommunityStore(s => s.searchQuery);
+  const viewMode = useCommunityStore(s => s.viewMode);
+
+  const sort = sortOption ?? defaultSort(activeTab);
+  const tag = activeTab === 'news'
+    ? 'news'
+    : activeTag ?? undefined;
+
   const { data, isLoading, error } = useDiscussions({
-    sort: activeSort,
-    tag: activeTag ?? undefined,
+    sort,
+    tag,
+    search: activeTab === 'explore' ? searchQuery || undefined : undefined,
   });
+
+  const authorIds = useMemo(
+    () => [...new Set((data?.results ?? []).map(d => d.author_id))],
+    [data?.results]
+  );
+  const { data: resolvedData } = useAuthorProfiles(authorIds);
+  const profileMap = resolvedData?.profileMap ?? {};
 
   if (isLoading) {
     return (
@@ -35,15 +54,38 @@ export function Feed() {
   }
 
   if (!data?.results.length) {
+    const msg = activeTab === 'explore' && searchQuery
+      ? `No discussions match "${searchQuery}".`
+      : activeTab === 'news'
+      ? 'No news discussions yet.'
+      : 'No discussions yet. Start one!';
     return (
-      <div className="text-center py-8 text-muted-foreground">No discussions yet. Start one!</div>
+      <div className="text-center py-8 text-muted-foreground">{msg}</div>
+    );
+  }
+
+  if (viewMode === 'grid') {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {data.results.map(discussion => (
+          <DiscussionCard
+            key={discussion.id}
+            discussion={discussion}
+            resolvedAuthor={profileMap[discussion.author_id] ?? null}
+          />
+        ))}
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
       {data.results.map(discussion => (
-        <DiscussionCard key={discussion.id} discussion={discussion} />
+        <DiscussionCard
+          key={discussion.id}
+          discussion={discussion}
+          resolvedAuthor={profileMap[discussion.author_id] ?? null}
+        />
       ))}
     </div>
   );

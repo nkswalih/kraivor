@@ -3,7 +3,7 @@ import type { SendMessagePayload, ChatMessage } from '@/types/domain/ai';
 
 /* ─── AI Service Base URL ────────────────────────────────── */
 
-const AI_BASE = process.env.NEXT_PUBLIC_AI_API_URL ?? 'http://localhost:8004';
+const AI_BASE = '/api/ai';
 
 /* ─── Frontend model ID → Backend model ID mapping ──────── */
 

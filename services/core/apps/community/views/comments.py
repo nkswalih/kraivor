@@ -11,6 +11,7 @@ from ..permissions import IsAuthenticatedOrReadOnly
 from ..serializers import CommentSerializer, CreateCommentSerializer
 from ..services import CommentService, DiscussionService, VoteService
 from .discussions import _resolve_profile, _sync_profile_counters
+from apps.notifications.tasks import dispatch_notification
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,33 @@ class CommentListView(APIView):
         )
         publish_comment_created(comment, request.user_id)
         _sync_profile_counters("comment.created", str(comment.author_id))
+
+        parent_id = serializer.validated_data.get("parent_id")
+        if parent_id:
+            from ..models import Comment as CommentModel
+            try:
+                parent_comment = CommentModel.objects.get(id=parent_id)
+                if str(parent_comment.author_id) != str(request.user_id):
+                    dispatch_notification.delay(
+                        user_id=str(parent_comment.author_id),
+                        notification_type="community.comment.reply",
+                        title="New reply to your comment",
+                        body=f"{profile.get('display_name', 'Someone')} replied to your comment.",
+                        link=f"/community/discussions/{discussion.id}",
+                        actor_id=str(request.user_id),
+                    )
+            except CommentModel.DoesNotExist:
+                pass
+        elif str(discussion.author_id) != str(request.user_id):
+            dispatch_notification.delay(
+                user_id=str(discussion.author_id),
+                notification_type="community.comment.created",
+                title=f"New comment on your discussion",
+                body=f"{profile.get('display_name', 'Someone')} commented on '{discussion.title}'.",
+                link=f"/community/discussions/{discussion.id}",
+                actor_id=str(request.user_id),
+            )
+
         return Response(
             CommentSerializer(comment, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
@@ -112,6 +140,15 @@ class CommentVoteView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         vote, action = VoteService.vote_comment(comment, request.user_id, value)
+        if value == 1 and action != "no_change" and str(comment.author_id) != str(request.user_id):
+            dispatch_notification.delay(
+                user_id=str(comment.author_id),
+                notification_type="community.comment.upvoted",
+                title="Your comment was upvoted",
+                body="Someone upvoted your comment.",
+                link=f"/community/discussions/{discussion_id}",
+                actor_id=str(request.user_id),
+            )
         return Response({"value": vote.value, "action": action})
 
     @extend_schema(

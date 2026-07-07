@@ -16,6 +16,7 @@ from django.utils import timezone
 from apps.chat.dynamodb import delete_message as dynamodb_delete_message
 from apps.chat.services import ChatRoomService
 from apps.chat.tasks import persist_to_dynamodb, trigger_ai_response
+from apps.notifications.tasks import dispatch_notification as dispatch_notification_task
 from core.infrastructure.redis import get_redis
 
 logger = logging.getLogger(__name__)
@@ -181,6 +182,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 ),
             )
 
+        for mentioned_user_id in mentions:
+            if mentioned_user_id and mentioned_user_id != self.user_id:
+                dispatch_notification_task.delay(
+                    user_id=mentioned_user_id,
+                    notification_type="chat.mention",
+                    title=f"{self.scope.get('user_name', 'Someone')} mentioned you",
+                    body=content[:200],
+                    link=f"/chat/{self.room_id}",
+                    workspace_id=(
+                        self.scope.get("workspace_ids", [None])[0]
+                        if self.scope.get("workspace_ids")
+                        else None
+                    ),
+                    actor_id=self.user_id,
+                )
+
     async def _handle_typing(self, data: dict, event_type: str) -> None:
         await self.channel_layer.group_send(
             self.room_group,
@@ -292,6 +309,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                     "title": event["title"],
                     "body": event["body"],
                     "link": event.get("link", ""),
+                    "metadata": event.get("metadata", {}),
                     "workspace_id": event.get("workspace_id", ""),
                     "actor_id": event.get("actor_id", ""),
                     "created_at": event["created_at"],

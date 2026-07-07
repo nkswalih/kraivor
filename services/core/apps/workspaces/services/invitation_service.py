@@ -235,6 +235,19 @@ class InvitationService:
             .order_by("-created_at")
         )
 
+    def list_my_pending_invitations(
+        self, *, email: str
+    ) -> "QuerySet[WorkspaceInvitation]":
+        return (
+            WorkspaceInvitation.objects.filter(
+                email=email,
+                accepted_at__isnull=True,
+                expires_at__gt=timezone.now(),
+            )
+            .select_related("workspace")
+            .order_by("-created_at")
+        )
+
 
 def _dispatch_invitation_email(invitation_id: str) -> None:
     try:
@@ -305,8 +318,8 @@ def _dispatch_invitation_notification(
         dispatch_notification.delay(
             user_id=user_id,
             notification_type="workspace.invitation",
-            title=f"You've been invited to {workspace_name}",
-            body=f"{invited_by_name or 'A team member'} invited you to {workspace_name} as {role}.",
+            title=f"{invited_by_name or 'A team member'} invited you to {workspace_name}",
+            body=f"Role: {role}",
             link=f"/invitations/{invitation_token}",
         )
         logger.info(

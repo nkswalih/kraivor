@@ -10,6 +10,7 @@ from .invitations import (
     InvitationAcceptView,
     InvitationListAdminView,
     InvitationRevokeView,
+    MyPendingInvitationsView,
 )
 from .members import MemberDetailView, MemberListCreateView
 from .workspaces import WorkspaceDetailView, WorkspaceListView

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bell, Mail, Building2, Users, Hash, Check, Loader2, X } from 'lucide-react';
+import { Bell, Mail, Building2, Users, Hash, Check, Loader2, X, ThumbsUp } from 'lucide-react';
 import { notificationEndpoints, workspaceEndpoints, chatEndpoints } from '@/lib/api/endpoints';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { formatRelativeTime } from '@/lib/utils';
@@ -30,6 +30,12 @@ export default function InboxPage() {
     queryFn: () => notificationEndpoints.list(),
   });
 
+  // My pending invitations (works for users without workspaces)
+  const { data: myInvitationsData } = useQuery({
+    queryKey: ['invitations', 'mine'],
+    queryFn: () => workspaceEndpoints.myPendingInvitations(),
+  });
+
   const { data: allInvitationsData } = useQuery({
     queryKey: ['invitations', 'all'],
     queryFn: async () => {
@@ -39,6 +45,10 @@ export default function InboxPage() {
             workspaceId: w.id,
             workspaceName: w.name,
             invitations: invs ?? [],
+          })).catch(() => ({
+            workspaceId: w.id,
+            workspaceName: w.name,
+            invitations: [],
           }))
         )
       );
@@ -50,24 +60,41 @@ export default function InboxPage() {
   const notifs: Notification[] = notifications ?? [];
   const unreadCount = unreadData?.unread_count ?? 0;
 
-  // Pending invitations for current user
+  // Pending invitations for current user — combine my-invitations + per-workspace
   const pendingInvites = useMemo(() => {
-    if (!allInvitationsData || !user?.email) return [];
     const items: { id: string; workspaceName: string; role: string; token: string }[] = [];
-    for (const ws of allInvitationsData) {
-      for (const inv of ws.invitations) {
-        if (inv.status === 'pending' && inv.email === user.email) {
-          items.push({
-            id: inv.id,
-            workspaceName: ws.workspaceName,
-            role: inv.role,
-            token: inv.token,
-          });
+    const seen = new Set<string>();
+    // Primary source: /invitations/pending/ endpoint (works for all users)
+    for (const inv of myInvitationsData ?? []) {
+      const token = inv.token;
+      if (!seen.has(token)) {
+        seen.add(token);
+        items.push({
+          id: inv.id,
+          workspaceName: (inv as any).workspace_name ?? 'Unknown',
+          role: inv.role,
+          token,
+        });
+      }
+    }
+    // Fallback: per-workspace invitations (for admins)
+    if (allInvitationsData) {
+      for (const ws of allInvitationsData) {
+        for (const inv of ws.invitations ?? []) {
+          if (inv.status === 'pending' && inv.email === user?.email && !seen.has(inv.token)) {
+            seen.add(inv.token);
+            items.push({
+              id: inv.id,
+              workspaceName: ws.workspaceName,
+              role: inv.role,
+              token: inv.token,
+            });
+          }
         }
       }
     }
     return items;
-  }, [allInvitationsData, user?.email]);
+  }, [myInvitationsData, allInvitationsData, user?.email]);
 
   // Category counts
   const workspaceNotifCount = notifs.filter(
@@ -112,7 +139,7 @@ export default function InboxPage() {
                 <Icon className="w-4 h-4 shrink-0" />
                 <span className="flex-1">{tab.label}</span>
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span className="text-[10px] font-semibold bg-[#6366F1] text-white min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1">
+                  <span className="text-[10px] font-semibold bg-venom-yellow text-black min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1">
                     {tab.count > 99 ? '99+' : tab.count}
                   </span>
                 )}
@@ -165,7 +192,7 @@ function acceptInviteInPanel(
     <button
       onClick={() => mut.mutate(token, { onSuccess: onAcceptSuccess })}
       disabled={mut.isPending}
-      className="shrink-0 px-2.5 py-1 bg-[#6366F1] hover:bg-[#4F46E5] text-white text-[11px] font-medium rounded-[4px] transition-colors disabled:opacity-50 flex items-center gap-1"
+      className="shrink-0 px-2.5 py-1 bg-venom-yellow hover:bg-venom-gold text-black text-[11px] font-medium rounded-[4px] transition-colors disabled:opacity-50 flex items-center gap-1"
     >
       {mut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
       Accept
@@ -179,21 +206,33 @@ function notificationDetail(
   acceptMut?: { mutate: (t: string) => void; isPending: boolean }
 ) {
   const isInvite = n.notification_type === 'workspace.invitation';
+  const isFollow = n.notification_type === 'profile.follow.new';
   const token = isInvite && n.link ? n.link.replace('/invitations/', '') : '';
+  const followerUsername = isFollow ? (n.metadata?.follower_username as string) : undefined;
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-[#27272A] flex items-center justify-center text-sm font-bold text-[#FAFAFA] shrink-0">
-          {n.title.charAt(0).toUpperCase()}
-        </div>
+        {isFollow ? (
+          <div className="w-10 h-10 rounded-full bg-venom-yellow flex items-center justify-center text-sm font-bold text-black shrink-0">
+            {(followerUsername || 'U').charAt(0).toUpperCase()}
+          </div>
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-[#27272A] flex items-center justify-center text-sm font-bold text-[#FAFAFA] shrink-0">
+            {n.title.charAt(0).toUpperCase()}
+          </div>
+        )}
         <div>
-          <p className="text-[15px] font-semibold text-[#FAFAFA]">{n.title}</p>
+          <p className="text-[15px] font-semibold text-[#FAFAFA]">
+            {isFollow ? (followerUsername || 'Someone') : n.title}
+          </p>
           <p className="text-[12px] text-[#A1A1AA]">{formatRelativeTime(n.created_at)}</p>
         </div>
       </div>
-      {n.body && (
+      {isFollow ? (
+        <p className="text-[14px] text-[#D1D5DB] leading-relaxed">Followed you</p>
+      ) : n.body ? (
         <p className="text-[14px] text-[#D1D5DB] leading-relaxed whitespace-pre-wrap">{n.body}</p>
-      )}
+      ) : null}
       <div className="flex items-center gap-2 pt-2">
         {isInvite &&
           token &&
@@ -269,7 +308,10 @@ function AllPanel({
         <div className="p-3 space-y-1">
           {notifications.map(n => {
             const isInvite = n.notification_type === 'workspace.invitation';
+            const isFollow = n.notification_type === 'profile.follow.new';
+            const isUpvote = n.notification_type.endsWith('upvoted');
             const token = isInvite && n.link ? n.link.replace('/invitations/', '') : '';
+            const followerUsername = isFollow ? (n.metadata?.follower_username as string) : undefined;
             return (
               <div
                 key={n.id}
@@ -282,22 +324,44 @@ function AllPanel({
                     ? 'bg-[#27272A]'
                     : n.read_at
                       ? 'hover:bg-[#18181B]'
-                      : 'bg-[#6366F1]/5 hover:bg-[#6366F1]/10'
+                      : 'bg-venom-yellow/5 hover:bg-venom-yellow/10'
                 }`}
               >
-                <div className="w-9 h-9 rounded-full bg-[#27272A] flex items-center justify-center text-xs font-bold text-[#FAFAFA] shrink-0 mt-0.5">
-                  {n.title.charAt(0).toUpperCase()}
-                </div>
+                {isFollow ? (
+                  <div className="w-10 h-10 rounded-full bg-venom-yellow flex items-center justify-center shrink-0">
+                    <span className="text-sm font-bold text-black">
+                      {(followerUsername || 'U').charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                ) : isUpvote ? (
+                  <div className="w-9 h-9 rounded-full bg-venom-yellow/15 flex items-center justify-center shrink-0 mt-0.5">
+                    <ThumbsUp className="w-4 h-4 text-venom-yellow" />
+                  </div>
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-[#27272A] flex items-center justify-center text-xs font-bold text-[#FAFAFA] shrink-0 mt-0.5">
+                    {n.title.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-[13px] font-medium text-[#FAFAFA] truncate">{n.title}</p>
+                    {isFollow ? (
+                      <p className="text-[13px] font-semibold text-[#FAFAFA] truncate">
+                        {followerUsername || 'Someone'}
+                      </p>
+                    ) : (
+                      <p className="text-[13px] font-medium text-[#FAFAFA] truncate">{n.title}</p>
+                    )}
                     <span className="text-[10px] text-[#A1A1AA] shrink-0 whitespace-nowrap mt-0.5">
                       {formatRelativeTime(n.created_at)}
                     </span>
                   </div>
-                  <p className="text-[12px] text-[#A1A1AA] line-clamp-1 mt-0.5 text-left">
-                    {n.body || n.title}
-                  </p>
+                  {isFollow ? (
+                    <p className="text-[12px] text-[#A1A1AA] mt-0.5 text-left">Followed you</p>
+                  ) : (
+                    <p className="text-[12px] text-[#A1A1AA] line-clamp-1 mt-0.5 text-left">
+                      {n.body || n.title}
+                    </p>
+                  )}
                 </div>
                 {isInvite && token && (
                   <div onClick={e => e.stopPropagation()}>
@@ -340,7 +404,10 @@ function InvitationsPanel({
 }) {
   const acceptMut = useMutation({
     mutationFn: (token: string) => workspaceEndpoints.acceptInvitation(token),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['invitations', 'all'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invitations', 'all'] });
+      queryClient.invalidateQueries({ queryKey: ['invitations', 'mine'] });
+    },
   });
 
   if (pendingInvites.length === 0) {
@@ -369,7 +436,7 @@ function InvitationsPanel({
             <button
               onClick={() => acceptMut.mutate(inv.token)}
               disabled={acceptMut.isPending}
-              className="shrink-0 px-3 py-1.5 bg-[#6366F1] hover:bg-[#4F46E5] text-white text-xs font-medium rounded-[6px] transition-colors disabled:opacity-50 flex items-center gap-1"
+              className="shrink-0 px-3 py-1.5 bg-venom-yellow hover:bg-venom-gold text-black text-xs font-medium rounded-[6px] transition-colors disabled:opacity-50 flex items-center gap-1"
             >
               {acceptMut.isPending ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -457,7 +524,7 @@ function WorkspacesPanel({
                     ? 'bg-[#27272A]'
                     : n.read_at
                       ? 'hover:bg-[#18181B]'
-                      : 'bg-[#6366F1]/5 hover:bg-[#6366F1]/10'
+                      : 'bg-venom-yellow/5 hover:bg-venom-yellow/10'
                 }`}
               >
                 <div className="w-9 h-9 rounded-full bg-[#27272A] flex items-center justify-center text-xs font-bold text-[#FAFAFA] shrink-0 mt-0.5">
@@ -547,7 +614,7 @@ function MembersPanel({
               {memberNotifs.map(n => (
                 <div
                   key={n.id}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${n.read_at ? '' : 'bg-[#6366F1]/5'}`}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${n.read_at ? '' : 'bg-venom-yellow/5'}`}
                 >
                   <div className="w-8 h-8 rounded-full bg-[#27272A] flex items-center justify-center text-xs font-bold text-[#FAFAFA] shrink-0">
                     {n.title.charAt(0).toUpperCase()}
@@ -722,7 +789,7 @@ function ChannelsPanel({ workspaceId }: { workspaceId?: string }) {
               ))}
               <a
                 href={`/${workspaceId}/chat/${selectedRoom}`}
-                className="block text-[12px] text-[#6366F1] hover:text-[#4F46E5] text-center py-2"
+                className="block text-[12px] text-venom-yellow hover:text-venom-gold text-center py-2"
               >
                 Open channel →
               </a>

@@ -13,6 +13,7 @@ export function ImageElement({ data }: Props) {
         <img
           src={data.url}
           alt={data.alt ?? ''}
+          loading="lazy"
           className="w-full h-full"
           style={{ objectFit: data.objectFit ?? 'contain' }}
         />

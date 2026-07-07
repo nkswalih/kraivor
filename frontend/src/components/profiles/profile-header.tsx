@@ -135,7 +135,7 @@ export function ProfileHeader({ profile, userAvatarUrl, workspaceSlug }: Profile
           )}
           {profile.twitter_username && (
             <a
-              href={`https://twitter.com/${profile.twitter_username}`}
+              href={`https://x.com//${profile.twitter_username}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 hover:text-foreground"

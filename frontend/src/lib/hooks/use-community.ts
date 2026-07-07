@@ -25,6 +25,7 @@ export function useDiscussions(params?: {
   page?: number;
   tag?: string;
   sort?: SortOption;
+  search?: string;
   workspace_id?: string;
 }) {
   return useQuery({
@@ -49,6 +50,7 @@ export function useCreateDiscussion() {
     mutationFn: (payload: DiscussionCreatePayload) => communityEndpoints.createDiscussion(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: communityKeys.discussions() });
+      qc.invalidateQueries({ queryKey: ['profiles'] });
     },
   });
 }
@@ -71,6 +73,7 @@ export function useDeleteDiscussion() {
     mutationFn: (discussionId: string) => communityEndpoints.deleteDiscussion(discussionId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: communityKeys.discussions() });
+      qc.invalidateQueries({ queryKey: ['profiles'] });
     },
   });
 }
@@ -82,6 +85,7 @@ export function useVoteDiscussion(discussionId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: communityKeys.discussionDetail(discussionId) });
       qc.invalidateQueries({ queryKey: communityKeys.discussions() });
+      qc.invalidateQueries({ queryKey: ['profiles'] });
     },
   });
 }
@@ -92,6 +96,7 @@ export function useRemoveVote(discussionId: string) {
     mutationFn: () => communityEndpoints.removeVote(discussionId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: communityKeys.discussionDetail(discussionId) });
+      qc.invalidateQueries({ queryKey: ['profiles'] });
     },
   });
 }
@@ -116,6 +121,7 @@ export function useCreateComment(discussionId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: communityKeys.comments(discussionId) });
       qc.invalidateQueries({ queryKey: communityKeys.discussionDetail(discussionId) });
+      qc.invalidateQueries({ queryKey: ['profiles'] });
     },
   });
 }
@@ -126,6 +132,7 @@ export function useVoteComment(discussionId: string, commentId: string) {
     mutationFn: (value: 1 | -1) => communityEndpoints.voteComment(discussionId, commentId, value),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: communityKeys.comments(discussionId) });
+      qc.invalidateQueries({ queryKey: ['profiles'] });
     },
   });
 }
@@ -136,6 +143,7 @@ export function useRemoveCommentVote(discussionId: string, commentId: string) {
     mutationFn: () => communityEndpoints.removeCommentVote(discussionId, commentId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: communityKeys.comments(discussionId) });
+      qc.invalidateQueries({ queryKey: ['profiles'] });
     },
   });
 }

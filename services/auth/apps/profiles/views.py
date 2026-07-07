@@ -1,6 +1,7 @@
 import logging
 import uuid
 
+import requests
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db.models import F
@@ -16,7 +17,7 @@ from profiles.constants import (
     BANNER_MAX_BYTES,
     REPUTATION_EVENTS,
 )
-from profiles.events import publish_profile_updated
+from profiles.events import publish_follow_new, publish_profile_updated
 from profiles.models import Profile
 from profiles.permissions import IsAuthenticatedOrReadOnly
 from profiles.serializers import (
@@ -48,6 +49,35 @@ def _user_id(request) -> str | None:
     if request.user.is_authenticated:
         return str(request.user.id)
     return None
+
+
+def _sync_community_author(user_id: str, username: str, display_name: str, avatar_url: str) -> None:
+    """Sync denormalized author fields to core service community discussions/comments."""
+    base = getattr(settings, "CORE_SERVICE_URL", "http://core:8002")
+    endpoint = f"{base}/api/community/internal/sync-author/"
+    header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
+    try:
+        resp = requests.post(
+            endpoint,
+            json={
+                "author_id": user_id,
+                "username": username,
+                "display_name": display_name,
+                "avatar_url": avatar_url,
+            },
+            headers={header: "1"},
+            timeout=5,
+        )
+        if resp.status_code != 200:
+            logger.warning(
+                "community_sync.failed",
+                extra={"author_id": user_id, "status": resp.status_code},
+            )
+    except requests.exceptions.RequestException as exc:
+        logger.warning(
+            "community_sync.error",
+            extra={"author_id": user_id, "error": str(exc)},
+        )
 
 
 class ProfileDetailView(APIView):
@@ -90,13 +120,29 @@ class ProfileDetailView(APIView):
             profile = Profile(user_id=uid, username=username, display_name=display_name)
         if uid != str(profile.user_id):
             return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+        old_username = profile.username
+        old_display_name = profile.display_name
+        old_avatar_url = profile.avatar_url
         old_values = {}
-        for field in ("display_name", "bio", "avatar_url", "website_url"):
+        for field in ("username", "display_name", "bio", "avatar_url", "website_url"):
             old_values[field] = getattr(profile, field)
         serializer = UpdateProfileSerializer(profile, data=request.data, partial=True)
         if not serializer.is_valid():  # pragma: no cover
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         serializer.save()
+        profile.refresh_from_db()
+        # Sync denormalized author fields to community if identity fields changed
+        if (
+            profile.username != old_username
+            or profile.display_name != old_display_name
+            or profile.avatar_url != old_avatar_url
+        ):
+            _sync_community_author(
+                str(profile.user_id),
+                profile.username,
+                profile.display_name,
+                profile.avatar_url,
+            )
         publish_profile_updated(profile, old_values=old_values)
         return Response(ProfileSerializer(profile).data)
 
@@ -218,6 +264,11 @@ class FollowView(APIView):
         result = ProfileService.follow(str(request.user.id), str(target.user_id))
         if result is None:
             return Response({"detail": "Already following or self-follow."}, status=status.HTTP_409_CONFLICT)
+        publish_follow_new(
+            follower_id=str(request.user.id),
+            target_user_id=str(target.user_id),
+            follower_username=getattr(request.user, "username", ""),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(
@@ -506,10 +557,19 @@ class CommunityEventWebhookView(APIView):
             Profile.objects.filter(user_id=author_uuid, discussion_count__gt=0).update(
                 discussion_count=F("discussion_count") - 1,
             )
+        elif event_type == "comment.created":
+            Profile.objects.filter(user_id=author_uuid).update(
+                comment_count=F("comment_count") + 1,
+            )
+        elif event_type == "comment.deleted":
+            Profile.objects.filter(user_id=author_uuid, comment_count__gt=0).update(
+                comment_count=F("comment_count") - 1,
+            )
         elif event_type == "backfill.user_stats":
             stats = request.data.get("data", {})
             Profile.objects.filter(user_id=author_uuid).update(
                 discussion_count=stats.get("discussion_count", 0),
+                comment_count=stats.get("comment_count", 0),
                 reputation_score=stats.get("reputation_score", 0),
             )
 

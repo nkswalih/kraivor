@@ -78,3 +78,18 @@ def publish_profile_updated(profile, old_values=None):
     transaction.on_commit(
         lambda: _publish("profiles", envelope, user_id=profile.user_id)
     )
+
+
+def publish_follow_new(follower_id: str, target_user_id: str, follower_username: str):
+    envelope = _build_envelope(
+        event_type="profile.follow.new",
+        data={
+            "follower_id": follower_id,
+            "follower_username": follower_username,
+            "target_user_id": target_user_id,
+        },
+        user_id=target_user_id,
+    )
+    transaction.on_commit(
+        lambda: _publish("profiles", envelope, user_id=target_user_id)
+    )

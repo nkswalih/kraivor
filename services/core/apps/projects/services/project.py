@@ -11,6 +11,7 @@ from ..constants import (
 )
 from ..events import ProjectEventPublisher
 from ..models import Project, Task
+from apps.notifications.utils import fanout_to_workspace_members
 
 logger = __import__("logging").getLogger(__name__)
 
@@ -76,6 +77,18 @@ class ProjectService:
             created_by=user_id,
         )
         ProjectEventPublisher.publish_project_created(project, user_id)
+
+        fanout_to_workspace_members(
+            workspace_id=workspace_id,
+            notification_type="project.created",
+            title=f"New Project: {name}",
+            body=f"Project '{name}' was created in your workspace.",
+            link=f"/workspaces/{workspace_id}/projects/{project.id}",
+            metadata={"project_name": name, "project_status": status},
+            actor_id=user_id,
+            exclude_user_id=user_id,
+        )
+
         logger.info("Project created: id=%s workspace=%s", project.id, workspace_id)
         return project
 

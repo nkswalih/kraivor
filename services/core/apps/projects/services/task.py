@@ -15,6 +15,8 @@ from ..constants import (
 )
 from ..events import TaskEventPublisher
 from ..models import Project, Task, TaskKnowledgeLink, TaskLink, TaskRepositoryLink
+from apps.notifications.tasks import dispatch_notification
+from apps.notifications.utils import fanout_to_workspace_members
 
 logger = __import__("logging").getLogger(__name__)
 
@@ -98,6 +100,38 @@ class TaskService:
         TaskEventPublisher.publish_task_created(task, reporter_id)
         if task.assignee_id:
             TaskEventPublisher.publish_task_assigned(task, assigned_by=reporter_id)
+
+        workspace_id = str(project.workspace_id)
+        metadata = {
+            "status": task.status,
+            "priority": task.priority,
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+        }
+
+        fanout_to_workspace_members(
+            workspace_id=workspace_id,
+            notification_type="task.created",
+            title=f"New Task: {title}",
+            body=f"Task '{title}' [{task.status}] [Priority: {task.priority}] was created.",
+            link=f"/workspaces/{workspace_id}/tasks/{task.id}",
+            metadata=metadata,
+            actor_id=reporter_id,
+            exclude_user_id=reporter_id,
+        )
+
+        if task.assignee_id and str(task.assignee_id) != reporter_id:
+            dispatch_notification.delay(
+                user_id=str(task.assignee_id),
+                notification_type="task.assigned",
+                title=f"Task assigned: {title}",
+                body=f"You were assigned task '{title}' [{task.status}] [Priority: {task.priority}].",
+                link=f"/workspaces/{workspace_id}/tasks/{task.id}",
+                metadata=metadata,
+                workspace_id=workspace_id,
+                actor_id=reporter_id,
+            )
+
         logger.info("Task created: id=%s project=%s", task.id, project.id)
         return task
 
@@ -132,13 +166,55 @@ class TaskService:
             setattr(task, field, value)
         task.save()
         new_assignee_id = str(task.assignee_id) if task.assignee_id else None
+        workspace_id = str(task.project.workspace_id)
+        metadata = {
+            "status": task.status,
+            "priority": task.priority,
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+        }
+
         if new_assignee_id and new_assignee_id != old_assignee_id:
             TaskEventPublisher.publish_task_assigned(task, assigned_by=user_id)
+            if new_assignee_id != user_id:
+                dispatch_notification.delay(
+                    user_id=new_assignee_id,
+                    notification_type="task.assigned",
+                    title=f"Task assigned: {task.title}",
+                    body=f"You were assigned task '{task.title}' [{task.status}] [Priority: {task.priority}].",
+                    link=f"/workspaces/{workspace_id}/tasks/{task.id}",
+                    metadata=metadata,
+                    workspace_id=workspace_id,
+                    actor_id=user_id,
+                )
+
         if task.status != old_status:
             if task.status == TaskStatus.BLOCKED:
                 TaskEventPublisher.publish_task_blocked(task, user_id)
+                if task.assignee_id and str(task.assignee_id) != user_id:
+                    dispatch_notification.delay(
+                        user_id=str(task.assignee_id),
+                        notification_type="task.blocked",
+                        title=f"Task blocked: {task.title}",
+                        body=f"Task '{task.title}' is blocked [Priority: {task.priority}].",
+                        link=f"/workspaces/{workspace_id}/tasks/{task.id}",
+                        metadata=metadata,
+                        workspace_id=workspace_id,
+                        actor_id=user_id,
+                    )
             elif task.status == TaskStatus.DONE:
                 TaskEventPublisher.publish_task_completed(task, user_id)
+                if task.assignee_id and str(task.assignee_id) != user_id:
+                    dispatch_notification.delay(
+                        user_id=str(task.assignee_id),
+                        notification_type="task.completed",
+                        title=f"Task completed: {task.title}",
+                        body=f"Task '{task.title}' has been completed.",
+                        link=f"/workspaces/{workspace_id}/tasks/{task.id}",
+                        metadata=metadata,
+                        workspace_id=workspace_id,
+                        actor_id=user_id,
+                    )
         logger.info("Task updated: id=%s", task.id)
         return task
 
@@ -159,11 +235,41 @@ class TaskService:
                 status=new_status,
             )
         task.save(update_fields=["status", "position", "updated_at"])
+        workspace_id = str(task.project.workspace_id)
+        metadata = {
+            "status": task.status,
+            "priority": task.priority,
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+        }
+
         if new_status != old_status:
             if new_status == TaskStatus.BLOCKED:
                 TaskEventPublisher.publish_task_blocked(task, user_id)
+                if task.assignee_id and str(task.assignee_id) != user_id:
+                    dispatch_notification.delay(
+                        user_id=str(task.assignee_id),
+                        notification_type="task.blocked",
+                        title=f"Task blocked: {task.title}",
+                        body=f"Task '{task.title}' is blocked [Priority: {task.priority}].",
+                        link=f"/workspaces/{workspace_id}/tasks/{task.id}",
+                        metadata=metadata,
+                        workspace_id=workspace_id,
+                        actor_id=user_id,
+                    )
             elif new_status == TaskStatus.DONE:
                 TaskEventPublisher.publish_task_completed(task, user_id)
+                if task.assignee_id and str(task.assignee_id) != user_id:
+                    dispatch_notification.delay(
+                        user_id=str(task.assignee_id),
+                        notification_type="task.completed",
+                        title=f"Task completed: {task.title}",
+                        body=f"Task '{task.title}' has been completed.",
+                        link=f"/workspaces/{workspace_id}/tasks/{task.id}",
+                        metadata=metadata,
+                        workspace_id=workspace_id,
+                        actor_id=user_id,
+                    )
         return task
 
     @staticmethod

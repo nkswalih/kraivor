@@ -1,7 +1,9 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useDiscussion } from '@/lib/hooks/use-community';
 import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
+import { useAuthorProfiles } from '@/lib/hooks/use-profiles';
 import { Avatar } from '@/components/profiles/avatar';
 import { UpvoteButton } from './upvote-button';
 import { TagChip } from './tag-chip';
@@ -33,6 +35,17 @@ export function DiscussionDetail({ discussionId }: DiscussionDetailProps) {
   useDetailBreadcrumb(discussion?.title);
   const params = useParams();
   const workspace = params?.workspace as string;
+
+  const authorProfileIds = useMemo(
+    () => (discussion?.author_id ? [discussion.author_id] : []),
+    [discussion?.author_id]
+  );
+  const { data: resolvedData } = useAuthorProfiles(authorProfileIds);
+  const profileMap = resolvedData?.profileMap ?? {};
+  const resolvedAuthor = discussion?.author_id ? profileMap?.[discussion.author_id] : undefined;
+  const authorUsername = resolvedAuthor?.username ?? discussion?.author_username ?? '';
+  const authorDisplayName = resolvedAuthor?.display_name ?? discussion?.author_display_name ?? '';
+  const authorAvatarUrl = resolvedAuthor?.avatar_url ?? discussion?.author_avatar_url ?? '';
 
   if (isLoading) {
     return (
@@ -72,15 +85,15 @@ export function DiscussionDetail({ discussionId }: DiscussionDetailProps) {
           <div className="flex-1">
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-2">
               <Avatar
-                src={discussion.author_avatar_url}
-                name={discussion.author_display_name}
+                src={authorAvatarUrl}
+                name={authorDisplayName}
                 size="sm"
               />
               <Link
-                href={`/${discussion.author_username}`}
+                href={`/${workspace}/profile/${authorUsername}`}
                 className="font-medium text-foreground hover:underline"
               >
-                {discussion.author_display_name}
+                {authorDisplayName}
               </Link>
               <span>·</span>
               <span>{timeAgo(discussion.created_at)}</span>

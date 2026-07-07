@@ -14,6 +14,7 @@ class NotificationSerializer(serializers.ModelSerializer):
             "title",
             "body",
             "link",
+            "metadata",
             "actor_id",
             "read_at",
             "created_at",

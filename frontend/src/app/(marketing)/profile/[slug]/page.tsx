@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useProfile, useFollowers, useFollowing } from '@/lib/hooks/use-profiles';
 import { ProfileHeader } from '@/components/profiles/profile-header';
+import { UserDiscussionList } from '@/components/profiles/user-discussions-list';
+import { UserCommentList } from '@/components/profiles/user-comments-list';
 import { Avatar } from '@/components/profiles/avatar';
 import { Skeleton } from '@/components/ui/shadcn';
 import { formatRelativeTime } from '@/lib/utils';
@@ -17,8 +19,13 @@ export default function UserProfilePage() {
   const { data: profile, isLoading, error } = useProfile(username);
   const [activeTab, setActiveTab] = useState<Tab>('followers');
 
-  const { data: followersData, isLoading: followersLoading } = useFollowers(username);
-  const { data: followingData, isLoading: followingLoading } = useFollowing(username);
+  const { data: followersData, isLoading: followersLoading, refetch: refetchFollowers } = useFollowers(username);
+  const { data: followingData, isLoading: followingLoading, refetch: refetchFollowing } = useFollowing(username);
+
+  useEffect(() => {
+    if (activeTab === 'followers') refetchFollowers();
+    if (activeTab === 'following') refetchFollowing();
+  }, [activeTab, refetchFollowers, refetchFollowing]);
 
   if (isLoading) {
     return (
@@ -72,16 +79,12 @@ export default function UserProfilePage() {
 
       {/* Tab Content */}
       <div className="mt-4">
-        {activeTab === 'discussions' && (
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="text-[13px]">Discussion history coming soon</p>
-          </div>
+        {activeTab === 'discussions' && profile && (
+          <UserDiscussionList userId={profile.user_id} />
         )}
 
-        {activeTab === 'comments' && (
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="text-[13px]">Comment history coming soon</p>
-          </div>
+        {activeTab === 'comments' && profile && (
+          <UserCommentList userId={profile.user_id} />
         )}
 
         {activeTab === 'followers' && (

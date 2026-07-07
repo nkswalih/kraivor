@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import type {
   CanvasElement,
   ArrowElementData,
@@ -12,8 +13,19 @@ import { TextElement } from './text-element';
 import { MarkdownElement } from './markdown-element';
 import { CodeElement } from './code-element';
 import { ImageElement } from './image-element';
-import { PdfElement } from './pdf-element';
 import { StickyNoteElement } from './sticky-note-element';
+
+const PdfElement = dynamic(
+  () => import('./pdf-element').then(m => m.PdfElement),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full bg-krait-surface3 flex items-center justify-center">
+        <span className="text-[12px] text-text-tertiary">Loading PDF...</span>
+      </div>
+    ),
+  },
+);
 
 interface Props {
   element: CanvasElement;
@@ -454,6 +466,26 @@ function ArrowSvg({
   );
 }
 
+function canvasElementAreEqual(prev: Props, next: Props): boolean {
+  if (prev.isSelected !== next.isSelected) return false;
+  if (prev.isEditing !== next.isEditing) return false;
+  const a = prev.element;
+  const b = next.element;
+  return (
+    a.id === b.id &&
+    a.position.x === b.position.x &&
+    a.position.y === b.position.y &&
+    a.size.width === b.size.width &&
+    a.size.height === b.size.height &&
+    a.zIndex === b.zIndex &&
+    a.opacity === b.opacity &&
+    a.visible === b.visible &&
+    a.rotation === b.rotation &&
+    a.locked === b.locked &&
+    JSON.stringify(a.data) === JSON.stringify(b.data)
+  );
+}
+
 export const CanvasElementRenderer = memo(function CanvasElementRenderer({
   element,
   spaceId,
@@ -600,4 +632,4 @@ export const CanvasElementRenderer = memo(function CanvasElementRenderer({
       )}
     </div>
   );
-});
+}, canvasElementAreEqual);

@@ -1,8 +1,8 @@
 """
 Kafka consumer management command.
 
-Listens to external service events (analysis, ai, workspace) and dispatches
-Celery tasks for notification delivery.
+Listens to external service events (analysis, ai, workspace, community,
+project, task, repository) and dispatches Celery tasks for notification delivery.
 
 Usage:
     python manage.py consume_events
@@ -11,11 +11,15 @@ Subscribes to topics:
     - analysis.events  (analysis.completed, analysis.failed)
     - ai.events        (ai.index.completed, ai.analysis.completed)
     - workspace.events (workspace.member.invited)
+    - community        (discussion.created, discussion.upvoted, comment.created)
+    - project.events   (project.created, project.updated, project.archived)
+    - task.events      (task.created, task.assigned, task.completed, task.blocked, task.overdue)
+    - repository.events (repository.connected, repository.disconnected)
 
 Events that Core publishes internally via transaction.on_commit() are the
 primary delivery path. This Kafka consumer acts as a durable fallback —
 it catches events that may have been missed if the on_commit handler
-failed (e.g. Identity service was temporarily unreachable).
+failed.
 """
 
 import json
@@ -33,20 +37,55 @@ logger = logging.getLogger(__name__)
 
 DISPATCH_TABLE: dict[str, str] = {
     # Analysis events
-    "analysis.completed": "notifications.tasks.dispatch_notification",
-    "analysis.failed": "notifications.tasks.dispatch_notification",
+    "analysis.completed": "notifications.dispatch_notification",
+    "analysis.failed": "notifications.dispatch_notification",
     # AI events
-    "ai.index.completed": "notifications.tasks.dispatch_notification",
-    "ai.analysis.completed": "notifications.tasks.dispatch_notification",
+    "ai.index.completed": "notifications.dispatch_notification",
+    "ai.analysis.completed": "notifications.dispatch_notification",
+    # Profile events
+    "profile.follow.new": "notifications.dispatch_notification",
+    # Community events (single-user only — primary dispatch happens in service code)
+    "discussion.upvoted": "notifications.dispatch_notification",
+    "comment.created": "notifications.dispatch_notification",
+    # Project events (single-user fallback — primary dispatch happens in service code)
+    "project.created": "notifications.dispatch_notification",
+    # Task events (single-user fallback — primary dispatch happens in service code)
+    "task.assigned": "notifications.dispatch_notification",
+    "task.completed": "notifications.dispatch_notification",
+    "task.blocked": "notifications.dispatch_notification",
+    "task.overdue": "notifications.dispatch_notification",
+    # Repository events
+    "repository.connected": "notifications.dispatch_notification",
+    "repository.disconnected": "notifications.dispatch_notification",
+}
+
+# Fan-out events: dispatched to every member of the workspace (fallback)
+FANOUT_EVENT_TYPES: set[str] = {
+    "analysis.completed",
+    "analysis.failed",
+    "discussion.created",
+    "project.created",
+    "task.created",
+    "repository.connected",
+    "repository.disconnected",
 }
 
 # Workspace events are dispatched via a separate handler that
 # resolves email → user_id via the Identity service.
 WORKSPACE_EVENT_DISPATCH: dict[str, str] = {
-    "workspace.member.invited": "notifications.tasks.dispatch_notification"
+    "workspace.member.invited": "notifications.dispatch_notification"
 }
 
-TOPICS = ["analysis.events", "ai.events", "workspace.events"]
+TOPICS = [
+    "analysis.events",
+    "ai.events",
+    "workspace.events",
+    "profiles",
+    "community",
+    "project.events",
+    "task.events",
+    "repository.events",
+]
 POLL_TIMEOUT = 1.0
 _shutdown = False
 
@@ -78,6 +117,12 @@ def _dispatch_task(event_type: str, data: dict) -> None:
 
     title = _build_title(event_type, data)
     body = _build_body(event_type, data)
+    metadata = _build_metadata(event_type, data)
+
+    # Map event-specific actor_id fields
+    actor_id = data.get("actor_id")
+    if not actor_id and event_type == "profile.follow.new":
+        actor_id = data.get("follower_id")
 
     task.delay(
         user_id=str(user_id),
@@ -85,8 +130,9 @@ def _dispatch_task(event_type: str, data: dict) -> None:
         title=title,
         body=body,
         link=data.get("link", ""),
+        metadata=metadata,
         workspace_id=data.get("workspace_id"),
-        actor_id=data.get("actor_id"),
+        actor_id=actor_id,
     )
     logger.info(
         "consumer.event.dispatched",
@@ -184,12 +230,65 @@ def _dispatch_workspace_event(event_type: str, data: dict) -> None:
     )
 
 
+def _dispatch_fanout_event(event_type: str, data: dict) -> None:
+    """
+    Dispatch a workspace-wide fan-out notification (fallback path).
+
+    Sends the notification to every active member of the workspace
+    referenced in the event data.
+    """
+    workspace_id = data.get("workspace_id")
+    if not workspace_id:
+        logger.warning(
+            "consumer.fanout.no_workspace", extra={"event_type": event_type}
+        )
+        return
+
+    from apps.notifications.utils import fanout_to_workspace_members
+
+    title = _build_title(event_type, data)
+    body = _build_body(event_type, data)
+    metadata = _build_metadata(event_type, data)
+
+    exclude_user_id = data.get("actor_id") or data.get("user_id")
+    notified = fanout_to_workspace_members(
+        workspace_id=workspace_id,
+        notification_type=event_type,
+        title=title,
+        body=body,
+        link=data.get("link", ""),
+        metadata=metadata,
+        actor_id=str(exclude_user_id) if exclude_user_id else None,
+        exclude_user_id=str(exclude_user_id) if exclude_user_id else None,
+    )
+    logger.info(
+        "consumer.fanout.dispatched",
+        extra={
+            "event_type": event_type,
+            "workspace_id": workspace_id,
+            "notified": notified,
+        },
+    )
+
+
 def _build_title(event_type: str, data: dict) -> str:
     titles = {
         "analysis.completed": "Analysis Complete",
         "analysis.failed": "Analysis Failed",
         "ai.index.completed": "Indexing Complete",
         "ai.analysis.completed": "AI Analysis Complete",
+        "profile.follow.new": "New Follower",
+        "discussion.created": f"New Discussion: {data.get('title', '')}",
+        "discussion.upvoted": "Your discussion was upvoted",
+        "comment.created": "New comment on your discussion",
+        "project.created": f"New Project: {data.get('project_name', '')}",
+        "task.created": f"New Task: {data.get('title', '')}",
+        "task.assigned": f"Task assigned: {data.get('title', '')}",
+        "task.completed": f"Task completed: {data.get('title', '')}",
+        "task.blocked": f"Task blocked: {data.get('title', '')}",
+        "task.overdue": f"Task overdue: {data.get('title', '')}",
+        "repository.connected": f"Repository connected: {data.get('name', '')}",
+        "repository.disconnected": f"Repository disconnected: {data.get('name', '')}",
     }
     return titles.get(event_type, f"Event: {event_type}")
 
@@ -200,8 +299,44 @@ def _build_body(event_type: str, data: dict) -> str:
         "analysis.failed": f"Repository analysis failed: {data.get('error', 'Unknown error')}",
         "ai.index.completed": f"Repository {data.get('github_repo', '')} has been indexed.",
         "ai.analysis.completed": f"AI analysis report is ready for {data.get('github_repo', '')}.",
+        "profile.follow.new": f"{data.get('follower_username', 'Someone')} started following you.",
+        "discussion.created": f"A new discussion '{data.get('title', '')}' was created.",
+        "discussion.upvoted": "Someone upvoted your discussion.",
+        "comment.created": "Someone commented on your discussion.",
+        "project.created": f"Project '{data.get('project_name', '')}' was created in your workspace.",
+        "task.created": f"Task '{data.get('title', '')}' was created with priority {data.get('priority', 'medium')}.",
+        "task.assigned": f"You were assigned task '{data.get('title', '')}'.",
+        "task.completed": f"Task '{data.get('title', '')}' has been completed.",
+        "task.blocked": f"Task '{data.get('title', '')}' is blocked.",
+        "task.overdue": f"Task '{data.get('title', '')}' is overdue.",
+        "repository.connected": f"Repository '{data.get('name', '')}' has been connected.",
+        "repository.disconnected": f"Repository '{data.get('name', '')}' has been disconnected.",
     }
     return bodies.get(event_type, json.dumps(data))
+
+
+def _build_metadata(event_type: str, data: dict) -> dict:
+    """Build structured metadata for task/analysis/follow notifications."""
+    metadata = {}
+    if event_type == "profile.follow.new":
+        metadata["follower_id"] = data.get("follower_id", "")
+        metadata["follower_username"] = data.get("follower_username", "")
+    if event_type.startswith("task.") or event_type == "task.created":
+        metadata["status"] = data.get("status", "")
+        metadata["priority"] = data.get("priority", "medium")
+        metadata["task_id"] = data.get("task_id", "")
+        metadata["project_id"] = data.get("project_id", "")
+        metadata["assignee_id"] = data.get("assignee_id", "")
+    if event_type.startswith("analysis."):
+        metadata["github_repo"] = data.get("github_repo", "")
+        metadata["status"] = "completed" if "completed" in event_type else "failed"
+    if event_type.startswith("repository."):
+        metadata["repository_id"] = data.get("repository_id", "")
+        metadata["name"] = data.get("name", "")
+    if event_type == "project.created":
+        metadata["project_name"] = data.get("project_name", "")
+        metadata["project_status"] = data.get("status", "planning")
+    return metadata
 
 
 class Command(BaseCommand):
@@ -298,6 +433,8 @@ class Command(BaseCommand):
             # Route workspace events through the email-resolution handler
             if event_type.startswith("workspace."):
                 _dispatch_workspace_event(event_type, data)
+            elif event_type in FANOUT_EVENT_TYPES:
+                _dispatch_fanout_event(event_type, data)
             else:
                 _dispatch_task(event_type, data)
         except json.JSONDecodeError as exc:

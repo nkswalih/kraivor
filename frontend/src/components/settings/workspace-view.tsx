@@ -126,15 +126,15 @@ function WorkspaceDetailContent({
   isCurrent: boolean;
   tab: Tab;
 }) {
-  const [name, setName] = useState(workspace.name);
+  const [name, setName] = useState(workspace?.name ?? '');
   const [description, setDescription] = useState(workspace.description ?? '');
   const queryClient = useQueryClient();
 
   const updateMut = useMutation({
     mutationFn: (payload: { name?: string; description?: string }) =>
-      workspaceEndpoints.update(workspace.id, payload),
+      workspaceEndpoints.update(workspace?.id ?? '', payload),
     onSuccess: data => {
-      useAuthStore.getState().updateWorkspaceInStore(workspace.id, {
+      useAuthStore.getState().updateWorkspaceInStore(workspace?.id ?? '', {
         name: data.name,
         description: data.description ?? undefined,
       });
@@ -142,7 +142,7 @@ function WorkspaceDetailContent({
     },
   });
 
-  const hasChanges = name !== workspace.name || description !== (workspace.description ?? '');
+  const hasChanges = name !== (workspace?.name ?? '') || description !== (workspace?.description ?? '');
 
   if (tab === 'settings') {
     return (
@@ -173,7 +173,7 @@ function WorkspaceDetailContent({
               kraivor.com/
             </span>
             <input
-              value={workspace.slug}
+              value={workspace?.slug ?? ''}
               disabled
               className="flex-1 bg-krait-surface-1 border border-krait-border rounded-r-lg px-3.5 py-2.5 text-[13px] text-text-primary opacity-50 cursor-not-allowed"
             />
@@ -200,13 +200,13 @@ function WorkspaceDetailContent({
           )}
         </div>
 
-        {isCurrent && <DangerZoneContent workspaceId={workspace.id} workspaceName={workspace.name} />}
+        {isCurrent && <DangerZoneContent workspaceId={workspace?.id ?? ''} workspaceName={workspace?.name ?? ''} />}
       </div>
     );
   }
 
   if (tab === 'team') {
-    return <TeamContent workspaceId={workspace.id} />;
+    return <TeamContent workspaceId={workspace?.id ?? ''} />;
   }
 
   return null;
@@ -362,7 +362,7 @@ function TeamContent({ workspaceId }: { workspaceId: string }) {
               return (
                 <div key={m.id} className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg hover:bg-krait-surface-1 transition-colors group border border-transparent hover:border-krait-border">
                   {avatarSrc ? (
-                    <img src={avatarSrc} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
+                    <img src={avatarSrc} alt="" loading="lazy" className="w-8 h-8 rounded object-cover shrink-0" />
                   ) : (
                     <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-xs font-bold text-text-secondary shrink-0">{initials}</div>
                   )}

@@ -361,7 +361,7 @@ function MemberRow({
     <div className="flex items-center gap-3 px-5 py-3 hover:bg-krait-surface-1/50 transition-colors group min-h-[60px]">
       {/* Avatar */}
       {avatarSrc ? (
-        <img src={avatarSrc} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+        <img src={avatarSrc} alt="" loading="lazy" className="w-9 h-9 rounded-full object-cover shrink-0" />
       ) : (
         <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
           {initials}

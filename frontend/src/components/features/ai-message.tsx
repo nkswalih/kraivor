@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, memo, useEffect, useRef } from 'react';
+import { useState, useCallback, memo, useEffect, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Copy,
@@ -95,7 +95,7 @@ function StreamingContent({ content, isStreaming }: { content: string; isStreami
   const [revealedCount, setRevealedCount] = useState(0);
   const prevCount = useRef(0);
 
-  const blocks = parseBlocks(content);
+  const blocks = useMemo(() => parseBlocks(content), [content]);
 
   useEffect(() => {
     const cur = blocks.length;

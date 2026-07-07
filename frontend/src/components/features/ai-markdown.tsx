@@ -1,8 +1,10 @@
 'use client';
 
+import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { AiCodeBlock } from '@/components/features/ai-code-block';
+import { useDebounce } from '@/lib/hooks/use-debounce';
 
 interface AiMarkdownProps {
   content: string;
@@ -118,10 +120,12 @@ const TD = (props: any) => (
 
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-export function AiMarkdown({ content, isStreaming }: AiMarkdownProps) {
+export const AiMarkdown = memo(function AiMarkdown({ content, isStreaming }: AiMarkdownProps) {
+  const displayContent = useDebounce(content, isStreaming ? 200 : 0);
+
   return (
     <div className="prose-custom max-w-none">
-      {content ? (
+      {displayContent ? (
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
@@ -147,7 +151,7 @@ export function AiMarkdown({ content, isStreaming }: AiMarkdownProps) {
             td: TD,
           }}
         >
-          {content}
+          {displayContent}
         </ReactMarkdown>
       ) : null}
       {isStreaming && (
@@ -155,4 +159,4 @@ export function AiMarkdown({ content, isStreaming }: AiMarkdownProps) {
       )}
     </div>
   );
-}
+}, (prev, next) => prev.content === next.content);

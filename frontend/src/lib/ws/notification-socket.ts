@@ -1,7 +1,20 @@
 import type { WsServerEvent, WsClientAction } from '@/types/ws';
 import { useAuthStore } from '@/lib/stores/auth-store';
 
-const WS_BASE = process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost';
+function getWsBase(): string {
+  const configured = process.env.NEXT_PUBLIC_WS_URL;
+  if (configured) return configured;
+  if (typeof document === 'undefined') return 'ws://localhost';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl || apiUrl === '/api') {
+    const proto = document.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${proto}//${document.location.host}`;
+  }
+  const parts = apiUrl.split('://');
+  const hostPort = parts.length > 1 ? parts[1] : apiUrl;
+  const proto = parts.length > 1 && parts[0] === 'https' ? 'wss:' : 'ws:';
+  return `${proto}//${hostPort}`;
+}
 
 export class NotificationSocket {
   private ws: WebSocket | null = null;
@@ -19,7 +32,7 @@ export class NotificationSocket {
     const token = this.getJwt();
     if (!token) return;
     this.closing = false;
-    this.ws = new WebSocket(`${WS_BASE}/ws/notifications/?token=${token}`);
+    this.ws = new WebSocket(`${getWsBase()}/ws/notifications/?token=${token}`);
     this.attachListeners();
   }
 

@@ -12,6 +12,7 @@ from ..github_app.client import GitHubAppClient, GitHubAppError
 from ..github_app.services import GitHubAppInstallationService
 from ..models import Repository
 from .client import GitHubAPIClient, GitHubTokenClient
+from apps.notifications.utils import fanout_to_workspace_members
 from .exceptions import (
     GitHubAPIError,
     RepositoryAlreadyConnectedError,
@@ -104,6 +105,21 @@ class RepositoryService:
                     repository=_repo, actor_id=_actor
                 )
             )
+            transaction.on_commit(
+                lambda: fanout_to_workspace_members(
+                    workspace_id=str(workspace.id),
+                    notification_type="repository.connected",
+                    title=f"Repository connected: {_repo.github_repo}",
+                    body=f"Repository '{_repo.github_repo}' has been connected to your workspace.",
+                    link=f"/workspaces/{workspace.id}/repositories/{_repo.id}",
+                    metadata={
+                        "repository_id": str(_repo.id),
+                        "name": _repo.github_repo,
+                    },
+                    actor_id=str(_actor),
+                    exclude_user_id=str(_actor),
+                )
+            )
         return repository
 
     def list_repositories(self, *, workspace: Workspace) -> QuerySet:
@@ -130,5 +146,20 @@ class RepositoryService:
         transaction.on_commit(
             lambda: self._events.repository_disconnected(
                 repository=_repo, actor_id=_actor
+            )
+        )
+        transaction.on_commit(
+            lambda: fanout_to_workspace_members(
+                workspace_id=str(workspace.id),
+                notification_type="repository.disconnected",
+                title=f"Repository disconnected: {_repo.github_repo}",
+                body=f"Repository '{_repo.github_repo}' has been disconnected from your workspace.",
+                link=f"/workspaces/{workspace.id}/repositories",
+                metadata={
+                    "repository_id": str(_repo.id),
+                    "name": _repo.github_repo,
+                },
+                actor_id=str(_actor),
+                exclude_user_id=str(_actor),
             )
         )

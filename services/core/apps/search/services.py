@@ -270,10 +270,10 @@ def search_notifications(query: str, workspace_id: str, user_id: str | None, lim
 def search_profiles(query: str, limit: int = 10) -> list[SearchResult]:
     if len(query) < 2:
         return []
-    identity_base = getattr(settings, "IDENTITY_SERVICE_URL", "http://identity:8002/api")
+    identity_base = getattr(settings, "IDENTITY_SERVICE_URL", "http://identity:8002")
     try:
         resp = requests.get(
-            f"{identity_base}/profiles/search/",
+            f"{identity_base}/api/profiles/search/",
             params={"q": query, "page_size": limit},
             timeout=2.0,
         )

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { MessagesSquare, Shield, FileText, Gauge, CheckCircle, BotMessageSquare, Pin, PinOff, Pencil, Check, X } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { AiInput } from '@/components/features/ai-input';
 import { aiApi } from '@/lib/api/ai-api';
 import type { ConversationSummary } from '@/lib/api/ai-api';
@@ -54,9 +53,10 @@ export function AiWelcome({
     return 0;
   });
 
-  const handleRename = async (convId: string, title: string) => {
-    if (title.trim()) {
-      await aiApi.updateConversation(convId, { title: title.trim() });
+  const handleRename = async (convId: string, newTitle: string) => {
+    const trimmed = newTitle.trim();
+    if (trimmed && trimmed !== conversations.find(c => c.id === convId)?.title) {
+      await aiApi.updateConversation(convId, { title: trimmed });
       onRefreshConversations?.();
     }
     setEditingConv(null);
@@ -71,12 +71,7 @@ export function AiWelcome({
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-[720px] mx-auto px-6 pt-16 pb-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, translateY: 16 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="text-center mb-8"
-        >
+        <div className="text-center mb-8 animate-fade-up">
           {workspaceAvatar ? (
             <img
               src={workspaceAvatar}
@@ -91,14 +86,10 @@ export function AiWelcome({
           <h1 className="text-[22px] font-bold text-text-primary tracking-tight">
             How can I help you today?
           </h1>
-        </motion.div>
+        </div>
 
         {/* Input */}
-        <motion.div
-          initial={{ opacity: 0, translateY: 16 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ duration: 0.4, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-        >
+        <div className="animate-fade-up" style={{ animationDelay: '0.1s' }}>
           <AiInput
             value={input}
             onChange={onInputChange}
@@ -109,15 +100,10 @@ export function AiWelcome({
             onModelSelect={onModelSelect}
             showBanner={showBanner}
           />
-        </motion.div>
+        </div>
 
         {/* Suggestions grid */}
-        <motion.div
-          initial={{ opacity: 0, translateY: 16 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ duration: 0.4, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="grid grid-cols-2 gap-8 mt-12"
-        >
+        <div className="grid grid-cols-2 gap-8 mt-12 animate-fade-up" style={{ animationDelay: '0.2s' }}>
           <div>
             <div className="text-[10px] uppercase tracking-[0.12em] font-medium text-text-tertiary mb-3">
               RECENT CHATS
@@ -237,7 +223,7 @@ export function AiWelcome({
               })}
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

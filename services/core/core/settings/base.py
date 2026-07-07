@@ -263,7 +263,7 @@ CELERY_BEAT_SCHEDULE = {
 # =============================================================================
 # Identity Service
 # =============================================================================
-IDENTITY_SERVICE_URL = env("IDENTITY_SERVICE_URL", default="http://identity:8002/api")
+IDENTITY_SERVICE_URL = env("IDENTITY_SERVICE_URL", default="http://identity:8001")
 
 # =============================================================================
 # Kafka — Event Bus

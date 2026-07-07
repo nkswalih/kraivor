@@ -73,6 +73,23 @@ class InvitationRevokeView(WorkspaceDetailView):
 
 
 @extend_schema(tags=["Workspace Invitations"])
+class MyPendingInvitationsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="List my pending invitations",
+        description="Returns all pending invitations for the current user's email across all workspaces.",
+        responses={200: WorkspaceInvitationSerializer(many=True)},
+    )
+    def get(self, request: Request) -> Response:
+        email = getattr(request, "user_email", None)
+        if not email:
+            return Response([], status=status.HTTP_200_OK)
+        invitations = InvitationService().list_my_pending_invitations(email=email)
+        return Response(WorkspaceInvitationSerializer(invitations, many=True).data)
+
+
+@extend_schema(tags=["Workspace Invitations"])
 class InvitationAcceptView(APIView):
     permission_classes = [IsAuthenticated]
 

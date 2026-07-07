@@ -1,14 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/hooks';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useChatStore } from '@/lib/stores/chat-store';
 import { useUIStore } from '@/lib/stores/ui-store';
-import { profileEndpoints, chatEndpoints } from '@/lib/api/endpoints';
+import { profileEndpoints, chatEndpoints, notificationEndpoints } from '@/lib/api/endpoints';
 import { getInitials, cn } from '@/lib/utils';
 import {
   Home,
@@ -55,10 +55,22 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
 
   const syncUnread = useChatStore(s => s.syncUnreadFromRooms);
   useEffect(() => {
-    if (roomsList.length) syncUnread(roomsList);
+    if (roomsList.length > 0) syncUnread(roomsList);
   }, [roomsList, syncUnread]);
 
-  const totalUnread = useChatStore(s => s.totalUnread());
+  const unreadCounts = useChatStore(s => s.unreadCounts);
+  const totalUnread = useMemo(() =>
+    Object.values(unreadCounts).reduce((a, b) => a + b, 0),
+    [unreadCounts]
+  );
+
+  /* ─── Inbox unread count (real-time via WebSocket invalidation) ── */
+  const { data: inboxUnread } = useQuery({
+    queryKey: ['unread-count'],
+    queryFn: () => notificationEndpoints.unreadCount(),
+    refetchInterval: 30_000,
+  });
+  const inboxCount = inboxUnread?.unread_count ?? 0;
 
   const navItems = [
     { name: 'Home', icon: Home, href: `/${workspaceSlug}` },
@@ -74,7 +86,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
 
   return (
     <aside
-      className={`${collapsed ? 'w-[60px]' : 'w-[240px]'} flex-shrink-0 flex flex-col bg-krait-obsidian border-r border-krait-border h-full select-none transition-all duration-200`}
+      className={`${collapsed ? 'w-[60px]' : 'w-[240px]'} flex-shrink-0 flex flex-col bg-krait-obsidian border-r border-krait-border h-full select-none transition-[width] duration-200`}
     >
       {/* Main Navigation */}
       <div className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
@@ -142,7 +154,13 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
         >
           <Inbox className="w-4 h-4 shrink-0" />
           <span className={collapsed ? 'hidden' : ''}>Inbox</span>
-          {!collapsed && <div className="ml-auto w-1.5 h-1.5 bg-[#EF4444] rounded-full" />}
+          {inboxCount > 0 && (collapsed ? (
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#EF4444]" />
+          ) : (
+            <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-[#EF4444] text-[10px] font-extrabold text-white px-1">
+              {inboxCount > 99 ? '99+' : inboxCount}
+            </span>
+          ))}
         </Link>
 
         <Link
@@ -176,6 +194,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
               <img
                 src={bestAvatar}
                 alt={user?.name || 'User'}
+                loading="lazy"
                 className={cn(
                   'shrink-0 object-cover border border-krait-border',
                   collapsed ? 'w-8 h-8 rounded-full' : 'w-8 h-8 rounded-[4px]'

@@ -506,6 +506,9 @@ OTP_RESEND_WAIT_SECONDS = 60
 INTERNAL_REQUEST_HEADER = env("INTERNAL_REQUEST_HEADER", default="X-Internal-Request")
 INTERNAL_REQUEST_TOKEN = env("INTERNAL_REQUEST_TOKEN", default="")
 
+# Core service URL for internal sync calls (e.g., denormalized author field updates)
+CORE_SERVICE_URL = env("CORE_SERVICE_URL", default="http://core:8002")
+
 # =============================================================================
 # ASYNC TASKS - Celery Configuration
 # =============================================================================

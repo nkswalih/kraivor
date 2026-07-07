@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useKnowledgeStore } from '@/lib/stores/knowledge-store';
 import { Eye, EyeOff, Lock, Unlock, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
 
@@ -9,16 +9,18 @@ interface Props {
 }
 
 export function LayersPanel({ spaceId }: Props) {
-  const canvas = useKnowledgeStore(s => s.spaces[spaceId]);
+  const elements = useKnowledgeStore(s => s.spaces[spaceId]?.elements ?? []);
+  const selectedIds = useKnowledgeStore(s => s.spaces[spaceId]?.selectedElementIds ?? []);
   const setSelectedElements = useKnowledgeStore(s => s.setSelectedElements);
   const toggleElementVisibility = useKnowledgeStore(s => s.toggleElementVisibility);
   const lockElement = useKnowledgeStore(s => s.lockElement);
   const bringForward = useKnowledgeStore(s => s.bringForward);
   const sendBackward = useKnowledgeStore(s => s.sendBackward);
 
-  const elements = canvas?.elements ?? [];
-  const selectedIds = canvas?.selectedElementIds ?? [];
-  const sorted = [...elements].sort((a, b) => b.zIndex - a.zIndex);
+  const sorted = useMemo(
+    () => [...elements].sort((a, b) => b.zIndex - a.zIndex),
+    [elements]
+  );
 
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);

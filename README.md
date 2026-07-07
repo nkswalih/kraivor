@@ -1,4 +1,4 @@
-## 🐍 Kraivor — developer intelligence OS
+## 🐍 Kraivor — developer intelligence Workspace
 
 <div align="center">
 

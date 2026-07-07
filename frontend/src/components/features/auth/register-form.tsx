@@ -149,7 +149,7 @@ export function RegisterForm() {
   const onSubmit = async (data: RegisterFormData) => {
     setServerError(null);
     try {
-      await registerUser({ email: data.email, password: data.password, name: data.name });
+      await registerUser({ email: data.email, password: data.password, password_confirm: data.confirmPassword, name: data.name });
       router.push(`${ROUTES.VERIFY_EMAIL}?email=${encodeURIComponent(data.email)}`);
     } catch {
       setServerError('Registration failed. Please try again or use a different email.');

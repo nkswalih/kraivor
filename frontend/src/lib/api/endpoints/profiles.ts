@@ -1,10 +1,11 @@
-import { identityApi, identityRequest } from '@/lib/api/client';
+import { identityApi, identityRequest, coreApi } from '@/lib/api/client';
 import type {
   Profile,
   ProfileUpdatePayload,
   Follower,
   TopContributor,
 } from '@/types/domain/profiles';
+import type { Discussion, Comment, PaginatedResponse } from '@/types/domain/community';
 
 export const profileEndpoints = {
   getProfilesByIds: (userIds: string[]) =>
@@ -74,5 +75,15 @@ export const profileEndpoints = {
   getTopContributors: (limit?: number) => {
     const qs = limit ? `?limit=${limit}` : '';
     return identityApi.get<{ results: TopContributor[] }>(`/profiles/top-contributors/${qs}`);
+  },
+
+  listUserDiscussions: (userId: string, params?: { page?: number }) => {
+    const qs = params?.page ? `?page=${params.page}` : '';
+    return coreApi.get<PaginatedResponse<Discussion>>(`/community/user/${userId}/discussions/${qs}`);
+  },
+
+  listUserComments: (userId: string, params?: { page?: number }) => {
+    const qs = params?.page ? `?page=${params.page}` : '';
+    return coreApi.get<PaginatedResponse<Comment>>(`/community/user/${userId}/comments/${qs}`);
   },
 };

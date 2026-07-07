@@ -1,10 +1,8 @@
-from datetime import timedelta
+import math
 
 from django.db.models import Count, F, Prefetch, QuerySet
-from django.utils import timezone
 from django.utils.text import slugify
 
-from ..constants import TRENDING_WINDOW_HOURS
 from ..models import Comment, Discussion, Tag, Vote
 
 logger = __import__("logging").getLogger(__name__)
@@ -19,6 +17,7 @@ class DiscussionService:
         page_size: int = PAGE_SIZE,
         tag: str | None = None,
         sort: str = "latest",
+        search: str | None = None,
         workspace_id: str | None = None,
         user_id: str | None = None,
     ) -> tuple[QuerySet, int]:
@@ -36,11 +35,12 @@ class DiscussionService:
             qs = qs.filter(workspace_id=workspace_id)
         if tag:
             qs = qs.filter(tags__slug=tag)
+        if search:
+            qs = qs.filter(title__icontains=search)
         if sort == "trending":
-            cutoff = timezone.now() - timedelta(hours=TRENDING_WINDOW_HOURS)
-            qs = qs.filter(created_at__gte=cutoff).order_by(
-                "-upvote_count", "-created_at"
-            )
+            qs = qs.annotate(
+                net_score=F("upvote_count") - F("downvote_count")
+            ).order_by("-net_score", "-created_at")
         elif sort == "top":
             qs = qs.order_by("-upvote_count", "-created_at")
         else:
@@ -117,22 +117,25 @@ class DiscussionService:
 
     @staticmethod
     def get_trending(limit: int = 10) -> list[dict]:
-        cutoff = timezone.now() - timedelta(hours=TRENDING_WINDOW_HOURS)
-        discussions = list(
-            Discussion.objects.filter(created_at__gte=cutoff)
-            .order_by("-upvote_count")[:limit]
-            .values(
-                "id",
-                "title",
-                "author_username",
-                "author_display_name",
-                "author_avatar_url",
-                "upvote_count",
-                "comment_count",
-                "created_at",
-            )
+        REDDIT_EPOCH = 1134028003
+
+        qs = Discussion.objects.filter(deleted_at__isnull=True).annotate(
+            net_score=F("upvote_count") - F("downvote_count"),
         )
-        ids = [d["id"] for d in discussions]
+
+        discussions = []
+        for d in qs:
+            score = d.net_score or 0
+            sign = 1 if score > 0 else -1 if score < 0 else 0
+            order = math.log10(max(abs(score), 1))
+            seconds = d.created_at.timestamp() - REDDIT_EPOCH
+            hot = round(sign * order + seconds / 45000, 7)
+            discussions.append((hot, d))
+
+        discussions.sort(key=lambda x: x[0], reverse=True)
+        top = [d for _, d in discussions[:limit]]
+
+        ids = [str(d.id) for d in top]
         if ids:
             counts = dict(
                 Comment.objects.filter(discussion_id__in=ids)
@@ -140,6 +143,23 @@ class DiscussionService:
                 .annotate(cnt=Count("id"))
                 .values_list("discussion_id", "cnt")
             )
-            for d in discussions:
-                d["comment_count"] = counts.get(d["id"], 0)
-        return discussions
+        else:
+            counts = {}
+
+        result = []
+        for d in top:
+            result.append(
+                {
+                    "id": str(d.id),
+                    "title": d.title,
+                    "author_id": str(d.author_id),
+                    "author_username": d.author_username,
+                    "author_display_name": d.author_display_name,
+                    "author_avatar_url": d.author_avatar_url,
+                    "upvote_count": d.upvote_count,
+                    "downvote_count": d.downvote_count,
+                    "comment_count": counts.get(str(d.id), d.comment_count),
+                    "created_at": d.created_at.isoformat(),
+                }
+            )
+        return result

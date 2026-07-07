@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores';
 import { ROUTES } from '@/constants';
@@ -8,7 +8,8 @@ import { ROUTES } from '@/constants';
 export function useProtectedRoute() {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
+  const isLoading = useAuthStore(s => s.isLoading);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -17,12 +18,16 @@ export function useProtectedRoute() {
     }
   }, [isLoading]);
 
+  const redirect = useCallback(() => {
+    const callbackUrl = encodeURIComponent(pathname);
+    router.push(`${ROUTES.LOGIN}?callbackUrl=${callbackUrl}`);
+  }, [pathname, router]);
+
   useEffect(() => {
     if (isReady && !isAuthenticated) {
-      const callbackUrl = encodeURIComponent(pathname);
-      router.push(`${ROUTES.LOGIN}?callbackUrl=${callbackUrl}`);
+      redirect();
     }
-  }, [isReady, isAuthenticated, pathname, router]);
+  }, [isReady, isAuthenticated, redirect]);
 
   return { isReady, isAuthenticated: isReady && isAuthenticated };
 }

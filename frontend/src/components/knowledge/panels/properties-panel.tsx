@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useKnowledgeStore } from '@/lib/stores/knowledge-store';
 
 interface Props {
@@ -7,22 +8,29 @@ interface Props {
 }
 
 export function PropertiesPanel({ spaceId }: Props) {
-  const canvas = useKnowledgeStore(s => s.spaces[spaceId]);
+  const selectedElementIds = useKnowledgeStore(s => s.spaces[spaceId]?.selectedElementIds ?? []);
+  const elements = useKnowledgeStore(s => s.spaces[spaceId]?.elements ?? []);
   const updateElement = useKnowledgeStore(s => s.updateElement);
 
-  const selectedIds = canvas?.selectedElementIds ?? [];
-  const selected =
-    selectedIds.length === 1 ? canvas?.elements.find(e => e.id === selectedIds[0]) : null;
+  const selected = useMemo(
+    () =>
+      selectedElementIds.length === 1
+        ? elements.find(e => e.id === selectedElementIds[0]) ?? null
+        : null,
+    [selectedElementIds, elements]
+  );
 
   if (!selected) {
     return (
       <div className="p-4 text-center text-text-tertiary text-[13px]">
-        {selectedIds.length > 1
-          ? `${selectedIds.length} elements selected`
+        {selectedElementIds.length > 1
+          ? `${selectedElementIds.length} elements selected`
           : 'Select an element to edit its properties'}
       </div>
     );
   }
+
+  const isShape = ['rectangle', 'circle', 'triangle', 'rhombus', 'hexagon'].includes(selected.type);
 
   return (
     <div className="p-3 space-y-4 overflow-y-auto">
@@ -114,7 +122,7 @@ export function PropertiesPanel({ spaceId }: Props) {
       </div>
 
       {/* Shape style */}
-      {['rectangle', 'circle', 'triangle', 'rhombus', 'hexagon'].includes(selected.type) && (
+      {isShape && (
         <div className="space-y-3 pt-1">
           <div className="flex items-center gap-2">
             <input

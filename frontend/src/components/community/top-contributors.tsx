@@ -52,7 +52,9 @@ export function TopContributors() {
                 </div>
               </div>
               <span className="text-[11px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0">
-                {(user.reputation_score / 1000).toFixed(1)}k
+                {user.reputation_score >= 1000
+                  ? `${(user.reputation_score / 1000).toFixed(1)}k`
+                  : user.reputation_score}
               </span>
             </Link>
           ))}

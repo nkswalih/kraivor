@@ -1,7 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { ArrowBigUp, ArrowBigDown } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { useVoteDiscussion, useRemoveVote } from '@/lib/hooks/use-community';
 
 interface UpvoteButtonProps {
@@ -14,8 +14,16 @@ export function UpvoteButton({ discussionId, upvoteCount, userVote }: UpvoteButt
   const voteMutation = useVoteDiscussion(discussionId);
   const removeVoteMutation = useRemoveVote(discussionId);
   const isPending = voteMutation.isPending || removeVoteMutation.isPending;
+  const [animateCount, setAnimateCount] = useState(false);
 
-  const handleVote = (value: 1 | -1) => {
+  useEffect(() => {
+    setAnimateCount(true);
+    const id = setTimeout(() => setAnimateCount(false), 200);
+    return () => clearTimeout(id);
+  }, [upvoteCount]);
+
+  const handleVote = (e: React.MouseEvent, value: 1 | -1) => {
+    e.stopPropagation();
     if (isPending) return;
     if (userVote === value) {
       removeVoteMutation.mutate();
@@ -26,40 +34,37 @@ export function UpvoteButton({ discussionId, upvoteCount, userVote }: UpvoteButt
 
   return (
     <div className="flex flex-col items-center gap-1 shrink-0 text-muted-foreground">
-      <motion.button
-        whileTap={{ scale: 0.8 }}
-        onClick={() => handleVote(1)}
+      <button
+        onClick={e => handleVote(e, 1)}
         disabled={isPending}
-        className={`rounded p-1 transition-colors ${
+        className={`rounded p-1 transition-colors active:scale-80 ${
           userVote === 1
             ? 'text-primary hover:bg-primary/20'
             : 'hover:text-primary hover:bg-primary/10'
         } ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <ArrowBigUp className="w-5 h-5" />
-      </motion.button>
-      <motion.span
-        key={upvoteCount}
-        initial={{ scale: 1.2 }}
-        animate={{ scale: 1 }}
-        className={`text-[12px] font-medium ${
+      </button>
+      <span
+        className={`text-[12px] font-medium transition-transform duration-200 ${
+          animateCount ? 'scale-110' : 'scale-100'
+        } ${
           userVote === 1 ? 'text-primary' : userVote === -1 ? 'text-destructive' : 'text-foreground'
         }`}
       >
         {upvoteCount}
-      </motion.span>
-      <motion.button
-        whileTap={{ scale: 0.8 }}
-        onClick={() => handleVote(-1)}
+      </span>
+      <button
+        onClick={e => handleVote(e, -1)}
         disabled={isPending}
-        className={`rounded p-1 transition-colors ${
+        className={`rounded p-1 transition-colors active:scale-80 ${
           userVote === -1
             ? 'text-destructive hover:bg-destructive/20'
             : 'hover:text-destructive hover:bg-destructive/10'
         } ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <ArrowBigDown className="w-5 h-5" />
-      </motion.button>
+      </button>
     </div>
   );
 }

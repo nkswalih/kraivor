@@ -69,6 +69,12 @@ function AuthEffects() {
     if (initialized.current) return;
     initialized.current = true;
 
+    if (isPublicRoute(pathname) || isAuthRedirectRoute(pathname)) {
+      useAuthStore.getState().setLoading(false);
+      sessionReady.current = true;
+      return;
+    }
+
     const { initWorkspace } = useAuthStore.getState();
     authApi
       .refreshSession()

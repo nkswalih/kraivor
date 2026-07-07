@@ -1,24 +1,40 @@
 import { create } from 'zustand';
-import type { SortOption } from '@/types/domain/community';
+import type { ActiveTab, SortOption, ViewMode } from '@/types/domain/community';
 
 interface CommunityState {
-  activeSort: SortOption;
+  activeTab: ActiveTab;
+  sortOption: SortOption | null;
   activeTag: string | null;
   searchQuery: string;
   createDialogOpen: boolean;
-  setActiveSort: (sort: SortOption) => void;
+  viewMode: ViewMode;
+  setActiveTab: (tab: ActiveTab) => void;
+  setSortOption: (sort: SortOption | null) => void;
   setActiveTag: (tag: string | null) => void;
   setSearchQuery: (query: string) => void;
   setCreateDialogOpen: (open: boolean) => void;
+  setViewMode: (mode: ViewMode) => void;
+}
+
+function defaultSort(tab: ActiveTab): SortOption {
+  if (tab === 'trending') return 'trending';
+  if (tab === 'news') return 'top';
+  return 'latest';
 }
 
 export const useCommunityStore = create<CommunityState>(set => ({
-  activeSort: 'trending' as SortOption,
+  activeTab: 'home',
+  sortOption: null,
   activeTag: null,
   searchQuery: '',
   createDialogOpen: false,
-  setActiveSort: sort => set({ activeSort: sort }),
+  viewMode: 'list',
+  setActiveTab: tab => set({ activeTab: tab, activeTag: null, searchQuery: '', sortOption: null }),
+  setSortOption: sort => set({ sortOption: sort }),
   setActiveTag: tag => set({ activeTag: tag }),
   setSearchQuery: query => set({ searchQuery: query }),
   setCreateDialogOpen: open => set({ createDialogOpen: open }),
+  setViewMode: mode => set({ viewMode: mode }),
 }));
+
+export { defaultSort };

@@ -90,7 +90,7 @@ export function useFindings(
   filters?: { severity?: string; category?: string; includeDismissed?: boolean; page?: number; pageSize?: number }
 ) {
   return useQuery({
-    queryKey: ['analysis-findings', jobId, filters],
+    queryKey: ['analysis-findings', jobId, JSON.stringify(filters)],
     queryFn: () =>
       analysisService.findings.list({
         jobId: jobId!,

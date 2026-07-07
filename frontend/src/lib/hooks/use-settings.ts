@@ -111,6 +111,7 @@ export function useUpdateProfile() {
       settingsEndpoints.updateProfile(username, payload),
     onSuccess: (data) => {
       qc.setQueryData([...settingsKeys.all(), 'my-profile'] as const, data);
+      qc.invalidateQueries({ queryKey: ['profiles'] });
     },
   });
 }
@@ -120,7 +121,10 @@ export function useUploadProfileImage() {
   return useMutation({
     mutationFn: ({ field, file }: { field: 'avatar' | 'banner'; file: File }) =>
       settingsEndpoints.uploadProfileImage(field, file),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...settingsKeys.all(), 'my-profile'] as const }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...settingsKeys.all(), 'my-profile'] as const });
+      qc.invalidateQueries({ queryKey: ['profiles'] });
+    },
   });
 }
 

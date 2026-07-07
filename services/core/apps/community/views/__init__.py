@@ -5,6 +5,8 @@ from .discussions import (
     DiscussionVoteView,
     TrendingDiscussionsView,
 )
+from .internal import SyncAuthorDenormalizationView
+from .user_content import UserCommentsView, UserDiscussionsView
 from .votes import PopularTagsView, TagSearchView
 
 __all__ = [
@@ -16,5 +18,8 @@ __all__ = [
     "DiscussionVoteView",
     "PopularTagsView",
     "TagSearchView",
+    "SyncAuthorDenormalizationView",
     "TrendingDiscussionsView",
+    "UserCommentsView",
+    "UserDiscussionsView",
 ]

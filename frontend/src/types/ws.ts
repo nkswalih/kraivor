@@ -35,6 +35,7 @@ export type WsServerEvent =
       title: string;
       body: string;
       link: string;
+      metadata: Record<string, unknown>;
       workspace_id: string;
       actor_id: string;
       created_at: string;

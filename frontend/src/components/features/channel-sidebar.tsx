@@ -240,7 +240,7 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
                   {/* Avatar */}
                   <div className="w-8 h-8 rounded-full bg-krait-surface3 flex items-center justify-center text-[13px] font-bold text-text-primary shrink-0 overflow-hidden">
                     {bestAvatar ? (
-                      <img src={bestAvatar} alt="" className="w-full h-full object-cover" />
+                      <img src={bestAvatar} alt="" loading="lazy" className="w-full h-full object-cover" />
                     ) : (
                       displayName.charAt(0).toUpperCase()
                     )}

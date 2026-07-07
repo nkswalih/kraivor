@@ -64,7 +64,8 @@ const typeLabels: Record<string, string> = {
 
 export function CommandPalette({ workspaceSlug }: { workspaceSlug: string }) {
   const router = useRouter();
-  const { isCommandPaletteOpen, setCommandPaletteOpen } = useUIStore();
+  const isCommandPaletteOpen = useUIStore(s => s.isCommandPaletteOpen);
+  const setCommandPaletteOpen = useUIStore(s => s.setCommandPaletteOpen);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showResults, setShowResults] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);

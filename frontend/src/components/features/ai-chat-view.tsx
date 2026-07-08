@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, Pin, PinOff, Pencil } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { ChevronDown, Pin, PinOff, Pencil, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useAiConversationStore } from '@/lib/stores/ai-conversation-store';
 import { workspaceEndpoints, repositoryEndpoints } from '@/lib/api/endpoints';
@@ -24,7 +25,14 @@ interface StreamChunk {
   [key: string]: unknown;
 }
 
-export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
+interface AiChatViewProps {
+  workspaceSlug: string;
+  initialConversationId?: string;
+}
+
+export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const workspaceId = useAuthStore(s => s.workspaceId);
   const storeSetActiveConversation = useAiConversationStore(s => s.setActiveConversation);
   const storeSetConversationTitle = useAiConversationStore(s => s.setConversationTitle);
@@ -39,10 +47,11 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
   const [conversationTitle, setConversationTitle] = useState('');
   const [isPinned, setIsPinned] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(!!initialConversationId);
   useDetailBreadcrumb(conversationId ? conversationTitle || 'Untitled' : null);
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const shouldAutoScroll = useRef(true);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   const { data: workspace } = useQuery({
@@ -81,12 +90,12 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
     const el = listRef.current;
     if (!el) return;
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
-    shouldAutoScroll.current = nearBottom;
+    setShouldAutoScroll(nearBottom);
   }, []);
 
   useEffect(() => {
-    if (shouldAutoScroll.current) scrollToBottom(isStreaming);
-  }, [messages, isStreaming, scrollToBottom]);
+    if (shouldAutoScroll) scrollToBottom(isStreaming);
+  }, [messages, isStreaming, scrollToBottom, shouldAutoScroll]);
 
   /* ─── Load previous conversation ──────────────────────── */
 
@@ -116,6 +125,27 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
       setMessages([]);
     }
   }, [storeSetActiveConversation]);
+
+  /* ─── Load initial conversation from URL ──────────────── */
+
+  useEffect(() => {
+    if (initialConversationId) {
+      loadConversation(initialConversationId).finally(() => setInitialLoading(false));
+    } else {
+      setInitialLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ─── Sync conversationId to URL ─────────────────────── */
+
+  useEffect(() => {
+    if (!conversationId) return;
+    const expectedPath = `/${workspaceSlug}/ai/${conversationId}`;
+    if (pathname !== expectedPath) {
+      router.replace(expectedPath);
+    }
+  }, [conversationId, workspaceSlug, router, pathname]);
 
   /* ─── Regenerate last response ────────────────────────── */
 
@@ -152,7 +182,7 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
       setMessages(prev => [...prev, userMsg, assistantMsg]);
       setInput('');
       setIsStreaming(true);
-      shouldAutoScroll.current = true;
+      setShouldAutoScroll(true);
       if (!conversationId) {
         const tempTitle = trimmed.length > 60 ? trimmed.slice(0, 60) + '...' : trimmed;
         setConversationTitle(tempTitle);
@@ -255,6 +285,14 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
   /* ─── Render ──────────────────────────────────────────── */
 
   const isEmpty = messages.length === 0;
+
+  if (initialLoading) {
+    return (
+      <div className="flex items-center justify-center h-full bg-krait-void">
+        <Loader2 className="w-5 h-5 text-venom-yellow animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-krait-void relative">
@@ -365,17 +403,18 @@ export function AiChatView({ workspaceSlug }: { workspaceSlug: string }) {
             <div ref={bottomRef} />
           </div>
 
-          {/* New messages button */}
-          {!shouldAutoScroll.current && messages.length > 0 && (
-            <div className="flex justify-center py-3">
+          {/* Scroll to bottom arrow */}
+          {!shouldAutoScroll && messages.length > 0 && (
+            <div className="absolute bottom-[160px] left-1/2 -translate-x-1/2 z-10">
               <button
                 onClick={() => {
                   scrollToBottom();
-                  shouldAutoScroll.current = true;
+                  setShouldAutoScroll(true);
                 }}
-                className="bg-krait-surface3 border border-krait-border rounded-full px-3 py-1.5 text-[12px] text-text-secondary hover:text-text-primary hover:bg-krait-surface4 shadow-lg flex items-center gap-1.5 transition-colors"
+                className="w-6 h-6 rounded-full border border-krait-border bg-black/10 backdrop-blur-sm flex items-center justify-center text-text-tertiary hover:bg-white/10 transition-colors"
+                aria-label="Scroll to latest message"
               >
-                <ChevronDown className="w-3.5 h-3.5" /> New messages
+                <ChevronDown className="w-3 h-3" strokeWidth={3} />
               </button>
             </div>
           )}

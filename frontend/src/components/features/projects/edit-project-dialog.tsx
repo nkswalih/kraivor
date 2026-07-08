@@ -9,6 +9,8 @@ import {
   useKnowledgeSpacesList,
 } from '@/lib/hooks/use-projects';
 import type { ProjectStatus, ProjectVisibility } from '@/types/domain/projects';
+import { cn } from '@/lib/utils';
+import { PROJECT_COLORS } from '@/lib/constants';
 
 interface EditProjectDialogProps {
   open: boolean;
@@ -109,6 +111,27 @@ export function EditProjectDialog({
                 className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] rounded-[6px] px-3 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--krait-border-hi)] resize-none"
               />
 
+              <div>
+                <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider mb-2 block">
+                  Color
+                </label>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {PROJECT_COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setColor(color === c ? '' : c)}
+                      className={cn(
+                        'w-7 h-7 rounded-full transition-all duration-150',
+                        color === c
+                          ? 'ring-2 ring-white ring-offset-2 ring-offset-[var(--krait-surface-1)] scale-110'
+                          : 'ring-1 ring-transparent hover:scale-110'
+                      )}
+                      style={{ background: c }}
+                    />
+                  ))}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">
@@ -122,21 +145,6 @@ export function EditProjectDialog({
                     className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] rounded-[6px] px-3 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--krait-border-hi)]"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">
-                    Color
-                  </label>
-                  <input
-                    value={color}
-                    onChange={e => setColor(e.target.value)}
-                    placeholder="#RRGGBB"
-                    maxLength={7}
-                    className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] rounded-[6px] px-3 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--krait-border-hi)]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">
                     Status
@@ -153,6 +161,9 @@ export function EditProjectDialog({
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">
                     Visibility

@@ -390,6 +390,22 @@ function SectionHeader({ title, href }: { title: string; href?: string }) {
   );
 }
 
+function AnalysisCardSkeleton() {
+  return (
+    <div className="p-4 rounded-lg bg-krait-surface1 border border-krait-border animate-pulse">
+      <div className="flex items-start justify-between mb-2">
+        <div className="w-4 h-4 rounded bg-krait-surface3" />
+        <div className="w-14 h-3 rounded bg-krait-surface3" />
+      </div>
+      <div className="w-2/3 h-4 rounded bg-krait-surface3 mt-3" />
+      <div className="flex items-center gap-4 mt-3">
+        <div className="w-10 h-5 rounded bg-krait-surface3" />
+        <div className="w-16 h-3 rounded bg-krait-surface3" />
+      </div>
+    </div>
+  );
+}
+
 /* ─── Page Section Wrapper ──────────────────────────────────────── */
 
 function DashboardSection({
@@ -512,16 +528,14 @@ export default function DashboardPage() {
         <SectionHeader title="Recent Analysis" href={`/${workspaceSlug}/analysis`} />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {isLoading
-            ? Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} variant="rect" className="h-28" />
-              ))
+            ? Array.from({ length: 4 }).map((_, i) => <AnalysisCardSkeleton key={i} />)
             : recentJobs.slice(0, 4).map((job: AnalysisJob) => (
                 <Link
                   key={job.job_id}
                   href={`/${workspaceSlug}/analysis/jobs/${job.job_id}`}
                   className="block p-4 rounded-lg bg-krait-surface1 border border-krait-border
                              hover:border-venom-yellow/30 hover:shadow-venom
-                             transition-all duration-[var(--duration-normal)] ease-strike group"
+                             transition-all duration-200 ease-out group"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <GitBranch className="w-4 h-4 text-venom-yellow/60 group-hover:text-venom-yellow transition-colors" />

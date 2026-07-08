@@ -6,6 +6,7 @@ import { useTrending } from '@/lib/hooks/use-community';
 import { useAuthorProfiles } from '@/lib/hooks/use-profiles';
 import { Avatar } from '@/components/profiles/avatar';
 import { TrendingUp, MessageSquare } from 'lucide-react';
+import { Skeleton } from '@/components/ui/shadcn';
 
 export function TrendingSidebar() {
   const router = useRouter();
@@ -28,7 +29,13 @@ export function TrendingSidebar() {
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-4 bg-muted rounded animate-pulse" />
+            <div key={i} className="flex items-start gap-2">
+              <Skeleton variant="rect" className="w-4 h-4 shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-3 w-2/3" />
+              </div>
+            </div>
           ))}
         </div>
       ) : (

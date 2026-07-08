@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTopContributors } from '@/lib/hooks/use-profiles';
 import { Avatar } from '@/components/profiles/avatar';
+import { Skeleton } from '@/components/ui/shadcn';
 
 export function TopContributors() {
   const params = useParams();
@@ -14,7 +15,16 @@ export function TopContributors() {
     return (
       <div className="space-y-3">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-8 bg-muted rounded animate-pulse" />
+          <div key={i} className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Skeleton variant="circle" className="w-7 h-7" />
+              <div className="space-y-1">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-2.5 w-14" />
+              </div>
+            </div>
+            <Skeleton className="h-5 w-10 rounded" />
+          </div>
         ))}
       </div>
     );

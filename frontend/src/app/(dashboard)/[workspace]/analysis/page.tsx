@@ -13,6 +13,20 @@ import { Skeleton } from '@/components/ui/shadcn';
 import { formatRelativeTime } from '@/lib/utils';
 import type { AnalysisJob } from '@/types/domain/analysis';
 
+function AnalysisRowSkeleton() {
+  return (
+    <div className="grid grid-cols-[100px_1.5fr_1fr_1fr_1fr_80px_32px] gap-4 p-3 items-center border-b border-border">
+      <Skeleton className="h-5 w-16 rounded-md" />
+      <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="h-4 w-1/2" />
+      <Skeleton className="h-4 w-10" />
+      <Skeleton className="h-4 w-8" />
+      <Skeleton className="h-4 w-14" />
+      <div />
+    </div>
+  );
+}
+
 function JobRow({ job, workspaceSlug }: { job: AnalysisJob; workspaceSlug: string }) {
   const isRunning = !['completed', 'failed'].includes(job.status);
   const deleteJob = useDeleteJob();
@@ -156,10 +170,21 @@ export default function AnalysisPage() {
 
       <div className="flex-1 overflow-y-auto bg-background p-6">
         {isLoading && jobs.length === 0 ? (
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full rounded-lg" />
-            ))}
+          <div className="border border-border rounded-lg overflow-hidden">
+            <div className="grid grid-cols-[100px_1.5fr_1fr_1fr_1fr_80px_32px] gap-4 p-3 border-b border-border bg-background/50 text-[12px] font-medium text-muted-foreground">
+              <div>Status</div>
+              <div>Repository</div>
+              <div>Branch</div>
+              <div>Score</div>
+              <div>Findings</div>
+              <div>Date</div>
+              <div />
+            </div>
+            <div className="divide-y divide-border">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <AnalysisRowSkeleton key={i} />
+              ))}
+            </div>
           </div>
         ) : jobs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">

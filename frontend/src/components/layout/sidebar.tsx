@@ -88,6 +88,26 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
     <aside
       className={`${collapsed ? 'w-[60px]' : 'w-[240px]'} flex-shrink-0 flex flex-col bg-krait-obsidian border-r border-krait-border h-full select-none transition-[width] duration-200`}
     >
+      {/* Top bar: logo + collapse */}
+      <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-2 h-12 shrink-0`}>
+        {!collapsed && (
+          <Link href="/" className="shrink-0">
+            <img src="/kraivor_text_logo.svg" alt="Kraivor" className="h-5" />
+          </Link>
+        )}
+        <button
+          onClick={toggleCollapse}
+          className="flex items-center justify-center w-8 h-8 rounded-[6px] text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary transition-colors"
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? (
+            <PanelLeftOpen className="w-4 h-4" />
+          ) : (
+            <PanelLeftClose className="w-4 h-4" />
+          )}
+        </button>
+      </div>
+
       {/* Main Navigation */}
       <div className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
         {navItems.map(item => {
@@ -245,18 +265,6 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
           </button>
         </div>
 
-        {/* Toggle Collapse Button */}
-        <button
-          onClick={toggleCollapse}
-          className="w-full flex items-center justify-center py-2 rounded-[6px] text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary transition-colors"
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed ? (
-            <PanelLeftOpen className="w-4 h-4" />
-          ) : (
-            <PanelLeftClose className="w-4 h-4" />
-          )}
-        </button>
       </div>
     </aside>
   );

@@ -1205,11 +1205,14 @@ export function KnowledgeCanvas({ spaceId }: Props) {
   const gridSize = canvas?.gridSize ?? 20;
 
   const gridSvg = useMemo(() => {
+    if (!gridEnabled) return undefined;
     const size = gridSize * viewport.zoom;
-    const dot = `<circle cx="0.5" cy="0.5" r="0.5" fill="var(--krait-border)"/>`;
-    return gridEnabled
-      ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'%3E${encodeURIComponent(dot)}%3C/svg%3E")`
-      : undefined;
+    const dotColor =
+      typeof window !== 'undefined'
+        ? getComputedStyle(document.documentElement).getPropertyValue('--krait-border').trim() || '#2c2c33'
+        : '#2c2c33';
+    const dot = `<circle cx="0.5" cy="0.5" r="0.5" fill="${dotColor}"/>`;
+    return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'%3E${encodeURIComponent(dot)}%3C/svg%3E")`;
   }, [gridEnabled, gridSize, Math.round(viewport.zoom * 10)]);
 
   return (

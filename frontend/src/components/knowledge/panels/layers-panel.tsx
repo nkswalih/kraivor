@@ -8,9 +8,11 @@ interface Props {
   spaceId: string;
 }
 
+const EMPTY_ARRAY: [] = [];
+
 export function LayersPanel({ spaceId }: Props) {
-  const elements = useKnowledgeStore(s => s.spaces[spaceId]?.elements ?? []);
-  const selectedIds = useKnowledgeStore(s => s.spaces[spaceId]?.selectedElementIds ?? []);
+  const elements = useKnowledgeStore(s => s.spaces[spaceId]?.elements ?? EMPTY_ARRAY);
+  const selectedIds = useKnowledgeStore(s => s.spaces[spaceId]?.selectedElementIds ?? EMPTY_ARRAY);
   const setSelectedElements = useKnowledgeStore(s => s.setSelectedElements);
   const toggleElementVisibility = useKnowledgeStore(s => s.toggleElementVisibility);
   const lockElement = useKnowledgeStore(s => s.lockElement);

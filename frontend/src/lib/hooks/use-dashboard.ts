@@ -68,8 +68,7 @@ export function useDashboard() {
     queryKey: ['dashboard-recent-jobs', workspaceId],
     queryFn: () => analysisService.jobs.list(1, 5, workspaceId ?? undefined),
     enabled: !!workspaceId,
-    refetchInterval: 10_000,
-    refetchIntervalInBackground: false,
+    staleTime: 30_000,
   });
 
   return useMemo(() => {
@@ -78,7 +77,8 @@ export function useDashboard() {
       roomsQuery.isLoading ||
       reposQuery.isLoading ||
       knowledgeQuery.isLoading ||
-      membersQuery.isLoading;
+      membersQuery.isLoading ||
+      recentJobsQuery.isLoading;
 
     const recentJobs = recentJobsQuery.data?.jobs ?? [];
 
@@ -136,5 +136,6 @@ export function useDashboard() {
     membersQuery.isLoading,
     membersQuery.error,
     recentJobsQuery.data,
+    recentJobsQuery.isLoading,
   ]);
 }

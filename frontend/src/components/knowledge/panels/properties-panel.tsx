@@ -3,13 +3,19 @@
 import { useMemo } from 'react';
 import { useKnowledgeStore } from '@/lib/stores/knowledge-store';
 
+const EMPTY_ARRAY: [] = [];
+
 interface Props {
   spaceId: string;
 }
 
 export function PropertiesPanel({ spaceId }: Props) {
-  const selectedElementIds = useKnowledgeStore(s => s.spaces[spaceId]?.selectedElementIds ?? []);
-  const elements = useKnowledgeStore(s => s.spaces[spaceId]?.elements ?? []);
+  const selectedElementIds = useKnowledgeStore(
+    s => s.spaces[spaceId]?.selectedElementIds ?? EMPTY_ARRAY
+  );
+  const elements = useKnowledgeStore(
+    s => s.spaces[spaceId]?.elements ?? EMPTY_ARRAY
+  );
   const updateElement = useKnowledgeStore(s => s.updateElement);
 
   const selected = useMemo(

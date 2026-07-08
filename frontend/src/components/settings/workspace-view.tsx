@@ -47,9 +47,9 @@ export function WorkspaceView() {
               key={ws.id}
               onClick={() => { setSelectedId(ws.id); setTab('settings'); }}
               className={cn(
-                'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[12px] font-medium transition-all duration-150',
+                'inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-[12px] font-medium transition-all duration-150',
                   active
-                    ? 'bg-primary/20 text-text-primary border border-primary/30'
+                    ? 'bg-primary/15 text-text-primary border border-primary/30 shadow-sm'
                     : 'bg-krait-surface-1 border border-krait-border text-text-secondary hover:border-krait-border-hi hover:text-text-secondary'
               )}
             >
@@ -78,7 +78,7 @@ export function WorkspaceView() {
         <button
           onClick={() => setTab('settings')}
           className={cn(
-            'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-medium transition-all duration-150',
+            'inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-medium transition-all duration-150',
             tab === 'settings'
               ? 'bg-muted text-text-primary'
               : 'text-text-tertiary hover:text-text-secondary'
@@ -90,7 +90,7 @@ export function WorkspaceView() {
         <button
           onClick={() => setTab('team')}
           className={cn(
-            'inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-medium transition-all duration-150',
+            'inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-medium transition-all duration-150',
             tab === 'team'
               ? 'bg-muted text-text-primary'
               : 'text-text-tertiary hover:text-text-secondary'
@@ -147,27 +147,35 @@ function WorkspaceDetailContent({
   if (tab === 'settings') {
     return (
       <div className="max-w-[560px] space-y-6">
-        <div>
-          <label className="text-[11px] font-medium text-text-secondary mb-1.5 block">Workspace Name</label>
-          <input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            className="w-full bg-krait-surface-1 border border-krait-border rounded-lg px-3.5 py-2.5 text-[14px] text-text-primary focus:outline-none focus:border-primary transition-colors"
-          />
+        {/* General */}
+        <div className="bg-krait-surface-1 border border-krait-border rounded-xl p-5 space-y-4">
+          <p className="text-[10px] font-semibold tracking-[0.08em] uppercase text-text-tertiary">
+            General
+          </p>
+          <div>
+            <label className="text-[11px] font-medium text-text-secondary mb-1.5 block">Workspace Name</label>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full bg-background border border-krait-border rounded-lg px-3.5 py-2.5 text-[14px] text-text-primary focus:outline-none focus:border-primary transition-colors placeholder:text-text-tertiary"
+            />
+          </div>
+          <div>
+            <label className="text-[11px] font-medium text-text-secondary mb-1.5 block">Description</label>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              rows={3}
+              className="w-full bg-background border border-krait-border rounded-lg px-3.5 py-2.5 text-[14px] text-text-primary focus:outline-none focus:border-primary transition-colors resize-none placeholder:text-text-tertiary"
+            />
+          </div>
         </div>
 
-        <div>
-          <label className="text-[11px] font-medium text-text-secondary mb-1.5 block">Description</label>
-          <textarea
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            rows={3}
-            className="w-full bg-krait-surface-1 border border-krait-border rounded-lg px-3.5 py-2.5 text-[14px] text-text-primary focus:outline-none focus:border-primary transition-colors resize-none"
-          />
-        </div>
-
-        <div>
-          <label className="text-[11px] font-medium text-text-secondary mb-1.5 block">Workspace URL</label>
+        {/* Workspace URL */}
+        <div className="bg-krait-surface-1 border border-krait-border rounded-xl p-5 space-y-3">
+          <p className="text-[10px] font-semibold tracking-[0.08em] uppercase text-text-tertiary">
+            Workspace URL
+          </p>
           <div className="flex items-center">
             <span className="bg-muted border border-krait-border border-r-0 rounded-l-lg px-3.5 py-2.5 text-[13px] text-text-tertiary">
               kraivor.com/
@@ -175,11 +183,12 @@ function WorkspaceDetailContent({
             <input
               value={workspace?.slug ?? ''}
               disabled
-              className="flex-1 bg-krait-surface-1 border border-krait-border rounded-r-lg px-3.5 py-2.5 text-[13px] text-text-primary opacity-50 cursor-not-allowed"
+              className="flex-1 bg-background border border-krait-border rounded-r-lg px-3.5 py-2.5 text-[13px] text-text-primary opacity-50 cursor-not-allowed"
             />
           </div>
         </div>
 
+        {/* Actions */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => updateMut.mutate({ name, description })}
@@ -277,64 +286,74 @@ function TeamContent({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div className="max-w-[560px] space-y-6">
-      {/* Invite */}
-      <div className="flex items-end gap-2">
-        <div className="flex-1">
-          <label className="text-[11px] font-medium text-text-secondary mb-1.5 block">Invite by email</label>
-          <div className="flex items-center gap-2">
-            <input
-              type="email"
-              value={inviteEmail}
-              onChange={e => setInviteEmail(e.target.value)}
-              placeholder="colleague@company.com"
-              className="flex-1 bg-krait-surface-1 border border-krait-border rounded-lg px-3 py-2 text-[13px] text-text-primary focus:outline-none focus:border-primary transition-colors"
-            />
-            <select
-              value={inviteRole}
-              onChange={e => setInviteRole(e.target.value)}
-              className="bg-krait-surface-1 border border-krait-border rounded-lg px-2.5 py-2 text-[12px] text-text-secondary focus:outline-none focus:border-primary"
-            >
-              <option value="admin">Admin</option>
-              <option value="member">Member</option>
-              <option value="viewer">Viewer</option>
-            </select>
+      {/* Invite Card */}
+      <div className="bg-krait-surface-1 border border-krait-border rounded-xl p-5">
+        <p className="text-[10px] font-semibold tracking-[0.08em] uppercase text-text-tertiary mb-3">
+          Invite Member
+        </p>
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-tertiary" />
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={e => setInviteEmail(e.target.value)}
+                  placeholder="colleague@company.com"
+                  className="w-full bg-background border border-krait-border rounded-lg pl-9 pr-3 py-2 text-[13px] text-text-primary focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+              <select
+                value={inviteRole}
+                onChange={e => setInviteRole(e.target.value)}
+                className="bg-background border border-krait-border rounded-lg px-2.5 py-2 text-[12px] text-text-secondary focus:outline-none focus:border-primary"
+              >
+                <option value="admin">Admin</option>
+                <option value="member">Member</option>
+                <option value="viewer">Viewer</option>
+              </select>
+            </div>
           </div>
+          <button
+            onClick={() => inviteMut.mutate()}
+            disabled={!inviteEmail || inviteMut.isPending}
+            className="bg-primary hover:bg-primary-dark text-primary-foreground font-medium py-2 px-5 rounded-lg transition-all duration-150 text-[13px] disabled:opacity-40 flex items-center gap-1.5 shrink-0 active:scale-[0.98]"
+          >
+            {inviteMut.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+            Invite
+          </button>
         </div>
-        <button
-          onClick={() => inviteMut.mutate()}
-          disabled={!inviteEmail || inviteMut.isPending}
-           className="bg-primary hover:bg-primary-dark text-primary-foreground font-medium py-2 px-4 rounded-lg transition-all duration-150 text-[12px] disabled:opacity-40 flex items-center gap-1.5 shrink-0 active:scale-[0.98]"
-        >
-          {inviteMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
-          Invite
-        </button>
+        {inviteError && <p className="text-[12px] text-destructive mt-2">{inviteError}</p>}
       </div>
-      {inviteError && <p className="text-[12px] text-destructive -mt-4">{inviteError}</p>}
 
       {/* Pending Invitations */}
       {invitationsLoading ? (
         <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-text-tertiary" /></div>
       ) : pendingInvitations.length > 0 ? (
         <div>
-          <p className="text-[10px] font-semibold tracking-wider text-text-tertiary uppercase mb-2">
+          <p className="text-[10px] font-semibold tracking-[0.08em] uppercase text-text-tertiary mb-2.5">
             Pending Invitations ({pendingInvitations.length})
           </p>
-          <div className="space-y-0.5">
+          <div className="border border-krait-border rounded-xl overflow-hidden divide-y divide-krait-border">
             {pendingInvitations.map(inv => (
-              <div key={inv.id} className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg bg-krait-surface-1 border border-krait-border group">
-                <div className="w-7 h-7 rounded bg-muted flex items-center justify-center text-xs font-bold text-text-secondary shrink-0">
+              <div key={inv.id} className="flex items-center gap-3 px-5 py-3.5 group hover:bg-krait-surface-1/50 transition-colors">
+                <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-text-secondary shrink-0">
                   {inv.email.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] text-text-primary truncate">{inv.email}</p>
                   <p className="text-[11px] text-text-tertiary">{inv.role} &middot; Expires {new Date(inv.expires_at).toLocaleDateString()}</p>
                 </div>
+                <span className="text-[10px] font-medium text-venom-amber bg-venom-amber/10 px-2 py-0.5 rounded-full border border-venom-amber/20">
+                  Pending
+                </span>
                 <button
                   onClick={() => { if (confirm(`Revoke invitation for ${inv.email}?`)) revokeInviteMut.mutate(inv.id); }}
                   disabled={revokeInviteMut.isPending}
-                      className="p-1 text-text-tertiary hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
+                  className="p-1.5 text-text-tertiary hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             ))}
@@ -344,7 +363,7 @@ function TeamContent({ workspaceId }: { workspaceId: string }) {
 
       {/* Members */}
       <div>
-        <p className="text-[10px] font-semibold tracking-wider text-text-tertiary uppercase mb-2">
+        <p className="text-[10px] font-semibold tracking-[0.08em] uppercase text-text-tertiary mb-2.5">
           Members ({allMembers.length})
         </p>
         {membersLoading ? (
@@ -352,7 +371,7 @@ function TeamContent({ workspaceId }: { workspaceId: string }) {
         ) : allMembers.length === 0 ? (
           <p className="text-[13px] text-text-tertiary text-center py-8">No members yet.</p>
         ) : (
-          <div className="space-y-0.5">
+          <div className="border border-krait-border rounded-xl overflow-hidden divide-y divide-krait-border">
             {allMembers.map(m => {
               const isMe = m.user_id === currentUser?.id;
               const profile = profileMap[m.user_id];
@@ -360,16 +379,16 @@ function TeamContent({ workspaceId }: { workspaceId: string }) {
               const avatarSrc = profile?.avatar_url ?? profile?.user_avatar_url ?? m.user?.avatar_url ?? null;
               const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
               return (
-                <div key={m.id} className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg hover:bg-krait-surface-1 transition-colors group border border-transparent hover:border-krait-border">
+                <div key={m.id} className="flex items-center gap-3 px-5 py-3.5 group hover:bg-krait-surface-1/50 transition-colors">
                   {avatarSrc ? (
-                    <img src={avatarSrc} alt="" loading="lazy" className="w-8 h-8 rounded object-cover shrink-0" />
+                    <img src={avatarSrc} alt="" loading="lazy" className="w-9 h-9 rounded-full object-cover shrink-0" />
                   ) : (
-                    <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-xs font-bold text-text-secondary shrink-0">{initials}</div>
+                    <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-text-secondary shrink-0">{initials}</div>
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-[13px] font-medium text-text-primary truncate">{displayName}</p>
-                      {isMe && <span className="text-[9px] text-primary bg-primary/10 px-1.5 py-0.5 rounded font-medium">You</span>}
+                      {isMe && <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">You</span>}
                     </div>
                   </div>
                   <select
@@ -389,9 +408,9 @@ function TeamContent({ workspaceId }: { workspaceId: string }) {
                   {!isMe && (
                     <button
                       onClick={() => { if (confirm(`Remove ${displayName}?`)) removeMemberMut.mutate(m.user_id); }}
-                  className="p-1 text-text-tertiary hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
+                      className="p-1.5 text-text-tertiary hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
@@ -412,15 +431,17 @@ function DangerZoneContent({ workspaceId, workspaceName }: { workspaceId: string
   });
 
   return (
-    <div className="border border-destructive/20 rounded-xl p-5 mt-8">
-      <h3 className="text-sm font-medium text-destructive mb-1">Danger Zone</h3>
-      <p className="text-[12px] text-text-tertiary mb-4">Once you delete this workspace, there is no going back.</p>
+    <div className="border border-destructive/20 rounded-xl p-5 bg-destructive/[0.02]">
+      <h3 className="text-sm font-semibold text-destructive mb-1 flex items-center gap-2">
+        <Trash2 className="w-4 h-4" /> Danger Zone
+      </h3>
+      <p className="text-[12px] text-text-tertiary mb-4">Once you delete this workspace, there is no going back. Please proceed with caution.</p>
       <div className="flex items-center gap-3">
         <input
           value={confirmDelete}
           onChange={e => setConfirmDelete(e.target.value)}
           placeholder={`Type "${workspaceName}" to confirm`}
-          className="flex-1 max-w-[360px] bg-krait-surface-1 border border-destructive/30 rounded-lg px-3.5 py-2 text-[13px] text-text-primary focus:outline-none focus:border-destructive transition-colors"
+          className="flex-1 max-w-[360px] bg-background border border-destructive/30 rounded-lg px-3.5 py-2 text-[13px] text-text-primary focus:outline-none focus:border-destructive transition-colors"
         />
         <button
           onClick={() => deleteMut.mutate()}

@@ -458,16 +458,19 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="p-8 max-w-[1100px] w-full mx-auto">
-        <DashboardError
-          message={error instanceof Error ? error.message : 'An unexpected error occurred'}
-        />
+      <div className="h-full overflow-y-auto">
+        <div className="p-8 max-w-[1100px] w-full mx-auto">
+          <DashboardError
+            message={error instanceof Error ? error.message : 'An unexpected error occurred'}
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 max-w-[1100px] w-full mx-auto">
+    <div className="h-full overflow-y-auto">
+      <div className="p-8 max-w-[1100px] w-full mx-auto">
       {/* Page header */}
       <div className="mb-8 animate-fade-up">
         <div className="flex items-center gap-3 mb-1">
@@ -647,6 +650,7 @@ export default function DashboardPage() {
             Create Knowledge Space
           </Link>
         </div>
+      </div>
       </div>
     </div>
   );

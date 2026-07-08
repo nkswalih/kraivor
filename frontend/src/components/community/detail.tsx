@@ -10,6 +10,7 @@ import { TagChip } from './tag-chip';
 import { CommentsSection } from './comments';
 import { TrendingSidebar } from './trending-sidebar';
 import { ShareDialog } from './share-dialog';
+import { Skeleton } from '@/components/ui/shadcn';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -51,10 +52,34 @@ export function DiscussionDetail({ discussionId }: DiscussionDetailProps) {
     return (
       <div className="flex h-full w-full">
         <div className="flex-1 overflow-y-auto p-6 max-w-[1000px] mx-auto border-r border-border bg-background">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-muted rounded w-3/4" />
-            <div className="h-4 bg-muted rounded w-1/4" />
-            <div className="h-32 bg-muted rounded" />
+          <Skeleton className="h-4 w-28 mb-6" />
+          <div className="flex gap-4 mb-8">
+            <Skeleton variant="rect" className="w-10 h-24 shrink-0" />
+            <div className="flex-1 space-y-4">
+              <div className="flex items-center gap-2">
+                <Skeleton variant="circle" className="w-6 h-6" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+              <Skeleton className="h-8 w-3/4" />
+              <div className="flex gap-2">
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-6 w-24 rounded-full" />
+              </div>
+              <Skeleton variant="rect" className="h-40 w-full" />
+            </div>
+          </div>
+          <div className="border-t border-border pt-6 space-y-4">
+            {[1, 2].map(j => (
+              <div key={j} className="flex gap-3">
+                <Skeleton variant="circle" className="w-6 h-6" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-3 w-32" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

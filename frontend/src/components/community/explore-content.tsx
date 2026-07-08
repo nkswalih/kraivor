@@ -9,6 +9,7 @@ import { useAuthorProfiles } from '@/lib/hooks/use-profiles';
 import { useCommunityStore } from '@/lib/stores/community-store';
 import { DiscussionCard } from './discussion-card';
 import { Avatar } from '@/components/profiles/avatar';
+import { Skeleton } from '@/components/ui/shadcn';
 
 export function ExploreContent() {
   const router = useRouter();
@@ -44,10 +45,23 @@ export function ExploreContent() {
       return (
         <div className="space-y-4">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-card border border-border rounded-lg p-4 animate-pulse">
-              <div className="h-4 bg-muted rounded w-3/4 mb-3" />
-              <div className="h-3 bg-muted rounded w-1/2 mb-2" />
-              <div className="h-3 bg-muted rounded w-1/4" />
+            <div key={i} className="bg-card border border-border rounded-lg p-4">
+              <div className="flex gap-4">
+                <Skeleton variant="rect" className="w-10 h-10 shrink-0" />
+                <div className="flex-1 min-w-0 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Skeleton variant="circle" className="w-5 h-5" />
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-3 w-12" />
+                  </div>
+                  <Skeleton className="h-5 w-3/4" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-5 w-14 rounded-full" />
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                  </div>
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -83,10 +97,23 @@ export function ExploreContent() {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map(i => (
-          <div key={i} className="bg-card border border-border rounded-lg p-4 animate-pulse">
-            <div className="h-4 bg-muted rounded w-3/4 mb-3" />
-            <div className="h-3 bg-muted rounded w-1/2 mb-2" />
-            <div className="h-3 bg-muted rounded w-1/4" />
+          <div key={i} className="bg-card border border-border rounded-lg p-4">
+            <div className="flex gap-4">
+              <Skeleton variant="rect" className="w-10 h-10 shrink-0" />
+              <div className="flex-1 min-w-0 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Skeleton variant="circle" className="w-5 h-5" />
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 w-12" />
+                </div>
+                <Skeleton className="h-5 w-3/4" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                </div>
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
           </div>
         ))}
       </div>

@@ -12,6 +12,7 @@ import {
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useAuthorProfiles, useMyProfile } from '@/lib/hooks/use-profiles';
 import { Avatar } from '@/components/profiles/avatar';
+import { Skeleton } from '@/components/ui/shadcn';
 import {
   MessageSquare,
   ChevronDown,
@@ -366,9 +367,13 @@ export function CommentsSection({ discussionId }: CommentsSectionProps) {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2].map(i => (
-            <div key={i} className="animate-pulse">
-              <div className="h-3 bg-muted rounded w-1/4 mb-2" />
-              <div className="h-8 bg-muted rounded" />
+            <div key={i} className="flex gap-3">
+              <Skeleton variant="circle" className="w-6 h-6 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-3 w-32" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
             </div>
           ))}
         </div>

@@ -21,7 +21,8 @@ export default function CommunityPage() {
 
   return (
     <div className="flex h-full w-full animate-fade-up">
-      <div className="flex-1 overflow-y-auto p-6 max-w-[1000px] mx-auto border-r border-border bg-background">
+      <div className="flex-1 overflow-y-auto border-r border-border bg-background">
+        <div className="p-6 max-w-[1000px] mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-xl font-medium flex items-center gap-2 text-foreground">
@@ -59,6 +60,7 @@ export default function CommunityPage() {
         )}
 
         {activeTab === 'explore' ? <ExploreContent /> : <Feed />}
+        </div>
       </div>
 
       <div className="w-[300px] bg-card p-6 hidden lg:block shrink-0 overflow-y-auto">

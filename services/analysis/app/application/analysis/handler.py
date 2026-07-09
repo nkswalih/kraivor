@@ -13,6 +13,7 @@ from app.application.analysis.commands import (
 from app.application.analysis.queries import (
     DismissFindingsCommand,
     GetFindingsSummaryQuery,
+    GetJobStatisticsQuery,
     GetJobStatusQuery,
     GetReportQuery,
     ListFindingsQuery,
@@ -74,6 +75,7 @@ async def handle_start_analysis(
             "repo_url": cmd.repo_url,
             "branch": cmd.branch,
             "deep_scan": cmd.deep_scan,
+            "depth": cmd.depth,
             "simulate_users": cmd.simulate_users or settings.analysis.simulate_users,
             "status": JobStatus.QUEUED,
             "progress_pct": 0,
@@ -126,15 +128,29 @@ async def handle_stage_clone(
     token = (
         get_settings().git.token.get_secret_value() if get_settings().git.token else ""
     )
+    clone_depth = cast(int, job.get("depth", 1))
     repo_path = await fetcher.clone(
         clone_url=cast(str, job["repo_url"]),
         branch=cast(str, job["branch"]),
-        depth=1,
+        depth=clone_depth,
         github_token=token,
     )
     languages = await fetcher.detect_languages(repo_path)
     files = await fetcher.get_source_files(repo_path)
     loc = await fetcher.count_loc(repo_path)
+
+    language_lines: dict[str, int] = {}
+    for f in files:
+        lang = f.get("language", "unknown") or "unknown"
+        language_lines[lang] = language_lines.get(lang, 0) + (f.get("lines_count", 0) or 0)
+    total_lang_lines = sum(language_lines.values()) or 1
+    language_breakdown = sorted(
+        [
+            {"name": lang, "percentage": round(count / total_lang_lines * 100, 1)}
+            for lang, count in language_lines.items()
+        ],
+        key=lambda x: -x["percentage"],
+    )
 
     from app.infrastructure.detection.detector import FrameworkDetector
 
@@ -153,6 +169,7 @@ async def handle_stage_clone(
     result = {
         "repo_path": repo_path,
         "languages": languages,
+        "language_breakdown": language_breakdown,
         "files": files,
         "total_lines": loc,
         "total_files": len(files),
@@ -168,17 +185,90 @@ async def handle_stage_clone(
     return result
 
 
-async def _push_progress(job_id: UUID, status: str, pct: int, message: str) -> None:
+async def handle_stage_churn(
+    cmd: ProcessStageCommand,
+    uow: UnitOfWork,
+    repo_path: str,
+    depth: int,
+) -> list[dict[str, object]]:
+    job = await uow.jobs.get_by_id(cmd.job_id)
+    if not job:
+        raise NotFoundError(f"Job {cmd.job_id} not found")
+
+    from app.workers.churn.analyser import ChurnAnalyser, finding_from_churn
+
+    analyser = ChurnAnalyser(repo_path, depth=depth)
+    churn_results = await analyser.analyse()
+
+    if churn_results:
+        findings = [
+            finding_from_churn(
+                c,
+                job_id=cmd.job_id,
+                repo_id=job["repo_id"],
+                workspace_id=job["workspace_id"],
+            )
+            for c in churn_results
+        ]
+        from app.domain.entities.finding import Finding
+        from app.core.constants import Category, Severity as Sev
+
+        finding_entities = [
+            Finding(
+                job_id=cmd.job_id,
+                repo_id=cast(UUID, f["repo_id"]),
+                workspace_id=cast(UUID, f["workspace_id"]),
+                rule_id=f["rule_id"],
+                category=Category(f["category"]),
+                severity=Sev(f["severity"]),
+                title=f["title"],
+                description=f["description"],
+                recommendation=f["recommendation"],
+                file_path=f["file_path"],
+                score_impact=cast(float, f["score_impact"]),
+                rpm_impact=cast(int, f.get("rpm_impact", 0)),
+                metadata={"change_count": c.change_count, "unique_authors": c.unique_authors},
+            )
+            for c, f in zip(churn_results, findings)
+        ]
+
+        saved = await uow.findings.save_many(finding_entities)
+        logger.info("churn_findings_saved", count=saved, job_id=str(cmd.job_id))
+
+    await uow.jobs.update_status(
+        cmd.job_id,
+        JobStatus.CHURN,
+        progress_pct=18,
+        progress_message=f"Churn analysis: {len(churn_results)} hotspot files",
+    )
+
+    return [r.to_dict() for r in churn_results]
+
+
+async def _push_progress(
+    job_id: UUID,
+    status: str,
+    pct: int,
+    message: str,
+    engine_statuses: dict[str, str] | None = None,
+) -> None:
     from sqlalchemy import update
 
     from app.infrastructure.db.models.analysis_job import AnalysisJobModel
     from app.infrastructure.db.session import async_session_factory
 
     async with async_session_factory() as session:
+        values: dict[str, object] = {
+            "status": status,
+            "progress_pct": pct,
+            "progress_message": message,
+        }
+        if engine_statuses is not None:
+            values["engine_statuses"] = engine_statuses
         stmt = (
             update(AnalysisJobModel)
             .where(AnalysisJobModel.id == job_id)
-            .values(status=status, progress_pct=pct, progress_message=message)
+            .values(**values)
         )
         await session.execute(stmt)
         await session.commit()
@@ -548,6 +638,7 @@ async def handle_stage_finalize(
     score: Score,
     findings: list[Finding],
     languages: list[str],
+    language_breakdown: list[dict],
     total_files: int,
     total_lines: int,
     duration_seconds: int,
@@ -560,6 +651,7 @@ async def handle_stage_finalize(
         workspace_id=cast(UUID, job["workspace_id"]),
         branch=cast(str, job["branch"]),
         languages_detected=languages,
+        language_breakdown=language_breakdown,
         total_files_analyzed=total_files,
         total_lines_of_code=total_lines,
         scores=score,
@@ -1236,6 +1328,55 @@ async def handle_delete_job(
 
     logger.info("job_deleted", job_id=str(cmd.job_id))
     return job
+
+
+async def get_job_statistics(
+    query: GetJobStatisticsQuery,
+    uow: UnitOfWork,
+) -> dict[str, object]:
+    from asyncio import gather
+    from app.infrastructure.db.session import async_session_factory
+    from app.infrastructure.db.repositories.finding import FindingRepository
+    from app.infrastructure.db.repositories.dead_code import DeadCodeRepository
+    from app.infrastructure.db.repositories.error_finding import ErrorFindingRepository
+    from app.infrastructure.db.repositories.performance_metric import (
+        PerformanceMetricRepository,
+    )
+    from app.infrastructure.db.repositories.simulation_result import (
+        SimulationResultRepository,
+    )
+    from app.infrastructure.db.repositories.enterprise_guide import (
+        EnterpriseGuideRepository,
+    )
+
+    async def _with_session(
+        repo_cls: type[object], method: str, *args: object
+    ) -> object:
+        async with async_session_factory() as s:
+            return await getattr(repo_cls(s), method)(*args)
+
+    severity_counts, dc, err, perf, sim, guide_exists, cat_counts = await gather(
+        _with_session(FindingRepository, "count_by_severity", query.job_id),
+        _with_session(DeadCodeRepository, "count_by_job", query.job_id),
+        _with_session(ErrorFindingRepository, "count_by_job", query.job_id),
+        _with_session(PerformanceMetricRepository, "count_by_job", query.job_id),
+        _with_session(SimulationResultRepository, "count_by_job", query.job_id),
+        _with_session(EnterpriseGuideRepository, "exists_by_job", query.job_id),
+        _with_session(FindingRepository, "count_by_category", query.job_id),
+    )
+
+    findings_count = sum(severity_counts.values()) if severity_counts else 0
+
+    return {
+        "findings_count": findings_count,
+        "dead_code_count": dc,
+        "error_findings_count": err,
+        "performance_metrics_count": perf,
+        "simulation_results_count": sim,
+        "enterprise_guide_exists": guide_exists,
+        "counts_by_severity": severity_counts,
+        "counts_by_category": cat_counts,
+    }
 
 
 async def get_dead_code(

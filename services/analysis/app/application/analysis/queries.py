@@ -35,6 +35,11 @@ class GetReportQuery:
 
 
 @dataclass(kw_only=True)
+class GetJobStatisticsQuery:
+    job_id: UUID
+
+
+@dataclass(kw_only=True)
 class ListJobsQuery:
     repo_id: UUID | None = None
     workspace_id: UUID | None = None

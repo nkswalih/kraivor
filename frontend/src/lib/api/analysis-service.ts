@@ -4,6 +4,7 @@ import type {
   AnalysisJob,
   AnalysisMetadataResponse,
   JobListResponse,
+  JobStatistics,
   StartAnalysisRequest,
   FindingsListResponse,
   FindingsSummary,
@@ -86,11 +87,9 @@ export const analysisService = {
     },
   },
   files: {
-    upload(workspaceId: string, file: File, repoUrl = '', branch = 'main'): Promise<AnalysisJob> {
+    upload(workspaceId: string, file: File): Promise<AnalysisJob> {
       const formData = new FormData();
       formData.append('workspace_id', workspaceId);
-      formData.append('repo_url', repoUrl);
-      formData.append('branch', branch);
       formData.append('file', file);
       return analysisFetch<AnalysisJob>(API_ENDPOINTS.ANALYSIS.FILE_UPLOAD, {
         method: 'POST',
@@ -115,6 +114,16 @@ export const analysisService = {
     },
     delete(jobId: string): Promise<void> {
       return analysisDelete<void>(API_ENDPOINTS.ANALYSIS.JOB_DELETE(jobId));
+    },
+    statistics(jobId: string): Promise<JobStatistics> {
+      return analysisGet<JobStatistics>(
+        API_ENDPOINTS.ANALYSIS.JOB_STATISTICS(jobId)
+      );
+    },
+    branches(repoUrl: string): Promise<string[]> {
+      return analysisGet<string[]>(
+        `${API_ENDPOINTS.ANALYSIS.BRANCHES}?url=${encodeURIComponent(repoUrl)}`
+      );
     },
   },
   findings: {

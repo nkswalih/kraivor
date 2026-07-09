@@ -73,6 +73,7 @@ export const API_ENDPOINTS = {
     JOB_GET: (id: string) => `/api/v1/jobs/${id}`,
     JOB_DELETE: (id: string) => `/api/v1/jobs/${id}`,
     JOB_START: '/api/v1/jobs',
+    JOB_STATISTICS: (id: string) => `/api/v1/jobs/${id}/statistics`,
     FINDINGS: '/api/v1/findings',
     FINDINGS_SUMMARY: '/api/v1/findings/summary',
     FINDINGS_DISMISS: '/api/v1/findings/dismiss',
@@ -84,6 +85,7 @@ export const API_ENDPOINTS = {
     SIMULATION_RESULTS: '/api/v1/simulation-results',
     SCORE_HISTORY: (repoId: string) => `/api/v1/score-history/${repoId}`,
     ENTERPRISE_GUIDE: '/api/v1/enterprise-guide',
+    BRANCHES: '/api/v1/jobs/branches',
     FILE_UPLOAD: '/api/v1/files/upload',
   },
   NOTES: {

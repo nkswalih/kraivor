@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, GitBranch, Upload, Loader2, AlertCircle, FileText } from 'lucide-react';
+import { ArrowLeft, GitBranch, Upload, Loader2, AlertCircle, FileText, Info } from 'lucide-react';
 import Link from 'next/link';
 import type { Repository } from '@/types/api';
 import { useQuery } from '@tanstack/react-query';
@@ -10,6 +10,7 @@ import { repositoryEndpoints } from '@/lib/api/endpoints';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useStartAnalysis, useFileUpload } from '@/lib/hooks/use-analysis';
 import type { StartAnalysisRequest } from '@/types/domain/analysis';
+import { analysisService } from '@/lib/api/analysis-service';
 
 type Mode = 'git' | 'upload';
 
@@ -25,7 +26,8 @@ export default function NewAnalysisPage() {
   const [repoUrl, setRepoUrl] = useState('');
   const [branch, setBranch] = useState('main');
   const [deepScan, setDeepScan] = useState(false);
-  const [depth, setDepth] = useState(1);
+  const [depth, setDepth] = useState(3);
+  const [showDeepInfo, setShowDeepInfo] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -36,6 +38,18 @@ export default function NewAnalysisPage() {
   });
 
   const reposList = repos ?? [];
+
+  const { data: branches, isLoading: branchesLoading, error: branchesError } = useQuery<string[]>({
+    queryKey: ['branches', repoUrl],
+    queryFn: () => analysisService.jobs.branches(repoUrl),
+    enabled: !!repoUrl && mode === 'git',
+  });
+
+  useEffect(() => {
+    if (branches && branches.length > 0) {
+      setBranch(branches[0]);
+    }
+  }, [branches]);
 
   const { mutate: startAnalysis, isPending: isStartPending, error: startError } = useStartAnalysis();
   const { mutate: uploadFile, isPending: isUploadPending, error: uploadError } = useFileUpload();
@@ -180,46 +194,111 @@ export default function NewAnalysisPage() {
               <label className="text-[13px] font-medium text-foreground block mb-1.5">
                 Branch
               </label>
-              <input
-                type="text"
-                value={branch}
-                onChange={(e) => setBranch(e.target.value)}
-                className="w-full bg-card border border-border rounded-md px-3 py-2 text-[13px] text-foreground focus:border-primary focus:outline-none transition-colors"
-                placeholder="main"
-              />
+              {!repoUrl ? (
+                <div className="w-full bg-card border border-border rounded-md px-3 py-2 text-[13px] text-text-tertiary">
+                  Select a repository first
+                </div>
+              ) : branchesLoading ? (
+                <div className="flex items-center gap-2 w-full bg-card border border-border rounded-md px-3 py-2 text-[13px] text-text-tertiary">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading branches...
+                </div>
+              ) : branchesError ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 p-2 border border-red-500/30 bg-red-500/10 rounded-md text-color-error text-[12px]">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    Failed to fetch branches. Enter manually below.
+                  </div>
+                  <input
+                    type="text"
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                    className="w-full bg-card border border-border rounded-md px-3 py-2 text-[13px] text-foreground focus:border-primary focus:outline-none transition-colors"
+                    placeholder="main"
+                  />
+                </div>
+              ) : (
+                <select
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                  className="w-full bg-card border border-border rounded-md px-3 py-2 text-[13px] text-foreground focus:border-primary focus:outline-none transition-colors"
+                >
+                  {branches?.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
-            {/* Deep Scan Toggle */}
-            <div className="flex items-center justify-between p-3 border border-border rounded-md bg-card">
-              <div>
-                <p className="text-[13px] font-medium text-foreground">Deep Scan</p>
-                <p className="text-[12px] text-text-tertiary">Analyze entire commit history and nested directories</p>
+            {/* Deep Scan Toggle with Info */}
+            <div className="relative">
+              <div className="flex items-center justify-between p-3 border border-border rounded-md bg-card">
+                <div className="flex items-center gap-2">
+                  <div>
+                    <p className="text-[13px] font-medium text-foreground">Deep Scan</p>
+                    <p className="text-[12px] text-text-tertiary">Analyze commit history for churn hotspots</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeepInfo(!showDeepInfo)}
+                    className="p-0.5 rounded-full text-text-tertiary hover:text-foreground transition-colors"
+                  >
+                    <Info className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDeepScan(!deepScan)}
+                  className={`relative w-10 h-5 rounded-full transition-colors ${deepScan ? 'bg-yellow-500' : 'bg-krait-surface3'}`}
+                >
+                  <div
+                    className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${deepScan ? 'translate-x-5' : 'translate-x-0.5'}`}
+                  />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setDeepScan(!deepScan)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${deepScan ? 'bg-yellow-500' : 'bg-krait-surface3'}`}
-              >
-                <div
-                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${deepScan ? 'translate-x-5' : 'translate-x-0.5'}`}
-                />
-              </button>
+              {showDeepInfo && (
+                <div className="absolute z-10 mt-1 p-3 border border-border rounded-md bg-card shadow-lg text-[12px] text-text-secondary leading-relaxed max-w-sm">
+                  <p className="mb-2">
+                    <strong className="text-foreground">Deep Scan</strong> fetches additional commit history (<code className="text-venom-yellow">git clone --depth N</code>) to enable <strong className="text-foreground">code churn analysis</strong>.
+                  </p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>Identifies files that change most frequently (<strong>hotspots</strong>)</li>
+                    <li>Detects ownership diffusion (many authors per file)</li>
+                    <li>Higher depth = more accurate churn signal</li>
+                    <li>Adds <strong>quality</strong> findings to your analysis results</li>
+                  </ul>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeepInfo(false)}
+                    className="mt-2 text-[11px] text-text-tertiary hover:text-foreground"
+                  >
+                    Got it
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Depth (shown only when deep scan is on) */}
+            {/* Depth Slider (shown only when deep scan is on) */}
             {deepScan && (
               <div>
-                <label className="text-[13px] font-medium text-foreground block mb-1.5">
-                  Scan Depth (1-10)
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[13px] font-medium text-foreground">
+                    Commit Depth
+                  </label>
+                  <span className="text-[12px] text-venom-yellow font-mono">{depth}</span>
+                </div>
                 <input
-                  type="number"
-                  min={1}
+                  type="range"
+                  min={2}
                   max={10}
                   value={depth}
-                  onChange={(e) => setDepth(Math.min(10, Math.max(1, Number(e.target.value))))}
-                  className="w-full bg-card border border-border rounded-md px-3 py-2 text-[13px] text-foreground focus:border-primary focus:outline-none transition-colors"
+                  onChange={(e) => setDepth(Number(e.target.value))}
+                  className="w-full accent-venom-yellow"
                 />
+                <div className="flex justify-between text-[10px] text-text-tertiary mt-0.5">
+                  <span>Shallow</span>
+                  <span>Deep</span>
+                </div>
               </div>
             )}
 
@@ -251,10 +330,10 @@ export default function NewAnalysisPage() {
           </form>
         ) : (
           <div className="space-y-6">
-            {/* File Drop Zone */}
+            {/* Project Zip Upload */}
             <div>
               <label className="text-[13px] font-medium text-foreground block mb-1.5">
-                Source File
+                Project Archive
               </label>
               <div
                 onDragOver={handleDragOver}
@@ -268,8 +347,16 @@ export default function NewAnalysisPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
+                  accept=".zip"
                   className="hidden"
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    if (f && !f.name.endsWith('.zip')) {
+                      e.target.value = '';
+                      return;
+                    }
+                    setSelectedFile(f);
+                  }}
                 />
                 {selectedFile ? (
                   <div className="flex flex-col items-center gap-2">
@@ -290,10 +377,10 @@ export default function NewAnalysisPage() {
                   <div className="flex flex-col items-center gap-2">
                     <Upload className="w-8 h-8 text-text-tertiary" />
                     <p className="text-[13px] text-text-tertiary">
-                      Drag and drop a file here, or click to browse
+                      Drag and drop a project zip here, or click to browse
                     </p>
                     <p className="text-[11px] text-text-tertiary">
-                      Python, JavaScript, TypeScript, Go, Rust, Java, and more
+                      Upload your entire project as a .zip archive for full analysis
                     </p>
                   </div>
                 )}

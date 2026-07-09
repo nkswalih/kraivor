@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.db.models.enterprise_guide import EnterpriseGuideModel
@@ -33,3 +33,12 @@ class EnterpriseGuideRepository:
             "migration_path": m.migration_path,
             "generated_at": m.generated_at,
         }
+
+    async def exists_by_job(self, job_id: UUID) -> bool:
+        stmt = (
+            select(func.count())
+            .select_from(EnterpriseGuideModel)
+            .where(EnterpriseGuideModel.job_id == job_id)
+        )
+        result = await self._session.execute(stmt)
+        return (result.scalar() or 0) > 0

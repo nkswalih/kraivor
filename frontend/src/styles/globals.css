@@ -118,6 +118,12 @@
 .animate-fade-up-delay-2 { animation: fade-up 0.6s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .animate-spin-slow { animation: spin-slow 20s linear infinite; }
 
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  50% { opacity: 0.85; filter: brightness(1.15); }
+}
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
 .btn-shimmer {
   background-size: 200% auto;
   background-image: linear-gradient(

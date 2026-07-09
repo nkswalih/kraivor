@@ -173,7 +173,7 @@ export function SeverityDonutChart({
             x={80}
             y={94}
             textAnchor="middle"
-            fill="hsl(var(--text-tertiary))"
+            fill="white"
             fontSize="11"
             fontFamily="sans-serif"
             style={{

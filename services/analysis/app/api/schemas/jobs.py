@@ -46,3 +46,14 @@ class JobListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class JobStatisticsResponse(BaseModel):
+    findings_count: int
+    dead_code_count: int
+    error_findings_count: int
+    performance_metrics_count: int
+    simulation_results_count: int
+    enterprise_guide_exists: bool
+    counts_by_severity: dict[str, int]
+    counts_by_category: dict[str, int]

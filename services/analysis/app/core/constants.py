@@ -24,6 +24,7 @@ class Category(StrEnum):
 class JobStatus(StrEnum):
     QUEUED = "queued"
     CLONING = "cloning"
+    CHURN = "churn"
     PARSING = "parsing"
     RULES = "rules"
     DEAD_CODE = "dead_code"

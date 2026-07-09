@@ -15,6 +15,7 @@ class Report:
     workspace_id: UUID
     branch: str = "main"
     languages_detected: list[str] = field(default_factory=list)
+    language_breakdown: list[dict] = field(default_factory=list)
     total_files_analyzed: int = 0
     total_lines_of_code: int = 0
 
@@ -33,6 +34,7 @@ class Report:
                 "workspace_id": str(self.workspace_id),
                 "branch": self.branch,
                 "languages_detected": self.languages_detected,
+                "language_breakdown": self.language_breakdown,
                 "total_files_analyzed": self.total_files_analyzed,
                 "total_lines_of_code": self.total_lines_of_code,
                 "duration_seconds": self.duration_seconds,

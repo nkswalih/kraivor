@@ -69,6 +69,7 @@ def _report_to_response(report: Report) -> ReportResponse:
         total_files=report.total_files_analyzed,
         total_lines_of_code=report.total_lines_of_code,
         languages_detected=report.languages_detected,
+        language_breakdown=report.language_breakdown,
         duration_seconds=report.duration_seconds,
         completed_at=report.completed_at,
         report_url=report.s3_key,

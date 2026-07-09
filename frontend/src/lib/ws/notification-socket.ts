@@ -23,6 +23,7 @@ export class NotificationSocket {
   private reconnectAttempts = 0;
   private maxReconnects = 10;
   private closing = false;
+  private active = false;
 
   onNotification?: (event: WsServerEvent & { type: 'notification' }) => void;
   onConnected?: () => void;
@@ -32,6 +33,7 @@ export class NotificationSocket {
     const token = this.getJwt();
     if (!token) return;
     this.closing = false;
+    this.active = true;
     this.ws = new WebSocket(`${getWsBase()}/ws/notifications/?token=${token}`);
     this.attachListeners();
   }
@@ -43,12 +45,14 @@ export class NotificationSocket {
 
   private attachListeners() {
     if (!this.ws) return;
-    this.ws.onopen = () => {
+    const ws = this.ws;
+    ws.onopen = () => {
+      if (!this.active || this.ws !== ws) return;
       this.reconnectAttempts = 0;
       this.startHeartbeat();
       this.onConnected?.();
     };
-    this.ws.onmessage = e => {
+    ws.onmessage = e => {
       try {
         const data: WsServerEvent = JSON.parse(e.data);
         if (data.type === 'notification') {
@@ -58,9 +62,9 @@ export class NotificationSocket {
         // ignore malformed frames
       }
     };
-    this.ws.onclose = e => {
+    ws.onclose = e => {
       this.stopHeartbeat();
-      if (this.closing) return;
+      if (this.closing || !this.active) return;
       if ([4001, 4002, 4003].includes(e.code)) {
         this.onAuthError?.(e.code);
         return;
@@ -70,10 +74,11 @@ export class NotificationSocket {
   }
 
   private scheduleReconnect() {
-    if (this.reconnectAttempts >= this.maxReconnects) return;
+    if (this.reconnectAttempts >= this.maxReconnects || !this.active) return;
     const base = Math.min(1000 * 2 ** this.reconnectAttempts, 30000);
     const delay = base * (0.5 + Math.random() * 0.5);
     this.reconnectTimer = setTimeout(() => {
+      if (!this.active) return;
       this.reconnectAttempts++;
       this.connect();
     }, delay);
@@ -87,14 +92,24 @@ export class NotificationSocket {
 
   disconnect() {
     this.closing = true;
+    this.active = false;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.stopHeartbeat();
-    this.ws?.close();
+    if (this.ws && this.ws.readyState !== WebSocket.CONNECTING) {
+      this.ws.close();
+    }
     this.ws = null;
   }
 
   private startHeartbeat() {
-    this.heartbeatTimer = setInterval(() => this.send({ action: 'heartbeat' } as WsClientAction), 40_000);
+    if (!this.active) return;
+    this.heartbeatTimer = setInterval(() => {
+      if (!this.active) {
+        clearInterval(this.heartbeatTimer!);
+        return;
+      }
+      this.send({ action: 'heartbeat' } as WsClientAction);
+    }, 40_000);
   }
 
   private stopHeartbeat() {

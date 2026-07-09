@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import FindingStatus
@@ -17,7 +17,15 @@ class FindingRepository(AbstractFindingRepository):
 
     async def save_many(self, findings: list[Finding]) -> int:
         models = [self._to_model(f) for f in findings]
-        self._session.add_all(models)
+        BATCH_SIZE = 200
+        for i in range(0, len(models), BATCH_SIZE):
+            batch = models[i : i + BATCH_SIZE]
+            rows = [
+                {c.name: getattr(m, c.name) for c in FindingModel.__table__.columns}
+                for m in batch
+            ]
+            stmt = insert(FindingModel)
+            await self._session.execute(stmt, rows)
         await self._session.flush()
         return len(models)
 

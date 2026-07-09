@@ -4,6 +4,59 @@ from django.dispatch import receiver
 from core.cache import CacheService
 
 
+# ── Chat v2: Workspace Team Group Auto-Provisioning ──────────────────────────
+
+
+@receiver(post_save, sender="workspaces.Workspace")
+def provision_team_group(sender, instance, created, **kwargs):
+    """Auto-provision a WORKSPACE_TEAM room when a workspace is created."""
+    if not created:
+        # Check if this is an archive (soft delete)
+        if instance.deleted_at:
+            from apps.chat.services.provisioning import get_provisioner
+
+            get_provisioner().archive_team_group(workspace_id=str(instance.id))
+        return
+
+    from apps.chat.services.provisioning import get_provisioner
+
+    get_provisioner().provision_team_group(
+        workspace_id=str(instance.id),
+        workspace_name=instance.name,
+        owner_id=str(instance.owner_id),
+    )
+
+
+@receiver(post_save, sender="workspaces.WorkspaceMember")
+def add_to_team_group(sender, instance, created, **kwargs):
+    """Add a user to the workspace team group when they join the workspace."""
+    if not created:
+        return
+    if instance.deleted_at:
+        return
+
+    from apps.chat.services.provisioning import get_provisioner
+
+    get_provisioner().add_to_team_group(
+        workspace_id=str(instance.workspace_id),
+        user_id=str(instance.user_id),
+    )
+
+
+@receiver(post_delete, sender="workspaces.WorkspaceMember")
+def remove_from_team_group(sender, instance, **kwargs):
+    """Remove a user from the workspace team group when they leave."""
+    from apps.chat.services.provisioning import get_provisioner
+
+    get_provisioner().remove_from_team_group(
+        workspace_id=str(instance.workspace_id),
+        user_id=str(instance.user_id),
+    )
+
+
+# ── Cache Invalidation ───────────────────────────────────────────────────────
+
+
 @receiver(post_save, sender="workspaces.WorkspaceMember")
 @receiver(post_delete, sender="workspaces.WorkspaceMember")
 def invalidate_workspace_member_count(sender, instance, **kwargs):

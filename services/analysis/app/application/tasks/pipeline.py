@@ -22,6 +22,7 @@ from app.application.analysis.handler import (
     handle_save_analysis_metadata,
     handle_save_findings,
     handle_stage_ai_enrich,
+    handle_stage_churn,
     handle_stage_clone,
     handle_stage_dead_code,
     handle_stage_devops,
@@ -41,7 +42,12 @@ from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
 from app.domain.entities.finding import Finding
 from app.domain.entities.score import Score
-from app.domain.events import AnalysisProgressed
+from app.domain.events import (
+    AnalysisProgressed,
+    EngineCompleted,
+    EngineFailed,
+    EngineStarted,
+)
 from app.domain.rules.base import RuleViolation
 from app.domain.rules.registry import create_default_registry
 from app.infrastructure.db.unit_of_work import UnitOfWork
@@ -76,6 +82,7 @@ _SCORER = ProductionReadinessScorer()
 _STAGE_STATUS: dict[str, str] = {
     "start": "cloning",
     "clone": "clone",
+    "churn": "churn",
     "parse": "parsing",
     "rules": "rules",
     "save_findings": "save_findings",
@@ -95,6 +102,7 @@ _STAGE_STATUS: dict[str, str] = {
 _STAGE_ENGINE: dict[str, str | None] = {
     "start": None,
     "clone": None,
+    "churn": None,
     "parse": None,
     "rules": None,
     "save_findings": None,
@@ -129,6 +137,7 @@ ALL_ENGINES = {
 _STAGE_PROGRESS: dict[str, int] = {
     "start": 10,
     "clone": 15,
+    "churn": 18,
     "parse": 25,
     "rules": 50,
     "save_findings": 65,
@@ -170,9 +179,16 @@ async def _push_stage_progress(state: dict[str, object], stage_name: str) -> Non
     job_id = cast(UUID, state["job_id"])
     pct = _STAGE_PROGRESS.get(stage_name, 50)
     status = _STAGE_STATUS.get(stage_name, stage_name)
+    engine_statuses = cast(dict[str, str] | None, state.get("engine_statuses"))
     try:
         await asyncio.wait_for(
-            _push_progress(job_id, status, pct, f"Running {stage_name}..."),
+            _push_progress(
+                job_id,
+                status,
+                pct,
+                f"Running {stage_name}...",
+                engine_statuses=engine_statuses,
+            ),
             timeout=10,
         )
     except Exception:
@@ -233,6 +249,26 @@ async def run_full_analysis(cmd_dict: dict[str, object]) -> dict[str, object]:
     }
 
 
+async def _publish_engine_event(
+    job_id: UUID, engine_name: str, new_status: str, error_message: str = ""
+) -> None:
+    try:
+        producer = EventProducer()
+        if new_status == "running":
+            event = EngineStarted(job_id=job_id, engine_name=engine_name)
+        elif new_status == "completed":
+            event = EngineCompleted(job_id=job_id, engine_name=engine_name)
+        elif new_status == "failed":
+            event = EngineFailed(
+                job_id=job_id, engine_name=engine_name, error_message=error_message
+            )
+        else:
+            return
+        await asyncio.wait_for(producer.publish(event), timeout=5)
+    except Exception:
+        logger.warning("publish_engine_event_failed", engine=engine_name)
+
+
 async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> None:
     """Execute all pipeline stages sequentially with per-stage error handling.
 
@@ -244,6 +280,7 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
     for stage_name, stage_fn, stage_args in (
         ("start", _stage_start, (cmd,)),
         ("clone", _stage_clone, ()),
+        ("churn", _stage_churn, ()),
         ("parse", _stage_parse, ()),
         ("rules", _stage_rules, ()),
         ("save_findings", _stage_save_findings, ()),
@@ -263,8 +300,12 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
         engine_ids = _STAGE_ENGINES.get(stage_name, [])
         single_engine_id = _STAGE_ENGINE.get(stage_name)
         engine_ids = engine_ids + ([single_engine_id] if single_engine_id else [])
+        job_id = cast(UUID, state.get("job_id"))
         for eid in engine_ids:
             cast(dict[str, str], state["engine_statuses"])[eid] = "running"
+            state[f"_engine_start_{eid}"] = time.monotonic()
+            if job_id:
+                await _publish_engine_event(job_id, eid, "running")
         await _push_stage_progress(state, stage_name)
         try:
             if stage_args:
@@ -273,10 +314,15 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
                 await stage_fn(state)  # type: ignore[call-arg]
             for eid in engine_ids:
                 cast(dict[str, str], state["engine_statuses"])[eid] = "completed"
+                if job_id:
+                    await _publish_engine_event(job_id, eid, "completed")
         except Exception:
             for eid in engine_ids:
                 cast(dict[str, str], state["engine_statuses"])[eid] = "failed"
-            job_id = cast(UUID, state.get("job_id"))
+                if job_id:
+                    await _publish_engine_event(
+                        job_id, eid, "failed", traceback.format_exc()
+                    )
             if job_id:
                 await _handle_failure_async(
                     job_id=job_id,
@@ -333,6 +379,36 @@ async def _stage_clone(state: dict[str, object]) -> None:
         job_id=str(job_id),
         files=state.get("total_files"),
         languages=state.get("languages"),
+    )
+
+
+async def _stage_churn(state: dict[str, object]) -> None:
+    state["_last_stage"] = "churn"
+    job_id = cast(UUID, state["job_id"])
+    repo_path = cast(str, state.get("repo_path", ""))
+    cmd = ProcessStageCommand(job_id=job_id, stage="churn")
+
+    if not repo_path:
+        logger.warning("churn_skipped", reason="no_repo_path", job_id=str(job_id))
+        return
+
+    async with UnitOfWork() as uow:
+        job = await uow.jobs.get_by_id(job_id)
+        clone_depth = cast(int, job.get("depth", 1)) if job else 1
+
+        if clone_depth <= 1:
+            logger.info("churn_skipped", reason="shallow_clone", depth=clone_depth, job_id=str(job_id))
+            return
+
+        result = await handle_stage_churn(cmd, uow, repo_path, clone_depth)
+        await uow.commit()
+        state["churn_results"] = result
+
+    logger.info(
+        "pipeline_stage_complete",
+        stage="churn",
+        job_id=str(job_id),
+        hotspots=len(cast(list[object], state.get("churn_results", []))),
     )
 
 
@@ -798,6 +874,7 @@ async def _stage_finalize(state: dict[str, object]) -> None:
     score = cast(Score, score_raw) if score_raw is not None else Score(overall=0)
     findings = cast(list[Finding], state.get("findings", []))
     languages = cast(list[str], state.get("languages", []))
+    language_breakdown = cast(list[dict], state.get("language_breakdown", []))
     total_files = cast(int, state.get("total_files", 0))
     total_lines = cast(int, state.get("total_lines", 0))
     duration_seconds = int(
@@ -820,6 +897,7 @@ async def _stage_finalize(state: dict[str, object]) -> None:
             score,
             findings,
             languages,
+            language_breakdown,
             total_files,
             total_lines,
             duration_seconds,

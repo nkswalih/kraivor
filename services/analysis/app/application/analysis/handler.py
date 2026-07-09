@@ -129,15 +129,24 @@ async def handle_stage_clone(
         get_settings().git.token.get_secret_value() if get_settings().git.token else ""
     )
     clone_depth = cast(int, job.get("depth", 1))
-    repo_path = await fetcher.clone(
-        clone_url=cast(str, job["repo_url"]),
-        branch=cast(str, job["branch"]),
-        depth=clone_depth,
-        github_token=token,
-    )
-    languages = await fetcher.detect_languages(repo_path)
-    files = await fetcher.get_source_files(repo_path)
-    loc = await fetcher.count_loc(repo_path)
+    repo_url = cast(str, job.get("repo_url", ""))
+
+    if repo_url.startswith("local://"):
+        repo_path = repo_url.removeprefix("local://")
+        languages = await fetcher.detect_languages(repo_path)
+        files = await fetcher.get_source_files(repo_path)
+        loc = await fetcher.count_loc(repo_path)
+        logger.info("local_repo_scan", path=repo_path, files=len(files))
+    else:
+        repo_path = await fetcher.clone(
+            clone_url=repo_url,
+            branch=cast(str, job["branch"]),
+            depth=clone_depth,
+            github_token=token,
+        )
+        languages = await fetcher.detect_languages(repo_path)
+        files = await fetcher.get_source_files(repo_path)
+        loc = await fetcher.count_loc(repo_path)
 
     language_lines: dict[str, int] = {}
     for f in files:

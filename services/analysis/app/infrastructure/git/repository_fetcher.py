@@ -168,6 +168,26 @@ class RepositoryFetcher:
                 with contextlib.suppress(OSError):
                     os.unlink(stderr_path)
 
+    async def list_branches(self, repo_url: str) -> list[str]:
+        import re
+
+        logger.info("listing_branches", url=repo_url)
+        proc = await asyncio.create_subprocess_exec(
+            "git",
+            "ls-remote",
+            "--heads",
+            repo_url,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        stdout, _ = await proc.communicate()
+        branches: list[str] = []
+        for line in stdout.decode().splitlines():
+            m = re.search(r"refs/heads/(.+)$", line)
+            if m:
+                branches.append(m.group(1))
+        return branches
+
     async def detect_languages(self, repo_path: str) -> list[str]:
         return await asyncio.to_thread(self._detect_languages_sync, repo_path)
 

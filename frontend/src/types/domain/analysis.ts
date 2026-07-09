@@ -170,6 +170,7 @@ export interface Report {
   total_files: number;
   total_lines_of_code: number;
   languages_detected: string[];
+  language_breakdown: { name: string; percentage: number }[];
   duration_seconds: number | null;
   completed_at: string | null;
   report_url: string | null;
@@ -273,6 +274,19 @@ export interface EnterpriseGuide {
   capacity_analysis: Record<string, unknown> | null;
   migration_path: unknown[] | null;
   generated_at: string | null;
+}
+
+// ─── Job Statistics ────────────────────────────────────
+
+export interface JobStatistics {
+  findings_count: number;
+  dead_code_count: number;
+  error_findings_count: number;
+  performance_metrics_count: number;
+  simulation_results_count: number;
+  enterprise_guide_exists: boolean;
+  counts_by_severity: Record<string, number>;
+  counts_by_category: Record<string, number>;
 }
 
 // ─── Analysis Insights (Sidebar) ────────────────────────

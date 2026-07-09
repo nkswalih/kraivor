@@ -196,45 +196,17 @@ export function CreateTaskDialog({
             ))}
           </select>
 
-          <div className="flex items-center gap-1">
+          <select
+            value={priority}
+            onChange={e => setPriority(e.target.value as TaskPriority)}
+            className="text-[12px] bg-[var(--krait-surface-2)] border border-[var(--krait-border)] text-[var(--text-secondary)] rounded-[5px] px-2 py-1 outline-none focus:border-[var(--krait-border-hi)]"
+          >
             {(['critical', 'high', 'medium', 'low'] as const).map(p => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPriority(p)}
-                className={cn(
-                  'text-[11px] font-medium px-2 py-1 rounded-[5px] capitalize transition-all',
-                  priority === p
-                    ? 'text-black'
-                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] bg-[var(--krait-surface-2)] border border-[var(--krait-border)]'
-                )}
-                style={
-                  priority === p
-                    ? {
-                        background:
-                          p === 'critical'
-                            ? '#ef4444'
-                            : p === 'high'
-                              ? '#f97316'
-                              : p === 'medium'
-                                ? '#eab308'
-                                : '#22c55e',
-                        borderColor:
-                          p === 'critical'
-                            ? '#ef4444'
-                            : p === 'high'
-                              ? '#f97316'
-                              : p === 'medium'
-                                ? '#eab308'
-                                : '#22c55e',
-                      }
-                    : undefined
-                }
-              >
+              <option key={p} value={p} className="capitalize">
                 {p}
-              </button>
+              </option>
             ))}
-          </div>
+          </select>
 
           <select
             value={taskType}

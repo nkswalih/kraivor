@@ -127,29 +127,39 @@ export function EngineCard({
   const label = ENGINE_LABELS[engine] ?? engine.charAt(0).toUpperCase() + engine.slice(1);
   const description = defaultDescription(engine, score, status);
 
+  const ringScore = parsed === 'completed' ? score : undefined;
+
   return (
     <div
       className={cn(
-        'bg-card border border-border rounded-xl p-4 flex flex-col items-center gap-2 transition-all hover:border-venom-yellow/30 hover:shadow-venom',
+        'bg-card border rounded-xl p-4 flex flex-col items-center gap-2 transition-all duration-500 ease-out',
+        'hover:border-venom-yellow/30 hover:shadow-venom',
         STATUS_CONFIG[parsed].borderClass,
+        parsed === 'running' && 'border-venom-yellow/40 shadow-[0_0_15px_-3px_hsl(var(--venom-yellow)/0.15)]',
+        parsed === 'completed' && ringScore != null && 'border-green-500/30',
       )}
     >
-      <ProgressRing score={parsed === 'completed' ? score : undefined} size={56} strokeWidth={4} label={label} />
+      <div className={cn(
+        'transition-all duration-500 ease-out',
+        parsed === 'running' && 'animate-pulse-glow',
+      )}>
+        <ProgressRing score={ringScore} size={56} strokeWidth={4} label={label} />
+      </div>
 
       <div className="flex items-center gap-1.5">
         <StatusIcon
           className={cn(
-            'w-3.5 h-3.5',
+            'w-3.5 h-3.5 transition-colors duration-300',
             STATUS_CONFIG[parsed].ringClass,
             parsed === 'running' && 'animate-spin',
           )}
         />
-        <span className={cn('text-[11px] font-medium', STATUS_CONFIG[parsed].ringClass)}>
+        <span className={cn('text-[11px] font-medium transition-colors duration-300', STATUS_CONFIG[parsed].ringClass)}>
           {STATUS_CONFIG[parsed].label}
         </span>
       </div>
 
-      <p className="text-[11px] text-text-tertiary text-center leading-relaxed max-w-[140px]">
+      <p className="text-[11px] text-text-tertiary text-center leading-relaxed max-w-[140px] transition-opacity duration-300">
         {description}
       </p>
     </div>

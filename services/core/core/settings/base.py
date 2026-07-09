@@ -281,6 +281,7 @@ KAFKA_AUTO_CREATE_TOPICS = env.bool("KAFKA_AUTO_CREATE_TOPICS", default=True)
 DYNAMODB_LOCAL = env.bool("DYNAMODB_LOCAL", default=False)
 DYNAMODB_ENDPOINT = env("DYNAMODB_ENDPOINT", default="http://localhost:8000")
 DYNAMODB_CHAT_TABLE = env("DYNAMODB_CHAT_TABLE", default="kraivor-chat-messages")
+DYNAMODB_CHAT_V2_TABLE = env("DYNAMODB_CHAT_V2_TABLE", default="kraivor-chat-v2")
 AWS_REGION = env("AWS_REGION", default="us-east-1")
 
 # =============================================================================

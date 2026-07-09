@@ -1,3 +1,4 @@
+import { getLanguageColor } from '@/lib/analysis/language-colors';
 import type {
   AnalysisInsights,
   AnalysisJob,
@@ -95,13 +96,19 @@ export function analysisInsightsBuilder(
     },
     priorityRecommendation,
     repositoryOverview: {
-      languages: report?.languages_detected?.length
-        ? report.languages_detected.map((name) => ({
-            name,
-            percentage: 0,
-            color: '#6366f1',
+      languages: report?.language_breakdown?.length
+        ? report.language_breakdown.map((lang) => ({
+            name: lang.name,
+            percentage: lang.percentage,
+            color: getLanguageColor(lang.name),
           }))
-        : FALLBACK_LANGUAGES,
+        : report?.languages_detected?.length
+          ? report.languages_detected.map((name) => ({
+              name,
+              percentage: 0,
+              color: '#6366f1',
+            }))
+          : FALLBACK_LANGUAGES,
       totalFiles: report?.total_files ?? job?.total_files ?? 0,
       totalLines: report?.total_lines_of_code ?? job?.total_lines ?? 0,
     },

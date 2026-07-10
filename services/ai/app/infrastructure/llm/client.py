@@ -58,6 +58,11 @@ class LLMClient:
             )
             message = response.choices[0].message
             result = message.content
+            if result is None:
+                raise ValueError(
+                    f"LLM returned null content for model={self.model} "
+                    f"provider={self.provider} finish_reason={response.choices[0].finish_reason}"
+                )
             raw_calls = getattr(message, "tool_calls", None)
             tool_calls = []
             if raw_calls:

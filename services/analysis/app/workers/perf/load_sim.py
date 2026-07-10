@@ -127,8 +127,18 @@ class ProductionSimulator:
         )
 
     def _calculate_available_capacity(self, metrics: PerformanceMetrics) -> int:
-        base = max(4 - len(metrics.bottlenecks), 1) if metrics.bottlenecks else 4
-        return base
+        avg_response_time = self._get_avg_response_time(metrics)
+        endpoints = len(metrics.endpoints)
+        bottlenecks = len(metrics.bottlenecks or [])
+        if endpoints == 0:
+            return 1
+        base = max(2, int(endpoints / 2))
+        capacity = base - bottlenecks
+        if avg_response_time > 200:
+            capacity -= 1
+        if avg_response_time > 500:
+            capacity -= 1
+        return max(capacity, 1)
 
     def _find_active_bottlenecks(
         self,

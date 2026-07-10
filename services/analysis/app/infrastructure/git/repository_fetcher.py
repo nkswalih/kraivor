@@ -14,12 +14,16 @@ logger = get_logger(__name__)
 
 _LANGUAGE_EXTENSIONS: dict[str, list[str]] = {
     "python": [".py", ".pyi", ".pyx"],
-    "javascript": [".js", ".mjs", ".cjs"],
+    "javascript": [".js", ".jsx", ".mjs", ".cjs"],
     "typescript": [".ts", ".tsx"],
     "go": [".go"],
     "java": [".java"],
     "rust": [".rs"],
     "ruby": [".rb"],
+    "csharp": [".cs"],
+    "php": [".php"],
+    "kotlin": [".kt", ".kts"],
+    "elixir": [".ex", ".exs"],
     "dockerfile": ["Dockerfile", ".dockerfile"],
     "yaml": [".yml", ".yaml"],
     "json": [".json"],

@@ -235,8 +235,10 @@ export interface PerformanceMetric {
   p50_latency_ms: number | null;
   p95_latency_ms: number | null;
   p99_latency_ms: number | null;
+  max_concurrent_users: number | null;
   bottleneck_type: string | null;
   bottleneck_severity: string | null;
+  bottleneck_detail: string | null;
 }
 
 export interface PerformanceMetricListResponse {
@@ -267,6 +269,7 @@ export interface EnterpriseGuide {
   id: string;
   job_id: string;
   executive_summary: string | null;
+  ai_executive_summary: string | null;
   critical_issues: unknown[] | null;
   high_issues: unknown[] | null;
   medium_issues: unknown[] | null;

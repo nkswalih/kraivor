@@ -120,6 +120,11 @@ export const analysisService = {
         API_ENDPOINTS.ANALYSIS.JOB_STATISTICS(jobId)
       );
     },
+    reEnrich(jobId: string): Promise<{ status: string; enriched: boolean }> {
+      return analysisPost<{ status: string; enriched: boolean }>(
+        `/api/v1/jobs/${jobId}/re-enrich`, null
+      );
+    },
     branches(repoUrl: string): Promise<string[]> {
       return analysisGet<string[]>(
         `${API_ENDPOINTS.ANALYSIS.BRANCHES}?url=${encodeURIComponent(repoUrl)}`

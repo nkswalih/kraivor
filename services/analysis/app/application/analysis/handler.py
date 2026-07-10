@@ -20,7 +20,7 @@ from app.application.analysis.queries import (
     ListJobsQuery,
 )
 from app.core.config import get_settings
-from app.core.constants import JobStatus, Severity
+from app.core.constants import Category, JobStatus, Severity
 from app.core.exceptions import NotFoundError
 from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
@@ -219,9 +219,6 @@ async def handle_stage_churn(
             )
             for c in churn_results
         ]
-        from app.domain.entities.finding import Finding
-        from app.core.constants import Category, Severity as Sev
-
         finding_entities = [
             Finding(
                 job_id=cmd.job_id,
@@ -229,7 +226,7 @@ async def handle_stage_churn(
                 workspace_id=cast(UUID, f["workspace_id"]),
                 rule_id=f["rule_id"],
                 category=Category(f["category"]),
-                severity=Sev(f["severity"]),
+                severity=Severity(f["severity"]),
                 title=f["title"],
                 description=f["description"],
                 recommendation=f["recommendation"],
@@ -1185,7 +1182,11 @@ async def handle_stage_ai_enrich(
     )
 
     if not result:
-        logger.info("ai_enrichment_unavailable", job_id=str(job_id))
+        logger.error(
+            "ai_enrichment_unavailable",
+            job_id=str(job_id),
+            message="AI enrichment client returned None — AI service is unreachable, timing out, or returning errors",
+        )
         await uow.jobs.update_status(
             job_id,
             JobStatus.AI_ENRICH,
@@ -1224,6 +1225,23 @@ async def handle_stage_ai_enrich(
         if guide:
             guide["ai_executive_summary"] = ai_executive_summary
             await uow.enterprise_guides.save(guide)
+            logger.info(
+                "ai_enrichment_summary_saved",
+                job_id=str(job_id),
+                summary_length=len(ai_executive_summary),
+            )
+        else:
+            logger.warning(
+                "ai_enrichment_guide_not_found",
+                job_id=str(job_id),
+                message="Enterprise guide not found — cannot save AI summary",
+            )
+    else:
+        logger.warning(
+            "ai_enrichment_empty_summary",
+            job_id=str(job_id),
+            message="AI service returned empty ai_executive_summary — LLM generation may have failed",
+        )
 
     await uow.jobs.update_status(
         job_id,
@@ -1237,8 +1255,49 @@ async def handle_stage_ai_enrich(
         job_id=str(job_id),
         enriched=updated_count,
         total=len(findings),
+        has_summary=bool(ai_executive_summary),
     )
     return result
+
+
+async def handle_re_enrich(
+    cmd: ProcessStageCommand,
+    uow: UnitOfWork,
+) -> dict[str, object] | None:
+    job_id = cmd.job_id
+    job = await uow.jobs.get_by_id(job_id)
+    if not job:
+        raise NotFoundError(f"Job {job_id} not found")
+
+    findings, _ = await uow.findings.get_by_job(
+        job_id, include_dismissed=True, limit=9999,
+    )
+
+    score = (
+        Score(
+            overall=job.get("overall_score"),
+            performance=job.get("performance_score"),
+            security=job.get("security_score"),
+            reliability=job.get("reliability_score"),
+            maintainability=job.get("maintainability_score"),
+            devops=job.get("devops_score"),
+            blocked_by=job.get("blocked_by") or [],
+            engine_statuses=job.get("engine_statuses") or {},
+        )
+        if job.get("overall_score") is not None
+        else None
+    )
+
+    metadata = await uow.analysis_metadata.get_by_job(job_id)
+    languages = list(metadata.languages) if metadata else None
+    frameworks = list(metadata.frameworks) if metadata else None
+
+    return await handle_stage_ai_enrich(
+        cmd, uow, findings,
+        score=score,
+        languages=languages,
+        frameworks=frameworks,
+    )
 
 
 async def get_job_status(

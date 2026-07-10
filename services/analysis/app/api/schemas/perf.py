@@ -12,8 +12,10 @@ class PerformanceMetricResponse(BaseModel):
     p50_latency_ms: int | None = None
     p95_latency_ms: int | None = None
     p99_latency_ms: int | None = None
+    max_concurrent_users: int | None = None
     bottleneck_type: str | None = None
     bottleneck_severity: str | None = None
+    bottleneck_detail: str | None = None
 
 
 class PerformanceMetricListResponse(BaseModel):

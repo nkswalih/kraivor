@@ -12,11 +12,16 @@ from app.api.schemas.jobs import (
     JobStatusResponse,
     StartAnalysisRequest,
 )
-from app.application.analysis.commands import DeleteJobCommand, StartAnalysisCommand
+from app.application.analysis.commands import (
+    DeleteJobCommand,
+    ProcessStageCommand,
+    StartAnalysisCommand,
+)
 from app.application.analysis.handler import (
     get_job_status,
     handle_analysis_failure,
     handle_delete_job,
+    handle_re_enrich,
     handle_start_analysis,
     list_jobs,
 )
@@ -182,6 +187,18 @@ async def delete_job(
     )
     await handle_delete_job(cmd, uow, storage)
     await uow.commit()
+
+
+@router.post("/{job_id}/re-enrich")
+async def re_enrich_job(
+    job_id: UUID,
+    uow: UnitOfWork = Depends(get_uow),
+    user: JWTPayload = Depends(get_current_user),
+) -> dict[str, object]:
+    cmd = ProcessStageCommand(job_id=job_id, stage="ai_enrich")
+    result = await handle_re_enrich(cmd, uow)
+    await uow.commit()
+    return {"status": "ok", "enriched": result is not None}
 
 
 def _job_to_response(job: dict[str, object]) -> JobStatusResponse:

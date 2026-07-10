@@ -53,6 +53,7 @@ export function analysisInsightsBuilder(
   findingsSummary: FindingsSummary | null | undefined,
   findings: Finding[] | null | undefined,
   analysisMetadata?: AnalysisMetadataResponse | null | undefined,
+  aiExecutiveSummary?: string | null | undefined,
 ): AnalysisInsights {
   const performanceScore = report?.performance_score ?? job?.overall_score;
   const securityScore = report?.security_score;
@@ -88,11 +89,12 @@ export function analysisInsightsBuilder(
     };
   });
 
+  const hasAiSummary = !!aiExecutiveSummary && aiExecutiveSummary.trim().length > 0;
+
   return {
     aiSummary: {
-      summary:
-        'This repository appears healthy overall. Security and reliability are in good condition. Performance can be improved by reducing synchronous database operations. Maintainability could benefit from simplifying complex modules.',
-      isAiGenerated: false,
+      summary: aiExecutiveSummary ?? '',
+      isAiGenerated: hasAiSummary,
     },
     priorityRecommendation,
     repositoryOverview: {
@@ -163,6 +165,20 @@ function buildPriorityRecommendation(
       estimatedTime: '3-6 hours',
       findingId: secFinding?.id ?? null,
       category: 'security',
+    };
+  }
+
+  const qualityCount = categories['quality'] ?? 0;
+  if (qualityCount >= 5) {
+    const qualityFinding = findings?.find((f) => f.category === 'quality');
+    return {
+      title: 'Refactor Churn Hotspots',
+      description: 'Files with high change frequency and spread ownership are at risk of architectural decay. Consider refactoring hotspot files to improve maintainability.',
+      impact: 'medium',
+      difficulty: 'medium',
+      estimatedTime: '3-6 hours',
+      findingId: qualityFinding?.id ?? null,
+      category: 'quality',
     };
   }
 

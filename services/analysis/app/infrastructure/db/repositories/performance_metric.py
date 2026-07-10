@@ -31,8 +31,10 @@ class PerformanceMetricRepository:
                 "p50_latency_ms": m.p50_latency_ms,
                 "p95_latency_ms": m.p95_latency_ms,
                 "p99_latency_ms": m.p99_latency_ms,
+                "max_concurrent_users": m.max_concurrent_users,
                 "bottleneck_type": m.bottleneck_type,
                 "bottleneck_severity": m.bottleneck_severity,
+                "bottleneck_detail": m.bottleneck_detail,
             }
             for m in result.scalars().all()
         ]

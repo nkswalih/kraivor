@@ -95,6 +95,7 @@ class AiServiceSettings(BaseModel):
     url: str = "http://ai:8004"
     enrich_endpoint: str = "/v1/analysis/enrich"
     timeout: int = Field(default=120, ge=1)
+    internal_request_header: str = "X-Internal-Request"
 
 
 class MonitoringSettings(BaseModel):

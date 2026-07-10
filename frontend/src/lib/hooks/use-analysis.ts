@@ -200,6 +200,18 @@ export function useSimulationResults(jobId: string | null) {
   });
 }
 
+// ─── Re-Enrich (regenerate AI enrichment only) ─────────
+
+export function useReEnrich() {
+  const queryClient = useQueryClient();
+  return useMutation<{ status: string; enriched: boolean }, Error, string>({
+    mutationFn: (jobId) => analysisService.jobs.reEnrich(jobId),
+    onSuccess: (_data, jobId) => {
+      queryClient.invalidateQueries({ queryKey: ['analysis-guide', jobId] });
+    },
+  });
+}
+
 // ─── Enterprise Guide ───────────────────────────────────
 
 export function useEnterpriseGuide(jobId: string | null) {

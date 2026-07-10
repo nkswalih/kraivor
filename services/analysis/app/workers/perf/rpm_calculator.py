@@ -7,8 +7,17 @@ from app.domain.contracts.parser import ParsedFile, ParsedRoute
 
 logger = get_logger(__name__)
 
-BASE_RPM = 2000
 LATENCY_BASE_MS = 10
+
+
+def _calibrate_base_rpm(parsed_files: list[ParsedFile]) -> int:
+    total_files = len(parsed_files)
+    if total_files == 0:
+        return 500
+    total_routes = sum(len(pf.routes) for pf in parsed_files)
+    route_boost = max(200, total_routes * 50)
+    file_boost = max(300, total_files * 30)
+    return min(8000, max(500, file_boost + route_boost))
 
 
 @dataclass
@@ -48,7 +57,7 @@ class EndpointMetric:
 @dataclass
 class PerformanceMetrics:
     endpoints: list[EndpointMetric] = field(default_factory=list)
-    overall_rpm: int = BASE_RPM
+    overall_rpm: int = 2000
     breaks_at_concurrent_users: int = 10000
     bottlenecks: list[str] = field(default_factory=list)
     overall_confidence: float = 0.8
@@ -59,10 +68,11 @@ class RPMCalculator:
         self.parsed_files = parsed_files
 
     async def calculate(self) -> PerformanceMetrics:
+        base_rpm = _calibrate_base_rpm(self.parsed_files)
         metrics = PerformanceMetrics()
         for pf in self.parsed_files:
             for route in pf.routes:
-                endpoint_metric = self._analyze_endpoint(route, pf)
+                endpoint_metric = self._analyze_endpoint(route, pf, base_rpm)
                 metrics.endpoints.append(endpoint_metric)
         if metrics.endpoints:
             metrics.overall_rpm = min(em.estimated_rpm for em in metrics.endpoints)
@@ -76,7 +86,7 @@ class RPMCalculator:
             metrics.bottlenecks = list(set(all_bottlenecks))
         return metrics
 
-    def _analyze_endpoint(self, route: ParsedRoute, pf: ParsedFile) -> EndpointMetric:
+    def _analyze_endpoint(self, route: ParsedRoute, pf: ParsedFile, base_rpm: int = 2000) -> EndpointMetric:
         deductions: list[tuple[str, int]] = []
         code = route.code or ""
         full_content = pf.content
@@ -137,7 +147,7 @@ class RPMCalculator:
             deductions.append(("loop_complexity", 100 * (loop_score - 1)))
 
         total_deduction = sum(d[1] for d in deductions)
-        rpm = max(BASE_RPM - total_deduction, 50)
+        rpm = max(base_rpm - total_deduction, 50)
 
         p50 = self._estimate_p50_latency(db_queries, sync_calls, code, loop_score)
         p95 = int(p50 * 2.5)

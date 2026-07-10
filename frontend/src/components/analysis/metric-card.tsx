@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
 
-export type CardColor = 'green' | 'orange' | 'blue' | 'red' | 'purple';
+export type CardColor = 'green' | 'orange' | 'blue' | 'red' | 'purple' | 'pink';
 export type CardStatus = 'healthy' | 'attention' | 'available' | 'pending';
 
 const COLOR_MAP: Record<CardColor, { container: string; icon: string; glow: string }> = {
@@ -13,6 +13,7 @@ const COLOR_MAP: Record<CardColor, { container: string; icon: string; glow: stri
   blue: { container: 'bg-blue-500/10', icon: 'text-blue-400', glow: 'rgba(96,165,250,0.2)' },
   red: { container: 'bg-red-500/10', icon: 'text-red-400', glow: 'rgba(248,113,113,0.2)' },
   purple: { container: 'bg-purple-500/10', icon: 'text-purple-400', glow: 'rgba(192,132,252,0.2)' },
+  pink: { container: 'bg-pink-500/10', icon: 'text-pink-400', glow: 'rgba(236,72,153,0.2)' },
 };
 
 const STATUS_CONFIG: Record<CardStatus, { label: string; classes: string }> = {

@@ -12,7 +12,7 @@ class EnterpriseGuideRepository:
 
     async def save(self, guide: dict[str, object]) -> None:
         model = EnterpriseGuideModel(**guide)
-        self._session.add(model)
+        model = await self._session.merge(model)
         await self._session.flush()
 
     async def get_by_job(self, job_id: UUID) -> dict[str, object] | None:
@@ -24,6 +24,8 @@ class EnterpriseGuideRepository:
         return {
             "id": m.id,
             "job_id": m.job_id,
+            "repo_id": m.repo_id,
+            "workspace_id": m.workspace_id,
             "executive_summary": m.executive_summary,
             "critical_issues": m.critical_issues,
             "high_issues": m.high_issues,
@@ -31,6 +33,7 @@ class EnterpriseGuideRepository:
             "architecture_review": m.architecture_review,
             "capacity_analysis": m.capacity_analysis,
             "migration_path": m.migration_path,
+            "ai_executive_summary": m.ai_executive_summary,
             "generated_at": m.generated_at,
         }
 

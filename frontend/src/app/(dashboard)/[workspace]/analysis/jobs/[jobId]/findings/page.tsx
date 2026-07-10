@@ -12,7 +12,7 @@ import { Severity } from '@/types/domain/analysis';
 import type { Finding } from '@/types/domain/analysis';
 
 const SEVERITIES = ['', Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW] as const;
-const CATEGORIES = ['', 'security', 'performance', 'reliability', 'maintainability', 'devops'] as const;
+const CATEGORIES = ['', 'security', 'performance', 'reliability', 'maintainability', 'devops', 'quality'] as const;
 
 export default function FindingsPage() {
   const params = useParams<{ workspace: string; jobId: string }>();

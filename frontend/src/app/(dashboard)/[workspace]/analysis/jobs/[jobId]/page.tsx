@@ -18,6 +18,7 @@ import {
   Trash2,
   PanelRightOpen,
   BarChart3,
+  Star,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -137,6 +138,9 @@ export default function JobDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['analysis-simulation', jobId] });
       queryClient.invalidateQueries({ queryKey: ['analysis-guide', jobId] });
       queryClient.invalidateQueries({ queryKey: ['analysis-score-history', job?.repo_id] });
+      queryClient.invalidateQueries({ queryKey: ['analysis-job-statistics', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['analysis-guide', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['analysis-metadata', jobId] });
     }
   }, [job?.status, jobId, job?.repo_id, queryClient]);
 
@@ -340,7 +344,7 @@ export default function JobDetailPage() {
                 </h3>
                 {isCountsLoading ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                    {[1,2,3,4,5].map(i => <MetricCardSkeleton key={i} />)}
+                    {[1,2,3,4,5,6].map(i => <MetricCardSkeleton key={i} />)}
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -385,13 +389,23 @@ export default function JobDetailPage() {
                       onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/performance`)}
                     />
                     <MetricCard
+                      icon={Star}
+                      value={stats?.counts_by_category?.quality ?? 0}
+                      title="Code Churn"
+                      subtitle="Hotspot files from commit history"
+                      status={(stats?.counts_by_category?.quality ?? 0) > 0 ? 'attention' : 'healthy'}
+                      color="pink"
+                      index={4}
+                      onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/findings?category=quality`)}
+                    />
+                    <MetricCard
                       icon={FileText}
                       value={stats?.enterprise_guide_exists ? 'Ready' : '—'}
                       title="Enterprise Guide"
                       subtitle="AI-assisted analysis summary"
                       status={stats?.enterprise_guide_exists ? 'available' : 'pending'}
                       color="purple"
-                      index={4}
+                      index={5}
                       onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/guide`)}
                     />
                   </div>
@@ -458,6 +472,16 @@ export default function JobDetailPage() {
                       index={3}
                     />
                     <AnalysisModuleCard
+                      href={`/${workspaceSlug}/analysis/jobs/${jobId}/findings?category=quality`}
+                      icon={Star}
+                      title="Code Churn"
+                      count={(stats?.counts_by_category?.quality ?? 0) + ((stats?.counts_by_category?.quality ?? 0) !== 1 ? ' Issues' : ' Issue')}
+                      description="Files with high change frequency and spread ownership. Review churn hotspots for refactoring opportunities."
+                      color="pink"
+                      actionLabel="Open Churn Analysis"
+                      index={4}
+                    />
+                    <AnalysisModuleCard
                       href={`/${workspaceSlug}/analysis/jobs/${jobId}/guide`}
                       icon={FileText}
                       title="Enterprise Guide"
@@ -465,7 +489,7 @@ export default function JobDetailPage() {
                       description="Architecture review, security checklist, and deployment guidance tailored to your codebase."
                       color="purple"
                       actionLabel="Open Guide"
-                      index={4}
+                      index={5}
                     />
                   </div>
                 )}

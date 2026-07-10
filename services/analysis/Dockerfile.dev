@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     git \
     curl \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Install uv ──────────────────────────────────────────────────────────────
@@ -47,7 +48,7 @@ EXPOSE 8003
 
 # Healthcheck — docker-compose.dev.yml overrides this, but useful standalone
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8003/api/health/ || exit 1
+    CMD curl -f http://localhost:8003/v1/health || exit 1
 
 # CMD left to docker-compose override (alembic migrate + uvicorn)
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8003", "--reload"]

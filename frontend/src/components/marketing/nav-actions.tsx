@@ -1,20 +1,27 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { ROUTES } from '@/constants';
 
 export function NavActions() {
   const { isAuthenticated, workspaceSlug } = useAuthStore();
+  const router = useRouter();
 
   if (isAuthenticated) {
     return (
-      <Link
-        href={`/${workspaceSlug || 'dashboard'}`}
+      <button
+        onClick={() => {
+          const slug = workspaceSlug || useAuthStore.getState().workspaceSlug;
+          if (slug) {
+            router.push(`/${slug}`);
+          }
+        }}
         className="inline-flex items-center rounded-xl bg-[var(--venom-yellow)] px-4 py-1.5 text-sm font-medium text-black transition-all hover:brightness-110"
       >
         Dashboard
-      </Link>
+      </button>
     );
   }
 

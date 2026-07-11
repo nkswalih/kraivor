@@ -70,8 +70,10 @@ function AuthEffects() {
     initialized.current = true;
 
     if (isPublicRoute(pathname) || isAuthRedirectRoute(pathname)) {
-      useAuthStore.getState().setLoading(false);
-      sessionReady.current = true;
+      useAuthStore.getState().initWorkspace().finally(() => {
+        useAuthStore.getState().setLoading(false);
+        sessionReady.current = true;
+      });
       return;
     }
 
@@ -84,10 +86,12 @@ function AuthEffects() {
           const slugFromUrl = pathSegments[0];
           if (slugFromUrl && !isPublicRoute(pathname) && !isAuthRedirectRoute(pathname)) {
             const state = useAuthStore.getState();
-            if (state.workspaceSlug !== slugFromUrl && state.workspaces.length > 0) {
+            if (state.workspaceSlug !== slugFromUrl) {
               const ws = state.workspaces.find((w: { slug: string }) => w.slug === slugFromUrl);
               if (ws) {
                 state.setWorkspace(ws.id, ws.slug);
+              } else if (state.workspaceSlug) {
+                router.replace(`/${state.workspaceSlug}`);
               }
             }
           }

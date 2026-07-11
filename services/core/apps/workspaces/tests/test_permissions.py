@@ -1,5 +1,4 @@
 import uuid
-
 from django.test import RequestFactory
 
 from apps.workspaces.permissions import (

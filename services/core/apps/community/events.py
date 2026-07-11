@@ -1,7 +1,7 @@
 import json
+
 import logging
 import uuid
-
 from django.db import transaction
 
 logger = logging.getLogger(__name__)
@@ -84,10 +84,7 @@ def publish_discussion_created(discussion, user_id):
 def publish_discussion_deleted(discussion_id, author_id):
     envelope = _build_envelope(
         event_type="discussion.deleted",
-        data={
-            "discussion_id": discussion_id,
-            "author_id": author_id,
-        },
+        data={"discussion_id": discussion_id, "author_id": author_id},
         user_id=author_id,
     )
     transaction.on_commit(lambda: _publish("community", envelope, user_id=author_id))

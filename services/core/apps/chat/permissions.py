@@ -1,5 +1,4 @@
 import logging
-
 from rest_framework.permissions import BasePermission
 
 from apps.chat.models import ChatRoom, ChatRoomParticipant

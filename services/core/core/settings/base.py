@@ -1,7 +1,7 @@
-import mimetypes
 from pathlib import Path
 
 import environ
+import mimetypes
 
 mimetypes.add_type("text/markdown", ".md", strict=True)
 mimetypes.add_type("text/markdown", ".mdx", strict=True)
@@ -105,15 +105,12 @@ MEDIA_ROOT = BASE_DIR / "media"
 # FileSystemStorage if needed (e.g., for local testing without Docker).
 
 DEFAULT_FILE_STORAGE = env(
-    "DEFAULT_FILE_STORAGE",
-    default="storages.backends.s3boto3.S3Boto3Storage",
+    "DEFAULT_FILE_STORAGE", default="storages.backends.s3boto3.S3Boto3Storage"
 )
 
 STORAGES = {
     "default": {"BACKEND": DEFAULT_FILE_STORAGE},
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
 }
 
 AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
@@ -124,9 +121,7 @@ AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
 AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="us-east-1")
 AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN", default="")
 AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL", default="") or None
-AWS_S3_OBJECT_PARAMETERS = {
-    "CacheControl": "max-age=86400",
-}
+AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
 AWS_DEFAULT_ACL = "public-read"
 AWS_QUERYSTRING_AUTH = False
 
@@ -331,11 +326,7 @@ if SENTRY_DSN:
 
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        integrations=[
-            DjangoIntegration(),
-            CeleryIntegration(),
-            RedisIntegration(),
-        ],
+        integrations=[DjangoIntegration(), CeleryIntegration(), RedisIntegration()],
         traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
         send_default_pii=False,
     )
@@ -360,35 +351,24 @@ LOGGING = {
             "format": "%(asctime)s %(name)s %(levelname)s %(message)s %(module)s %(lineno)d",
         },
         "verbose": {
-            "format": "%(levelname)s %(asctime)s %(module)s:%(lineno)d %(message)s",
+            "format": "%(levelname)s %(asctime)s %(module)s:%(lineno)d %(message)s"
         },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "json" if not DEBUG else "verbose",
-        },
+        }
     },
-    "root": {
-        "handlers": ["console"],
-        "level": "INFO",
-    },
+    "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
-        "django": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
+        "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "django.db.backends": {
             "handlers": ["console"],
             "level": "WARNING",
             "propagate": False,
         },
-        "celery": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
+        "celery": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 

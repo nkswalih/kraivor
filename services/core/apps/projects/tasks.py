@@ -12,7 +12,6 @@ trigger to keep the task-create/update path fast and side-effect-free.
 """
 
 import logging
-
 from celery import shared_task
 from django.utils import timezone
 
@@ -35,10 +34,7 @@ def check_overdue_tasks(self) -> dict:
         today = timezone.now().date()
 
         overdue_tasks = (
-            Task.objects.filter(
-                due_date__lt=today,
-                deleted_at__isnull=True,
-            )
+            Task.objects.filter(due_date__lt=today, deleted_at__isnull=True)
             .exclude(status__in=list(TERMINAL_TASK_STATUSES))
             .select_related("project")
         )

@@ -20,5 +20,5 @@ class Migration(migrations.Migration):
         PgOnlySQL(
             sql="CREATE EXTENSION IF NOT EXISTS pg_trgm",
             reverse_sql="DROP EXTENSION IF EXISTS pg_trgm",
-        ),
+        )
     ]

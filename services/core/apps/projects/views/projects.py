@@ -1,6 +1,6 @@
-import logging
 from typing import TYPE_CHECKING
 
+import logging
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
@@ -48,8 +48,7 @@ class ProjectListView(WorkspaceContextMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="List projects",
-        responses={200: ProjectSerializer(many=True)},
+        summary="List projects", responses={200: ProjectSerializer(many=True)}
     )
     def get(self, request: Request, workspace_pk: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
@@ -86,15 +85,11 @@ class ProjectListView(WorkspaceContextMixin, APIView):
 class ProjectDetailView(WorkspaceContextMixin, APIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(
-        summary="Get project",
-        responses={200: ProjectSerializer},
-    )
+    @extend_schema(summary="Get project", responses={200: ProjectSerializer})
     def get(self, request: Request, workspace_pk: str, project_id: str) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         project = ProjectService.get(
-            project_id=str(project_id),
-            workspace_id=str(workspace.id),
+            project_id=str(project_id), workspace_id=str(workspace.id)
         )
         return Response(ProjectSerializer(project).data, status=status.HTTP_200_OK)
 

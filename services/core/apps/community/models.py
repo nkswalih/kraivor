@@ -1,5 +1,4 @@
 import uuid
-
 from django.db import models
 
 
@@ -141,12 +140,10 @@ class Vote(models.Model):
                 name="vote_single_target",
             ),
             models.UniqueConstraint(
-                fields=["user_id", "discussion"],
-                name="unique_discussion_vote",
+                fields=["user_id", "discussion"], name="unique_discussion_vote"
             ),
             models.UniqueConstraint(
-                fields=["user_id", "comment"],
-                name="unique_comment_vote",
+                fields=["user_id", "comment"], name="unique_comment_vote"
             ),
         ]
         indexes = [

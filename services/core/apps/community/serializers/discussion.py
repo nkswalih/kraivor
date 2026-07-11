@@ -63,9 +63,7 @@ class CreateDiscussionSerializer(serializers.Serializer):
     body = serializers.CharField(min_length=20, max_length=20000)
     workspace_id = serializers.UUIDField(required=False, allow_null=True)
     tags = serializers.ListField(
-        child=serializers.CharField(max_length=50),
-        required=False,
-        default=list,
+        child=serializers.CharField(max_length=50), required=False, default=list
     )
 
 
@@ -73,7 +71,6 @@ class UpdateDiscussionSerializer(serializers.Serializer):
     title = serializers.CharField(min_length=10, max_length=200, required=False)
     body = serializers.CharField(min_length=20, max_length=20000, required=False)
     tags = serializers.ListField(
-        child=serializers.CharField(max_length=50),
-        required=False,
+        child=serializers.CharField(max_length=50), required=False
     )
     is_resolved = serializers.BooleanField(required=False)

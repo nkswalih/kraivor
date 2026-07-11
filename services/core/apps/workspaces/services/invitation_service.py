@@ -1,6 +1,5 @@
 import logging
 import uuid
-
 from django.db import transaction
 from django.db.models import QuerySet
 from django.utils import timezone
@@ -240,9 +239,7 @@ class InvitationService:
     ) -> "QuerySet[WorkspaceInvitation]":
         return (
             WorkspaceInvitation.objects.filter(
-                email=email,
-                accepted_at__isnull=True,
-                expires_at__gt=timezone.now(),
+                email=email, accepted_at__isnull=True, expires_at__gt=timezone.now()
             )
             .select_related("workspace")
             .order_by("-created_at")
@@ -252,6 +249,7 @@ class InvitationService:
 def _dispatch_invitation_email(invitation_id: str) -> None:
     try:
         from ..tasks import send_workspace_invitation_email
+
         send_workspace_invitation_email.delay(invitation_id)
     except Exception as exc:
         logger.error(
@@ -265,6 +263,7 @@ def _dispatch_member_joined_notification(
 ) -> None:
     try:
         from ..tasks import notify_member_joined
+
         notify_member_joined.delay(
             workspace_id=workspace_id, user_id=user_id, role=role
         )
@@ -315,6 +314,7 @@ def _dispatch_invitation_notification(
     user_id = user_info["id"]
     try:
         from apps.notifications.tasks import dispatch_notification
+
         dispatch_notification.delay(
             user_id=user_id,
             notification_type="workspace.invitation",

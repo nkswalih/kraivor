@@ -1,5 +1,4 @@
 import logging
-
 import requests
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -63,8 +62,7 @@ class Command(BaseCommand):
         # Count top-level comments per author (on non-deleted discussions)
         comment_counts = dict(
             Comment.objects.filter(
-                parent__isnull=True,
-                discussion__deleted_at__isnull=True,
+                parent__isnull=True, discussion__deleted_at__isnull=True
             )
             .values("author_id")
             .annotate(cnt=Count("id"))
@@ -137,7 +135,5 @@ class Command(BaseCommand):
                 failed += 1
 
         self.stdout.write(
-            self.style.SUCCESS(
-                f"Done. {success} succeeded, {failed} failed."
-            )
+            self.style.SUCCESS(f"Done. {success} succeeded, {failed} failed.")
         )

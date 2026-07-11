@@ -1,7 +1,6 @@
 import logging
-import uuid
-
 import requests
+import uuid
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
@@ -124,7 +123,9 @@ class MemberDetailView(WorkspaceDetailView):
         request=MemberRoleUpdateSerializer,
         responses={200: WorkspaceMemberSerializer},
     )
-    def patch(self, request: Request, workspace_pk: str | None = None, pk: str | None = None) -> Response:
+    def patch(
+        self, request: Request, workspace_pk: str | None = None, pk: str | None = None
+    ) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk, request.user_id)
         try:
             target_user_id = uuid.UUID(str(pk))
@@ -150,11 +151,10 @@ class MemberDetailView(WorkspaceDetailView):
         resolved = _resolve_member_users([data])
         return Response(_enrich_member_data([data], resolved)[0])
 
-    @extend_schema(
-        summary="Remove member",
-        responses={204: None},
-    )
-    def delete(self, request: Request, workspace_pk: str | None = None, pk: str | None = None) -> Response:
+    @extend_schema(summary="Remove member", responses={204: None})
+    def delete(
+        self, request: Request, workspace_pk: str | None = None, pk: str | None = None
+    ) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk, request.user_id)
         try:
             target_user_id = uuid.UUID(str(pk))

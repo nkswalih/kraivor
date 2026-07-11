@@ -27,16 +27,14 @@ class TestProjectSerializer:
     def test_create_serializer_valid(self, workspace, user_id):
         data = {"name": "New Project"}
         serializer = ProjectCreateSerializer(
-            data=data,
-            context={"workspace_id": str(workspace.id)},
+            data=data, context={"workspace_id": str(workspace.id)}
         )
         assert serializer.is_valid(), serializer.errors
         assert serializer.validated_data["name"] == "New Project"
 
     def test_create_serializer_missing_name(self, workspace):
         serializer = ProjectCreateSerializer(
-            data={},
-            context={"workspace_id": str(workspace.id)},
+            data={}, context={"workspace_id": str(workspace.id)}
         )
         assert not serializer.is_valid()
         assert "name" in serializer.errors
@@ -62,20 +60,14 @@ class TestTaskSerializer:
         }
         serializer = TaskCreateSerializer(
             data=data,
-            context={
-                "workspace_id": str(workspace.id),
-                "project_id": str(project.id),
-            },
+            context={"workspace_id": str(workspace.id), "project_id": str(project.id)},
         )
         assert serializer.is_valid(), serializer.errors
 
     def test_create_serializer_missing_title(self, project, workspace):
         serializer = TaskCreateSerializer(
             data={},
-            context={
-                "workspace_id": str(workspace.id),
-                "project_id": str(project.id),
-            },
+            context={"workspace_id": str(workspace.id), "project_id": str(project.id)},
         )
         assert not serializer.is_valid()
         assert "title" in serializer.errors

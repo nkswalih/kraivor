@@ -5,7 +5,12 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [("chat", "0005_rename_chat_room_pa_user_id_2376ee_idx_chat_room_p_user_id_94d4ce_idx_and_more")]
+    dependencies = [
+        (
+            "chat",
+            "0005_rename_chat_room_pa_user_id_2376ee_idx_chat_room_p_user_id_94d4ce_idx_and_more",
+        )
+    ]
 
     operations = [
         migrations.AddField(

@@ -3,7 +3,6 @@ from django.dispatch import receiver
 
 from core.cache import CacheService
 
-
 # ── Chat v2: Workspace Team Group Auto-Provisioning ──────────────────────────
 
 
@@ -38,8 +37,7 @@ def add_to_team_group(sender, instance, created, **kwargs):
     from apps.chat.services.provisioning import get_provisioner
 
     get_provisioner().add_to_team_group(
-        workspace_id=str(instance.workspace_id),
-        user_id=str(instance.user_id),
+        workspace_id=str(instance.workspace_id), user_id=str(instance.user_id)
     )
 
 
@@ -49,8 +47,7 @@ def remove_from_team_group(sender, instance, **kwargs):
     from apps.chat.services.provisioning import get_provisioner
 
     get_provisioner().remove_from_team_group(
-        workspace_id=str(instance.workspace_id),
-        user_id=str(instance.user_id),
+        workspace_id=str(instance.workspace_id), user_id=str(instance.user_id)
     )
 
 

@@ -39,5 +39,6 @@ __all__ = [
     "InvitationListAdminView",
     "InvitationRevokeView",
     "InvitationAcceptView",
+    "MyPendingInvitationsView",
     "WorkspaceContextMixin",
 ]

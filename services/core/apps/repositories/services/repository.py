@@ -1,9 +1,9 @@
 import logging
 import uuid
-
 from django.db import transaction
 from django.db.models import QuerySet
 
+from apps.notifications.utils import fanout_to_workspace_members
 from apps.workspaces.models import Workspace
 
 from ..events import RepositoryEventPublisher
@@ -12,7 +12,6 @@ from ..github_app.client import GitHubAppClient, GitHubAppError
 from ..github_app.services import GitHubAppInstallationService
 from ..models import Repository
 from .client import GitHubAPIClient, GitHubTokenClient
-from apps.notifications.utils import fanout_to_workspace_members
 from .exceptions import (
     GitHubAPIError,
     RepositoryAlreadyConnectedError,
@@ -155,10 +154,7 @@ class RepositoryService:
                 title=f"Repository disconnected: {_repo.github_repo}",
                 body=f"Repository '{_repo.github_repo}' has been disconnected from your workspace.",
                 link=f"/workspaces/{workspace.id}/repositories",
-                metadata={
-                    "repository_id": str(_repo.id),
-                    "name": _repo.github_repo,
-                },
+                metadata={"repository_id": str(_repo.id), "name": _repo.github_repo},
                 actor_id=str(_actor),
                 exclude_user_id=str(_actor),
             )

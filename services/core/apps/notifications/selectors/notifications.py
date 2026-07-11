@@ -1,5 +1,4 @@
 import uuid
-
 from django.db.models import QuerySet
 from django.utils import timezone
 
@@ -31,7 +30,9 @@ class NotificationSelector:
         )
 
     @staticmethod
-    def get_notification(notification_id: uuid.UUID, user_id: uuid.UUID) -> Notification | None:
+    def get_notification(
+        notification_id: uuid.UUID, user_id: uuid.UUID
+    ) -> Notification | None:
         try:
             return Notification.objects.select_related("workspace").get(
                 id=notification_id, user_id=user_id
@@ -44,7 +45,9 @@ class NotificationSelector:
         count = Notification.objects.filter(
             user_id=user_id, read_at__isnull=True
         ).update(read_at=timezone.now())
-        CacheService.delete(f"{NotificationSelector.NOTIFICATION_CACHE_PREFIX}:{user_id}")
+        CacheService.delete(
+            f"{NotificationSelector.NOTIFICATION_CACHE_PREFIX}:{user_id}"
+        )
         return count
 
     @staticmethod
@@ -64,11 +67,11 @@ class NotificationSelector:
         notification.delete()
 
     @staticmethod
-    def register_fcm_token(user_id: uuid.UUID, token: str, platform: str = "web") -> tuple[FCMToken, bool]:
+    def register_fcm_token(
+        user_id: uuid.UUID, token: str, platform: str = "web"
+    ) -> tuple[FCMToken, bool]:
         obj, created = FCMToken.objects.get_or_create(
-            user_id=user_id,
-            token=token,
-            defaults={"platform": platform},
+            user_id=user_id, token=token, defaults={"platform": platform}
         )
         if not created and obj.platform != platform:
             obj.platform = platform

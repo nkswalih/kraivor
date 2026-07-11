@@ -15,9 +15,7 @@ class PgOnlySQL(migrations.RunSQL):
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ("search", "0001_enable_pg_trgm"),
-    ]
+    dependencies = [("search", "0001_enable_pg_trgm")]
 
     operations = [
         PgOnlySQL(
@@ -63,5 +61,5 @@ class Migration(migrations.Migration):
             DROP INDEX IF EXISTS idx_search_notif_title_trgm;
             DROP INDEX IF EXISTS idx_search_notif_body_trgm;
             """,
-        ),
+        )
     ]

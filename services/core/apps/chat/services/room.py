@@ -1,7 +1,7 @@
-import logging
-from datetime import UTC, datetime
 from typing import Any
 
+import logging
+from datetime import UTC, datetime
 from django.db import transaction
 from django.db.models import Count, QuerySet
 
@@ -96,11 +96,7 @@ class ChatRoomService:
     @staticmethod
     @transaction.atomic
     def get_or_create_dm_room(
-        *,
-        workspace_id: str,
-        user_id_1: str,
-        user_id_2: str,
-        target_name: str,
+        *, workspace_id: str, user_id_1: str, user_id_2: str, target_name: str
     ) -> ChatRoom:
         existing_rooms: QuerySet = (
             ChatRoomParticipant.objects.filter(
@@ -144,17 +140,20 @@ class ChatRoomService:
     @staticmethod
     def increment_message_count(room_id: str) -> None:
         from django.db.models import F
+
         ChatRoom.objects.filter(id=room_id).update(message_count=F("message_count") + 1)
 
     @staticmethod
     def mark_room_read(room_id: str, user_id: str) -> None:
-        room = ChatRoom.objects.filter(id=room_id).values_list("message_count", flat=True).first()
+        room = (
+            ChatRoom.objects.filter(id=room_id)
+            .values_list("message_count", flat=True)
+            .first()
+        )
         if room is None:
             return
         ChatRoomParticipant.objects.update_or_create(
-            room_id=room_id,
-            user_id=user_id,
-            defaults={"last_read_message_count": room},
+            room_id=room_id, user_id=user_id, defaults={"last_read_message_count": room}
         )
 
     @staticmethod

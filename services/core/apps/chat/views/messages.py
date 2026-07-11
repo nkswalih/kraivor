@@ -1,9 +1,9 @@
 import json
+from typing import Any
+
 import logging
 import uuid
 from datetime import UTC, datetime
-from typing import Any
-
 from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiParameter,
@@ -136,7 +136,7 @@ class MessageListSendView(APIView):
                     "mentions": [],
                     "reply_to": "",
                 },
-            ),
+            )
         ],
     )
     def post(
@@ -240,10 +240,7 @@ class MessageDetailView(APIView):
             503: OpenApiResponse(description="Message store unavailable"),
         },
         examples=[
-            OpenApiExample(
-                "Request example",
-                value={"content": "Updated content"},
-            ),
+            OpenApiExample("Request example", value={"content": "Updated content"})
         ],
     )
     def patch(
@@ -337,7 +334,7 @@ class MessageSearchView(APIView):
                 description="Search query (minimum 2 characters)",
                 required=True,
                 type=str,
-            ),
+            )
         ],
         responses={
             200: OpenApiResponse(
@@ -357,10 +354,7 @@ class MessageSearchView(APIView):
             503: OpenApiResponse(description="Message store unavailable"),
         },
         examples=[
-            OpenApiExample(
-                "Response example",
-                value={"results": [], "count": 0},
-            ),
+            OpenApiExample("Response example", value={"results": [], "count": 0})
         ],
     )
     def get(
@@ -378,8 +372,7 @@ class MessageSearchView(APIView):
             )
         try:
             results: list[dict[str, Any]] = ChatMessageService.search_messages(
-                room_id=str(room_pk),
-                query=query,
+                room_id=str(room_pk), query=query
             )
         except Exception as exc:
             logger.error(

@@ -1,4 +1,3 @@
-
 from typing import Any
 
 from django.db import transaction
@@ -6,12 +5,11 @@ from django.db.models import Count, Q, QuerySet
 from django.http import Http404
 from django.utils import timezone
 
-from ..constants import (
-    TaskStatus,
-)
+from apps.notifications.utils import fanout_to_workspace_members
+
+from ..constants import TaskStatus
 from ..events import ProjectEventPublisher
 from ..models import Project, Task
-from apps.notifications.utils import fanout_to_workspace_members
 
 logger = __import__("logging").getLogger(__name__)
 
@@ -19,9 +17,7 @@ logger = __import__("logging").getLogger(__name__)
 class ProjectService:
     @staticmethod
     def list_for_workspace(
-        workspace_id: str,
-        status: str | None = None,
-        user_id: str | None = None,
+        workspace_id: str, status: str | None = None, user_id: str | None = None
     ) -> QuerySet:
         qs = (
             Project.objects.filter(workspace_id=workspace_id)
@@ -31,15 +27,13 @@ class ProjectService:
                 blocked_task_count=Count(
                     "tasks",
                     filter=Q(
-                        tasks__deleted_at__isnull=True,
-                        tasks__status=TaskStatus.BLOCKED,
+                        tasks__deleted_at__isnull=True, tasks__status=TaskStatus.BLOCKED
                     ),
                 ),
                 done_task_count=Count(
                     "tasks",
                     filter=Q(
-                        tasks__deleted_at__isnull=True,
-                        tasks__status=TaskStatus.DONE,
+                        tasks__deleted_at__isnull=True, tasks__status=TaskStatus.DONE
                     ),
                 ),
             )
@@ -120,7 +114,9 @@ class ProjectService:
             raise Http404(f"Project {project_id} not found.") from None
 
     @staticmethod
-    def update(project: Project, user_id: str, **validated_data: Any) -> Project:  # noqa: ANN401
+    def update(
+        project: Project, user_id: str, **validated_data: Any
+    ) -> Project:  # noqa: ANN401
         for field, value in validated_data.items():
             setattr(project, field, value)
         project.save()
@@ -139,9 +135,8 @@ class ProjectService:
     @staticmethod
     def delete(project: Project, user_id: str) -> None:
         with transaction.atomic():
-            Task.objects.filter(
-                project_id=project.id,
-                deleted_at__isnull=True,
-            ).update(deleted_at=timezone.now())
+            Task.objects.filter(project_id=project.id, deleted_at__isnull=True).update(
+                deleted_at=timezone.now()
+            )
             project.soft_delete()
         logger.info("Project soft-deleted: id=%s by user=%s", project.id, user_id)

@@ -51,12 +51,26 @@ tag_patterns = [
 ]
 
 user_content_patterns = [
-    path("user/<uuid:user_id>/discussions/", UserDiscussionsView.as_view(), name="user-discussions"),
-    path("user/<uuid:user_id>/comments/", UserCommentsView.as_view(), name="user-comments"),
+    path(
+        "user/<uuid:user_id>/discussions/",
+        UserDiscussionsView.as_view(),
+        name="user-discussions",
+    ),
+    path(
+        "user/<uuid:user_id>/comments/",
+        UserCommentsView.as_view(),
+        name="user-comments",
+    ),
 ]
 
 internal_patterns = [
-    path("internal/sync-author/", SyncAuthorDenormalizationView.as_view(), name="sync-author"),
+    path(
+        "internal/sync-author/",
+        SyncAuthorDenormalizationView.as_view(),
+        name="sync-author",
+    )
 ]
 
-urlpatterns = discussion_patterns + tag_patterns + user_content_patterns + internal_patterns
+urlpatterns = (
+    discussion_patterns + tag_patterns + user_content_patterns + internal_patterns
+)

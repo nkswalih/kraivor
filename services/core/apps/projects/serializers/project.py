@@ -1,5 +1,4 @@
 import logging
-
 from rest_framework import serializers
 
 from ..constants import ProjectStatus, ProjectVisibility
@@ -58,9 +57,7 @@ class ProjectCreateSerializer(serializers.Serializer):
         max_length=7, required=False, allow_blank=True, default=""
     )
     status = serializers.ChoiceField(
-        choices=ProjectStatus.choices,
-        default=ProjectStatus.PLANNING,
-        required=False,
+        choices=ProjectStatus.choices, default=ProjectStatus.PLANNING, required=False
     )
     visibility = serializers.ChoiceField(
         choices=ProjectVisibility.choices,

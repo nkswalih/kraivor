@@ -1,10 +1,5 @@
 import logging
-
-from drf_spectacular.utils import (
-    OpenApiExample,
-    OpenApiResponse,
-    extend_schema,
-)
+from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework.request import Request
@@ -33,14 +28,12 @@ class RoomListCreateView(APIView):
         operation_id="list_chat_rooms",
         tags=["chat-rooms"],
         description="List all chat rooms the user can see in a workspace.",
-        responses={
-            200: ChatRoomListSerializer(many=True),
-        },
+        responses={200: ChatRoomListSerializer(many=True)},
         examples=[
             OpenApiExample(
                 "Response example",
                 value=[{"id": "uuid", "name": "general", "room_type": "workspace"}],
-            ),
+            )
         ],
     )
     def get(self, request: Request, workspace_pk: str | None = None) -> Response:
@@ -71,7 +64,7 @@ class RoomListCreateView(APIView):
                     "room_type": "group",
                     "topic": "Chat about stuff",
                 },
-            ),
+            )
         ],
     )
     def post(self, request: Request, workspace_pk: str | None = None) -> Response:
@@ -135,9 +128,8 @@ class RoomDetailView(APIView):
         },
         examples=[
             OpenApiExample(
-                "Request example",
-                value={"name": "updated-name", "topic": "New topic"},
-            ),
+                "Request example", value={"name": "updated-name", "topic": "New topic"}
+            )
         ],
     )
     def patch(
@@ -200,7 +192,7 @@ class DMCreateView(APIView):
             OpenApiExample(
                 "Request example",
                 value={"target_user_id": "uuid-of-target", "target_user_name": "jane"},
-            ),
+            )
         ],
     )
     def post(self, request: Request, workspace_pk: str | None = None) -> Response:

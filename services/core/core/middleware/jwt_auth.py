@@ -1,10 +1,9 @@
-import logging
-from threading import Lock
-
 import jwt
+import logging
 from django.conf import settings
 from django.http import JsonResponse
 from jwt import PyJWKClient
+from threading import Lock
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +81,9 @@ class JWTAuthenticationMiddleware:
             request.email = request.headers.get("X-Email", "")
             request.user_email = request.headers.get("X-Email", "")
             workspace_ids_str = request.headers.get("X-Workspace-IDs", "")
-            request.workspace_ids = [w.strip() for w in workspace_ids_str.split(",") if w.strip()]
+            request.workspace_ids = [
+                w.strip() for w in workspace_ids_str.split(",") if w.strip()
+            ]
             request.roles = {}
             return self.get_response(request)
 
@@ -145,6 +146,7 @@ class JWTAuthenticationMiddleware:
             is_active = True
             pk = user_id
             id = user_id
+
         request.user = _JwtUser()
 
         return self.get_response(request)

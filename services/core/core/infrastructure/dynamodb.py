@@ -11,9 +11,8 @@ Usage:
     table.put_item(Item={...})
 """
 
-import logging
-
 import boto3
+import logging
 from botocore.config import Config as BotoConfig
 from django.conf import settings
 
@@ -41,7 +40,9 @@ def get_dynamodb():
                 )
                 kwargs["endpoint_url"] = endpoint
                 kwargs["aws_access_key_id"] = "dummy"  # nosec - local dev dummy values
-                kwargs["aws_secret_access_key"] = "dummy"  # nosec - local dev dummy values
+                kwargs["aws_secret_access_key"] = (
+                    "dummy"  # nosec - local dev dummy values
+                )
                 logger.info("dynamodb.using_local", extra={"endpoint": endpoint})
             _resource = boto3.resource("dynamodb", **kwargs)
             logger.info("dynamodb.initialized", extra={"local": dynamodb_local})

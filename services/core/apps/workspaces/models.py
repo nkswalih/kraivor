@@ -14,7 +14,6 @@ Design rules (system design §6):
 import secrets
 import uuid
 from datetime import timedelta
-
 from django.db import models
 from django.utils import timezone
 

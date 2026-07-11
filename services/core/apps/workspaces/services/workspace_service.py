@@ -1,6 +1,5 @@
 import logging
 import uuid
-
 from django.db import transaction
 from django.utils import timezone
 
@@ -269,6 +268,7 @@ def _dispatch_member_joined_notification(
 ) -> None:
     try:
         from ..tasks import notify_member_joined
+
         notify_member_joined.delay(
             workspace_id=workspace_id, user_id=user_id, role=role
         )
@@ -284,6 +284,7 @@ def _dispatch_member_removed_notification(
 ) -> None:
     try:
         from ..tasks import notify_member_removed
+
         notify_member_removed.delay(
             workspace_id=workspace_id,
             removed_user_id=removed_user_id,

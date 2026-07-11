@@ -1,6 +1,5 @@
-import uuid
-
 import pytest
+import uuid
 from django.utils import timezone
 
 from apps.workspaces.constants import WorkspaceRole

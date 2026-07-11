@@ -9,8 +9,6 @@ Triggered by Django signals from the workspaces app:
 """
 
 import logging
-from typing import Any
-
 from django.db import transaction
 
 from apps.chat.dynamodb.repository import ChatV2Repository
@@ -26,7 +24,9 @@ class ProvisioningService:
         self.repo = ChatV2Repository()
 
     @transaction.atomic
-    def provision_team_group(self, *, workspace_id: str, workspace_name: str, owner_id: str) -> Room | None:
+    def provision_team_group(
+        self, *, workspace_id: str, workspace_name: str, owner_id: str
+    ) -> Room | None:
         """Create the WORKSPACE_TEAM room for a new workspace. Idempotent."""
         existing = Room.objects.filter(
             workspace_id=workspace_id,
@@ -34,7 +34,10 @@ class ProvisioningService:
             deleted_at__isnull=True,
         ).first()
         if existing:
-            logger.debug("provision.exists", extra={"workspace_id": workspace_id, "room_id": str(existing.id)})
+            logger.debug(
+                "provision.exists",
+                extra={"workspace_id": workspace_id, "room_id": str(existing.id)},
+            )
             return None
 
         room = Room.objects.create(
@@ -54,7 +57,9 @@ class ProvisioningService:
         return room
 
     @transaction.atomic
-    def add_to_team_group(self, *, workspace_id: str, user_id: str) -> RoomMember | None:
+    def add_to_team_group(
+        self, *, workspace_id: str, user_id: str
+    ) -> RoomMember | None:
         """Add a user to the workspace's team group. Idempotent."""
         room = Room.objects.filter(
             workspace_id=workspace_id,
@@ -62,19 +67,24 @@ class ProvisioningService:
             deleted_at__isnull=True,
         ).first()
         if not room:
-            logger.warning("provision.no_team_group", extra={"workspace_id": workspace_id})
+            logger.warning(
+                "provision.no_team_group", extra={"workspace_id": workspace_id}
+            )
             return None
 
         member, created = RoomMember.objects.get_or_create(
-            room=room, user_id=user_id,
-            defaults={"last_read_seq": 0},
+            room=room, user_id=user_id, defaults={"last_read_seq": 0}
         )
         if created:
             room.member_count += 1
             room.save(update_fields=["member_count"])
             logger.info(
                 "provision.member_added",
-                extra={"workspace_id": workspace_id, "room_id": str(room.id), "user_id": user_id},
+                extra={
+                    "workspace_id": workspace_id,
+                    "room_id": str(room.id),
+                    "user_id": user_id,
+                },
             )
         return member
 
@@ -90,7 +100,7 @@ class ProvisioningService:
             return False
 
         deleted_count = RoomMember.objects.filter(
-            room=room, user_id=user_id, deleted_at__isnull=True,
+            room=room, user_id=user_id, deleted_at__isnull=True
         ).delete()[0]
 
         if deleted_count:
@@ -98,7 +108,11 @@ class ProvisioningService:
             room.save(update_fields=["member_count"])
             logger.info(
                 "provision.member_removed",
-                extra={"workspace_id": workspace_id, "room_id": str(room.id), "user_id": user_id},
+                extra={
+                    "workspace_id": workspace_id,
+                    "room_id": str(room.id),
+                    "user_id": user_id,
+                },
             )
         return deleted_count > 0
 

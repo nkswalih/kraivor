@@ -1,5 +1,4 @@
 import logging
-
 from celery import shared_task
 from django.utils import timezone
 
@@ -86,8 +85,5 @@ def update_trending_scores():
     discussions = Discussion.objects.filter(created_at__gte=cutoff).order_by(
         "-upvote_count"
     )[:20]
-    logger.info(
-        "trending.updated",
-        extra={"count": len(discussions)},
-    )
+    logger.info("trending.updated", extra={"count": len(discussions)})
     return [str(d.id) for d in discussions]

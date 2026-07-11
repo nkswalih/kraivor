@@ -1,6 +1,5 @@
-import uuid
-
 import pytest
+import uuid
 from django.test import RequestFactory
 
 from apps.workspaces.constants import WorkspaceRole

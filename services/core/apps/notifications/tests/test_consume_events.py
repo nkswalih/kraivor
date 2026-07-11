@@ -1,7 +1,7 @@
 import json
-from unittest.mock import MagicMock, patch
 
 from django.test import override_settings
+from unittest.mock import MagicMock, patch
 
 from apps.notifications.management.commands.consume_events import (
     DISPATCH_TABLE,
@@ -129,9 +129,8 @@ class TestCommand:
     def test_handle_missing_kafka_library(self):
         import contextlib
         import sys
-        from io import StringIO
-
         from django.core.management import call_command
+        from io import StringIO
 
         with patch.dict("sys.modules", {"confluent_kafka": None}):
             err = StringIO()

@@ -1,5 +1,4 @@
 import uuid
-
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
@@ -49,7 +48,12 @@ class InvitationRevokeView(WorkspaceDetailView):
         summary="Revoke invitation",
         responses={204: OpenApiResponse(description="No content")},
     )
-    def delete(self, request: Request, workspace_pk: str | None = None, invitation_id: str | None = None) -> Response:
+    def delete(
+        self,
+        request: Request,
+        workspace_pk: str | None = None,
+        invitation_id: str | None = None,
+    ) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk, request.user_id)
         try:
             inv_id = uuid.UUID(str(invitation_id))
@@ -94,8 +98,7 @@ class InvitationAcceptView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="Accept invitation",
-        responses={200: InvitationAcceptResponseSerializer},
+        summary="Accept invitation", responses={200: InvitationAcceptResponseSerializer}
     )
     def post(self, request: Request, token: str | None = None) -> Response:
         if not token:

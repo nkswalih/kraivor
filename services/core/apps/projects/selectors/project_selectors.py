@@ -1,5 +1,4 @@
 import uuid
-
 from django.db.models import QuerySet
 
 from apps.projects.models import Project, Task
@@ -10,9 +9,7 @@ class ProjectSelector:
     @staticmethod
     def list_for_workspace(workspace_id: uuid.UUID) -> QuerySet[Project]:
         return (
-            Project.objects.filter(
-                workspace_id=workspace_id, deleted_at__isnull=True
-            )
+            Project.objects.filter(workspace_id=workspace_id, deleted_at__isnull=True)
             .select_related("workspace", "repository", "knowledge_space")
             .order_by("-updated_at")
         )
@@ -20,9 +17,7 @@ class ProjectSelector:
     @staticmethod
     def get_detail(project_id: uuid.UUID, workspace_id: uuid.UUID) -> Project | None:
         return (
-            Project.objects.select_related(
-                "workspace", "repository", "knowledge_space"
-            )
+            Project.objects.select_related("workspace", "repository", "knowledge_space")
             .filter(id=project_id, workspace_id=workspace_id, deleted_at__isnull=True)
             .first()
         )
@@ -41,7 +36,9 @@ class ProjectSelector:
 
 class TaskSelector:
     @staticmethod
-    def list_for_project(project_id: uuid.UUID, status_filter: str | None = None) -> QuerySet[Task]:
+    def list_for_project(
+        project_id: uuid.UUID, status_filter: str | None = None
+    ) -> QuerySet[Task]:
         qs = Task.objects.filter(project_id=project_id, deleted_at__isnull=True)
         if status_filter:
             qs = qs.filter(status=status_filter)

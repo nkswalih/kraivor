@@ -25,7 +25,7 @@ import {
 
 export function EnterpriseGuideContent({ guide }: { guide: EnterpriseGuide }) {
   return (
-    <div className="max-w-3xl mx-auto w-full px-6 py-5 space-y-5">
+    <div className="max-w-6xl mx-auto w-full px-8 py-6 space-y-6">
       <div data-section="overview">
         <ExecutiveSummaryHeader data={guide.repository_health} />
       </div>

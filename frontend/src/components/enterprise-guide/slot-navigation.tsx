@@ -14,8 +14,8 @@ interface SlotNavigationProps {
 }
 
 const ITEM_H = 40;
-const VISIBLE_ITEMS = 5;
-const VISIBLE_HEIGHT = VISIBLE_ITEMS * ITEM_H; // 200px
+const VISIBLE_ITEMS = 9;
+const VISIBLE_HEIGHT = VISIBLE_ITEMS * ITEM_H; // 360px
 
 export function SlotNavigation({ sections, activeSection, onNavigate }: SlotNavigationProps) {
   const activeIndex = sections.findIndex(s => s.id === activeSection);
@@ -24,17 +24,17 @@ export function SlotNavigation({ sections, activeSection, onNavigate }: SlotNavi
   const centerOffset = (VISIBLE_ITEMS / 2) * ITEM_H;
   const offset = centerOffset - clampedIndex * ITEM_H;
 
-  const fadeHeight = 48;
+  const fadeHeight = 24;
 
   return (
     <nav className="relative flex flex-col items-center justify-center bg-krait-surface1/40 backdrop-blur-sm border-r border-border rounded-r-2xl overflow-hidden"
       style={{ width: 'clamp(200px, 22vw, 260px)', minHeight: `${VISIBLE_HEIGHT + fadeHeight * 2}px` }}
     >
       <div className="absolute top-0 left-0 right-0 z-10 pointer-events-none"
-        style={{ height: `${fadeHeight}px`, background: 'linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background) / 0.8) 60%, transparent)' }}
+        style={{ height: `${fadeHeight}px`, background: 'linear-gradient(to bottom, hsl(var(--background)) 0%, hsl(var(--background) / 0.5) 50%, transparent 100%)' }}
       />
       <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none"
-        style={{ height: `${fadeHeight}px`, background: 'linear-gradient(to top, hsl(var(--background)), hsl(var(--background) / 0.8) 60%, transparent)' }}
+        style={{ height: `${fadeHeight}px`, background: 'linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.5) 50%, transparent 100%)' }}
       />
 
       <div
@@ -52,7 +52,7 @@ export function SlotNavigation({ sections, activeSection, onNavigate }: SlotNavi
             const dist = Math.abs(idx - clampedIndex);
             const isActive = idx === clampedIndex;
             const isAdjacent = dist === 1;
-            const opacity = isActive ? 1 : isAdjacent ? 0.4 : 0;
+            const opacity = isActive ? 1 : isAdjacent ? 0.6 : dist === 2 ? 0.3 : dist === 3 ? 0.15 : 0;
 
             return (
               <div key={section.id} className="flex items-center w-full relative"
@@ -64,8 +64,8 @@ export function SlotNavigation({ sections, activeSection, onNavigate }: SlotNavi
                   {[8, 16, 20, 24, 32].map(pos => {
                     const isMain = pos === 20;
                     const tickW = isMain
-                      ? (isActive ? 14 : isAdjacent ? 8 : 4)
-                      : (isActive ? 6 : isAdjacent ? 4 : 2);
+                      ? (isActive ? 14 : isAdjacent ? 10 : dist === 2 ? 7 : dist === 3 ? 5 : 3)
+                      : (isActive ? 6 : isAdjacent ? 5 : dist === 2 ? 4 : dist === 3 ? 3 : 2);
                     return (
                       <div
                         key={pos}
@@ -117,8 +117,8 @@ export function SlotNavigation({ sections, activeSection, onNavigate }: SlotNavi
                   {[8, 16, 20, 24, 32].map(pos => {
                     const isMain = pos === 20;
                     const tickW = isMain
-                      ? (isActive ? 14 : isAdjacent ? 8 : 4)
-                      : (isActive ? 6 : isAdjacent ? 4 : 2);
+                      ? (isActive ? 14 : isAdjacent ? 10 : dist === 2 ? 7 : dist === 3 ? 5 : 3)
+                      : (isActive ? 6 : isAdjacent ? 5 : dist === 2 ? 4 : dist === 3 ? 3 : 2);
                     return (
                       <div
                         key={pos}

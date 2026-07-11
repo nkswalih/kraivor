@@ -283,7 +283,7 @@ export default function JobDetailPage() {
           )}
 
           {isComplete && (
-            <div className="space-y-8 max-w-4xl">
+            <div className="space-y-8 max-w-5xl mx-auto">
               {/* Blocked Overall Banner */}
               {job.blocked_by.length > 0 && (
                 <BlockedOverall blockedBy={job.blocked_by} />

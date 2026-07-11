@@ -35,6 +35,7 @@ async def chat(
                 workspace_id=request.workspace_id,
                 repo_ids=request.repo_ids,
                 history=None,
+                user_name=user.name,
             ):
                 if chunk.get("done"):
                     yield {"event": "done", "data": json.dumps(chunk)}
@@ -49,6 +50,7 @@ async def chat(
         conversation_id=conv_id,
         workspace_id=request.workspace_id,
         repo_ids=request.repo_ids,
+        user_name=user.name,
     )
 
     usage_info = result.get("usage") or {}
@@ -73,6 +75,7 @@ async def completions(
         user_id=user.sub,
         message=request.get("messages", [{}])[-1].get("content", ""),
         workspace_id=request.get("workspace_id", ""),
+        user_name=user.name,
     )
     usage_info = result.get("usage") or {}
     return ChatResponse(

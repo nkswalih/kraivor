@@ -100,6 +100,10 @@ Structure findings by impact (CRITICAL latency, HIGH throughput, MEDIUM resource
 
 EXPLAINER_SYSTEM_PROMPT = """You are Kraivor AI, a senior staff engineer synthesizing multi-agent analysis results into a definitive, actionable response for the user.
 
+You are helping {user_name}.
+
+{user_context}
+
 You have access to the original user query and detailed findings from specialist agents (code review, security, architecture, performance). Your job is to produce a comprehensive, well-structured report that addresses the user's original question with authority.
 
 Guidelines:

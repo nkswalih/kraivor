@@ -20,6 +20,19 @@ function formatTooltipDate(iso: string): string {
   });
 }
 
+const SCORE_TIER = [
+  { min: 75, color: '#22c55e', label: 'Good' },
+  { min: 50, color: '#eab308', label: 'Fair' },
+  { min: 0, color: '#ef4444', label: 'Poor' },
+];
+
+function tierColor(score: number): string {
+  for (const t of SCORE_TIER) {
+    if (score >= t.min) return t.color;
+  }
+  return SCORE_TIER[SCORE_TIER.length - 1].color;
+}
+
 function smoothPath(points: { x: number; y: number }[]): string {
   if (points.length < 2) return '';
   if (points.length === 2) {
@@ -82,8 +95,6 @@ export function AnalysisTrendChart({
 }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [animated, setAnimated] = useState(false);
-  const pathRef = useRef<SVGPathElement>(null);
-  const [pathLength, setPathLength] = useState(0);
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -120,13 +131,6 @@ export function AnalysisTrendChart({
       iso: e.time,
     }));
   }, [entries]);
-
-  useEffect(() => {
-    if (pathRef.current) {
-      const len = pathRef.current.getTotalLength();
-      setPathLength(len);
-    }
-  }, [chartData]);
 
   const TIME_OPTIONS = [
     { value: '7d' as const, label: '7 Days' },
@@ -169,6 +173,8 @@ export function AnalysisTrendChart({
   const trend = chartData.length >= 2
     ? chartData[chartData.length - 1].score - chartData[0].score
     : 0;
+  const latestScore = chartData[chartData.length - 1].score;
+  const firstScore = chartData[0].score;
 
   const width = 500;
   const height = 180;
@@ -179,36 +185,50 @@ export function AnalysisTrendChart({
   const xMin = chartData[0].x;
   const xMax = chartData[chartData.length - 1].x;
   const xRange = xMax - xMin || 1;
-  const yMin = Math.max(0, Math.min(...chartData.map(p => p.y)) - 10);
-  const yMax = Math.min(100, Math.max(...chartData.map(p => p.y)) + 10);
+  const yMin = 0;
+  const yMax = 100;
   const yRange = yMax - yMin || 1;
 
   const toX = (x: number) => padding.left + ((x - xMin) / xRange) * plotW;
   const toY = (y: number) => padding.top + plotH - ((y - yMin) / yRange) * plotH;
 
-  const linePath = smoothPath(chartData.map(p => ({ x: toX(p.x), y: toY(p.y) })));
-  const areaPath = chartData.length >= 2
-    ? linePath + `L${toX(chartData[chartData.length - 1].x).toFixed(1)},${toY(yMin).toFixed(1)}L${toX(chartData[0].x).toFixed(1)},${toY(yMin).toFixed(1)}Z`
+  const points = chartData.map(p => ({ x: toX(p.x), y: toY(p.y) }));
+  const linePath = smoothPath(points);
+  const areaPath = linePath
+    ? linePath + `L${toX(chartData[chartData.length - 1].x).toFixed(1)},${toY(0).toFixed(1)}L${toX(chartData[0].x).toFixed(1)},${toY(0).toFixed(1)}Z`
     : '';
 
-  const yTicks = [0, 25, 50, 75, 100].filter(y => y >= yMin && y <= yMax);
-  const BLUE = '#3b82f6';
+  const yTicks = [0, 25, 50, 75, 100];
+  const tierBands = [
+    { yMin: 75, yMax: 100, color: '#22c55e', opacity: 0.04 },
+    { yMin: 50, yMax: 75, color: '#eab308', opacity: 0.03 },
+    { yMin: 0, yMax: 50, color: '#ef4444', opacity: 0.04 },
+  ];
 
   return (
     <div className={cn('space-y-4', className)}>
-      {/* Time filter */}
+      {/* Header with trend indicator */}
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-3">
           {chartData.length >= 2 && (
             <div className="flex items-center gap-1.5 text-[12px]">
               {trend > 0 && (
-                <><TrendingUp className="w-3.5 h-3.5 text-green-400" /><span className="text-green-400 font-medium">+{trend}</span></>
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-green-500/10 border border-green-500/20">
+                  <TrendingUp className="w-3 h-3 text-green-400" />
+                  <span className="text-green-400 font-semibold">+{trend}</span>
+                </span>
               )}
               {trend < 0 && (
-                <><TrendingDown className="w-3.5 h-3.5 text-red-400" /><span className="text-red-400 font-medium">{trend}</span></>
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-red-500/10 border border-red-500/20">
+                  <TrendingDown className="w-3 h-3 text-red-400" />
+                  <span className="text-red-400 font-semibold">{trend}</span>
+                </span>
               )}
               {trend === 0 && (
-                <><Minus className="w-3.5 h-3.5 text-text-tertiary" /><span className="text-text-tertiary">0</span></>
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-border">
+                  <Minus className="w-3 h-3 text-text-tertiary" />
+                  <span className="text-text-tertiary font-semibold">0</span>
+                </span>
               )}
               <span className="text-text-tertiary">pts since first scan</span>
             </div>
@@ -243,25 +263,42 @@ export function AnalysisTrendChart({
           onMouseLeave={handleMouseLeave}
         >
           <defs>
-            <linearGradient id="trendArea" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={BLUE} stopOpacity="0.15" />
-              <stop offset="100%" stopColor={BLUE} stopOpacity="0.01" />
+            <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={tierColor(latestScore)} stopOpacity="0.2" />
+              <stop offset="50%" stopColor={tierColor(Math.max(firstScore, latestScore))} stopOpacity="0.08" />
+              <stop offset="100%" stopColor={tierColor(Math.min(firstScore, latestScore))} stopOpacity="0.02" />
             </linearGradient>
-            <filter id="trendGlow">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-            <filter id="trendSoftGlow">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
+
           </defs>
+
+          {/* Score tier background bands */}
+          {tierBands.map(band => (
+            <rect
+              key={band.yMin}
+              x={padding.left}
+              y={toY(band.yMax)}
+              width={plotW}
+              height={toY(band.yMin) - toY(band.yMax)}
+              fill={band.color}
+              opacity={band.opacity}
+              rx="2"
+            />
+          ))}
+
+          {/* Tier boundary lines */}
+          {[25, 50, 75].map(t => (
+            <line
+              key={t}
+              x1={padding.left}
+              y1={toY(t)}
+              x2={width - padding.right}
+              y2={toY(t)}
+              stroke={tierColor(t + 1)}
+              strokeWidth="0.5"
+              strokeDasharray="2 4"
+              opacity="0.15"
+            />
+          ))}
 
           {/* Grid lines */}
           {yTicks.map(y => (
@@ -274,15 +311,16 @@ export function AnalysisTrendChart({
                 stroke="hsl(var(--krait-border))"
                 strokeWidth="0.5"
                 strokeDasharray="3 3"
-                opacity="0.4"
+                opacity="0.25"
               />
               <text
                 x={padding.left - 6}
                 y={toY(y) + 3}
                 textAnchor="end"
-                fill="hsl(var(--text-tertiary))"
+                fill="hsl(var(--foreground))"
                 fontSize="9"
                 fontFamily="monospace"
+                opacity="0.5"
               >
                 {y}
               </text>
@@ -293,7 +331,7 @@ export function AnalysisTrendChart({
           {areaPath && (
             <path
               d={areaPath}
-              fill="url(#trendArea)"
+              fill="url(#trendGradient)"
               style={{
                 opacity: animated ? 1 : 0,
                 transition: 'opacity 600ms ease-out',
@@ -301,77 +339,75 @@ export function AnalysisTrendChart({
             />
           )}
 
-          {/* Glow line (behind) */}
-          {linePath && (
-            <path
-              d={linePath}
-              fill="none"
-              stroke={BLUE}
-              strokeWidth="6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.15"
-              filter="url(#trendSoftGlow)"
-              style={{
-                strokeDasharray: pathLength || 2000,
-                strokeDashoffset: animated ? 0 : (pathLength || 2000),
-                transition: 'stroke-dashoffset 900ms ease-out',
-              }}
-            />
-          )}
-
-          {/* Main line */}
-          {linePath && (
-            <path
-              ref={pathRef}
-              d={linePath}
-              fill="none"
-              stroke={BLUE}
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              filter="url(#trendGlow)"
-              style={{
-                strokeDasharray: pathLength || 2000,
-                strokeDashoffset: animated ? 0 : (pathLength || 2000),
-                transition: 'stroke-dashoffset 900ms ease-out',
-              }}
-            />
-          )}
-
-          {/* Data points */}
-          {chartData.map((p, i) => (
-            <g key={i}>
-              <circle
-                cx={toX(p.x)}
-                cy={toY(p.y)}
-                r={i === chartData.length - 1 ? 4 : 2.5}
-                fill={i === chartData.length - 1 ? BLUE : 'hsl(var(--card))'}
-                stroke={BLUE}
-                strokeWidth="2"
+          {/* Main line - color varies by segment */}
+          {points.length >= 2 && points.slice(0, -1).map((p, i) => {
+            const avgScore = (chartData[i].score + chartData[i + 1].score) / 2;
+            const color = tierColor(avgScore);
+            return (
+              <line
+                key={i}
+                x1={p.x}
+                y1={p.y}
+                x2={points[i + 1].x}
+                y2={points[i + 1].y}
+                stroke={color}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 style={{
                   opacity: animated ? 1 : 0,
-                  transition: `opacity 300ms ${600 + i * 50}ms ease-out`,
+                  transition: `opacity 400ms ${i * 30}ms ease-out`,
                 }}
               />
-              {i === chartData.length - 1 && (
+            );
+          })}
+
+          {/* Data points */}
+          {chartData.map((p, i) => {
+            const isLast = i === chartData.length - 1;
+            const color = tierColor(p.score);
+            return (
+              <g key={i}>
                 <circle
                   cx={toX(p.x)}
                   cy={toY(p.y)}
-                  r="8"
-                  fill="none"
-                  stroke={BLUE}
-                  strokeWidth="1"
-                  opacity="0.3"
+                  r={isLast ? 4.5 : 2.5}
+                  fill={isLast ? color : 'hsl(var(--card))'}
+                  stroke={color}
+                  strokeWidth={isLast ? 2 : 1.5}
                   style={{
-                    opacity: animated ? 0.3 : 0,
-                    transition: 'opacity 500ms 800ms ease-out',
+                    opacity: animated ? 1 : 0,
+                    transition: `opacity 300ms ${600 + i * 50}ms ease-out`,
                   }}
                 />
-              )}
-              <title>{`${p.tooltip}\nScore: ${p.score}`}</title>
-            </g>
-          ))}
+                {isLast && (
+                  <>
+                    <circle
+                      cx={toX(p.x)}
+                      cy={toY(p.y)}
+                      r="10"
+                      fill="none"
+                      stroke={color}
+                      strokeWidth="1"
+                      opacity={animated ? 0.25 : 0}
+                      style={{ transition: 'opacity 500ms 800ms ease-out' }}
+                    />
+                    <circle
+                      cx={toX(p.x)}
+                      cy={toY(p.y)}
+                      r="14"
+                      fill="none"
+                      stroke={color}
+                      strokeWidth="0.5"
+                      opacity={animated ? 0.1 : 0}
+                      style={{ transition: 'opacity 600ms 900ms ease-out' }}
+                    />
+                  </>
+                )}
+                <title>{`${p.tooltip}\nScore: ${p.score}`}</title>
+              </g>
+            );
+          })}
 
           {/* X-axis labels */}
           {chartData.length > 1 &&
@@ -383,15 +419,16 @@ export function AnalysisTrendChart({
                   x={toX(p.x)}
                   y={height - 4}
                   textAnchor="middle"
-                  fill="hsl(var(--text-tertiary))"
+                  fill="hsl(var(--foreground))"
                   fontSize="8"
                   fontFamily="monospace"
+                  opacity="0.5"
                 >
                   {p.label}
                 </text>
               ))}
 
-          {/* Crosshair */}
+          {/* Crosshair + tooltip */}
           {hoveredIndex != null && chartData.length > 1 && (
             <g>
               <line
@@ -399,38 +436,50 @@ export function AnalysisTrendChart({
                 y1={padding.top}
                 x2={toX(chartData[hoveredIndex].x)}
                 y2={height - padding.bottom}
-                stroke={BLUE}
+                stroke={tierColor(chartData[hoveredIndex].score)}
                 strokeWidth="1"
                 strokeDasharray="3 3"
-                opacity="0.4"
+                opacity="0.5"
               />
               <rect
                 x={toX(chartData[hoveredIndex].x) + 8}
-                y={toY(chartData[hoveredIndex].y) - 18}
-                width="100"
-                height="28"
-                rx="4"
+                y={toY(chartData[hoveredIndex].y) - 22}
+                width="108"
+                height="34"
+                rx="5"
                 fill="hsl(var(--card))"
                 stroke="hsl(var(--border))"
                 strokeWidth="0.5"
-                opacity="0.95"
+                opacity="0.97"
+                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
               />
               <text
                 x={toX(chartData[hoveredIndex].x) + 14}
-                y={toY(chartData[hoveredIndex].y) - 4}
+                y={toY(chartData[hoveredIndex].y) - 6}
                 fill="hsl(var(--foreground))"
-                fontSize="10"
+                fontSize="12"
                 fontFamily="monospace"
-                fontWeight="600"
+                fontWeight="700"
               >
                 {chartData[hoveredIndex].score}
               </text>
               <text
-                x={toX(chartData[hoveredIndex].x) + 50}
-                y={toY(chartData[hoveredIndex].y) - 4}
-                fill="hsl(var(--text-tertiary))"
+                x={toX(chartData[hoveredIndex].x) + 40}
+                y={toY(chartData[hoveredIndex].y) - 6}
+                fill="hsl(var(--foreground))"
                 fontSize="9"
-                textAnchor="end"
+                fontFamily="monospace"
+                opacity="0.5"
+              >
+                pts
+              </text>
+              <text
+                x={toX(chartData[hoveredIndex].x) + 14}
+                y={toY(chartData[hoveredIndex].y) + 8}
+                fill="hsl(var(--foreground))"
+                fontSize="8"
+                fontFamily="monospace"
+                opacity="0.5"
               >
                 {chartData[hoveredIndex].label}
               </text>

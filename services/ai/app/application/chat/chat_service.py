@@ -1,10 +1,16 @@
+import logging
 from collections.abc import AsyncGenerator
 
 from app.application.agents.graph import build_agent_graph
 from app.application.chat.conversation_repository import (
     ensure_conversation,
+    get_messages,
     save_message,
     update_conversation_after_message,
+)
+from app.application.memory.user_memory_service import (
+    extract_and_store_facts,
+    get_user_context,
 )
 from app.application.provisioning.key_resolver import KeyResolver
 from app.core.config import settings
@@ -13,6 +19,9 @@ from app.domain.entities.message import MessageRole
 from app.infrastructure.db.database import async_session_factory
 from app.infrastructure.llm.router import ModelRouter
 from app.infrastructure.service_client import ServiceClient
+
+logger = logging.getLogger(__name__)
+_HISTORY_LIMIT = 20
 
 
 class ChatService:
@@ -25,13 +34,36 @@ class ChatService:
         self.key_resolver = KeyResolver()
         self.router = ModelRouter()
 
+    async def _load_history(self, conversation_id: str) -> list[dict]:
+        """Load the last N messages from the database for context."""
+        async with async_session_factory() as db:
+            messages = await get_messages(db, conversation_id, limit=_HISTORY_LIMIT)
+        return [
+            {"role": m.role.value, "content": m.content}
+            for m in messages
+            if m.role in (MessageRole.USER, MessageRole.ASSISTANT)
+        ]
+
     async def chat(self, user_id: str, message: str, conversation_id: str | None = None,
                    workspace_id: str | None = None, repo_ids: list[str] | None = None,
                    history: list[dict] | None = None, stream: bool = False,
                    model: str | None = None,
-) -> dict:
+                   user_name: str | None = None,
+    ) -> dict:
+        # Load conversation history from DB if we have a conversation_id
+        if conversation_id and not history:
+            db_history = await self._load_history(conversation_id)
+        else:
+            db_history = history or []
+
+        # Load cross-session user memory
+        async with async_session_factory() as db:
+            user_context_str = await get_user_context(db, user_id)
+        user_context_str = user_context_str or None
+
         state = {
             "user_id": user_id,
+            "user_name": user_name,
             "workspace_id": workspace_id,
             "message": message,
             "conversation_id": conversation_id,
@@ -46,8 +78,9 @@ class ChatService:
             "needs_tools": False,
             "context_code": None,
             "context_analysis": None,
-            "context_history": history or [],
+            "context_history": db_history,
             "assembled_context": None,
+            "user_context": user_context_str,
             "messages": [],
             "tool_results": None,
             "tool_calls": [],
@@ -97,6 +130,13 @@ class ChatService:
                     input_tokens=usage.get("input_tokens", 0),
                     output_tokens=usage.get("output_tokens", 0),
                 )
+
+                # Extract and store user facts for cross-session memory
+                try:
+                    await extract_and_store_facts(db, user_id, message, conversation_id)
+                except Exception as e:
+                    logger.warning("Failed to extract user facts: %s", e)
+
             await db.commit()
 
         return result

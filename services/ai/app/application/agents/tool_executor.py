@@ -13,6 +13,12 @@ from app.infrastructure.llm.router import ModelRouter
 logger = logging.getLogger(__name__)
 
 
+def _format_prompt(template: str, user_name: str | None, user_context: str | None) -> str:
+    name = user_name or "the user"
+    ctx = f"Known context about the user:\n{user_context}" if user_context else ""
+    return template.format(user_name=name, user_context=ctx)
+
+
 class ToolExecutorNode:
     def __init__(self, workspace_tools: WorkspaceTools):
         self.tools = workspace_tools
@@ -31,6 +37,8 @@ class ToolExecutorNode:
 
     async def __call__(self, state: dict) -> dict:
         user_id = state.get("user_id", "")
+        user_name = state.get("user_name")
+        user_context = state.get("user_context")
         workspace_id = state.get("workspace_id", "")
         message = state.get("message", "")
         history = state.get("context_history") or []
@@ -38,7 +46,7 @@ class ToolExecutorNode:
         api_key, provider = await self.key_resolver.resolve(user_id, route["model"])
         client = LLMClient(api_key=api_key, provider=provider, model=route["model"])
 
-        messages = [{"role": "system", "content": TOOL_EXECUTOR_PROMPT}]
+        messages = [{"role": "system", "content": _format_prompt(TOOL_EXECUTOR_PROMPT, user_name, user_context)}]
         for h in history[-5:]:
             role = h.get("role", "user")
             content = h.get("content", "")
@@ -56,7 +64,7 @@ class ToolExecutorNode:
             )
 
             tool_calls = response.get("tool_calls", [])
-            content = response.get("content", "")
+            content = response.get("content") or ""
 
             if content and not tool_calls:
                 return {

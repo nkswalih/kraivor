@@ -1240,6 +1240,7 @@ async def handle_stage_ai_enrich(
         logger.warning(
             "ai_enrichment_empty_summary",
             job_id=str(job_id),
+            response_keys=list(result.keys()) if result else [],
             message="AI service returned empty ai_executive_summary — LLM generation may have failed",
         )
 
@@ -1260,6 +1261,148 @@ async def handle_stage_ai_enrich(
     return result
 
 
+async def handle_re_generate_guide(
+    cmd: ProcessStageCommand,
+    uow: UnitOfWork,
+) -> dict[str, object] | None:
+    job_id = cmd.job_id
+    job = await uow.jobs.get_by_id(job_id)
+    if not job:
+        raise NotFoundError(f"Job {job_id} not found")
+
+    try:
+        from types import SimpleNamespace
+
+        # Load main Finding entities (duck-types as RuleViolation for the generator)
+        findings, _ = await uow.findings.get_by_job(
+            job_id, include_dismissed=True, limit=9999,
+        )
+
+        # Load auxiliary finding tables as dicts, wrap for getattr compatibility
+        def _to_objs(items: list[dict[str, object]]) -> list[object]:
+            return [SimpleNamespace(**d) for d in items]
+
+        dead_code = _to_objs(await uow.dead_code.get_by_job(job_id))
+        errors = _to_objs(await uow.error_findings.get_by_job(job_id))
+        reliability = _to_objs(await uow.reliability_findings.get_by_job(job_id))
+        devops = _to_objs(await uow.devops_findings.get_by_job(job_id))
+        maintainability = _to_objs(
+            await uow.maintainability_findings.get_by_job(job_id)
+        )
+
+        # Reconstruct PerformanceMetrics from DB endpoint metrics
+        from app.workers.perf.rpm_calculator import EndpointMetric, PerformanceMetrics
+
+        perf_metrics: PerformanceMetrics | None = None
+        pm_raw = await uow.performance_metrics.get_by_job(job_id)
+        if pm_raw:
+            endpoints: list[EndpointMetric] = []
+            for m in pm_raw:
+                endpoints.append(
+                    EndpointMetric(
+                        endpoint=m.get("endpoint", ""),
+                        method=m.get("http_method", "GET"),
+                        estimated_rpm=m.get("estimated_rpm", 0),
+                        p50_latency_ms=m.get("p50_latency_ms", 0),
+                        p95_latency_ms=m.get("p95_latency_ms", 0),
+                        p99_latency_ms=m.get("p99_latency_ms", 0),
+                        max_concurrent_users=m.get("max_concurrent_users", 0),
+                        bottlenecks=(
+                            [m["bottleneck_type"]]
+                            if m.get("bottleneck_type")
+                            else []
+                        ),
+                    )
+                )
+            perf_metrics = PerformanceMetrics(endpoints=endpoints)
+            perf_metrics.overall_rpm = min(
+                em.estimated_rpm for em in perf_metrics.endpoints
+            )
+            perf_metrics.breaks_at_concurrent_users = min(
+                em.max_concurrent_users for em in perf_metrics.endpoints
+            )
+            all_bottlenecks: list[str] = []
+            for em in perf_metrics.endpoints:
+                all_bottlenecks.extend(em.bottlenecks)
+            perf_metrics.bottlenecks = list(set(all_bottlenecks))
+            perf_metrics.overall_confidence = min(
+                em.confidence for em in perf_metrics.endpoints
+            )
+
+        # Load simulation results (dicts → SimulationResult objects)
+        from app.workers.perf.load_sim import SimulationResult
+
+        sim_raw = await uow.simulation_results.get_by_job(job_id)
+        simulation: list[SimulationResult] = []
+        for s in sim_raw or []:
+            simulation.append(
+                SimulationResult(
+                    concurrent_users=s.get("concurrent_users", 0),
+                    status=s.get("status", "unknown"),
+                    overall_rpm=s.get("overall_rpm", 0),
+                    error_rate_pct=s.get("error_rate_pct", 0.0),
+                    bottlenecks=s.get("bottlenecks", []),
+                    endpoints_analysis=s.get("endpoints_analysis", []),
+                )
+            )
+
+        # Reconstruct Score from job record
+        score = (
+            Score(
+                overall=job.get("overall_score"),
+                performance=job.get("performance_score"),
+                security=job.get("security_score"),
+                reliability=job.get("reliability_score"),
+                maintainability=job.get("maintainability_score"),
+                devops=job.get("devops_score"),
+                blocked_by=job.get("blocked_by") or [],
+                engine_statuses=job.get("engine_statuses") or {},
+            )
+            if job.get("overall_score") is not None
+            else Score(overall=0)
+        )
+
+        # Run generator — Finding duck-types as RuleViolation,
+        # SimpleNamespace objects work with getattr() in _group_findings_by_severity,
+        # and _flat() now handles Finding + dict/SimpleNamespace
+        generator = EnterpriseGuideGenerator()
+        guide = await generator.generate(
+            findings=findings,
+            scores=score,
+            perf_metrics=perf_metrics,
+            simulation=simulation,
+            dead_code=dead_code,
+            errors=errors,
+            reliability=reliability,
+            devops=devops,
+            maintainability=maintainability,
+        )
+
+        guide_dict = guide.to_dict()
+        guide_dict["job_id"] = job_id
+        guide_dict["repo_id"] = job["repo_id"]
+        guide_dict["workspace_id"] = job["workspace_id"]
+
+        # Preserve existing guide ID so merge() doesn't create a duplicate row
+        # Also preserve ai_executive_summary — regeneration doesn't produce one
+        existing = await uow.enterprise_guides.get_by_job(job_id)
+        if existing and existing.get("id"):
+            guide_dict["id"] = existing["id"]
+            if existing.get("ai_executive_summary"):
+                guide_dict["ai_executive_summary"] = existing["ai_executive_summary"]
+
+        await uow.enterprise_guides.save(guide_dict)
+        logger.info("enterprise_guide_regenerated", job_id=str(job_id))
+        return guide_dict
+    except Exception as exc:
+        logger.warning(
+            "guide_regenerate_failed",
+            job_id=str(job_id),
+            error=str(exc),
+        )
+        return None
+
+
 async def handle_re_enrich(
     cmd: ProcessStageCommand,
     uow: UnitOfWork,
@@ -1268,6 +1411,9 @@ async def handle_re_enrich(
     job = await uow.jobs.get_by_id(job_id)
     if not job:
         raise NotFoundError(f"Job {job_id} not found")
+
+    # Regenerate structured guide fields from existing analysis data first
+    await handle_re_generate_guide(cmd, uow)
 
     findings, _ = await uow.findings.get_by_job(
         job_id, include_dismissed=True, limit=9999,

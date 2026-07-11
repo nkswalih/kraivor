@@ -25,30 +25,72 @@ import {
 
 export function EnterpriseGuideContent({ guide }: { guide: EnterpriseGuide }) {
   return (
-    <div className="max-w-3xl mx-auto w-full p-6 space-y-5">
-      <ExecutiveSummaryHeader data={guide.repository_health} />
+    <div className="max-w-3xl mx-auto w-full px-6 py-5 space-y-5">
+      <div data-section="overview">
+        <ExecutiveSummaryHeader data={guide.repository_health} />
+      </div>
 
-      <AiExecutiveSummarySection
-        summary={guide.ai_executive_summary}
-        jobId={guide.job_id}
-      />
+      <div data-section="ai-summary">
+        <AiExecutiveSummarySection
+          summary={guide.ai_executive_summary}
+          jobId={guide.job_id}
+        />
+      </div>
 
-      <EngineeringScorecards data={guide.engineering_scorecard} />
-      <EstimatedEffortSummary data={guide.estimated_effort} />
-      <BusinessRiskSection data={guide.business_risk} />
-      <TechnicalDebtSection data={guide.technical_debt} />
-      <IssueClusterSection clusters={guide.issue_clusters} />
-      <HotspotsSection hotspots={guide.hotspots} />
-      <ServiceHealthSection data={guide.service_health} />
-      <QuickWinsSection data={guide.quick_wins} />
-      <ScalabilityReviewSection data={guide.scalability_review} />
-      <DeploymentReleaseSection
-        deployment={guide.deployment_readiness}
-        release={guide.release_recommendation}
-      />
-      <SprintRoadmapSection data={guide.sprint_roadmap} />
-      <OwnershipSection data={guide.ownership} />
-      <AIRecommendationsSection data={guide.ai_recommendations} />
+      <div data-section="scorecards">
+        <EngineeringScorecards data={guide.engineering_scorecard} />
+      </div>
+
+      <div data-section="effort">
+        <EstimatedEffortSummary data={guide.estimated_effort} />
+      </div>
+
+      <div data-section="risk">
+        <BusinessRiskSection data={guide.business_risk} />
+      </div>
+
+      <div data-section="debt">
+        <TechnicalDebtSection data={guide.technical_debt} />
+      </div>
+
+      <div data-section="clusters">
+        <IssueClusterSection clusters={guide.issue_clusters} />
+      </div>
+
+      <div data-section="hotspots">
+        <HotspotsSection hotspots={guide.hotspots} />
+      </div>
+
+      <div data-section="health">
+        <ServiceHealthSection data={guide.service_health} />
+      </div>
+
+      <div data-section="quick-wins">
+        <QuickWinsSection data={guide.quick_wins} />
+      </div>
+
+      <div data-section="scalability">
+        <ScalabilityReviewSection data={guide.scalability_review} />
+      </div>
+
+      <div data-section="deployment">
+        <DeploymentReleaseSection
+          deployment={guide.deployment_readiness}
+          release={guide.release_recommendation}
+        />
+      </div>
+
+      <div data-section="roadmap">
+        <SprintRoadmapSection data={guide.sprint_roadmap} />
+      </div>
+
+      <div data-section="ownership">
+        <OwnershipSection data={guide.ownership} />
+      </div>
+
+      <div data-section="ai-recs">
+        <AIRecommendationsSection data={guide.ai_recommendations} />
+      </div>
     </div>
   );
 }

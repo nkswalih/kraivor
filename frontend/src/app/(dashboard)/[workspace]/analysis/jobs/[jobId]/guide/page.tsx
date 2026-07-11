@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { EnterpriseGuideContent } from '@/components/enterprise-guide/enterprise-guide-content';
+import { EnterpriseGuideLayout } from '@/components/enterprise-guide/enterprise-guide-layout';
 
 export default function EnterpriseGuidePage() {
   const params = useParams<{ workspace: string; jobId: string }>();
@@ -103,9 +104,9 @@ export default function EnterpriseGuidePage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <EnterpriseGuideLayout>
         <EnterpriseGuideContent guide={guide} />
-      </div>
+      </EnterpriseGuideLayout>
     </div>
   );
 }

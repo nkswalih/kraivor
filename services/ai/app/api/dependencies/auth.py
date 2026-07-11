@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 class JWTPayload(BaseModel):
     sub: str
     email: str
+    name: str | None = None
     workspace_ids: list[str] = []
     roles: dict = {}
 
@@ -64,6 +65,7 @@ def get_current_user(request: Request) -> JWTPayload:
         return JWTPayload(
             sub=request.headers.get("X-User-ID", ""),
             email=request.headers.get("X-Email", ""),
+            name=request.headers.get("X-User-Name"),
             workspace_ids=request.headers.get("X-Workspace-IDs", "").split(",") if request.headers.get("X-Workspace-IDs") else [],
             roles={}
         )
@@ -83,6 +85,7 @@ def get_current_user(request: Request) -> JWTPayload:
         return JWTPayload(
             sub=payload.get("sub") or payload.get("user_id", ""),
             email=payload.get("email", ""),
+            name=payload.get("name"),
             workspace_ids=payload.get("workspace_ids", []),
             roles=payload.get("roles", {})
         )

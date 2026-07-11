@@ -265,9 +265,173 @@ export interface SimulationResultListResponse {
 
 // ─── Enterprise Guide ───────────────────────────────────
 
+export interface DimensionHealth {
+  score: number | null;
+  grade: string | null;
+  status: string;
+  label?: string;
+}
+
+export interface ScorecardCategory {
+  score: number | null;
+  grade: string | null;
+  trend: string;
+  industry_comparison: string;
+  biggest_problem: string;
+  best_recommendation: string;
+  total_findings: number;
+  severity_breakdown: Record<string, number>;
+}
+
+export interface RepositoryHealth {
+  overall_score: number | null;
+  overall_grade: string | null;
+  repository_health: string;
+  production_readiness: string;
+  deployment_readiness: string;
+  release_recommendation: string;
+  business_risk: string;
+  engineering_risk: string;
+  technical_debt_level: string;
+  estimated_remediation_time: string;
+  estimated_team_size: number | null;
+}
+
+export interface BusinessRisk {
+  revenue_risk: string;
+  customer_impact: string;
+  compliance_risk: string;
+  reputation_risk: string;
+  downtime_risk: string;
+  operational_risk: string;
+  details: string;
+}
+
+export interface ScalabilityReview {
+  estimated_rpm: number | null;
+  estimated_concurrent_users: number | null;
+  expected_bottleneck: string | null;
+  database_scalability: { score: number | null; grade: string | null; recommendation: string } | null;
+  cache_recommendation: string | null;
+  queue_recommendation: string | null;
+  horizontal_scaling_readiness: { score: number; grade: string; status: string } | null;
+  vertical_scaling_readiness: { score: number; grade: string; status: string } | null;
+  infrastructure_cost_projection: string | null;
+  status?: string;
+}
+
+export interface TechnicalDebt {
+  security_debt: { count: number; estimated_minutes: number; estimated_hours: number; severity: string; label: string };
+  architecture_debt: { count: number; estimated_minutes: number; estimated_hours: number; severity: string; label: string };
+  performance_debt: { count: number; estimated_minutes: number; estimated_hours: number; severity: string; label: string };
+  maintainability_debt: { count: number; estimated_minutes: number; estimated_hours: number; severity: string; label: string };
+  devops_debt: { count: number; estimated_minutes: number; estimated_hours: number; severity: string; label: string };
+  other_debt: { count: number; estimated_minutes: number; estimated_hours: number; severity: string; label: string };
+}
+
+export interface IssueCluster {
+  cluster_id: string;
+  title: string;
+  total_count: number;
+  severity: string;
+  severity_breakdown: Record<string, number>;
+  affected_services: string[];
+  total_files: number;
+  representative_file: string;
+  root_cause: string;
+  enterprise_recommendation: string;
+  estimated_fix_time: number;
+  cwe: string[];
+  owasp: string[];
+  standards_reference: string[];
+}
+
+export interface Hotspot {
+  path: string;
+  risk_score: number;
+  reason: string;
+  priority: string;
+  estimated_effort: number;
+  total_findings: number;
+  severity_breakdown: Record<string, number>;
+  top_issue: string;
+}
+
+export interface ServiceHealth {
+  health_score: number;
+  grade: string | null;
+  security: number;
+  performance: number;
+  reliability: number;
+  maintainability: number;
+  total_findings: number;
+  critical_count: number;
+  high_count: number;
+  recommendation: string;
+}
+
+export interface QuickWin {
+  title: string;
+  file: string;
+  estimated_impact: string;
+  estimated_time: number;
+  priority: string;
+  expected_score_improvement: number;
+}
+
+export interface Sprint {
+  sprint_number: number;
+  title: string;
+  objectives: string[];
+  tasks: string[];
+  estimated_hours: number;
+  expected_score_gain: number;
+}
+
+export interface OwnershipAssignment {
+  recommended_team: string;
+  total_findings: number;
+  estimated_hours: number;
+  categories: string[];
+  rationale: string;
+}
+
+export interface EstimatedEffort {
+  total_minutes: number;
+  total_hours: number;
+  total_days: number;
+  by_severity: Record<string, number>;
+  by_category: Record<string, number>;
+}
+
+export interface AIRecommendation {
+  cluster_id: string;
+  problem: string;
+  root_cause: string;
+  business_impact: string;
+  enterprise_best_practice: string;
+  recommended_refactor: string;
+  expected_score_gain: number;
+  estimated_hours: number;
+  ai_confidence: string;
+}
+
+export interface RawFinding {
+  rule_id: string;
+  category: string;
+  severity: string;
+  title: string;
+  file: string;
+  description: string;
+  recommendation: string;
+  estimated_effort: number;
+}
+
 export interface EnterpriseGuide {
   id: string;
   job_id: string;
+
+  // Legacy fields
   executive_summary: string | null;
   ai_executive_summary: string | null;
   critical_issues: unknown[] | null;
@@ -276,6 +440,25 @@ export interface EnterpriseGuide {
   architecture_review: Record<string, unknown> | null;
   capacity_analysis: Record<string, unknown> | null;
   migration_path: unknown[] | null;
+
+  // New structured fields
+  repository_health: RepositoryHealth | null;
+  engineering_scorecard: Record<string, ScorecardCategory> | null;
+  business_risk: BusinessRisk | null;
+  scalability_review: ScalabilityReview | null;
+  technical_debt: TechnicalDebt | null;
+  issue_clusters: IssueCluster[] | null;
+  hotspots: Hotspot[] | null;
+  service_health: Record<string, ServiceHealth> | null;
+  quick_wins: QuickWin[] | null;
+  sprint_roadmap: Record<string, Sprint> | null;
+  deployment_readiness: Record<string, unknown> | null;
+  release_recommendation: Record<string, unknown> | null;
+  ownership: OwnershipAssignment[] | null;
+  estimated_effort: EstimatedEffort | null;
+  ai_recommendations: AIRecommendation[] | null;
+  raw_findings: RawFinding[] | null;
+
   generated_at: string | null;
 }
 

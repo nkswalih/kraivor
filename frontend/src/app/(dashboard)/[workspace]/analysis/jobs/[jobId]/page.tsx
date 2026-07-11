@@ -343,11 +343,11 @@ export default function JobDetailPage() {
                   Repository Summary
                 </h3>
                 {isCountsLoading ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {[1,2,3,4,5,6].map(i => <MetricCardSkeleton key={i} />)}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <MetricCard
                       icon={Activity}
                       value={stats?.findings_count ?? 0}

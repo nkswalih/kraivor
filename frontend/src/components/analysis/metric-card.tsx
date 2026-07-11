@@ -7,20 +7,29 @@ import type { LucideIcon } from 'lucide-react';
 export type CardColor = 'green' | 'orange' | 'blue' | 'red' | 'purple' | 'pink';
 export type CardStatus = 'healthy' | 'attention' | 'available' | 'pending';
 
-const COLOR_MAP: Record<CardColor, { container: string; icon: string; glow: string }> = {
-  green: { container: 'bg-green-500/10', icon: 'text-green-400', glow: 'rgba(74,222,128,0.2)' },
-  orange: { container: 'bg-orange-500/10', icon: 'text-orange-400', glow: 'rgba(251,146,60,0.2)' },
-  blue: { container: 'bg-blue-500/10', icon: 'text-blue-400', glow: 'rgba(96,165,250,0.2)' },
-  red: { container: 'bg-red-500/10', icon: 'text-red-400', glow: 'rgba(248,113,113,0.2)' },
-  purple: { container: 'bg-purple-500/10', icon: 'text-purple-400', glow: 'rgba(192,132,252,0.2)' },
-  pink: { container: 'bg-pink-500/10', icon: 'text-pink-400', glow: 'rgba(236,72,153,0.2)' },
+const BORDER_ACCENT: Record<CardColor, string> = {
+  green:  'border-t-green-500/60',
+  orange: 'border-t-orange-500/60',
+  blue:   'border-t-blue-500/60',
+  red:    'border-t-red-500/60',
+  purple: 'border-t-purple-500/60',
+  pink:   'border-t-pink-500/60',
+};
+
+const COLOR_TEXT: Record<CardColor, string> = {
+  green:  'text-green-400',
+  orange: 'text-orange-400',
+  blue:   'text-blue-400',
+  red:    'text-red-400',
+  purple: 'text-purple-400',
+  pink:   'text-pink-400',
 };
 
 const STATUS_CONFIG: Record<CardStatus, { label: string; classes: string }> = {
-  healthy: { label: 'Healthy', classes: 'bg-green-500/10 text-green-400 border-green-500/20' },
+  healthy:   { label: 'Healthy',         classes: 'bg-green-500/10 text-green-400 border-green-500/20' },
   attention: { label: 'Needs Attention', classes: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-  available: { label: 'Available', classes: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-  pending: { label: 'Pending', classes: 'bg-white/5 text-text-tertiary border-white/10' },
+  available: { label: 'Available',       classes: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+  pending:   { label: 'Pending',         classes: 'bg-white/5 text-text-tertiary border-white/10' },
 };
 
 function AnimatedValue({ value: target, duration = 400 }: { value: number; duration?: number }) {
@@ -47,17 +56,16 @@ function AnimatedValue({ value: target, duration = 400 }: { value: number; durat
 
 export function MetricCardSkeleton() {
   return (
-    <div className="bg-card border border-border rounded-2xl p-4 flex flex-col animate-pulse aspect-square">
-      <div className="flex items-start justify-between">
-        <div className="w-9 h-9 rounded-xl bg-surface2" />
-        <div className="h-4 w-16 rounded-full bg-surface2" />
-      </div>
-      <div className="flex-1 flex items-center justify-center">
-        <div className="h-7 w-12 rounded bg-surface2" />
-      </div>
-      <div className="space-y-1">
-        <div className="h-3 w-16 rounded bg-surface2" />
-        <div className="h-2.5 w-12 rounded bg-surface2" />
+    <div className="bg-card border border-border rounded-xl flex flex-col animate-pulse overflow-hidden">
+      <div className="h-[3px] shrink-0 bg-surface2" />
+      <div className="p-3.5 flex flex-col gap-2.5">
+        <div className="flex items-center gap-2">
+          <div className="h-5 w-5 rounded bg-surface2" />
+          <div className="h-5 w-12 rounded bg-surface2" />
+          <div className="ml-auto h-3.5 w-14 rounded-full bg-surface2" />
+        </div>
+        <div className="h-2.5 w-28 rounded bg-surface2" />
+        <div className="h-2 w-20 rounded bg-surface2" />
       </div>
     </div>
   );
@@ -84,7 +92,6 @@ export function MetricCard({
   onClick?: () => void;
   className?: string;
 }) {
-  const colors = COLOR_MAP[color];
   const statusCfg = STATUS_CONFIG[status];
   const Comp = onClick ? 'button' : 'div';
 
@@ -92,12 +99,13 @@ export function MetricCard({
     <Comp
       onClick={onClick}
       className={cn(
-        'bg-card border border-border rounded-2xl p-4 flex flex-col gap-2',
+        'bg-card border border-border rounded-xl flex flex-col overflow-hidden',
         'transition-all duration-300 ease-out',
-        'hover:-translate-y-0.5 hover:shadow-lg hover:border-white/10',
+        'hover:shadow-lg hover:border-white/15',
         onClick && 'cursor-pointer text-left w-full',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-venom-yellow/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         'animate-fade-up opacity-0',
+        BORDER_ACCENT[color],
         className,
       )}
       style={{ animationDelay: index * 80 + 'ms', animationFillMode: 'forwards' }}
@@ -106,28 +114,19 @@ export function MetricCard({
       aria-label={`${title}: ${typeof value === 'number' ? value.toLocaleString() : value} - ${statusCfg.label}`}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
     >
-      <div className="flex items-start justify-between gap-1">
-        <div
-          className={cn('w-9 h-9 rounded-xl flex items-center justify-center shrink-0', colors.container)}
-          style={{ boxShadow: '0 0 8px ' + colors.glow }}
-        >
-          <Icon className={cn('w-[18px] h-[18px]', colors.icon)} />
+      <div className="p-3.5 flex flex-col gap-1.5">
+        <div className="flex items-center gap-2">
+          <Icon className={cn('w-[15px] h-[15px] shrink-0', COLOR_TEXT[color])} />
+          <span className="text-lg font-bold text-foreground tabular-nums leading-none tracking-tight">
+            {typeof value === 'number' ? <AnimatedValue value={value} /> : value}
+          </span>
+          <span className={cn('ml-auto px-2 py-0.5 rounded-full border text-[10px] font-medium leading-none', statusCfg.classes)}>
+            {statusCfg.label}
+          </span>
         </div>
-        <span className={cn('px-2 py-0.5 rounded-full border text-[10px] font-medium leading-none', statusCfg.classes)}>
-          {statusCfg.label}
-        </span>
-      </div>
-
-      <div className="flex-1 flex items-center justify-center">
-        <span className="text-[24px] font-bold text-foreground tabular-nums leading-none tracking-tight">
-          {typeof value === 'number' ? <AnimatedValue value={value} /> : value}
-        </span>
-      </div>
-
-      <div className="text-center">
-        <p className="text-[11px] font-medium text-foreground leading-tight">{title}</p>
+        <p className="text-[12px] font-medium text-foreground leading-tight">{title}</p>
         {subtitle && (
-          <p className="text-[10px] text-text-tertiary mt-0.5 leading-tight">{subtitle}</p>
+          <p className="text-[10.5px] text-text-tertiary leading-tight">{subtitle}</p>
         )}
       </div>
     </Comp>

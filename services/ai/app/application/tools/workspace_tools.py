@@ -4,6 +4,8 @@ Every tool receives (user_id, workspace_id) from AgentState — the LLM
 never controls which workspace to query. This is the security boundary.
 """
 
+from datetime import UTC, datetime
+
 from app.infrastructure.service_client import ServiceClient
 
 
@@ -279,6 +281,31 @@ class WorkspaceTools:
         comments = comments[:limit]
         return _format_comments(comments)
 
+    async def get_current_date(self, user_id: str, workspace_id: str) -> str:
+        now = datetime.now(UTC)
+        return now.strftime("%A, %B %d, %Y — %H:%M %Z")
+
+    async def web_search(
+        self, user_id: str, workspace_id: str, query: str, max_results: int = 5
+    ) -> str:
+        from app.application.tools.search_tool import DuckDuckGoSearchTool
+
+        tool = DuckDuckGoSearchTool()
+        return await tool.run(query=query, max_results=max_results)
+
+    async def web_fetch(self, user_id: str, workspace_id: str, url: str) -> str:
+        from app.application.tools.web_fetch_tool import WebFetchTool
+
+        tool = WebFetchTool()
+        return await tool.run(url=url)
+
+    async def remember_user_fact(
+        self, user_id: str, workspace_id: str, fact_type: str, fact_key: str, fact_value: str
+    ) -> str:
+        from app.application.memory.user_memory_service import store_fact_explicit
+
+        return await store_fact_explicit(user_id, fact_type, fact_key, fact_value)
+
 
 # OpenAI function-calling tool definitions for the LLM.
 # These schemas are sent with every tool_executor LLM call.
@@ -410,6 +437,92 @@ WORKSPACE_TOOL_DEFINITIONS = [
                     },
                 },
                 "required": ["discussion_title"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_current_date",
+            "description": "Get the current date and time. Use this when the user asks "
+            "about today's date, current time, or any time-related question.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "web_search",
+            "description": "Search the web using DuckDuckGo. Use this when the user asks "
+            "about current events, latest news, recent information, or anything "
+            "not available in your training data.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query to find information about.",
+                    },
+                    "max_results": {
+                        "type": "integer",
+                        "description": "Maximum number of results to return (default 5).",
+                    },
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "web_fetch",
+            "description": "Fetch and extract text content from a URL. Use this to read "
+            "the content of a specific webpage when you need detailed information.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "The URL to fetch content from.",
+                    }
+                },
+                "required": ["url"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remember_user_fact",
+            "description": "Store a fact about the user for future conversations. Use this "
+            "when the user tells you something about themselves, their preferences, "
+            "corrects you, or shares project context. This helps the AI learn about "
+            "the user across sessions.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "fact_type": {
+                        "type": "string",
+                        "enum": [
+                            "identity",
+                            "preference",
+                            "tech_stack",
+                            "correction",
+                            "project_context",
+                            "goal",
+                        ],
+                        "description": "The category of fact to store.",
+                    },
+                    "fact_key": {
+                        "type": "string",
+                        "description": "A short key for this fact (e.g., 'name', 'preferred_framework', 'project_deadline').",
+                    },
+                    "fact_value": {
+                        "type": "string",
+                        "description": "The value of the fact to remember.",
+                    },
+                },
+                "required": ["fact_type", "fact_key", "fact_value"],
             },
         },
     },

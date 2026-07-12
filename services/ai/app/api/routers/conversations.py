@@ -1,7 +1,7 @@
-import uuid
-from datetime import datetime
 from typing import Annotated
 
+import uuid
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
@@ -101,10 +101,7 @@ async def update_conversation_endpoint(
             raise HTTPException(status_code=403, detail="Access denied")
 
         updated = await update_conversation(
-            db,
-            conversation_id,
-            title=body.title,
-            is_pinned=body.is_pinned,
+            db, conversation_id, title=body.title, is_pinned=body.is_pinned
         )
         await db.commit()
         return ConversationResponse(

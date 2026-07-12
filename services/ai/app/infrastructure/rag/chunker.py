@@ -46,16 +46,22 @@ class SemanticChunker:
             chunks = []
 
             def visit(node):
-                if node.type in ("function_definition", "class_definition",
-                                  "method_definition", "arrow_function"):
+                if node.type in (
+                    "function_definition",
+                    "class_definition",
+                    "method_definition",
+                    "arrow_function",
+                ):
                     start_line = node.start_point[0]
                     end_line = node.end_point[0]
-                    chunk_content = content[node.start_byte:node.end_byte]
-                    chunks.append({
-                        "content": chunk_content,
-                        "start_line": start_line + 1,
-                        "end_line": end_line + 1,
-                    })
+                    chunk_content = content[node.start_byte : node.end_byte]
+                    chunks.append(
+                        {
+                            "content": chunk_content,
+                            "start_line": start_line + 1,
+                            "end_line": end_line + 1,
+                        }
+                    )
 
                 for child in node.children:
                     visit(child)
@@ -69,22 +75,22 @@ class SemanticChunker:
         except ImportError:
             return await self._chunk_by_tokens(file_path, content)
 
-    async def _chunk_by_tokens(
-        self, file_path: str, content: str
-    ) -> list[dict]:
+    async def _chunk_by_tokens(self, file_path: str, content: str) -> list[dict]:
         tokens = self.enc.encode(content)
         chunks = []
 
         for i in range(0, len(tokens), self.chunk_size - self.overlap):
-            chunk_tokens = tokens[i: i + self.chunk_size]
+            chunk_tokens = tokens[i : i + self.chunk_size]
             chunk_content = self.enc.decode(chunk_tokens)
-            chunks.append({
-                "content": chunk_content,
-                "start_line": self._offset_to_line(content, i),
-                "end_line": self._offset_to_line(
-                    content, min(i + self.chunk_size, len(tokens))
-                ),
-            })
+            chunks.append(
+                {
+                    "content": chunk_content,
+                    "start_line": self._offset_to_line(content, i),
+                    "end_line": self._offset_to_line(
+                        content, min(i + self.chunk_size, len(tokens))
+                    ),
+                }
+            )
 
         return chunks
 

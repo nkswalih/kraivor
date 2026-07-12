@@ -1,6 +1,5 @@
-from unittest.mock import AsyncMock
-
 import pytest
+from unittest.mock import AsyncMock
 
 from app.api.dependencies.rate_limiter import LUA_SLIDING_WINDOW
 

@@ -19,17 +19,11 @@ embedder = Embedder()
 
 
 @router.post("/embeddings", response_model=EmbeddingResponse)
-async def create_embeddings(
-    request: EmbeddingRequest,
-    user: CurrentUser,
-):
+async def create_embeddings(request: EmbeddingRequest, user: CurrentUser):
     inputs = [request.input] if isinstance(request.input, str) else request.input
     embeddings = await embedder.embed_batch(inputs)
 
-    data = [
-        EmbeddingData(index=i, embedding=emb)
-        for i, emb in enumerate(embeddings)
-    ]
+    data = [EmbeddingData(index=i, embedding=emb) for i, emb in enumerate(embeddings)]
 
     return EmbeddingResponse(
         data=data,

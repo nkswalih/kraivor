@@ -12,11 +12,7 @@ async def handle_event(topic: str, event: dict) -> None:
         conv_id = event.get("conversation_id")
 
         svc = ChatService()
-        await svc.chat(
-            user_id=user_id,
-            message=message,
-            conversation_id=conv_id,
-        )
+        await svc.chat(user_id=user_id, message=message, conversation_id=conv_id)
         logger.info("Processed ai.requests", user_id=user_id, conv_id=conv_id)
 
     elif topic == "ai.results":

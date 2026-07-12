@@ -17,9 +17,15 @@ class SecurityAnalystNode:
         code = state.get("code_findings", [])
         context = state.get("assembled_context", "")
 
-        response = await client.generate([
-            {"role": "system", "content": SECURITY_SYSTEM_PROMPT},
-            {"role": "user", "content": f"Analyze for vulnerabilities:\n\n{context}\n\nCode findings: {code}"},
-        ], max_tokens=route["max_tokens"])
+        response = await client.generate(
+            [
+                {"role": "system", "content": SECURITY_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": f"Analyze for vulnerabilities:\n\n{context}\n\nCode findings: {code}",
+                },
+            ],
+            max_tokens=route["max_tokens"],
+        )
 
         return {"security_findings": [response["content"]]}

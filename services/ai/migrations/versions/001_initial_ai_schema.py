@@ -4,6 +4,7 @@ Revision ID: 001
 Revises:
 Create Date: 2026-06-30
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -30,8 +31,18 @@ def upgrade() -> None:
         sa.Column("rate_limit", sa.JSON(), nullable=True),
         sa.Column("model_access", sa.JSON(), nullable=True),
         sa.Column("is_active", sa.Boolean(), server_default="true", nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
         schema="ai",
     )
@@ -43,8 +54,18 @@ def upgrade() -> None:
         sa.Column("workspace_id", sa.String(), nullable=True),
         sa.Column("title", sa.String(length=255), nullable=True),
         sa.Column("metadata", sa.JSON(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
         schema="ai",
     )
@@ -58,7 +79,12 @@ def upgrade() -> None:
         sa.Column("metadata", sa.JSON(), nullable=True),
         sa.Column("token_count", sa.Integer(), nullable=True),
         sa.Column("model", sa.String(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["conversation_id"], ["ai.conversations.id"]),
         sa.PrimaryKeyConstraint("id"),
         schema="ai",
@@ -74,7 +100,12 @@ def upgrade() -> None:
         sa.Column("output_tokens", sa.Integer(), nullable=False),
         sa.Column("cost", sa.Float(), nullable=False),
         sa.Column("latency_ms", sa.Integer(), nullable=True),
-        sa.Column("logged_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "logged_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
         schema="ai",
     )
@@ -90,8 +121,18 @@ def upgrade() -> None:
         sa.Column("system_prompt", sa.Text(), nullable=True),
         sa.Column("tools_enabled", sa.JSON(), nullable=True),
         sa.Column("is_active", sa.Boolean(), server_default="true", nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
         schema="ai",
     )
@@ -105,7 +146,12 @@ def upgrade() -> None:
         sa.Column("files_total", sa.Integer(), nullable=True),
         sa.Column("files_indexed", sa.Integer(), nullable=True),
         sa.Column("error_count", sa.Integer(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
         schema="ai",
@@ -122,13 +168,26 @@ def upgrade() -> None:
         sa.Column("embedding", Vector(384), nullable=True),
         sa.Column("line_start", sa.Integer(), nullable=True),
         sa.Column("line_end", sa.Integer(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.PrimaryKeyConstraint("id"),
         schema="ai",
     )
 
 
 def downgrade() -> None:
-    for table in ["code_embeddings", "index_jobs", "agent_configs", "usage_logs", "messages", "conversations", "api_keys"]:
+    for table in [
+        "code_embeddings",
+        "index_jobs",
+        "agent_configs",
+        "usage_logs",
+        "messages",
+        "conversations",
+        "api_keys",
+    ]:
         op.drop_table(table, schema="ai")
     op.execute("DROP SCHEMA IF EXISTS ai")

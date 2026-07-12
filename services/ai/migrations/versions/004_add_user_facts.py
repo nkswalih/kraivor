@@ -4,6 +4,7 @@ Revision ID: 004
 Revises: 003
 Create Date: 2026-07-11
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -41,10 +42,7 @@ def upgrade() -> None:
         schema="ai",
     )
     op.create_index(
-        "ix_user_facts_user_fact",
-        "user_facts",
-        ["user_id", "fact_type"],
-        schema="ai",
+        "ix_user_facts_user_fact", "user_facts", ["user_id", "fact_type"], schema="ai"
     )
     op.create_index(
         "ix_user_facts_user_key",

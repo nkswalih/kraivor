@@ -21,9 +21,11 @@ def build_agent_graph(client=None) -> StateGraph:
         workspace_tools = WorkspaceTools(client)
         builder.add_node("tool_executor", ToolExecutorNode(workspace_tools))
     else:
+
         class _NoopToolExecutor:
             async def __call__(self, state: dict) -> dict:
                 return {"tool_results": None, "tool_calls": [], "response": None}
+
         builder.add_node("tool_executor", _NoopToolExecutor())
 
     builder.add_node("context_assembler", ContextAssemblerNode())
@@ -103,17 +105,25 @@ def build_agent_graph(client=None) -> StateGraph:
     def route_after_performance(state: AgentState) -> str:
         return "explainer"
 
-    builder.add_conditional_edges("orchestrator", route_after_orchestrator, {
-        "tool_executor": "tool_executor",
-        "context_assembler": "context_assembler",
-        "explainer": "explainer",
-        "end": END,
-    })
-    builder.add_conditional_edges("tool_executor", route_after_tools, {
-        "context_assembler": "context_assembler",
-        "explainer": "explainer",
-        "end": END,
-    })
+    builder.add_conditional_edges(
+        "orchestrator",
+        route_after_orchestrator,
+        {
+            "tool_executor": "tool_executor",
+            "context_assembler": "context_assembler",
+            "explainer": "explainer",
+            "end": END,
+        },
+    )
+    builder.add_conditional_edges(
+        "tool_executor",
+        route_after_tools,
+        {
+            "context_assembler": "context_assembler",
+            "explainer": "explainer",
+            "end": END,
+        },
+    )
     builder.add_conditional_edges("context_assembler", route_after_context)
     builder.add_conditional_edges("code_analyst", route_after_code)
     builder.add_conditional_edges("security_analyst", route_after_security)

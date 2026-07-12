@@ -1,6 +1,5 @@
 import uuid
 from datetime import UTC, datetime, timedelta
-
 from sqlalchemy import desc, func, select
 from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,10 +89,10 @@ async def update_conversation_after_message(
 
     if title:
         first_msg_result = await db.execute(
-            select(Message).where(
-                Message.conversation_id == conversation_id,
-                Message.role == "user",
-            ).order_by(Message.created_at.asc()).limit(1)
+            select(Message)
+            .where(Message.conversation_id == conversation_id, Message.role == "user")
+            .order_by(Message.created_at.asc())
+            .limit(1)
         )
         first_msg = first_msg_result.scalar_one_or_none()
         if first_msg:
@@ -172,10 +171,7 @@ async def list_conversations(
 
 
 async def get_messages(
-    db: AsyncSession,
-    conversation_id: str,
-    limit: int = 100,
-    offset: int = 0,
+    db: AsyncSession, conversation_id: str, limit: int = 100, offset: int = 0
 ) -> list[MessageEntity]:
     result = await db.execute(
         select(Message)
@@ -202,8 +198,7 @@ async def get_messages(
 
 
 async def get_conversation(
-    db: AsyncSession,
-    conversation_id: str,
+    db: AsyncSession, conversation_id: str
 ) -> ConversationEntity | None:
     result = await db.execute(
         select(Conversation).where(Conversation.id == conversation_id)

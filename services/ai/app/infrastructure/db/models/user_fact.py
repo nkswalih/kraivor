@@ -10,12 +10,8 @@ class UserFact(Base, TimestampMixin):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     user_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
-    fact_type: Mapped[str] = mapped_column(
-        String(50), nullable=False, index=True
-    )
+    fact_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     fact_key: Mapped[str] = mapped_column(String(255), nullable=False)
     fact_value: Mapped[str] = mapped_column(Text, nullable=False)
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
-    source_conversation_id: Mapped[str | None] = mapped_column(
-        String, nullable=True
-    )
+    source_conversation_id: Mapped[str | None] = mapped_column(String, nullable=True)

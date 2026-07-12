@@ -1,6 +1,5 @@
-from unittest.mock import AsyncMock
-
 import pytest
+from unittest.mock import AsyncMock
 
 from app.api.routers.chat import chat_service
 
@@ -22,11 +21,17 @@ class TestChatRouter:
     async def test_chat_non_streaming(self, monkeypatch):
         from app.api.routers.chat import chat
 
-        monkeypatch.setattr(chat_service, "chat", AsyncMock(return_value={
-            "response": "Test answer",
-            "usage": {"model": "test", "input_tokens": 5, "output_tokens": 10},
-            "sources": [],
-        }))
+        monkeypatch.setattr(
+            chat_service,
+            "chat",
+            AsyncMock(
+                return_value={
+                    "response": "Test answer",
+                    "usage": {"model": "test", "input_tokens": 5, "output_tokens": 10},
+                    "sources": [],
+                }
+            ),
+        )
 
         mock_request = AsyncMock()
         mock_request.workspace_id = "ws-1"

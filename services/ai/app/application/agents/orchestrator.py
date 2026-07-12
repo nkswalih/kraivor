@@ -1,4 +1,5 @@
 import json
+
 import logging
 
 from app.application.agents.prompts.orchestrator import (
@@ -14,11 +15,23 @@ from app.infrastructure.llm.router import ModelRouter
 logger = logging.getLogger(__name__)
 
 _DIRECT_INTENTS = {
-    "greeting", "conversation", "question", "programming",
-    "code_generation", "writing", "translation", "planning",
-    "devops", "security_audit", "data_science",
-    "cloud_engineering", "system_design", "ui_ux",
-    "database_design", "testing", "full_stack",
+    "greeting",
+    "conversation",
+    "question",
+    "programming",
+    "code_generation",
+    "writing",
+    "translation",
+    "planning",
+    "devops",
+    "security_audit",
+    "data_science",
+    "cloud_engineering",
+    "system_design",
+    "ui_ux",
+    "database_design",
+    "testing",
+    "full_stack",
     "unknown",
 }
 
@@ -35,7 +48,9 @@ _INTENT_ROUTE_MAP = {
 }
 
 
-def _format_prompt(template: str, user_name: str | None, user_context: str | None) -> str:
+def _format_prompt(
+    template: str, user_name: str | None, user_context: str | None
+) -> str:
     name = user_name or "the user"
     ctx = f"Known context about the user:\n{user_context}" if user_context else ""
     return template.format(user_name=name, user_context=ctx)
@@ -57,10 +72,14 @@ class OrchestratorNode:
         api_key, provider = await self.key_resolver.resolve(user_id, route["model"])
         client = LLMClient(api_key=api_key, provider=provider, model=route["model"])
 
-        response = await client.generate([
-            {"role": "system", "content": ORCHESTRATOR_SYSTEM_PROMPT},
-            {"role": "user", "content": message},
-        ], max_tokens=route["max_tokens"], response_format={"type": "json_object"})
+        response = await client.generate(
+            [
+                {"role": "system", "content": ORCHESTRATOR_SYSTEM_PROMPT},
+                {"role": "user", "content": message},
+            ],
+            max_tokens=route["max_tokens"],
+            response_format={"type": "json_object"},
+        )
 
         try:
             analysis = json.loads(response["content"])
@@ -97,12 +116,18 @@ class OrchestratorNode:
             intent_prompt = _format_prompt(intent_prompt, user_name, user_context)
             intent_route_name = _INTENT_ROUTE_MAP.get(intent, "simple_qa")
             respond_route = self.router.get_route(intent_route_name)
-            api_key, provider = await self.key_resolver.resolve(user_id, respond_route["model"])
-            respond_client = LLMClient(api_key=api_key, provider=provider, model=respond_route["model"])
+            api_key, provider = await self.key_resolver.resolve(
+                user_id, respond_route["model"]
+            )
+            respond_client = LLMClient(
+                api_key=api_key, provider=provider, model=respond_route["model"]
+            )
 
             messages = []
             for h in history[-10:]:
-                messages.append({"role": h.get("role", "user"), "content": h.get("content", "")})
+                messages.append(
+                    {"role": h.get("role", "user"), "content": h.get("content", "")}
+                )
             messages.append({"role": "system", "content": intent_prompt})
             messages.append({"role": "user", "content": message})
 

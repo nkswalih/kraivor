@@ -1,6 +1,5 @@
 import logging
 import time
-
 from fastapi import HTTPException, Request
 
 from app.core.config import settings
@@ -36,8 +35,11 @@ async def check_rate_limit(request: Request) -> None:
     if settings.redis__url:
         try:
             import redis.asyncio as aioredis
+
             r = aioredis.from_url(settings.redis__url, decode_responses=True)
-            allowed, count, max_limit = await r.eval(LUA_SLIDING_WINDOW, 1, key, now, window, limit)
+            allowed, count, max_limit = await r.eval(
+                LUA_SLIDING_WINDOW, 1, key, now, window, limit
+            )
             if not allowed:
                 raise HTTPException(
                     status_code=429,

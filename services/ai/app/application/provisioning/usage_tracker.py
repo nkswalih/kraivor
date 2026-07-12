@@ -32,16 +32,12 @@ class UsageTracker:
         db_session.add(log)
 
     async def check_budget(
-        self,
-        db_session,
-        user_id: str,
-        monthly_limit: int = 1_000_000,
+        self, db_session, user_id: str, monthly_limit: int = 1_000_000
     ) -> bool:
         from sqlalchemy import func, select
 
         result = await db_session.execute(
-            select(func.sum(UsageLog.tokens_input + UsageLog.tokens_output))
-            .where(
+            select(func.sum(UsageLog.tokens_input + UsageLog.tokens_output)).where(
                 UsageLog.user_id == user_id,
                 UsageLog.logged_at >= datetime.now(UTC).replace(day=1),
             )

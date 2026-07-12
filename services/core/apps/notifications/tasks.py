@@ -3,9 +3,8 @@ Celery tasks for notification dispatch and lifecycle management.
 """
 
 import logging
-from datetime import timedelta
-
 from celery import shared_task
+from datetime import timedelta
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -83,6 +82,7 @@ def dispatch_notification(
     # Invalidate unread count cache so the red dot updates dynamically
     try:
         from core.cache import CacheService
+
         CacheService.delete(f"notif:unread:{user_id}")
     except Exception:
         pass
@@ -137,10 +137,7 @@ def dispatch_notification(
                     push_data["metadata"] = metadata
 
                 send_push_notification(
-                    token=token,
-                    title=title,
-                    body=body,
-                    data=push_data,
+                    token=token, title=title, body=body, data=push_data
                 )
         except Exception as exc:
             logger.warning(

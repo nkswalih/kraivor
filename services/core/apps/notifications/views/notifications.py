@@ -1,6 +1,6 @@
-import uuid
 from typing import TYPE_CHECKING
 
+import uuid
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound
@@ -37,8 +37,7 @@ class NotificationListView(APIView):
     pagination_class = StandardPagination
 
     @extend_schema(
-        summary="List notifications",
-        responses={200: NotificationSerializer(many=True)},
+        summary="List notifications", responses={200: NotificationSerializer(many=True)}
     )
     def get(self, request: Request) -> Response:
         user_id = request.user_id
@@ -71,17 +70,13 @@ class NotificationDetailView(APIView):
             raise NotFound("Notification not found.")
         return notification
 
-    @extend_schema(
-        summary="Get notification",
-        responses={200: NotificationSerializer},
-    )
+    @extend_schema(summary="Get notification", responses={200: NotificationSerializer})
     def get(self, request: Request, pk: str | None = None) -> Response:
         notification = self._get_notification_or_404(pk, request.user_id)
         return Response(NotificationSerializer(notification).data)
 
     @extend_schema(
-        summary="Mark notification as read",
-        responses={200: NotificationSerializer},
+        summary="Mark notification as read", responses={200: NotificationSerializer}
     )
     def patch(self, request: Request, pk: str | None = None) -> Response:
         notification = self._get_notification_or_404(pk, request.user_id)

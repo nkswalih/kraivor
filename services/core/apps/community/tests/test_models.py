@@ -1,15 +1,9 @@
-import uuid
-
 import pytest
+import uuid
 from django.db import IntegrityError
 
 from ..models import Discussion
-from .factories import (
-    CommentFactory,
-    DiscussionFactory,
-    TagFactory,
-    VoteFactory,
-)
+from .factories import CommentFactory, DiscussionFactory, TagFactory, VoteFactory
 
 
 @pytest.mark.django_db

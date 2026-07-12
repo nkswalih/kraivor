@@ -40,12 +40,7 @@ class TaskStatus(models.TextChoices):
 TERMINAL_TASK_STATUSES = frozenset({TaskStatus.DONE, TaskStatus.CANCELLED})
 
 ACTIVE_TASK_STATUSES = frozenset(
-    {
-        TaskStatus.TODO,
-        TaskStatus.IN_PROGRESS,
-        TaskStatus.IN_REVIEW,
-        TaskStatus.BLOCKED,
-    }
+    {TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.IN_REVIEW, TaskStatus.BLOCKED}
 )
 
 

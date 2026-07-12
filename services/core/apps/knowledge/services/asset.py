@@ -1,6 +1,6 @@
-import uuid
 from typing import Any
 
+import uuid
 from django.db import transaction
 from django.db.models import QuerySet
 

@@ -1,6 +1,5 @@
 import logging
 import uuid
-
 from django.conf import settings
 from rest_framework import status
 from rest_framework.response import Response
@@ -29,7 +28,9 @@ class SyncAuthorDenormalizationView(APIView):
     permission_classes = []
 
     def post(self, request):
-        internal_header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
+        internal_header = getattr(
+            settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"
+        )
         if request.headers.get(internal_header) != "1":
             return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -47,8 +48,12 @@ class SyncAuthorDenormalizationView(APIView):
         try:
             uuid.UUID(author_id)
         except (ValueError, TypeError):
-            return Response({"error": "Invalid author_id"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid author_id"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
-        update_author_denormalization.delay(author_id, username, display_name, avatar_url)
+        update_author_denormalization.delay(
+            author_id, username, display_name, avatar_url
+        )
 
         return Response({"processed": True})

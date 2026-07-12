@@ -18,10 +18,9 @@ Covers:
   delete_knowledge_space — success, audit, permission errors, not-found
 """
 
+import pytest
 import uuid
 from unittest.mock import MagicMock
-
-import pytest
 
 from apps.knowledge.models import KnowledgeSpace
 from apps.knowledge.services import KnowledgePermissionError, KnowledgeSpaceService

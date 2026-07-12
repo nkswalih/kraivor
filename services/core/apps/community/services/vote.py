@@ -56,9 +56,7 @@ class VoteService:
         return True
 
     @staticmethod
-    def vote_comment(
-        comment: Comment, user_id: str, value: int
-    ) -> tuple[Vote, str]:
+    def vote_comment(comment: Comment, user_id: str, value: int) -> tuple[Vote, str]:
         existing = Vote.objects.filter(user_id=user_id, comment=comment).first()
         if existing:
             if existing.value == value:
@@ -108,7 +106,9 @@ class VoteService:
 
     @staticmethod
     def get_user_votes(
-        user_id: str, discussion_ids: list | None = None, comment_ids: list | None = None
+        user_id: str,
+        discussion_ids: list | None = None,
+        comment_ids: list | None = None,
     ) -> dict:
         q = Q(user_id=user_id)
         if discussion_ids:

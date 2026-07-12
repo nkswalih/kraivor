@@ -1,20 +1,9 @@
+import pytest
 import uuid
 
-import pytest
-
 from ..models import Comment, Discussion
-from ..services import (
-    CommentService,
-    DiscussionService,
-    TagService,
-    VoteService,
-)
-from .factories import (
-    CommentFactory,
-    DiscussionFactory,
-    TagFactory,
-    VoteFactory,
-)
+from ..services import CommentService, DiscussionService, TagService, VoteService
+from .factories import CommentFactory, DiscussionFactory, TagFactory, VoteFactory
 
 
 @pytest.mark.django_db

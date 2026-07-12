@@ -1,5 +1,4 @@
 import math
-
 from django.db.models import Count, F, Prefetch, QuerySet
 from django.utils.text import slugify
 
@@ -60,20 +59,13 @@ class DiscussionService:
 
     @staticmethod
     def create_discussion(
-        data: dict,
-        user_id: str,
-        username: str,
-        display_name: str,
-        avatar_url: str,
+        data: dict, user_id: str, username: str, display_name: str, avatar_url: str
     ) -> Discussion:
         tag_objs = []
         tag_names = data.pop("tags", [])
         for name in tag_names[:5]:
             slug = slugify(name)[:60]
-            tag, _ = Tag.objects.get_or_create(
-                slug=slug,
-                defaults={"name": name[:50]},
-            )
+            tag, _ = Tag.objects.get_or_create(slug=slug, defaults={"name": name[:50]})
             Tag.objects.filter(id=tag.id).update(usage_count=F("usage_count") + 1)
             tag.refresh_from_db()
             tag_objs.append(tag)
@@ -103,8 +95,7 @@ class DiscussionService:
             for name in tag_names[:5]:
                 slug = slugify(name)[:60]
                 tag, _ = Tag.objects.get_or_create(
-                    slug=slug,
-                    defaults={"name": name[:50]},
+                    slug=slug, defaults={"name": name[:50]}
                 )
                 tag_objs.append(tag)
             discussion.tags.set(tag_objs)
@@ -117,10 +108,10 @@ class DiscussionService:
 
     @staticmethod
     def get_trending(limit: int = 10) -> list[dict]:
-        REDDIT_EPOCH = 1134028003
+        reddit_epoch = 1134028003
 
         qs = Discussion.objects.filter(deleted_at__isnull=True).annotate(
-            net_score=F("upvote_count") - F("downvote_count"),
+            net_score=F("upvote_count") - F("downvote_count")
         )
 
         discussions = []
@@ -128,7 +119,7 @@ class DiscussionService:
             score = d.net_score or 0
             sign = 1 if score > 0 else -1 if score < 0 else 0
             order = math.log10(max(abs(score), 1))
-            seconds = d.created_at.timestamp() - REDDIT_EPOCH
+            seconds = d.created_at.timestamp() - reddit_epoch
             hot = round(sign * order + seconds / 45000, 7)
             discussions.append((hot, d))
 

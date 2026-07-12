@@ -1,8 +1,8 @@
+from pathlib import Path
+
 import logging
 import mimetypes
 import uuid
-from pathlib import Path
-
 from django.conf import settings
 from django.core.files.storage import default_storage
 

@@ -1,14 +1,15 @@
-import logging
-import time
 from collections.abc import AsyncGenerator
 
 import google.generativeai as genai
+import logging
+import time
 from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI
 
 from app.infrastructure.llm.cost import estimate_cost
-from app.monitoring.metrics import llm_calls, llm_duration, llm_tokens
+from app.monitoring.metrics import llm_calls
 from app.monitoring.metrics import llm_cost as llm_cost_counter
+from app.monitoring.metrics import llm_duration, llm_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +28,7 @@ class LLMClient:
                 "openai": "https://api.openai.com/v1",
             }
             self.client = AsyncOpenAI(
-                api_key=api_key,
-                base_url=base_urls[self.provider],
+                api_key=api_key, base_url=base_urls[self.provider]
             )
         elif self.provider == "anthropic":
             self.client = AsyncAnthropic(api_key=api_key)
@@ -36,9 +36,7 @@ class LLMClient:
             genai.configure(api_key=api_key)
             self.client = genai.GenerativeModel(self.model)
 
-    async def generate(
-        self, messages: list, **kwargs
-    ) -> dict:
+    async def generate(self, messages: list, **kwargs) -> dict:
         metrics = {
             "provider": self.provider,
             "model": self.model,
@@ -52,9 +50,7 @@ class LLMClient:
 
         if self.provider in ("openrouter", "groq", "openai"):
             response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                **kwargs,
+                model=self.model, messages=messages, **kwargs
             )
             message = response.choices[0].message
             result = message.content
@@ -62,13 +58,15 @@ class LLMClient:
             tool_calls = []
             if raw_calls:
                 for tc in raw_calls:
-                    tool_calls.append({
-                        "id": tc.id,
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
-                        },
-                    })
+                    tool_calls.append(
+                        {
+                            "id": tc.id,
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments,
+                            },
+                        }
+                    )
             if result is None and not tool_calls:
                 raise ValueError(
                     f"LLM returned null content for model={self.model} "
@@ -80,8 +78,11 @@ class LLMClient:
         elif self.provider == "anthropic":
             msg = await self.client.messages.create(
                 model=self.model,
-                messages=[{"role": "user", "content": m["content"]}
-                          for m in messages if m["role"] == "user"],
+                messages=[
+                    {"role": "user", "content": m["content"]}
+                    for m in messages
+                    if m["role"] == "user"
+                ],
                 **kwargs,
             )
             result = msg.content[0].text
@@ -90,19 +91,20 @@ class LLMClient:
 
         elif self.provider == "google":
             response = await self.client.generate_content_async(
-                messages[-1]["content"] if messages else "",
-                **kwargs,
+                messages[-1]["content"] if messages else "", **kwargs
             )
             result = response.text
             if hasattr(response, "usage_metadata"):
-                metrics["input_tokens"] = getattr(response.usage_metadata, "prompt_token_count", 0)
-                metrics["output_tokens"] = getattr(response.usage_metadata, "candidates_token_count", 0)
+                metrics["input_tokens"] = getattr(
+                    response.usage_metadata, "prompt_token_count", 0
+                )
+                metrics["output_tokens"] = getattr(
+                    response.usage_metadata, "candidates_token_count", 0
+                )
 
         metrics["latency_ms"] = int((time.monotonic() - start) * 1000)
         metrics["cost"] = estimate_cost(
-            self.provider, self.model,
-            metrics["input_tokens"],
-            metrics["output_tokens"],
+            self.provider, self.model, metrics["input_tokens"], metrics["output_tokens"]
         )
 
         try:
@@ -117,15 +119,10 @@ class LLMClient:
 
         return {"content": result, "tool_calls": tool_calls or [], **metrics}
 
-    async def stream(
-        self, messages: list, **kwargs
-    ) -> AsyncGenerator[str, None]:
+    async def stream(self, messages: list, **kwargs) -> AsyncGenerator[str, None]:
         if self.provider in ("openrouter", "groq", "openai"):
             stream = await self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                stream=True,
-                **kwargs,
+                model=self.model, messages=messages, stream=True, **kwargs
             )
             async for chunk in stream:
                 if delta := chunk.choices[0].delta.content:
@@ -133,17 +130,18 @@ class LLMClient:
         elif self.provider == "anthropic":
             async with self.client.messages.stream(
                 model=self.model,
-                messages=[{"role": "user", "content": m["content"]}
-                          for m in messages if m["role"] == "user"],
+                messages=[
+                    {"role": "user", "content": m["content"]}
+                    for m in messages
+                    if m["role"] == "user"
+                ],
                 **kwargs,
             ) as stream:
                 async for text in stream.text_stream:
                     yield text
         elif self.provider == "google":
             response = await self.client.generate_content_async(
-                messages[-1]["content"] if messages else "",
-                stream=True,
-                **kwargs,
+                messages[-1]["content"] if messages else "", stream=True, **kwargs
             )
             async for chunk in response:
                 if chunk.text:

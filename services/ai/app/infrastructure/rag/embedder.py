@@ -1,5 +1,4 @@
 import logging
-
 from openai import AsyncOpenAI
 
 from app.core.config import settings
@@ -16,9 +15,13 @@ class Embedder:
         if self.provider == "local":
             try:
                 from sentence_transformers import SentenceTransformer
+
                 self._model = SentenceTransformer(settings.embedding_model)
             except Exception as e:
-                logger.warning("Failed to load sentence_transformers, embedding will raise at call time: %s", e)
+                logger.warning(
+                    "Failed to load sentence_transformers, embedding will raise at call time: %s",
+                    e,
+                )
         elif self.provider == "openai":
             self._client = AsyncOpenAI(api_key=api_key)
             self.dimension = 1536
@@ -27,11 +30,11 @@ class Embedder:
         if self.provider == "local":
             if self._model is None:
                 from sentence_transformers import SentenceTransformer
+
                 self._model = SentenceTransformer(settings.embedding_model)
             return self._model.encode(text).tolist()
         response = await self._client.embeddings.create(
-            model="text-embedding-3-small",
-            input=text,
+            model="text-embedding-3-small", input=text
         )
         return response.data[0].embedding
 
@@ -39,10 +42,10 @@ class Embedder:
         if self.provider == "local":
             if self._model is None:
                 from sentence_transformers import SentenceTransformer
+
                 self._model = SentenceTransformer(settings.embedding_model)
             return self._model.encode(texts, batch_size=32).tolist()
         response = await self._client.embeddings.create(
-            model="text-embedding-3-small",
-            input=texts,
+            model="text-embedding-3-small", input=texts
         )
         return [d.embedding for d in response.data]

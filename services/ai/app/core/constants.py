@@ -32,11 +32,7 @@ class MessageRole(StrEnum):
 
 
 TIER_MODEL_ACCESS = {
-    "free": [
-        "google/gemini-flash-1.5",
-        "groq/llama3-70b",
-        "openrouter/auto",
-    ],
+    "free": ["google/gemini-flash-1.5", "groq/llama3-70b", "openrouter/auto"],
     "pro": [
         "anthropic/claude-3.5-sonnet",
         "openai/gpt-4o-mini",
@@ -46,11 +42,7 @@ TIER_MODEL_ACCESS = {
     "enterprise": ["*"],
 }
 
-TIER_BUDGET_LIMITS = {
-    "free": 0.50,
-    "pro": 10.00,
-    "enterprise": 100.00,
-}
+TIER_BUDGET_LIMITS = {"free": 0.50, "pro": 10.00, "enterprise": 100.00}
 
 TIER_RATE_LIMITS = {
     "free": {"requests": 30, "interval": "1m"},

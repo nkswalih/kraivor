@@ -80,7 +80,9 @@ class EnrichmentService:
                 result = await self._enrich_category(category, cat_findings)
                 enriched_map[category] = result
             except Exception as e:
-                logger.warning("category_enrichment_failed category=%s error=%s", category, str(e))
+                logger.warning(
+                    "category_enrichment_failed category=%s error=%s", category, str(e)
+                )
                 enriched_map[category] = [
                     {**f, "ai_explanation": ""} for f in cat_findings
                 ]
@@ -93,7 +95,7 @@ class EnrichmentService:
         ai_executive_summary = ""
         try:
             ai_executive_summary = await self._generate_executive_summary(
-                enriched_findings, overall_score, tier, languages, frameworks,
+                enriched_findings, overall_score, tier, languages, frameworks
             )
         except Exception as e:
             logger.warning("executive_summary_generation_failed error=%s", str(e))
@@ -103,9 +105,7 @@ class EnrichmentService:
             "ai_executive_summary": ai_executive_summary,
         }
 
-    async def _enrich_category(
-        self, category: str, findings: list[dict],
-    ) -> list[dict]:
+    async def _enrich_category(self, category: str, findings: list[dict]) -> list[dict]:
         route_key = CATEGORY_ROUTES.get(category, "code_review")
         route = self.router.get_route(route_key)
 
@@ -158,23 +158,37 @@ class EnrichmentService:
                 enriched_items: list[dict] = []
                 try:
                     import json
+
                     parsed = json.loads(result["content"])
-                    items = parsed if isinstance(parsed, list) else parsed.get("findings", parsed.get("items", []))
+                    items = (
+                        parsed
+                        if isinstance(parsed, list)
+                        else parsed.get("findings", parsed.get("items", []))
+                    )
                     for item in items:
                         idx = item.get("index", 0)
                         if 1 <= idx <= len(findings):
                             enriched_finding = dict(findings[idx - 1])
-                            enriched_finding["ai_explanation"] = item.get("ai_explanation", "")
-                            enriched_finding["ai_recommendation"] = item.get("ai_recommendation", "")
+                            enriched_finding["ai_explanation"] = item.get(
+                                "ai_explanation", ""
+                            )
+                            enriched_finding["ai_recommendation"] = item.get(
+                                "ai_recommendation", ""
+                            )
                             enriched_finding["is_ai_enriched"] = True
                             enriched_items.append(enriched_finding)
                 except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
-                    logger.warning("failed_to_parse_enrichment_response category=%s model=%s error=%s", category, model, str(e))
+                    logger.warning(
+                        "failed_to_parse_enrichment_response category=%s model=%s error=%s",
+                        category,
+                        model,
+                        str(e),
+                    )
                     raise
 
                 remaining = len(findings) - len(enriched_items)
                 if remaining > 0:
-                    for f in findings[len(enriched_items):]:
+                    for f in findings[len(enriched_items) :]:
                         enriched_finding = dict(f)
                         enriched_finding["ai_explanation"] = ""
                         enriched_finding["is_ai_enriched"] = False
@@ -183,7 +197,12 @@ class EnrichmentService:
                 return enriched_items
             except Exception as e:
                 last_error = e
-                logger.warning("enrichment_model_failed model=%s category=%s error=%s", model, category, str(e))
+                logger.warning(
+                    "enrichment_model_failed model=%s category=%s error=%s",
+                    model,
+                    category,
+                    str(e),
+                )
                 continue
 
         raise last_error  # type: ignore[misc]
@@ -196,8 +215,6 @@ class EnrichmentService:
         languages: list[str] | None,
         frameworks: list[str] | None,
     ) -> str:
-        route = self.router.get_route("architecture_review")
-
         system_prompt = (
             "You are a technical lead writing an executive summary of a production readiness "
             "analysis. Synthesize the findings below into a clear, actionable narrative.\n\n"
@@ -209,7 +226,9 @@ class EnrichmentService:
             "Be concise and business-focused. Use Markdown."
         )
 
-        critical = [f for f in findings if str(f.get("severity", "")).upper() == "CRITICAL"]
+        critical = [
+            f for f in findings if str(f.get("severity", "")).upper() == "CRITICAL"
+        ]
         high = [f for f in findings if str(f.get("severity", "")).upper() == "HIGH"]
         categories = {f.get("category", "") for f in findings}
 

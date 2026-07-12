@@ -1,5 +1,6 @@
-import logging
 from collections.abc import AsyncGenerator
+
+import logging
 
 from app.application.agents.graph import build_agent_graph
 from app.application.chat.conversation_repository import (
@@ -27,8 +28,7 @@ _HISTORY_LIMIT = 20
 class ChatService:
     def __init__(self):
         client = ServiceClient(
-            core_url=settings.core_api_url,
-            analysis_url=settings.analysis_api_url,
+            core_url=settings.core_api_url, analysis_url=settings.analysis_api_url
         )
         self.graph = build_agent_graph(client=client)
         self.key_resolver = KeyResolver()
@@ -44,11 +44,17 @@ class ChatService:
             if m.role in (MessageRole.USER, MessageRole.ASSISTANT)
         ]
 
-    async def chat(self, user_id: str, message: str, conversation_id: str | None = None,
-                   workspace_id: str | None = None, repo_ids: list[str] | None = None,
-                   history: list[dict] | None = None, stream: bool = False,
-                   model: str | None = None,
-                   user_name: str | None = None,
+    async def chat(
+        self,
+        user_id: str,
+        message: str,
+        conversation_id: str | None = None,
+        workspace_id: str | None = None,
+        repo_ids: list[str] | None = None,
+        history: list[dict] | None = None,
+        stream: bool = False,
+        model: str | None = None,
+        user_name: str | None = None,
     ) -> dict:
         # Load conversation history from DB if we have a conversation_id
         if conversation_id and not history:
@@ -103,24 +109,30 @@ class ChatService:
                 await ensure_conversation(
                     db, conversation_id, user_id, workspace_id or "", model
                 )
-                await save_message(db, MessageEntity(
-                    role=MessageRole.USER,
-                    content=message,
-                    conversation_id=conversation_id,
-                    user_id=user_id,
-                    model=model,
-                ))
-                if response:
-                    assistant_msg = await save_message(db, MessageEntity(
-                        role=MessageRole.ASSISTANT,
-                        content=response,
+                await save_message(
+                    db,
+                    MessageEntity(
+                        role=MessageRole.USER,
+                        content=message,
                         conversation_id=conversation_id,
                         user_id=user_id,
-                        model=usage.get("model", model),
-                        tokens_input=usage.get("input_tokens"),
-                        tokens_output=usage.get("output_tokens"),
-                        metadata=usage,
-                    ))
+                        model=model,
+                    ),
+                )
+                if response:
+                    assistant_msg = await save_message(
+                        db,
+                        MessageEntity(
+                            role=MessageRole.ASSISTANT,
+                            content=response,
+                            conversation_id=conversation_id,
+                            user_id=user_id,
+                            model=usage.get("model", model),
+                            tokens_input=usage.get("input_tokens"),
+                            tokens_output=usage.get("output_tokens"),
+                            metadata=usage,
+                        ),
+                    )
                 await update_conversation_after_message(
                     db,
                     conversation_id,
@@ -141,16 +153,18 @@ class ChatService:
 
         return result
 
-    async def stream_chat(self, user_id: str, message: str, **kwargs
-) -> AsyncGenerator[dict, None]:
+    async def stream_chat(
+        self, user_id: str, message: str, **kwargs
+    ) -> AsyncGenerator[dict, None]:
         result = await self.chat(user_id=user_id, message=message, **kwargs)
-        content = result.get('response', '')
+        content = result.get("response", "")
         title = None
         conv_id = kwargs.get("conversation_id")
         if conv_id:
             from sqlalchemy import select
 
             from app.infrastructure.db.models.conversation import Conversation
+
             async with async_session_factory() as db:
                 conv_result = await db.execute(
                     select(Conversation).where(Conversation.id == conv_id)

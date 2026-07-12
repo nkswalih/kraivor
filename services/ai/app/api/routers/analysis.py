@@ -63,10 +63,7 @@ class EnrichResponse(BaseModel):
 
 
 @router.post("/v1/analysis/enrich", response_model=EnrichResponse)
-async def enrich_analysis(
-    request: EnrichRequest,
-    _user: CurrentUser,
-) -> EnrichResponse:
+async def enrich_analysis(request: EnrichRequest, _user: CurrentUser) -> EnrichResponse:
     service = _get_enrichment()
     result = await service.enrich(
         findings=[f.model_dump() for f in request.findings],

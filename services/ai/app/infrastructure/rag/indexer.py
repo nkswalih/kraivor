@@ -5,7 +5,9 @@ from app.infrastructure.rag.embedder import Embedder
 
 
 class Indexer:
-    def __init__(self, chunker: SemanticChunker | None = None, embedder: Embedder | None = None):
+    def __init__(
+        self, chunker: SemanticChunker | None = None, embedder: Embedder | None = None
+    ):
         self.chunker = chunker or SemanticChunker()
         self.embedder = embedder or Embedder()
 

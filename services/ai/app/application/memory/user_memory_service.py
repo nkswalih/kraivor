@@ -1,8 +1,8 @@
-import logging
 import re
+
+import logging
 import uuid
 from datetime import UTC, datetime
-
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,16 +12,27 @@ logger = logging.getLogger(__name__)
 
 # Patterns to extract user facts from messages
 _NAME_PATTERNS = [
-    re.compile(r"(?:my name is|I'm |i am |call me )([A-Za-z\s\-']+?)(?:[,\.!]|\s+and|\s*$)", re.IGNORECASE),
-    re.compile(r"(?:you can call me |name's )([A-Za-z\s\-']+?)(?:[,\.!]|\s*$)", re.IGNORECASE),
+    re.compile(
+        r"(?:my name is|I'm |i am |call me )([A-Za-z\s\-']+?)(?:[,\.!]|\s+and|\s*$)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(?:you can call me |name's )([A-Za-z\s\-']+?)(?:[,\.!]|\s*$)", re.IGNORECASE
+    ),
 ]
 
 _PREFERENCE_PATTERNS = [
-    re.compile(r"(?:I\s+(?:prefer|like|use|work with|enjoy|love)\s+)([\w\s+#]+?)(?:[,\.!]|for|because|when|\s*$)", re.IGNORECASE),
+    re.compile(
+        r"(?:I\s+(?:prefer|like|use|work with|enjoy|love)\s+)([\w\s+#]+?)(?:[,\.!]|for|because|when|\s*$)",
+        re.IGNORECASE,
+    )
 ]
 
 _TECH_STACK_PATTERNS = [
-    re.compile(r"(?:stack is|tech stack|using|working with|primarily use|mostly use)\s+([A-Za-z0-9#+.\s,]+?)(?:[,\.!]|for|because|\s*$)", re.IGNORECASE),
+    re.compile(
+        r"(?:stack is|tech stack|using|working with|primarily use|mostly use)\s+([A-Za-z0-9#+.\s,]+?)(?:[,\.!]|for|because|\s*$)",
+        re.IGNORECASE,
+    )
 ]
 
 
@@ -113,10 +124,7 @@ async def extract_and_store_facts(
 async def get_user_context(db: AsyncSession, user_id: str, limit: int = 20) -> str:
     result = await db.execute(
         select(UserFact)
-        .where(
-            UserFact.user_id == user_id,
-            UserFact.deleted_at.is_(None),
-        )
+        .where(UserFact.user_id == user_id, UserFact.deleted_at.is_(None))
         .order_by(UserFact.confidence.desc(), UserFact.updated_at.desc())
         .limit(limit)
     )
@@ -131,7 +139,9 @@ async def get_user_context(db: AsyncSession, user_id: str, limit: int = 20) -> s
     return "\n".join(parts)
 
 
-async def clear_user_facts(db: AsyncSession, user_id: str, fact_type: str | None = None) -> None:
+async def clear_user_facts(
+    db: AsyncSession, user_id: str, fact_type: str | None = None
+) -> None:
     stmt = (
         update(UserFact)
         .where(UserFact.user_id == user_id, UserFact.deleted_at.is_(None))

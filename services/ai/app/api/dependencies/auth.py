@@ -1,8 +1,7 @@
-import logging
-import time
-
 import httpx
 import jwt
+import logging
+import time
 from fastapi import HTTPException, Request
 from pydantic import BaseModel
 
@@ -45,7 +44,7 @@ def _get_jwks() -> dict:
 
 def _verify_token(token: str) -> dict:
     jwks = _get_jwks()
-    jwk = jwks['keys'][0]
+    jwk = jwks["keys"][0]
 
     signing_key = jwt.PyJWK(jwk, algorithm=settings.jwt_algorithm)
 
@@ -55,7 +54,7 @@ def _verify_token(token: str) -> dict:
         algorithms=[settings.jwt_algorithm],
         audience=settings.jwt_audience,
         issuer=settings.jwt_issuer,
-        options={'verify_exp': settings.jwt_verify_expiration}
+        options={"verify_exp": settings.jwt_verify_expiration},
     )
     return payload
 
@@ -66,8 +65,12 @@ def get_current_user(request: Request) -> JWTPayload:
             sub=request.headers.get("X-User-ID", ""),
             email=request.headers.get("X-Email", ""),
             name=request.headers.get("X-User-Name"),
-            workspace_ids=request.headers.get("X-Workspace-IDs", "").split(",") if request.headers.get("X-Workspace-IDs") else [],
-            roles={}
+            workspace_ids=(
+                request.headers.get("X-Workspace-IDs", "").split(",")
+                if request.headers.get("X-Workspace-IDs")
+                else []
+            ),
+            roles={},
         )
 
     auth_header = request.headers.get("Authorization", "")
@@ -75,7 +78,10 @@ def get_current_user(request: Request) -> JWTPayload:
     if not auth_header.startswith("Bearer "):
         raise HTTPException(
             status_code=401,
-            detail={"error": "missing_authorization", "message": "Authorization header required"}
+            detail={
+                "error": "missing_authorization",
+                "message": "Authorization header required",
+            },
         )
 
     token = auth_header[7:]
@@ -87,24 +93,27 @@ def get_current_user(request: Request) -> JWTPayload:
             email=payload.get("email", ""),
             name=payload.get("name"),
             workspace_ids=payload.get("workspace_ids", []),
-            roles=payload.get("roles", {})
+            roles=payload.get("roles", {}),
         )
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=401,
-            detail={"error": "token_expired", "message": "Token has expired"}
+            detail={"error": "token_expired", "message": "Token has expired"},
         ) from None
     except jwt.InvalidTokenError as e:
         logger.warning(f"JWT validation failed: {e}")
         raise HTTPException(
             status_code=401,
-            detail={"error": "invalid_token", "message": "Invalid or malformed token"}
+            detail={"error": "invalid_token", "message": "Invalid or malformed token"},
         ) from e
     except Exception as e:
         logger.error(f"JWT verification error: {e}")
         raise HTTPException(
             status_code=401,
-            detail={"error": "verification_failed", "message": "Token verification failed"}
+            detail={
+                "error": "verification_failed",
+                "message": "Token verification failed",
+            },
         ) from e
 
 

@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
-from datetime import datetime
 from enum import StrEnum
+
+from datetime import datetime
 
 
 class MessageRole(StrEnum):

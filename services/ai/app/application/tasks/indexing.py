@@ -26,8 +26,9 @@ def index_repository(self, repo_id: str, workspace_id: str, files: list[dict]):
 
 
 @celery_app.task(bind=True, queue="ai.indexing", acks_late=True)
-def index_single_file(self, repo_id: str, workspace_id: str,
-                       file_path: str, content: str, language: str):
+def index_single_file(
+    self, repo_id: str, workspace_id: str, file_path: str, content: str, language: str
+):
     import asyncio
 
     from app.infrastructure.db.database import async_session_factory

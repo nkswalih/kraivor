@@ -4,7 +4,9 @@ from app.infrastructure.llm.client import LLMClient
 from app.infrastructure.llm.router import ModelRouter
 
 
-def _format_prompt(template: str, user_name: str | None, user_context: str | None) -> str:
+def _format_prompt(
+    template: str, user_name: str | None, user_context: str | None
+) -> str:
     name = user_name or "the user"
     ctx = f"Known context about the user:\n{user_context}" if user_context else ""
     return template.format(user_name=name, user_context=ctx)
@@ -61,7 +63,12 @@ class ExplainerNode:
             parts.append(f"Recent conversation:\n{brief}")
 
         messages = [
-            {"role": "system", "content": _format_prompt(EXPLAINER_SYSTEM_PROMPT, user_name, user_context)},
+            {
+                "role": "system",
+                "content": _format_prompt(
+                    EXPLAINER_SYSTEM_PROMPT, user_name, user_context
+                ),
+            },
             {"role": "user", "content": "\n\n".join(parts)},
         ]
 

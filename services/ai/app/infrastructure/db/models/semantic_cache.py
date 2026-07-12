@@ -1,5 +1,4 @@
 from datetime import datetime
-
 from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -15,4 +14,6 @@ class SemanticCache(Base, UUIDMixin):
     model: Mapped[str] = mapped_column(String(100), nullable=False)
     tokens_saved: Mapped[int] = mapped_column(Integer, default=0)
     hit_count: Mapped[int] = mapped_column(Integer, default=1)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )

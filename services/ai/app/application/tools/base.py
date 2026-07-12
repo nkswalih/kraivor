@@ -5,5 +5,4 @@ class BaseTool(Protocol):
     name: str
     description: str
 
-    async def run(self, **kwargs) -> str:
-        ...
+    async def run(self, **kwargs) -> str: ...

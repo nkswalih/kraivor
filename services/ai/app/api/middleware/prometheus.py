@@ -1,5 +1,4 @@
 import time
-
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.types import ASGIApp
@@ -22,9 +21,8 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
             status=response.status_code,
         ).inc()
 
-        http_duration.labels(
-            method=request.method,
-            endpoint=request.url.path,
-        ).observe(duration)
+        http_duration.labels(method=request.method, endpoint=request.url.path).observe(
+            duration
+        )
 
         return response

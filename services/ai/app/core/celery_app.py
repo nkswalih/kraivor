@@ -3,9 +3,7 @@ from celery import Celery
 from app.core.config import settings
 
 celery_app = Celery(
-    "ai",
-    broker=settings.celery__broker__url,
-    backend=settings.celery__result__backend,
+    "ai", broker=settings.celery__broker__url, backend=settings.celery__result__backend
 )
 
 celery_app.conf.update(

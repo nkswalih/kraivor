@@ -20,9 +20,15 @@ class ArchitectureAnalystNode:
         }
         context = state.get("assembled_context", "")
 
-        response = await client.generate([
-            {"role": "system", "content": ARCHITECTURE_SYSTEM_PROMPT},
-            {"role": "user", "content": f"Review architecture:\n\n{context}\n\nFindings: {findings}"},
-        ], max_tokens=route["max_tokens"])
+        response = await client.generate(
+            [
+                {"role": "system", "content": ARCHITECTURE_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": f"Review architecture:\n\n{context}\n\nFindings: {findings}",
+                },
+            ],
+            max_tokens=route["max_tokens"],
+        )
 
         return {"architecture_findings": [response["content"]]}

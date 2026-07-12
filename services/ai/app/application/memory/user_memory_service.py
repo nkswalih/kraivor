@@ -7,6 +7,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.db.models.user_fact import UserFact
+from app.infrastructure.db.database import async_session_factory
 
 logger = logging.getLogger(__name__)
 
@@ -151,3 +152,39 @@ async def clear_user_facts(
         stmt = stmt.where(UserFact.fact_type == fact_type)
     await db.execute(stmt)
     await db.flush()
+
+
+async def store_fact_explicit(
+    user_id: str, fact_type: str, fact_key: str, fact_value: str
+) -> str:
+    """Store a fact explicitly via the AI tool (no regex extraction needed)."""
+    async with async_session_factory() as db:
+        try:
+            existing = await db.execute(
+                select(UserFact).where(
+                    UserFact.user_id == user_id,
+                    UserFact.fact_key == fact_key,
+                    UserFact.fact_type == fact_type,
+                    UserFact.deleted_at.is_(None),
+                )
+            )
+            existing_row = existing.scalar_one_or_none()
+            if existing_row:
+                existing_row.fact_value = fact_value
+                existing_row.confidence = 1.0
+            else:
+                fact = UserFact(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    fact_type=fact_type,
+                    fact_key=fact_key,
+                    fact_value=fact_value,
+                    confidence=1.0,
+                )
+                db.add(fact)
+            await db.commit()
+            return f"Remembered: {fact_type} → {fact_key} = {fact_value}"
+        except Exception as e:
+            await db.rollback()
+            logger.warning("Failed to store explicit fact: %s", e)
+            return f"Failed to store fact: {e}"

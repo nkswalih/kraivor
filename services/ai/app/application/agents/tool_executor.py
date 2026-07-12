@@ -36,6 +36,10 @@ class ToolExecutorNode:
             "get_user_notifications": self.tools.get_notifications,
             "get_workspace_discussions": self.tools.get_discussions,
             "get_discussion_comments": self.tools.get_discussion_comments,
+            "get_current_date": self.tools.get_current_date,
+            "web_search": self.tools.web_search,
+            "web_fetch": self.tools.web_fetch,
+            "remember_user_fact": self.tools.remember_user_fact,
         }
 
     async def __call__(self, state: dict) -> dict:

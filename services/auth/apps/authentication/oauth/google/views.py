@@ -16,8 +16,6 @@ Views are intentionally thin — all business logic lives in services/.
 from __future__ import annotations
 
 import logging
-from urllib.parse import urlencode
-
 from authentication.cookie_utils import create_refresh_cookie
 from authentication.oauth.google.services.exchange import (
     GoogleTokenExchangeError,
@@ -33,15 +31,13 @@ from authentication.security import get_client_ip
 from authentication.tokens import get_token_service
 from django.conf import settings
 from django.http import HttpResponseRedirect
-from drf_spectacular.utils import (
-    OpenApiResponse,
-    extend_schema,
-)
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from urllib.parse import urlencode
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +80,9 @@ class GoogleOAuthInitiateView(APIView):
         summary="Initiate Google OAuth",
         description="Initiates the Google OAuth 2.0 / OIDC flow. Generates CSRF state and redirects to Google consent screen.",
         tags=["Authentication"],
-        responses={302: OpenApiResponse(description="Redirect to Google consent screen")},
+        responses={
+            302: OpenApiResponse(description="Redirect to Google consent screen")
+        },
     )
     def get(self, request: Request) -> HttpResponseRedirect:
         state_service = GoogleStateService()
@@ -150,14 +148,20 @@ class GoogleOAuthCallbackView(APIView):
         if error:
             logger.info("google_oauth_user_denied: ip=%s error=%s", ip, error)
             return Response(
-                {"error": "Google OAuth was denied or cancelled.", "error_code": "oauth_denied"},
+                {
+                    "error": "Google OAuth was denied or cancelled.",
+                    "error_code": "oauth_denied",
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         # ── 3. Validate CSRF state ────────────────────────────────────────────
         if not state:
             return Response(
-                {"error": "Missing OAuth state parameter.", "error_code": "missing_state"},
+                {
+                    "error": "Missing OAuth state parameter.",
+                    "error_code": "missing_state",
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -165,7 +169,10 @@ class GoogleOAuthCallbackView(APIView):
         if not state_service.consume(state):
             logger.warning("google_oauth_invalid_state: ip=%s", ip)
             return Response(
-                {"error": "Invalid or expired OAuth state.", "error_code": "invalid_state"},
+                {
+                    "error": "Invalid or expired OAuth state.",
+                    "error_code": "invalid_state",
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -197,7 +204,10 @@ class GoogleOAuthCallbackView(APIView):
         except GoogleIDTokenVerificationError as exc:
             logger.warning("google_oauth_id_token_invalid: ip=%s error=%s", ip, exc)
             return Response(
-                {"error": "Google identity verification failed.", "error_code": "invalid_id_token"},
+                {
+                    "error": "Google identity verification failed.",
+                    "error_code": "invalid_id_token",
+                },
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -206,7 +216,9 @@ class GoogleOAuthCallbackView(APIView):
         try:
             user, created = identity_service.get_or_create(user_info, raw_tokens)
         except Exception:
-            logger.exception("google_oauth_identity_error: ip=%s email=%s", ip, user_info.email)
+            logger.exception(
+                "google_oauth_identity_error: ip=%s email=%s", ip, user_info.email
+            )
             return Response(
                 {"error": "Failed to process account.", "error_code": "identity_error"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -225,7 +237,10 @@ class GoogleOAuthCallbackView(APIView):
         except Exception:
             logger.exception("google_oauth_token_issue_failed: user_id=%s", user.id)
             return Response(
-                {"error": "Failed to issue session tokens.", "error_code": "token_error"},
+                {
+                    "error": "Failed to issue session tokens.",
+                    "error_code": "token_error",
+                },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

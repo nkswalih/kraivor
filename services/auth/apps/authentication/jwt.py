@@ -31,10 +31,7 @@ def generate_token_pair(user, device_id: str = "", ip: str = "", user_agent: str
     """
     token_service = get_token_service()
     token_pair = token_service.generate_tokens(
-        user=user,
-        device_id=device_id,
-        ip_address=ip,
-        user_agent=user_agent,
+        user=user, device_id=device_id, ip_address=ip, user_agent=user_agent
     )
 
     return {

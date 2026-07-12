@@ -95,7 +95,7 @@ def test_generate_api_key_format():
     """Raw key must match krv_live_<64hex> and is_api_key_format must accept it."""
     raw_key, prefix = generate_api_key()
     assert raw_key.startswith("krv_live_")
-    rest = raw_key[len("krv_live_"):]
+    rest = raw_key[len("krv_live_") :]
     assert len(rest) == 64
     assert all(c in "0123456789abcdef" for c in rest)
     assert is_api_key_format(raw_key) is True
@@ -252,7 +252,6 @@ def test_authenticate_revoked_key_raises(user):
 @pytest.mark.django_db
 def test_authenticate_expired_key_raises(user):
     from datetime import timedelta
-
     from django.utils import timezone
 
     result = create_api_key(
@@ -297,9 +296,7 @@ def test_create_endpoint_returns_201_and_raw_key(jwt_client, list_create_url):
 @pytest.mark.django_db
 def test_create_endpoint_raw_key_not_in_db(jwt_client, list_create_url):
     resp = jwt_client.post(
-        list_create_url,
-        {"name": "CLI Tool", "scopes": ["ai:chat"]},
-        format="json",
+        list_create_url, {"name": "CLI Tool", "scopes": ["ai:chat"]}, format="json"
     )
     raw_key = resp.json()["raw_key"]
     assert not APIKey.objects.filter(key_hash=raw_key).exists()
@@ -308,9 +305,7 @@ def test_create_endpoint_raw_key_not_in_db(jwt_client, list_create_url):
 @pytest.mark.django_db
 def test_create_endpoint_invalid_scope_returns_400(jwt_client, list_create_url):
     resp = jwt_client.post(
-        list_create_url,
-        {"name": "Bad", "scopes": ["not:a:scope"]},
-        format="json",
+        list_create_url, {"name": "Bad", "scopes": ["not:a:scope"]}, format="json"
     )
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -319,9 +314,7 @@ def test_create_endpoint_invalid_scope_returns_400(jwt_client, list_create_url):
 def test_create_endpoint_unauthenticated_returns_401(list_create_url):
     client = APIClient()
     resp = client.post(
-        list_create_url,
-        {"name": "Key", "scopes": ["ai:chat"]},
-        format="json",
+        list_create_url, {"name": "Key", "scopes": ["ai:chat"]}, format="json"
     )
     assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -351,7 +344,9 @@ def test_list_endpoint_never_returns_raw_key(jwt_client, user, list_create_url):
 
 
 @pytest.mark.django_db
-def test_list_endpoint_excludes_revoked_keys(jwt_client, user, list_create_url, revoke_url):
+def test_list_endpoint_excludes_revoked_keys(
+    jwt_client, user, list_create_url, revoke_url
+):
     result = create_api_key(user, "Key", ["analysis:read"])
     jwt_client.delete(revoke_url(result.api_key.id))
     resp = jwt_client.get(list_create_url)
@@ -406,7 +401,9 @@ def test_revoke_endpoint_idor_protection(user, other_user, revoke_url):
 @pytest.mark.django_db
 def test_revoke_endpoint_nonexistent_key_returns_404(jwt_client):
     resp = jwt_client.delete(
-        reverse("api-key-revoke", kwargs={"key_id": "00000000-0000-0000-0000-000000000000"})
+        reverse(
+            "api-key-revoke", kwargs={"key_id": "00000000-0000-0000-0000-000000000000"}
+        )
     )
     assert resp.status_code == status.HTTP_404_NOT_FOUND
 
@@ -473,29 +470,30 @@ def test_model_is_valid_revoked_key(user):
 @pytest.mark.django_db
 def test_authentication_backend_expired_key_raises(user):
     """Cover the except APIKeyExpiredError branch in APIKeyAuthentication."""
-    from datetime import timedelta
-    from unittest.mock import MagicMock
-
     from api_keys.authentication.backend import APIKeyAuthentication
     from api_keys.services.key_service import create_api_key
+    from datetime import timedelta
     from django.utils import timezone
+    from unittest.mock import MagicMock
 
     result = create_api_key(
-        user, "Exp Key", ["analysis:read"],
+        user,
+        "Exp Key",
+        ["analysis:read"],
         expires_at=timezone.now() - timedelta(seconds=1),
     )
     backend = APIKeyAuthentication()
     request = MagicMock()
     request.META = {"HTTP_AUTHORIZATION": f"Bearer {result.raw_key}"}
     from rest_framework.exceptions import AuthenticationFailed
+
     with pytest.raises(AuthenticationFailed, match="expired"):
         backend.authenticate(request)
 
 
 def test_authentication_backend_no_header_returns_none():
-    from unittest.mock import MagicMock
-
     from api_keys.authentication.backend import APIKeyAuthentication
+    from unittest.mock import MagicMock
 
     backend = APIKeyAuthentication()
     request = MagicMock()
@@ -504,9 +502,8 @@ def test_authentication_backend_no_header_returns_none():
 
 
 def test_authentication_backend_bearer_only_returns_none():
-    from unittest.mock import MagicMock
-
     from api_keys.authentication.backend import APIKeyAuthentication
+    from unittest.mock import MagicMock
 
     backend = APIKeyAuthentication()
     request = MagicMock()
@@ -515,9 +512,8 @@ def test_authentication_backend_bearer_only_returns_none():
 
 
 def test_authentication_backend_basic_auth_returns_none():
-    from unittest.mock import MagicMock
-
     from api_keys.authentication.backend import APIKeyAuthentication
+    from unittest.mock import MagicMock
 
     backend = APIKeyAuthentication()
     request = MagicMock()
@@ -526,9 +522,8 @@ def test_authentication_backend_basic_auth_returns_none():
 
 
 def test_authentication_backend_jwt_token_returns_none():
-    from unittest.mock import MagicMock
-
     from api_keys.authentication.backend import APIKeyAuthentication
+    from unittest.mock import MagicMock
 
     backend = APIKeyAuthentication()
     request = MagicMock()
@@ -538,17 +533,18 @@ def test_authentication_backend_jwt_token_returns_none():
 
 def test_authentication_backend_unexpected_error_raises():
     """Cover the except Exception branch in APIKeyAuthentication."""
-    from unittest.mock import MagicMock, patch
-
     from api_keys.authentication.backend import APIKeyAuthentication
     from rest_framework.exceptions import AuthenticationFailed
+    from unittest.mock import MagicMock, patch
 
     backend = APIKeyAuthentication()
     request = MagicMock()
     request.META = {"HTTP_AUTHORIZATION": "Bearer krv_live_" + "a" * 64}
     with (
-        patch("api_keys.authentication.backend.authenticate_api_key",
-              side_effect=ValueError("surprise")),
+        patch(
+            "api_keys.authentication.backend.authenticate_api_key",
+            side_effect=ValueError("surprise"),
+        ),
         pytest.raises(AuthenticationFailed, match="Authentication error"),
     ):
         backend.authenticate(request)
@@ -557,14 +553,10 @@ def test_authentication_backend_unexpected_error_raises():
 @pytest.mark.django_db
 def test_model_is_valid_expired_key(user):
     from datetime import timedelta
-
     from django.utils import timezone
 
     result = create_api_key(
-        user,
-        "Key",
-        ["analysis:read"],
-        expires_at=timezone.now() - timedelta(seconds=1),
+        user, "Key", ["analysis:read"], expires_at=timezone.now() - timedelta(seconds=1)
     )
     assert result.api_key.is_valid() is False
 

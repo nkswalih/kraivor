@@ -18,7 +18,7 @@ class TestGenerateAPIKey:
 
     def test_random_part_is_64_hex_chars(self):
         key = generate_api_key()[0]
-        random_part = key[len(API_KEY_PREFIX):]
+        random_part = key[len(API_KEY_PREFIX) :]
         assert len(random_part) == 64
         assert all(c in "0123456789abcdef" for c in random_part)
 

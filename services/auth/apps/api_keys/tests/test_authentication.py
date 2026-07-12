@@ -1,11 +1,10 @@
 """Unit tests for the DRF APIKeyAuthentication backend."""
 
-from unittest.mock import MagicMock, patch
-
 import pytest
 from api_keys.authentication.backend import APIKeyAuthentication
 from api_keys.services.key_service import APIKeyExpiredError, APIKeyNotFoundError
 from rest_framework.exceptions import AuthenticationFailed
+from unittest.mock import MagicMock, patch
 
 
 @pytest.fixture
@@ -55,10 +54,13 @@ class TestAPIKeyAuthentication:
 
     @patch("api_keys.authentication.backend.is_api_key_format", return_value=True)
     def test_unexpected_error_raises_auth_failed(self, mock_fmt, backend):
-        with patch(
-            "api_keys.authentication.backend.authenticate_api_key",
-            side_effect=ValueError("surprise"),
-        ), pytest.raises(AuthenticationFailed, match="Authentication error"):
+        with (
+            patch(
+                "api_keys.authentication.backend.authenticate_api_key",
+                side_effect=ValueError("surprise"),
+            ),
+            pytest.raises(AuthenticationFailed, match="Authentication error"),
+        ):
             backend.authenticate(make_request("Bearer krv_live_" + "a" * 64))
 
     def test_authenticate_header_returns_bearer_realm(self, backend):

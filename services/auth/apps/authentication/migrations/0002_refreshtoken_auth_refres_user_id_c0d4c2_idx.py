@@ -14,7 +14,8 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="refreshtoken",
             index=models.Index(
-                fields=["user", "revoked", "expires_at"], name="auth_refres_user_id_c0d4c2_idx"
+                fields=["user", "revoked", "expires_at"],
+                name="auth_refres_user_id_c0d4c2_idx",
             ),
-        ),
+        )
     ]

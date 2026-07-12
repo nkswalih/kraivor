@@ -6,7 +6,9 @@ from rest_framework import serializers
 
 class ProfileSerializer(serializers.ModelSerializer):
     user_id = serializers.UUIDField(source="user.id", read_only=True)
-    user_avatar_url = serializers.URLField(source="user.avatar_url", read_only=True, allow_null=True)
+    user_avatar_url = serializers.URLField(
+        source="user.avatar_url", read_only=True, allow_null=True
+    )
 
     class Meta:
         model = Profile
@@ -69,8 +71,12 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
         value = re.sub(r"[^a-z0-9_]", "", value)
         value = re.sub(r"_+", "_", value).strip("_")
         if not value:  # pragma: no cover
-            raise serializers.ValidationError("Username must contain at least one letter.")
-        existing = Profile.objects.filter(username=value).exclude(id=self.instance.id).first()
+            raise serializers.ValidationError(
+                "Username must contain at least one letter."
+            )
+        existing = (
+            Profile.objects.filter(username=value).exclude(id=self.instance.id).first()
+        )
         if existing:
             raise serializers.ValidationError("This username is not available.")
         return value
@@ -88,7 +94,9 @@ class FollowerSerializer(serializers.Serializer):
     username = serializers.CharField(source="follower.profile.username")
     display_name = serializers.CharField(source="follower.profile.display_name")
     avatar_url = serializers.URLField(source="follower.profile.avatar_url")
-    user_avatar_url = serializers.URLField(source="follower.avatar_url", allow_null=True)
+    user_avatar_url = serializers.URLField(
+        source="follower.avatar_url", allow_null=True
+    )
     bio = serializers.CharField(source="follower.profile.bio")
     followed_at = serializers.DateTimeField(source="created_at")
 
@@ -98,6 +106,8 @@ class FollowingSerializer(serializers.Serializer):
     username = serializers.CharField(source="following.profile.username")
     display_name = serializers.CharField(source="following.profile.display_name")
     avatar_url = serializers.URLField(source="following.profile.avatar_url")
-    user_avatar_url = serializers.URLField(source="following.avatar_url", allow_null=True)
+    user_avatar_url = serializers.URLField(
+        source="following.avatar_url", allow_null=True
+    )
     bio = serializers.CharField(source="following.profile.bio")
     followed_at = serializers.DateTimeField(source="created_at")

@@ -76,7 +76,9 @@ class UserFactory:
     @classmethod
     def admin(cls, **kwargs):
         """Create an admin user."""
-        return cls.create(is_staff=True, is_superuser=True, email_verified=True, **kwargs)
+        return cls.create(
+            is_staff=True, is_superuser=True, email_verified=True, **kwargs
+        )
 
     @classmethod
     def unverified(cls, **kwargs):

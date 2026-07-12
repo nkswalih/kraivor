@@ -5,20 +5,18 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('api_keys', '0001_initial'),
-    ]
+    dependencies = [("api_keys", "0001_initial")]
 
     operations = [
         migrations.AddField(
-            model_name='apikey',
-            name='prefix',
-            field=models.CharField(db_index=True, default='legacy', max_length=32),
+            model_name="apikey",
+            name="prefix",
+            field=models.CharField(db_index=True, default="legacy", max_length=32),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='apikey',
-            name='revoked',
+            model_name="apikey",
+            name="revoked",
             field=models.BooleanField(default=False),
         ),
     ]

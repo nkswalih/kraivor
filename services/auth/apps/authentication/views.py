@@ -21,15 +21,12 @@ Token strategy
 - refresh_token  → HttpOnly cookie (30-day lifetime, rotated on every use)
 """
 
-import hashlib
-import logging
 from dataclasses import dataclass
 
+import hashlib
+import logging
 from django.utils import timezone
-from drf_spectacular.utils import (
-    OpenApiResponse,
-    extend_schema,
-)
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -46,11 +43,7 @@ from .otp import (
     get_otp_service,
 )
 from .security import check_password as verify_password
-from .security import (
-    generate_device_id,
-    get_client_ip,
-    get_lockout_manager,
-)
+from .security import generate_device_id, get_client_ip, get_lockout_manager
 from .serializers import (
     OTPSendSerializer,
     OTPVerifySerializer,
@@ -159,9 +152,7 @@ def _set_refresh_cookie(response: Response, raw_token: str) -> None:
 def _active_sessions_qs(user_id):
     """Base queryset: non-revoked, non-expired sessions for a user."""
     return RefreshToken.objects.filter(
-        user_id=user_id,
-        revoked=False,
-        expires_at__gt=timezone.now(),
+        user_id=user_id, revoked=False, expires_at__gt=timezone.now()
     )
 
 
@@ -229,7 +220,9 @@ class SignInIdentifyView(APIView):
             email_verified = False
 
         if not user_exists:
-            return Response({"next_step": "signup", "user_exists": False, "email_verified": False})
+            return Response(
+                {"next_step": "signup", "user_exists": False, "email_verified": False}
+            )
 
         if not email_verified:
             return Response(
@@ -278,7 +271,9 @@ class SignInPasswordView(APIView):
 
         email = serializer.validated_data["email"].lower()
         password = serializer.validated_data["password"]
-        device_id = serializer.validated_data.get("device_id") or generate_device_id(request)
+        device_id = serializer.validated_data.get("device_id") or generate_device_id(
+            request
+        )
 
         ip = get_client_ip(request)
         user_agent = request.META.get("HTTP_USER_AGENT", "")
@@ -425,7 +420,9 @@ class OTPSendView(APIView):
             method="otp",
         )
 
-        return Response({"message": "OTP sent to your email"}, status=status.HTTP_200_OK)
+        return Response(
+            {"message": "OTP sent to your email"}, status=status.HTTP_200_OK
+        )
 
 
 class OTPVerifyView(APIView):
@@ -451,7 +448,9 @@ class OTPVerifyView(APIView):
 
         email = serializer.validated_data["email"].lower()
         otp_code = serializer.validated_data["otp_code"]
-        device_id = serializer.validated_data.get("device_id") or generate_device_id(request)
+        device_id = serializer.validated_data.get("device_id") or generate_device_id(
+            request
+        )
 
         ip = get_client_ip(request)
         user_agent = request.META.get("HTTP_USER_AGENT", "")
@@ -564,9 +563,7 @@ class RefreshTokenView(APIView):
 
         try:
             user, tokens = token_service.validate_and_rotate(
-                refresh_token=refresh_token,
-                ip_address=ip,
-                user_agent=user_agent,
+                refresh_token=refresh_token, ip_address=ip, user_agent=user_agent
             )
         except TokenExpiredError:
             return ErrorResponse(
@@ -660,7 +657,9 @@ class LogoutView(APIView):
             token_service.revoke_token(refresh_token)
             log_auth_event(event_type="logout", ip=ip, method="single")
 
-        response = Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
+        response = Response(
+            {"message": "Logged out successfully"}, status=status.HTTP_200_OK
+        )
         _clear_refresh_cookie(response)
         return response
 
@@ -737,14 +736,15 @@ class SignOutView(APIView):
         if raw_token:
             token_hash = _hash_token(raw_token)
             revoked = RefreshToken.objects.filter(
-                token_hash=token_hash,
-                revoked=False,
+                token_hash=token_hash, revoked=False
             ).update(revoked=True)
 
             if revoked:
                 log_auth_event(event_type="signout", ip=ip, method="single")
 
-        response = Response({"message": "Signed out successfully."}, status=status.HTTP_200_OK)
+        response = Response(
+            {"message": "Signed out successfully."}, status=status.HTTP_200_OK
+        )
         _clear_refresh_cookie(response)
         return response
 
@@ -826,7 +826,9 @@ class SessionRevokeView(APIView):
                 expires_at__gt=timezone.now(),
             )
         except RefreshToken.DoesNotExist:
-            return Response({"error": "Session not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Session not found."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         session.revoked = True
         session.save(update_fields=["revoked"])

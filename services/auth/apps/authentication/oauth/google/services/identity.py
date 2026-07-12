@@ -20,11 +20,10 @@ Token storage:
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
-
 from authentication.models import OAuthIdentity
 from authentication.oauth.base import OAuthUserInfo
 from authentication.oauth.encryption import encrypt_token
+from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 from users.models import User
@@ -42,9 +41,7 @@ class GoogleIdentityService:
 
     @transaction.atomic
     def get_or_create(
-        self,
-        user_info: OAuthUserInfo,
-        raw_token_response: dict,
+        self, user_info: OAuthUserInfo, raw_token_response: dict
     ) -> tuple[User, bool]:
         """
         Find or create a User and their Google OAuthIdentity.
@@ -84,7 +81,7 @@ class GoogleIdentityService:
             if user_info.avatar_url:
                 user.avatar_url = user_info.avatar_url
                 user.save(update_fields=["avatar_url"])
-                
+
             logger.info(
                 "google_oauth_link_existing_account: user_id=%s email=%s",
                 user.id,
@@ -123,7 +120,9 @@ class GoogleIdentityService:
             provider_user_id=user_info.provider_user_id,
             provider_email=user_info.email,
             access_token_encrypted=encrypt_token(access_token) if access_token else "",
-            refresh_token_encrypted=encrypt_token(refresh_token) if refresh_token else "",
+            refresh_token_encrypted=(
+                encrypt_token(refresh_token) if refresh_token else ""
+            ),
             expires_at=expires_at,
             raw_data={
                 "sub": user_info.provider_user_id,

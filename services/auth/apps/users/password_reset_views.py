@@ -8,12 +8,8 @@ POST /api/auth/reset-password/   — Reset password with token
 """
 
 import logging
-
 from django.conf import settings
-from drf_spectacular.utils import (
-    OpenApiResponse,
-    extend_schema,
-)
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -58,7 +54,9 @@ class ForgotPasswordView(APIView):
 
         rate_key = f"forgot_password:{email}"
         try:
-            rate_limiter.is_allowed(rate_key, limit=_RESEND_LIMIT, window_seconds=_RESEND_WINDOW)
+            rate_limiter.is_allowed(
+                rate_key, limit=_RESEND_LIMIT, window_seconds=_RESEND_WINDOW
+            )
         except RateLimitExceededError as exc:
             response = Response(
                 {
@@ -76,7 +74,7 @@ class ForgotPasswordView(APIView):
         except User.DoesNotExist:
             return Response(
                 {
-                    "message": "If that email exists, a password reset link has been sent.",
+                    "message": "If that email exists, a password reset link has been sent."
                 },
                 status=status.HTTP_200_OK,
             )
@@ -191,7 +189,10 @@ class ResetPasswordView(APIView):
 
         if not new_password or len(new_password) < 8:
             return Response(
-                {"error": "Password must be at least 8 characters.", "error_code": "weak_password"},
+                {
+                    "error": "Password must be at least 8 characters.",
+                    "error_code": "weak_password",
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

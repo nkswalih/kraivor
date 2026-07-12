@@ -1,8 +1,8 @@
+from pathlib import Path
+
 import base64
 import hashlib
 import logging
-from pathlib import Path
-
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from django.conf import settings
@@ -24,9 +24,14 @@ class JWKSView(View):
             response["Cache-Control"] = "public, max-age=3600"
             return response
         except FileNotFoundError:
-            logger.error("JWKS: Public key not found at %s", settings.JWT_PUBLIC_KEY_PATH)
+            logger.error(
+                "JWKS: Public key not found at %s", settings.JWT_PUBLIC_KEY_PATH
+            )
             return JsonResponse(
-                {"error": "Public key not configured", "error_code": "jwks_not_available"},
+                {
+                    "error": "Public key not configured",
+                    "error_code": "jwks_not_available",
+                },
                 status=503,
             )
         except Exception as e:
@@ -55,9 +60,10 @@ class JWKSView(View):
             if prev_path_obj.exists():
                 try:
                     prev_key = cls._load_public_key_from_path(prev_path_obj)
-                    prev_kid = "kraivor-rs256-" + hashlib.sha256(
-                        prev_path_obj.read_bytes()
-                    ).hexdigest()[:8]
+                    prev_kid = (
+                        "kraivor-rs256-"
+                        + hashlib.sha256(prev_path_obj.read_bytes()).hexdigest()[:8]
+                    )
                     keys.append(cls._public_key_to_jwk(prev_key, kid=prev_kid))
                 except Exception as exc:
                     logger.warning("Failed to load previous key %s: %s", prev_path, exc)

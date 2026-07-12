@@ -2,11 +2,10 @@
 Unit and integration tests for signup flow.
 """
 
-import uuid
-from unittest.mock import patch
-
 import pytest
+import uuid
 from rest_framework.test import APIClient
+from unittest.mock import patch
 from users.models import User
 
 

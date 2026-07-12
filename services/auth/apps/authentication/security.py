@@ -12,7 +12,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
-
 import redis
 from django.conf import settings
 from django.contrib.auth.hashers import check_password as django_check_password
@@ -101,10 +100,14 @@ class LoginLockoutManager:
 
             return failed_attempts
         except redis.exceptions.ConnectionError as e:
-            logger.warning(f"Redis unavailable in record_failure: {e}. Cannot track failures.")
+            logger.warning(
+                f"Redis unavailable in record_failure: {e}. Cannot track failures."
+            )
             return 0
         except redis.exceptions.TimeoutError as e:
-            logger.warning(f"Redis timeout in record_failure: {e}. Cannot track failures.")
+            logger.warning(
+                f"Redis timeout in record_failure: {e}. Cannot track failures."
+            )
             return 0
 
     def clear_attempts(self, email: str, ip: str) -> None:
@@ -118,9 +121,13 @@ class LoginLockoutManager:
             pipe.delete(lockout_key)
             pipe.execute()
         except redis.exceptions.ConnectionError as e:
-            logger.warning(f"Redis unavailable in clear_attempts: {e}. Cannot clear failures.")
+            logger.warning(
+                f"Redis unavailable in clear_attempts: {e}. Cannot clear failures."
+            )
         except redis.exceptions.TimeoutError as e:
-            logger.warning(f"Redis timeout in clear_attempts: {e}. Cannot clear failures.")
+            logger.warning(
+                f"Redis timeout in clear_attempts: {e}. Cannot clear failures."
+            )
 
     def is_allowed(self, email: str, ip: str) -> bool:
         """Check if login is allowed (not locked out)."""

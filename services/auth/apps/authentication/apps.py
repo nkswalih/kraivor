@@ -1,5 +1,4 @@
 import logging
-
 from django.apps import AppConfig
 from django.conf import settings as django_settings
 

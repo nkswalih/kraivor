@@ -2,11 +2,10 @@
 Unit and integration tests for KRV-011 sign-in flow.
 """
 
-from unittest.mock import MagicMock, patch
-
 import pytest
 from authentication.security import reset_lockout_manager
 from rest_framework.test import APIClient
+from unittest.mock import MagicMock, patch
 
 from tests.factories import UserFactory
 
@@ -34,7 +33,9 @@ class TestSignInIdentify:
         ):
             client = APIClient()
             response = client.post(
-                "/api/auth/signin/identify/", {"email": "locked@example.com"}, format="json"
+                "/api/auth/signin/identify/",
+                {"email": "locked@example.com"},
+                format="json",
             )
             assert response.status_code == 429
 
@@ -93,7 +94,9 @@ class TestOTPFlow:
         user = UserFactory.verified()
         mock_sender.return_value.send = lambda e, o: None
         client = APIClient()
-        response = client.post("/api/auth/signin/otp/send/", {"email": user.email}, format="json")
+        response = client.post(
+            "/api/auth/signin/otp/send/", {"email": user.email}, format="json"
+        )
         assert response.status_code == 200
 
     def test_otp_verify_invalid(self, db):
@@ -134,7 +137,9 @@ class TestSignInIntegration:
         client = APIClient()
 
         # Step 1: identify with the actual user's email
-        response = client.post("/api/auth/signin/identify/", {"email": user.email}, format="json")
+        response = client.post(
+            "/api/auth/signin/identify/", {"email": user.email}, format="json"
+        )
         assert response.status_code == 200
         assert response.json()["next_step"] == "choose_method"
 

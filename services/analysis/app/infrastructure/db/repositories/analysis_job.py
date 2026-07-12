@@ -25,8 +25,7 @@ class JobRepository(AbstractJobRepository):
 
     async def get_by_id(self, job_id: UUID) -> dict[str, object] | None:
         stmt = select(AnalysisJobModel).where(
-            AnalysisJobModel.id == job_id,
-            AnalysisJobModel.deleted_at.is_(None),
+            AnalysisJobModel.id == job_id, AnalysisJobModel.deleted_at.is_(None)
         )
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
@@ -47,8 +46,7 @@ class JobRepository(AbstractJobRepository):
         self, repo_id: UUID, limit: int = 10, offset: int = 0
     ) -> tuple[list[dict[str, object]], int]:
         base = select(AnalysisJobModel).where(
-            AnalysisJobModel.repo_id == repo_id,
-            AnalysisJobModel.deleted_at.is_(None),
+            AnalysisJobModel.repo_id == repo_id, AnalysisJobModel.deleted_at.is_(None)
         )
         count_stmt = select(func.count()).select_from(base.subquery())
         count_result = await self._session.execute(count_stmt)
@@ -90,12 +88,12 @@ class JobRepository(AbstractJobRepository):
 
         # These tables have no FK cascade — delete manually
         stmt_del_score = sa_delete(ScoreHistoryModel).where(
-            ScoreHistoryModel.job_id == job_id,
+            ScoreHistoryModel.job_id == job_id
         )
         await self._session.execute(stmt_del_score)
 
         stmt_del_files = sa_delete(FileAnalysisModel).where(
-            FileAnalysisModel.job_id == job_id,
+            FileAnalysisModel.job_id == job_id
         )
         await self._session.execute(stmt_del_files)
 

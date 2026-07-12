@@ -12,10 +12,7 @@ from datetime import datetime
 from typing import cast
 from uuid import UUID
 
-from app.application.analysis.commands import (
-    ProcessStageCommand,
-    StartAnalysisCommand,
-)
+from app.application.analysis.commands import ProcessStageCommand, StartAnalysisCommand
 from app.application.analysis.handler import (
     _push_progress,
     handle_analysis_failure,
@@ -119,9 +116,7 @@ _STAGE_ENGINE: dict[str, str | None] = {
     "finalize": None,
 }
 
-_STAGE_ENGINES: dict[str, list[str]] = {
-    "rules": ["security"],
-}
+_STAGE_ENGINES: dict[str, list[str]] = {"rules": ["security"]}
 
 ALL_ENGINES = {
     "security",
@@ -197,11 +192,7 @@ async def _push_stage_progress(state: dict[str, object], stage_name: str) -> Non
         producer = EventProducer()
         await asyncio.wait_for(
             producer.publish(
-                AnalysisProgressed(
-                    job_id=job_id,
-                    status=status,
-                    progress_pct=pct,
-                )
+                AnalysisProgressed(job_id=job_id, status=status, progress_pct=pct)
             ),
             timeout=5,
         )
@@ -397,7 +388,12 @@ async def _stage_churn(state: dict[str, object]) -> None:
         clone_depth = cast(int, job.get("depth", 1)) if job else 1
 
         if clone_depth <= 1:
-            logger.info("churn_skipped", reason="shallow_clone", depth=clone_depth, job_id=str(job_id))
+            logger.info(
+                "churn_skipped",
+                reason="shallow_clone",
+                depth=clone_depth,
+                job_id=str(job_id),
+            )
             return
 
         result = await handle_stage_churn(cmd, uow, repo_path, clone_depth)
@@ -423,12 +419,7 @@ async def _stage_parse(state: dict[str, object]) -> None:
     async with UnitOfWork() as uow:
         producer = EventProducer()
         metadata, parsed_files = await handle_stage_parse(
-            cmd,
-            parser,
-            uow,
-            producer,
-            repo_path,
-            files,
+            cmd, parser, uow, producer, repo_path, files
         )
         await handle_save_analysis_metadata(
             job_id=job_id,
@@ -459,11 +450,7 @@ async def _stage_rules(state: dict[str, object]) -> None:
     async with UnitOfWork() as uow:
         producer = EventProducer()
         summary, violations = await handle_stage_rules(
-            cmd,
-            _REGISTRY,
-            uow,
-            producer,
-            parsed_files,
+            cmd, _REGISTRY, uow, producer, parsed_files
         )
         await uow.commit()
         state["rule_violations_summary"] = summary
@@ -586,12 +573,7 @@ async def _stage_dead_code(state: dict[str, object]) -> None:
 
     async with UnitOfWork() as uow:
         producer = EventProducer()
-        results = await handle_stage_dead_code(
-            cmd,
-            uow,
-            producer,
-            parsed_files,
-        )
+        results = await handle_stage_dead_code(cmd, uow, producer, parsed_files)
         await uow.commit()
         state["dead_code_results"] = results
 
@@ -611,12 +593,7 @@ async def _stage_errors(state: dict[str, object]) -> None:
 
     async with UnitOfWork() as uow:
         producer = EventProducer()
-        results = await handle_stage_errors(
-            cmd,
-            uow,
-            producer,
-            parsed_files,
-        )
+        results = await handle_stage_errors(cmd, uow, producer, parsed_files)
         await uow.commit()
         state["error_results"] = results
 
@@ -636,12 +613,7 @@ async def _stage_reliability(state: dict[str, object]) -> None:
 
     async with UnitOfWork() as uow:
         producer = EventProducer()
-        results = await handle_stage_reliability(
-            cmd,
-            uow,
-            producer,
-            parsed_files,
-        )
+        results = await handle_stage_reliability(cmd, uow, producer, parsed_files)
         await uow.commit()
         state["reliability_results"] = results
 
@@ -661,12 +633,7 @@ async def _stage_maintainability(state: dict[str, object]) -> None:
 
     async with UnitOfWork() as uow:
         producer = EventProducer()
-        results = await handle_stage_maintainability(
-            cmd,
-            uow,
-            producer,
-            parsed_files,
-        )
+        results = await handle_stage_maintainability(cmd, uow, producer, parsed_files)
         await uow.commit()
         state["maintainability_results"] = results
 
@@ -686,12 +653,7 @@ async def _stage_devops(state: dict[str, object]) -> None:
 
     async with UnitOfWork() as uow:
         producer = EventProducer()
-        results = await handle_stage_devops(
-            cmd,
-            uow,
-            producer,
-            parsed_files,
-        )
+        results = await handle_stage_devops(cmd, uow, producer, parsed_files)
         await uow.commit()
         state["devops_results"] = results
 
@@ -711,12 +673,7 @@ async def _stage_perf(state: dict[str, object]) -> None:
 
     async with UnitOfWork() as uow:
         producer = EventProducer()
-        metrics = await handle_stage_perf(
-            cmd,
-            uow,
-            producer,
-            parsed_files,
-        )
+        metrics = await handle_stage_perf(cmd, uow, producer, parsed_files)
         await uow.commit()
         state["perf_metrics"] = metrics
 
@@ -724,9 +681,11 @@ async def _stage_perf(state: dict[str, object]) -> None:
         "pipeline_stage_complete",
         stage="perf",
         job_id=str(job_id),
-        rpm=cast(PerformanceMetrics, state["perf_metrics"]).overall_rpm
-        if state.get("perf_metrics")
-        else None,
+        rpm=(
+            cast(PerformanceMetrics, state["perf_metrics"]).overall_rpm
+            if state.get("perf_metrics")
+            else None
+        ),
     )
 
 
@@ -743,12 +702,7 @@ async def _stage_simulation(state: dict[str, object]) -> None:
 
     async with UnitOfWork() as uow:
         producer = EventProducer()
-        results = await handle_stage_simulation(
-            cmd,
-            uow,
-            producer,
-            perf_metrics,
-        )
+        results = await handle_stage_simulation(cmd, uow, producer, perf_metrics)
         await uow.commit()
         state["simulation_results"] = results
 
@@ -829,11 +783,7 @@ async def _stage_guide_gen(state: dict[str, object]) -> None:
         await uow.commit()
         state["enterprise_guide"] = guide
 
-    logger.info(
-        "pipeline_stage_complete",
-        stage="guide_gen",
-        job_id=str(job_id),
-    )
+    logger.info("pipeline_stage_complete", stage="guide_gen", job_id=str(job_id))
 
 
 async def _stage_ai_enrich(state: dict[str, object]) -> None:
@@ -848,12 +798,7 @@ async def _stage_ai_enrich(state: dict[str, object]) -> None:
 
     async with UnitOfWork() as uow:
         result = await handle_stage_ai_enrich(
-            cmd,
-            uow,
-            findings,
-            score=score,
-            languages=languages,
-            frameworks=frameworks,
+            cmd, uow, findings, score=score, languages=languages, frameworks=frameworks
         )
         await uow.commit()
         if result:
@@ -905,25 +850,11 @@ async def _stage_finalize(state: dict[str, object]) -> None:
         await uow.commit()
         state["report"] = report.to_dict()
 
-    logger.info(
-        "pipeline_stage_complete",
-        stage="finalize",
-        job_id=str(job_id),
-    )
+    logger.info("pipeline_stage_complete", stage="finalize", job_id=str(job_id))
 
 
-async def _handle_failure_async(
-    job_id: UUID,
-    stage: str,
-    error_message: str,
-) -> None:
+async def _handle_failure_async(job_id: UUID, stage: str, error_message: str) -> None:
     async with UnitOfWork() as uow:
         producer = EventProducer()
-        await handle_analysis_failure(
-            job_id,
-            stage,
-            error_message,
-            uow,
-            producer,
-        )
+        await handle_analysis_failure(job_id, stage, error_message, uow, producer)
         await uow.commit()

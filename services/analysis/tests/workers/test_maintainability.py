@@ -40,7 +40,7 @@ class TestLongMethod:
             functions=[
                 ParsedFunction(
                     name="long_func", line_start=1, line_end=57, complexity=1
-                ),
+                )
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -57,7 +57,7 @@ class TestLongMethod:
             functions=[
                 ParsedFunction(
                     name="short_func", line_start=1, line_end=12, complexity=1
-                ),
+                )
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -76,7 +76,7 @@ class TestTooManyParameters:
             functions=[
                 ParsedFunction(
                     name="overloaded", line_start=1, line_end=2, complexity=1
-                ),
+                )
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -90,7 +90,7 @@ class TestTooManyParameters:
             "params.py",
             content,
             functions=[
-                ParsedFunction(name="simple", line_start=1, line_end=2, complexity=1),
+                ParsedFunction(name="simple", line_start=1, line_end=2, complexity=1)
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -108,7 +108,7 @@ class TestHighCyclomaticComplexity:
             functions=[
                 ParsedFunction(
                     name="complex_func", line_start=1, line_end=2, complexity=15
-                ),
+                )
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -121,7 +121,7 @@ class TestHighCyclomaticComplexity:
             "simple.py",
             "def simple():\n    pass\n",
             functions=[
-                ParsedFunction(name="simple", line_start=1, line_end=2, complexity=3),
+                ParsedFunction(name="simple", line_start=1, line_end=2, complexity=3)
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -191,7 +191,7 @@ class TestLargeClass:
             "large.py",
             "class Large:\n    pass\n",
             classes=[
-                ParsedClass(name="Large", line_start=1, line_end=350, methods=["a"]),
+                ParsedClass(name="Large", line_start=1, line_end=350, methods=["a"])
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -204,7 +204,7 @@ class TestLargeClass:
             "small.py",
             "class Small:\n    pass\n",
             classes=[
-                ParsedClass(name="Small", line_start=1, line_end=50, methods=["a"]),
+                ParsedClass(name="Small", line_start=1, line_end=50, methods=["a"])
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -225,7 +225,7 @@ class TestTooManyMethods:
                     line_start=1,
                     line_end=100,
                     methods=[f"m{i}" for i in range(20)],
-                ),
+                )
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -243,7 +243,7 @@ class TestTooManyMethods:
                     line_start=1,
                     line_end=50,
                     methods=[f"m{i}" for i in range(5)],
-                ),
+                )
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -284,7 +284,7 @@ class TestMissingDocstrings:
                     line_end=2,
                     complexity=1,
                     docstring="",
-                ),
+                )
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -303,7 +303,7 @@ class TestMissingDocstrings:
                     line_end=3,
                     complexity=1,
                     docstring="Has docs.",
-                ),
+                )
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -318,7 +318,7 @@ class TestMissingDocstrings:
             functions=[
                 ParsedFunction(
                     name="_helper", line_start=1, line_end=2, complexity=1, docstring=""
-                ),
+                )
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -407,7 +407,7 @@ class TestDeepInheritance:
                     line_end=2,
                     bases=["B", "C", "D", "E"],
                     methods=["method"],
-                ),
+                )
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -426,7 +426,7 @@ class TestDeepInheritance:
                     line_end=2,
                     bases=["Base"],
                     methods=["method"],
-                ),
+                )
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -504,7 +504,7 @@ class TestMetricsComputation:
             "test.py",
             "def f():\n    pass\n",
             functions=[
-                ParsedFunction(name="f", line_start=1, line_end=60, complexity=15),
+                ParsedFunction(name="f", line_start=1, line_end=60, complexity=15)
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -520,7 +520,7 @@ class TestMetricsComputation:
             "test.py",
             "def f():\n    pass\n",
             functions=[
-                ParsedFunction(name="f", line_start=1, line_end=60, complexity=12),
+                ParsedFunction(name="f", line_start=1, line_end=60, complexity=12)
             ],
         )
         detector = MaintainabilityDetector([pf])
@@ -534,7 +534,7 @@ class TestMetricsComputation:
             "test.py",
             "x = 1\n",
             functions=[
-                ParsedFunction(name="f", line_start=1, line_end=2, complexity=1),
+                ParsedFunction(name="f", line_start=1, line_end=2, complexity=1)
             ],
         )
         detector = MaintainabilityDetector([pf])

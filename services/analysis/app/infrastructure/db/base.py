@@ -38,8 +38,4 @@ class SoftDeleteMixin:
 
 def UUIDColumn() -> MappedColumn[UUID]:  # noqa: N802
     """Generate a UUID primary key column."""
-    return mapped_column(
-        PG_UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid4,
-    )
+    return mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)

@@ -13,37 +13,25 @@ class RustParser(AbstractParser):
     language: str = "rust"
     supported_extensions: list[str] = [".rs"]
 
-    _STRUCT_DECL = re.compile(
-        r"(?:pub\s+)?struct\s+(\w+)(?:<[^>]*>)?(?:\s*\{|;)",
-    )
-    _ENUM_DECL = re.compile(
-        r"(?:pub\s+)?enum\s+(\w+)(?:<[^>]*>)?\s*\{",
-    )
+    _STRUCT_DECL = re.compile(r"(?:pub\s+)?struct\s+(\w+)(?:<[^>]*>)?(?:\s*\{|;)")
+    _ENUM_DECL = re.compile(r"(?:pub\s+)?enum\s+(\w+)(?:<[^>]*>)?\s*\{")
     _TRAIT_DECL = re.compile(
-        r"(?:pub\s+)?(?:unsafe\s+)?trait\s+(\w+)(?:<[^>]*>)?(?:\s*:\s*([^{]+?))?(?=\s*\{)",
+        r"(?:pub\s+)?(?:unsafe\s+)?trait\s+(\w+)(?:<[^>]*>)?(?:\s*:\s*([^{]+?))?(?=\s*\{)"
     )
     _IMPL_DECL = re.compile(
-        r"(?:pub\s+)?(?:unsafe\s+)?impl\s+(?:<[^>]*>\s+)?(?:\w+(?:<[^>]*>)?\s+for\s+)?(\w+(?:<[^>]*>)?)\s*\{",
+        r"(?:pub\s+)?(?:unsafe\s+)?impl\s+(?:<[^>]*>\s+)?(?:\w+(?:<[^>]*>)?\s+for\s+)?(\w+(?:<[^>]*>)?)\s*\{"
     )
     _FN_DECL = re.compile(
         r'(?:pub\s+)?(?:async\s+)?(?:unsafe\s+)?(?:extern\s+"[^"]+"\s+)?fn\s+(\w+)\s*\(([^)]*)\)\s*(?:->\s*[^{;]+)?(?:\s*where\s+[^{;]+)?(?=\s*\{|\s*;)',
         re.MULTILINE,
     )
     _USE = re.compile(
-        r"use\s+(?:pub\s+)?(?:\w+(?:::\w+)*(?:::\*)?(?:\s+as\s+\w+)?)\s*;",
+        r"use\s+(?:pub\s+)?(?:\w+(?:::\w+)*(?:::\*)?(?:\s+as\s+\w+)?)\s*;"
     )
-    _USE_PATH = re.compile(
-        r"use\s+(?:pub\s+)?([\w:*]+(?:\s+as\s+\w+)?)\s*;",
-    )
-    _MOD_DECL = re.compile(
-        r"(?:pub\s+)?mod\s+(\w+)\s*(?:;|\{)",
-    )
-    _MACRO = re.compile(
-        r"(\w+)!\s*",
-    )
-    _COMPLEXITY_KW = re.compile(
-        r"\b(?:if|else|for|while|loop|match|catch)\b",
-    )
+    _USE_PATH = re.compile(r"use\s+(?:pub\s+)?([\w:*]+(?:\s+as\s+\w+)?)\s*;")
+    _MOD_DECL = re.compile(r"(?:pub\s+)?mod\s+(\w+)\s*(?:;|\{)")
+    _MACRO = re.compile(r"(\w+)!\s*")
+    _COMPLEXITY_KW = re.compile(r"\b(?:if|else|for|while|loop|match|catch)\b")
 
     async def parse(self, file_path: str, content: str) -> ParsedFile:
         parsed = ParsedFile(

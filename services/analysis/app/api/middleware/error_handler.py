@@ -10,8 +10,7 @@ logger = get_logger(__name__)
 async def not_found_handler(request: Request, exc: NotFoundError) -> JSONResponse:
     logger.warning("not_found", path=request.url.path, detail=str(exc))
     return JSONResponse(
-        status_code=404,
-        content={"detail": str(exc), "error_code": "NOT_FOUND"},
+        status_code=404, content={"detail": str(exc), "error_code": "NOT_FOUND"}
     )
 
 

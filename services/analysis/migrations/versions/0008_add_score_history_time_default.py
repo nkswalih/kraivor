@@ -17,17 +17,9 @@ depends_on: str | None = None
 
 def upgrade() -> None:
     op.alter_column(
-        "score_history",
-        "time",
-        server_default=sa.func.now(),
-        schema="analysis",
+        "score_history", "time", server_default=sa.func.now(), schema="analysis"
     )
 
 
 def downgrade() -> None:
-    op.alter_column(
-        "score_history",
-        "time",
-        server_default=None,
-        schema="analysis",
-    )
+    op.alter_column("score_history", "time", server_default=None, schema="analysis")

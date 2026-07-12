@@ -4,12 +4,4 @@ from app.domain.entities.report import Report
 from app.domain.entities.repository import Repository
 from app.domain.entities.score import Score
 
-__all__ = [
-    "Category",
-    "Finding",
-    "Report",
-    "Repository",
-    "Score",
-    "Severity",
-    "Tiers",
-]
+__all__ = ["Category", "Finding", "Report", "Repository", "Score", "Severity", "Tiers"]

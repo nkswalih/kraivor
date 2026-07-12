@@ -5,9 +5,7 @@ from app.infrastructure.db.repositories.analysis_metadata import (
     AnalysisMetadataRepository,
 )
 from app.infrastructure.db.repositories.dead_code import DeadCodeRepository
-from app.infrastructure.db.repositories.devops_finding import (
-    DevOpsFindingRepository,
-)
+from app.infrastructure.db.repositories.devops_finding import DevOpsFindingRepository
 from app.infrastructure.db.repositories.enterprise_guide import (
     EnterpriseGuideRepository,
 )

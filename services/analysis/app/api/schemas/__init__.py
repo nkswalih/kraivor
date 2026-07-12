@@ -1,8 +1,4 @@
-from app.api.schemas.common import (
-    ErrorResponse,
-    HealthResponse,
-    PaginationParams,
-)
+from app.api.schemas.common import ErrorResponse, HealthResponse, PaginationParams
 from app.api.schemas.dead_code import DeadCodeFindingResponse, DeadCodeListResponse
 from app.api.schemas.errors import ErrorFindingListResponse, ErrorFindingResponse
 from app.api.schemas.findings import (

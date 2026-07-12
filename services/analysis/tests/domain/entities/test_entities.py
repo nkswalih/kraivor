@@ -77,20 +77,13 @@ class TestReport:
     def test_report_with_scores(self) -> None:
         score = Score(overall=85)
         report = Report(
-            job_id=uuid4(),
-            repo_id=uuid4(),
-            workspace_id=uuid4(),
-            scores=score,
+            job_id=uuid4(), repo_id=uuid4(), workspace_id=uuid4(), scores=score
         )
         assert report.scores is not None
         assert report.scores.overall == 85
 
     def test_to_dict(self) -> None:
-        report = Report(
-            job_id=uuid4(),
-            repo_id=uuid4(),
-            workspace_id=uuid4(),
-        )
+        report = Report(job_id=uuid4(), repo_id=uuid4(), workspace_id=uuid4())
         d = report.to_dict()
         assert "metadata" in d
         assert "findings" in d

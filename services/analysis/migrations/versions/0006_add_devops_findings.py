@@ -46,17 +46,9 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         schema="analysis",
     )
+    op.create_index("idx_devops_job", "devops_findings", ["job_id"], schema="analysis")
     op.create_index(
-        "idx_devops_job",
-        "devops_findings",
-        ["job_id"],
-        schema="analysis",
-    )
-    op.create_index(
-        "idx_devops_type",
-        "devops_findings",
-        ["devops_type"],
-        schema="analysis",
+        "idx_devops_type", "devops_findings", ["devops_type"], schema="analysis"
     )
 
 

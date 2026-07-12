@@ -17,7 +17,7 @@ def _calibrate_base_rpm(parsed_files: list[ParsedFile]) -> int:
     total_routes = sum(len(pf.routes) for pf in parsed_files)
     route_boost = max(200, total_routes * 50)
     file_boost = max(300, total_files * 30)
-    return min(8000, max(500, file_boost + route_boost))
+    return min(8000, max(2000, file_boost + route_boost))
 
 
 @dataclass
@@ -45,11 +45,13 @@ class EndpointMetric:
             "max_concurrent_users": self.max_concurrent_users,
             "bottleneck_type": ",".join(self.bottlenecks) if self.bottlenecks else None,
             "bottleneck_severity": "high" if self.estimated_rpm < 500 else "medium",
-            "bottleneck_detail": "; ".join(
-                f"{d['type']}: -{d['rpm_impact']} RPM" for d in self.deductions
-            )
-            if self.deductions
-            else None,
+            "bottleneck_detail": (
+                "; ".join(
+                    f"{d['type']}: -{d['rpm_impact']} RPM" for d in self.deductions
+                )
+                if self.deductions
+                else None
+            ),
             "confidence": self.confidence,
         }
 
@@ -86,7 +88,9 @@ class RPMCalculator:
             metrics.bottlenecks = list(set(all_bottlenecks))
         return metrics
 
-    def _analyze_endpoint(self, route: ParsedRoute, pf: ParsedFile, base_rpm: int = 2000) -> EndpointMetric:
+    def _analyze_endpoint(
+        self, route: ParsedRoute, pf: ParsedFile, base_rpm: int = 2000
+    ) -> EndpointMetric:
         deductions: list[tuple[str, int]] = []
         code = route.code or ""
         full_content = pf.content

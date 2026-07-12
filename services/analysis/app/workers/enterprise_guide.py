@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from statistics import mean, stdev
 from types import SimpleNamespace as _SimpleNamespace
 
 from app.core.constants import Category, Severity, Tiers
@@ -329,7 +328,17 @@ class FlatEntry:
 
 
 def _flat(
-    f: RuleViolation | DeadCodeFinding | ErrorFinding | ReliabilityFinding | DevOpsFinding | MaintainabilityFinding | Finding | dict[str, object] | _SimpleNamespace,
+    f: (
+        RuleViolation
+        | DeadCodeFinding
+        | ErrorFinding
+        | ReliabilityFinding
+        | DevOpsFinding
+        | MaintainabilityFinding
+        | Finding
+        | dict[str, object]
+        | _SimpleNamespace
+    ),
 ) -> FlatEntry:
     if isinstance(f, RuleViolation):
         return FlatEntry(
@@ -452,11 +461,9 @@ def _flat(
             title=getattr(f, "title", ""),
             description=getattr(f, "description", ""),
             file_path=getattr(f, "file_path", ""),
-            line_start=getattr(f, "line_start"),
+            line_start=f.line_start,
             recommendation=getattr(f, "recommendation", ""),
-            effort=_estimate_effort(
-                getattr(f, "rule_id", ""), getattr(f, "title", "")
-            ),
+            effort=_estimate_effort(getattr(f, "rule_id", ""), getattr(f, "title", "")),
             score_impact=getattr(f, "score_impact", 0),
             rpm_impact=getattr(f, "rpm_impact", 0),
         )
@@ -566,25 +573,63 @@ def _classify_service(file_path: str) -> str:
 
 
 OWNERSHIP_MAP: list[tuple[list[str], str, str]] = [
-    (["security", "auth", "jwt", "crypto", "secret", "xss", "injection"], "Security Team",
-     "All security-critical findings require security team review"),
-    (["performance", "n_plus_one", "caching", "bottleneck", "sync_in_async", "unbounded"],
-     "Platform Team",
-     "Performance and scalability concerns affect the platform layer"),
-    (["devops", "docker", "deploy", "ci/cd", "pipeline", "kubernetes", "helm"],
-     "DevOps Team",
-     "Infrastructure and deployment configuration"),
-    (["test", "coverage", "assertion", "mock"], "QA Team",
-     "Test quality and coverage improvements"),
-    (["frontend", "ui", "css", "component", "react", "vue", "angular", "typescript", "jsx", "tsx"],
-     "Frontend Team",
-     "Frontend-specific code quality and security issues"),
-    (["maintainability", "complexity", "duplicate", "long_method", "dead_code", "unused", "quality"],
-     "Platform Team",
-     "Code maintainability and technical debt"),
+    (
+        ["security", "auth", "jwt", "crypto", "secret", "xss", "injection"],
+        "Security Team",
+        "All security-critical findings require security team review",
+    ),
+    (
+        [
+            "performance",
+            "n_plus_one",
+            "caching",
+            "bottleneck",
+            "sync_in_async",
+            "unbounded",
+        ],
+        "Platform Team",
+        "Performance and scalability concerns affect the platform layer",
+    ),
+    (
+        ["devops", "docker", "deploy", "ci/cd", "pipeline", "kubernetes", "helm"],
+        "DevOps Team",
+        "Infrastructure and deployment configuration",
+    ),
+    (
+        ["test", "coverage", "assertion", "mock"],
+        "QA Team",
+        "Test quality and coverage improvements",
+    ),
+    (
+        [
+            "frontend",
+            "ui",
+            "css",
+            "component",
+            "react",
+            "vue",
+            "angular",
+            "typescript",
+            "jsx",
+            "tsx",
+        ],
+        "Frontend Team",
+        "Frontend-specific code quality and security issues",
+    ),
+    (
+        [
+            "maintainability",
+            "complexity",
+            "duplicate",
+            "long_method",
+            "dead_code",
+            "unused",
+            "quality",
+        ],
+        "Platform Team",
+        "Code maintainability and technical debt",
+    ),
 ]
-
-import re
 
 
 def _assign_ownership(rule_id: str, title: str, file_path: str) -> dict[str, str]:
@@ -592,10 +637,15 @@ def _assign_ownership(rule_id: str, title: str, file_path: str) -> dict[str, str
     for patterns, team, rationale in OWNERSHIP_MAP:
         if any(p in text for p in patterns):
             return {"recommended_team": team, "rationale": rationale}
-    return {"recommended_team": "Backend Team", "rationale": "General backend code ownership"}
+    return {
+        "recommended_team": "Backend Team",
+        "rationale": "General backend code ownership",
+    }
 
 
-def _generate_ai_recommendation(entry: FlatEntry, cluster: dict[str, object]) -> dict[str, object]:
+def _generate_ai_recommendation(
+    entry: FlatEntry, cluster: dict[str, object]
+) -> dict[str, object]:
     cluster_id = cluster.get("cluster_id", entry.rule_id)
     cwe = cluster.get("cwe", [])
     standards = cluster.get("standards_reference", [])
@@ -607,7 +657,9 @@ def _generate_ai_recommendation(entry: FlatEntry, cluster: dict[str, object]) ->
         business_impact = "Critical — potential data breach, regulatory fines, and customer trust loss"
         confidence = "high"
     elif severity == Severity.HIGH:
-        business_impact = "High — may lead to service degradation or unauthorized access"
+        business_impact = (
+            "High — may lead to service degradation or unauthorized access"
+        )
         confidence = "high"
     elif severity == Severity.MEDIUM:
         business_impact = "Moderate — impacts maintainability and developer velocity"
@@ -619,10 +671,15 @@ def _generate_ai_recommendation(entry: FlatEntry, cluster: dict[str, object]) ->
     return {
         "cluster_id": cluster_id,
         "problem": entry.title,
-        "root_cause": entry.description[:150] if entry.description else "Identified by static analysis",
+        "root_cause": (
+            entry.description[:150]
+            if entry.description
+            else "Identified by static analysis"
+        ),
         "business_impact": business_impact,
         "enterprise_best_practice": f"Refer to {std_ref} ({cwe_ref}) for remediation guidance",
-        "recommended_refactor": entry.recommendation or "Follow OWASP/relevant best practice for remediation",
+        "recommended_refactor": entry.recommendation
+        or "Follow OWASP/relevant best practice for remediation",
         "expected_score_gain": abs(entry.score_impact) if entry.score_impact else 1.0,
         "estimated_hours": max(1, entry.effort // 60),
         "ai_confidence": confidence,
@@ -846,9 +903,7 @@ class EnterpriseGuideGenerator:
                 guide.medium_issues.append(issue_entry)
 
     def _generate_architecture_review(
-        self,
-        guide: EnterpriseGuide,
-        findings: list[RuleViolation],
+        self, guide: EnterpriseGuide, findings: list[RuleViolation]
     ) -> None:
         total = len(findings)
         by_category: dict[str, int] = {}
@@ -995,9 +1050,7 @@ class EnterpriseGuideGenerator:
             "release_recommendation": self._compute_release_rec(scores),
             "business_risk": self._score_to_risk_level(overall),
             "engineering_risk": self._score_to_risk_level(scores.maintainability),
-            "technical_debt_level": self._score_to_risk_level(
-                scores.maintainability
-            ),
+            "technical_debt_level": self._score_to_risk_level(scores.maintainability),
             "estimated_remediation_time": remediation_time,
             "estimated_team_size": team_size,
         }
@@ -1021,18 +1074,13 @@ class EnterpriseGuideGenerator:
         return "no_go"
 
     def _generate_engineering_scorecard(
-        self,
-        guide: EnterpriseGuide,
-        scores: Score,
-        findings: list[RuleViolation],
+        self, guide: EnterpriseGuide, scores: Score, findings: list[RuleViolation]
     ) -> None:
         cat_findings: dict[str, list[RuleViolation]] = defaultdict(list)
         for f in findings:
             cat_findings[str(f.category)].append(f)
 
-        def card(
-            cat: str, cat_score: int | None, label: str
-        ) -> dict[str, object]:
+        def card(cat: str, cat_score: int | None, label: str) -> dict[str, object]:
             cat_f = cat_findings.get(cat, [])
             severity_counts = Counter(str(f.severity) for f in cat_f)
             biggest = ""
@@ -1050,7 +1098,11 @@ class EnterpriseGuideGenerator:
                 "industry_comparison": (
                     "below_average"
                     if cat_score is not None and cat_score < 70
-                    else "average" if cat_score is not None and cat_score < 85 else "above_average"
+                    else (
+                        "average"
+                        if cat_score is not None and cat_score < 85
+                        else "above_average"
+                    )
                 ),
                 "biggest_problem": biggest,
                 "best_recommendation": rec,
@@ -1059,9 +1111,7 @@ class EnterpriseGuideGenerator:
             }
 
         guide.engineering_scorecard = {
-            "security": card(
-                Category.SECURITY, scores.security, "Security"
-            ),
+            "security": card(Category.SECURITY, scores.security, "Security"),
             "performance": card(
                 Category.PERFORMANCE, scores.performance, "Performance"
             ),
@@ -1084,14 +1134,12 @@ class EnterpriseGuideGenerator:
         clusters: list[dict[str, object]] = []
         for rule_id, group in sorted(groups.items(), key=lambda x: -len(x[1])):
             cluster_template = _lookup_cluster(rule_id)
-            services = sorted(
-                set(_classify_service(e.file_path) for e in group)
-            )
+            services = sorted({_classify_service(e.file_path) for e in group})
             files = sorted(
-                set(
+                {
                     f"{e.file_path}:{e.line_start}" if e.line_start else e.file_path
                     for e in group
-                )
+                }
             )
             severity_counts = Counter(e.severity for e in group)
             total_effort = sum(e.effort for e in group)
@@ -1221,21 +1269,19 @@ class EnterpriseGuideGenerator:
         guide.service_health = health
 
     def _generate_business_risk(
-        self,
-        guide: EnterpriseGuide,
-        scores: Score,
-        entries: list[FlatEntry],
+        self, guide: EnterpriseGuide, scores: Score, entries: list[FlatEntry]
     ) -> None:
         severity_counts = Counter(e.severity for e in entries)
         cat_counts: dict[str, int] = Counter(e.category for e in entries)
         critical = severity_counts.get(Severity.CRITICAL, 0)
         high = severity_counts.get(Severity.HIGH, 0)
         has_critical_security = (
-            critical > 0
-            and cat_counts.get(Category.SECURITY, 0) > 0
+            critical > 0 and cat_counts.get(Category.SECURITY, 0) > 0
         )
 
-        def _risk(critical_count: int, high_count: int, threshold_c: int, threshold_h: int) -> str:
+        def _risk(
+            critical_count: int, high_count: int, threshold_c: int, threshold_h: int
+        ) -> str:
             if critical_count >= threshold_c:
                 return "critical"
             if high_count >= threshold_h:
@@ -1277,7 +1323,7 @@ class EnterpriseGuideGenerator:
         cat_count: dict[str, int] = defaultdict(int)
         cat_severity: dict[str, list[str]] = defaultdict(list)
 
-        CATEGORY_DEBT_MAP: dict[str, str] = {
+        category_debt_map: dict[str, str] = {
             Category.SECURITY: "security_debt",
             Category.STRUCTURE: "architecture_debt",
             Category.PERFORMANCE: "performance_debt",
@@ -1290,7 +1336,7 @@ class EnterpriseGuideGenerator:
         }
 
         for e in entries:
-            debt_key = CATEGORY_DEBT_MAP.get(e.category, "other_debt")
+            debt_key = category_debt_map.get(e.category, "other_debt")
             cat_effort[debt_key] += e.effort
             cat_count[debt_key] += 1
             cat_severity[debt_key].append(e.severity)
@@ -1304,9 +1350,13 @@ class EnterpriseGuideGenerator:
                 "estimated_minutes": hrs,
                 "estimated_hours": round(hrs / 60, 1),
                 "severity": (
-                    "critical" if any(s == Severity.CRITICAL for s in sevs)
-                    else "high" if any(s == Severity.HIGH for s in sevs)
-                    else "medium" if cnt > 0 else "low"
+                    "critical"
+                    if any(s == Severity.CRITICAL for s in sevs)
+                    else (
+                        "high"
+                        if any(s == Severity.HIGH for s in sevs)
+                        else "medium" if cnt > 0 else "low"
+                    )
                 ),
                 "label": label,
             }
@@ -1331,17 +1381,23 @@ class EnterpriseGuideGenerator:
         guide.quick_wins = [
             {
                 "title": e.title,
-                "file": f"{e.file_path}:{e.line_start}" if e.line_start else e.file_path,
+                "file": (
+                    f"{e.file_path}:{e.line_start}" if e.line_start else e.file_path
+                ),
                 "estimated_impact": (
-                    "high" if e.severity in (Severity.CRITICAL, Severity.HIGH) else "medium"
+                    "high"
+                    if e.severity in (Severity.CRITICAL, Severity.HIGH)
+                    else "medium"
                 ),
                 "estimated_time": e.effort,
                 "priority": (
-                    "P0" if e.severity == Severity.CRITICAL
-                    else "P1" if e.severity == Severity.HIGH
-                    else "P2"
+                    "P0"
+                    if e.severity == Severity.CRITICAL
+                    else "P1" if e.severity == Severity.HIGH else "P2"
                 ),
-                "expected_score_improvement": abs(e.score_impact) if e.score_impact else 0.5,
+                "expected_score_improvement": (
+                    abs(e.score_impact) if e.score_impact else 0.5
+                ),
             }
             for e in quick[:15]
         ]
@@ -1372,7 +1428,9 @@ class EnterpriseGuideGenerator:
         guide.scalability_review = {
             "estimated_rpm": rpm,
             "estimated_concurrent_users": concurrent_users,
-            "expected_bottleneck": bottlenecks[0] if bottlenecks else "Database connections under load",
+            "expected_bottleneck": (
+                bottlenecks[0] if bottlenecks else "Database connections under load"
+            ),
             "rpm_grade": rpm_grade,
             "database_scalability": {
                 "score": db_score,
@@ -1385,7 +1443,8 @@ class EnterpriseGuideGenerator:
             },
             "cache_recommendation": (
                 "Implement Redis/Memcached for API response caching and session storage"
-                if perf_metrics.bottlenecks and any("db" in b.lower() for b in perf_metrics.bottlenecks)
+                if perf_metrics.bottlenecks
+                and any("db" in b.lower() for b in perf_metrics.bottlenecks)
                 else "Evaluate caching strategy for frequently accessed data"
             ),
             "queue_recommendation": (
@@ -1404,7 +1463,8 @@ class EnterpriseGuideGenerator:
                 "status": "ready",
             },
             "infrastructure_cost_projection": (
-                "high increase at 2x scale — consider optimization" if rpm and rpm > 20000
+                "high increase at 2x scale — consider optimization"
+                if rpm and rpm > 20000
                 else "moderate increase at 2x scale"
             ),
         }
@@ -1428,23 +1488,33 @@ class EnterpriseGuideGenerator:
             "status": readiness,
             "overall_score": scores.overall,
             "security_check": (
-                "passed" if scores.security is not None and scores.security >= 70 else "failed"
+                "passed"
+                if scores.security is not None and scores.security >= 70
+                else "failed"
             ),
             "performance_check": (
-                "passed" if scores.performance is not None and scores.performance >= 60 else "failed"
+                "passed"
+                if scores.performance is not None and scores.performance >= 60
+                else "failed"
             ),
             "reliability_check": (
-                "passed" if scores.reliability is not None and scores.reliability >= 60 else "failed"
+                "passed"
+                if scores.reliability is not None and scores.reliability >= 60
+                else "failed"
             ),
             "maintainability_check": (
-                "passed" if scores.maintainability is not None and scores.maintainability >= 50 else "failed"
+                "passed"
+                if scores.maintainability is not None and scores.maintainability >= 50
+                else "failed"
             ),
             "recommendation": (
                 "Ready for deployment to production"
                 if readiness == "ready"
-                else "Address critical issues before deploying to production"
-                if readiness == "not_ready"
-                else "Can deploy with monitoring — address security concerns in parallel"
+                else (
+                    "Address critical issues before deploying to production"
+                    if readiness == "not_ready"
+                    else "Can deploy with monitoring — address security concerns in parallel"
+                )
             ),
         }
 
@@ -1462,16 +1532,16 @@ class EnterpriseGuideGenerator:
             "description": (
                 "All checks pass — ready for production release"
                 if rec == "go"
-                else "Address critical issues before release"
-                if rec == "no_go"
-                else "Monitor closely — proceed with rollback plan"
+                else (
+                    "Address critical issues before release"
+                    if rec == "no_go"
+                    else "Monitor closely — proceed with rollback plan"
+                )
             ),
         }
 
     def _generate_sprint_roadmap(
-        self,
-        guide: EnterpriseGuide,
-        entries: list[FlatEntry],
+        self, guide: EnterpriseGuide, entries: list[FlatEntry]
     ) -> None:
         sprints: dict[str, list[FlatEntry]] = {
             "sprint_1": [],
@@ -1510,18 +1580,16 @@ class EnterpriseGuideGenerator:
                 roadmap[key] = {
                     "sprint_number": num,
                     "title": label,
-                    "objectives": ["No critical issues remaining — focus on preventive measures"],
+                    "objectives": [
+                        "No critical issues remaining — focus on preventive measures"
+                    ],
                     "tasks": [],
                     "estimated_hours": 0,
                     "expected_score_gain": 0,
                 }
                 continue
 
-            tasks = list(
-                dict.fromkeys(
-                    f"{e.title} — {e.file_path}" for e in items
-                )
-            )[:8]
+            tasks = list(dict.fromkeys(f"{e.title} — {e.file_path}" for e in items))[:8]
             total_effort = sum(e.effort for e in items)
 
             severity_counts = Counter(e.severity for e in items)
@@ -1546,9 +1614,7 @@ class EnterpriseGuideGenerator:
         guide.sprint_roadmap = roadmap
 
     def _generate_ownership(
-        self,
-        guide: EnterpriseGuide,
-        entries: list[FlatEntry],
+        self, guide: EnterpriseGuide, entries: list[FlatEntry]
     ) -> None:
         team_groups: dict[str, list[FlatEntry]] = defaultdict(list)
         for e in entries:
@@ -1557,7 +1623,7 @@ class EnterpriseGuideGenerator:
 
         ownership_list: list[dict[str, object]] = []
         for team, team_entries in sorted(team_groups.items()):
-            categories = sorted(set(e.category for e in team_entries))
+            categories = sorted({e.category for e in team_entries})
             total = len(team_entries)
             effort = sum(e.effort for e in team_entries)
             rationale = _assign_ownership(
@@ -1580,9 +1646,7 @@ class EnterpriseGuideGenerator:
         guide.ownership = ownership_list
 
     def _generate_estimated_effort(
-        self,
-        guide: EnterpriseGuide,
-        entries: list[FlatEntry],
+        self, guide: EnterpriseGuide, entries: list[FlatEntry]
     ) -> None:
         total_minutes = sum(e.effort for e in entries)
         by_severity: dict[str, int] = defaultdict(int)
@@ -1650,15 +1714,13 @@ class EnterpriseGuideGenerator:
             group = cluster_map.get(cid, [])
             if group:
                 rep = max(group, key=lambda e: SEVERITY_RISK.get(e.severity, 0))
-                recommendations.append(
-                    _generate_ai_recommendation(rep, cluster)
-                )
+                recommendations.append(_generate_ai_recommendation(rep, cluster))
 
         recommendations.sort(
             key=lambda r: (
-                0 if r.get("ai_confidence") == "high"
-                else 1 if r.get("ai_confidence") == "medium"
-                else 2
+                0
+                if r.get("ai_confidence") == "high"
+                else 1 if r.get("ai_confidence") == "medium" else 2
             )
         )
         guide.ai_recommendations = recommendations

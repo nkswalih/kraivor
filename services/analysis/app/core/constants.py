@@ -57,10 +57,7 @@ class EngineStatus(StrEnum):
 
 
 # Engines whose failure blocks the overall score from being computed
-CORE_ENGINES: set[str] = {
-    "security",
-    "maintainability",
-}
+CORE_ENGINES: set[str] = {"security", "maintainability"}
 
 
 class FindingStatus(StrEnum):

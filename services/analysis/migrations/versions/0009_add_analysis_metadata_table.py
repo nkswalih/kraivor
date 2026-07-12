@@ -38,11 +38,7 @@ def upgrade() -> None:
             server_default=sa.func.now(),
             nullable=False,
         ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            nullable=True,
-        ),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         schema="analysis",
     )
 

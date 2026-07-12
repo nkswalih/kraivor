@@ -199,14 +199,7 @@ class PythonParser(AbstractParser):
         for child in ast.walk(node):
             if isinstance(
                 child,
-                (
-                    ast.If,
-                    ast.For,
-                    ast.While,
-                    ast.ExceptHandler,
-                    ast.With,
-                    ast.Assert,
-                ),
+                (ast.If, ast.For, ast.While, ast.ExceptHandler, ast.With, ast.Assert),
             ):
                 complexity += 1
             elif isinstance(child, ast.BoolOp):

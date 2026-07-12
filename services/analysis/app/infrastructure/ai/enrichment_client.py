@@ -23,11 +23,7 @@ class AiEnrichmentClient:
         frameworks: list[str] | None = None,
     ) -> dict[str, object] | None:
         url = f"{self.base_url}{self.endpoint}"
-        logger.info(
-            "ai_enrichment_starting",
-            url=url,
-            findings_count=len(findings),
-        )
+        logger.info("ai_enrichment_starting", url=url, findings_count=len(findings))
         payload = {
             "findings": findings,
             "overall_score": overall_score,
@@ -43,14 +39,13 @@ class AiEnrichmentClient:
                 )
                 response.raise_for_status()
                 data = response.json()
-                logger.info("ai_enrichment_success", url=url, status=response.status_code)
+                logger.info(
+                    "ai_enrichment_success", url=url, status=response.status_code
+                )
                 return dict(data)
         except httpx.TimeoutException:
             logger.error(
-                "ai_enrichment_timeout",
-                url=url,
-                timeout=self.timeout,
-                exc_info=True,
+                "ai_enrichment_timeout", url=url, timeout=self.timeout, exc_info=True
             )
             return None
         except httpx.HTTPStatusError as e:

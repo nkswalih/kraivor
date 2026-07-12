@@ -1,11 +1,11 @@
-import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from functools import lru_cache
 
+import logging
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.conf import settings
 from django.db.models import Q
+from functools import lru_cache
 
 from apps.knowledge.models import KnowledgeAsset, KnowledgeSpace
 from apps.notifications.models import Notification
@@ -83,14 +83,16 @@ def _build_url(workspace_id: str, *segments: str) -> str:
     return "/" + "/".join((_slug_for(workspace_id), *segments))
 
 
-def search_projects(query: str, workspace_id: str, limit: int = 10) -> list[SearchResult]:
+def search_projects(
+    query: str, workspace_id: str, limit: int = 10
+) -> list[SearchResult]:
     if len(query) < 2:
         return []
-    qs = Project.objects.filter(
-        workspace_id=workspace_id,
-    ).filter(
-        Q(name__icontains=query) | Q(description__icontains=query)
-    ).order_by("-created_at")[:limit]
+    qs = (
+        Project.objects.filter(workspace_id=workspace_id)
+        .filter(Q(name__icontains=query) | Q(description__icontains=query))
+        .order_by("-created_at")[:limit]
+    )
 
     results = []
     for obj in qs:
@@ -100,29 +102,35 @@ def search_projects(query: str, workspace_id: str, limit: int = 10) -> list[Sear
             compute_relevance(obj.name, query, 0.95),
             compute_relevance(obj.description or "", query, 0.85),
         )
-        results.append(SearchResult(
-            id=str(obj.id),
-            type="project",
-            title=obj.name,
-            description=obj.description or "",
-            url=_build_url(workspace_id, "projects", str(obj.id)),
-            workspace_id=str(workspace_id),
-            relevance=score,
-            highlights={"title": [title_hl], "description": [desc_hl] if obj.description else []},
-            metadata={"status": obj.status},
-            created_at=obj.created_at.isoformat() if obj.created_at else None,
-        ))
+        results.append(
+            SearchResult(
+                id=str(obj.id),
+                type="project",
+                title=obj.name,
+                description=obj.description or "",
+                url=_build_url(workspace_id, "projects", str(obj.id)),
+                workspace_id=str(workspace_id),
+                relevance=score,
+                highlights={
+                    "title": [title_hl],
+                    "description": [desc_hl] if obj.description else [],
+                },
+                metadata={"status": obj.status},
+                created_at=obj.created_at.isoformat() if obj.created_at else None,
+            )
+        )
     return results
 
 
 def search_tasks(query: str, workspace_id: str, limit: int = 10) -> list[SearchResult]:
     if len(query) < 2:
         return []
-    qs = Task.objects.filter(
-        project__workspace_id=workspace_id,
-    ).filter(
-        Q(title__icontains=query) | Q(description__icontains=query)
-    ).select_related("project").order_by("-created_at")[:limit]
+    qs = (
+        Task.objects.filter(project__workspace_id=workspace_id)
+        .filter(Q(title__icontains=query) | Q(description__icontains=query))
+        .select_related("project")
+        .order_by("-created_at")[:limit]
+    )
 
     results = []
     for obj in qs:
@@ -132,29 +140,36 @@ def search_tasks(query: str, workspace_id: str, limit: int = 10) -> list[SearchR
             compute_relevance(obj.title, query, 0.95),
             compute_relevance(obj.description or "", query, 0.85),
         )
-        results.append(SearchResult(
-            id=str(obj.id),
-            type="task",
-            title=obj.title,
-            description=obj.description or "",
-            url=f"{_build_url(workspace_id, 'projects', str(obj.project_id))}?task={obj.id}",
-            workspace_id=str(workspace_id),
-            relevance=score,
-            highlights={"title": [title_hl], "description": [desc_hl] if obj.description else []},
-            metadata={"status": obj.status, "priority": obj.priority},
-            created_at=obj.created_at.isoformat() if obj.created_at else None,
-        ))
+        results.append(
+            SearchResult(
+                id=str(obj.id),
+                type="task",
+                title=obj.title,
+                description=obj.description or "",
+                url=f"{_build_url(workspace_id, 'projects', str(obj.project_id))}?task={obj.id}",
+                workspace_id=str(workspace_id),
+                relevance=score,
+                highlights={
+                    "title": [title_hl],
+                    "description": [desc_hl] if obj.description else [],
+                },
+                metadata={"status": obj.status, "priority": obj.priority},
+                created_at=obj.created_at.isoformat() if obj.created_at else None,
+            )
+        )
     return results
 
 
-def search_knowledge(query: str, workspace_id: str, limit: int = 10) -> list[SearchResult]:
+def search_knowledge(
+    query: str, workspace_id: str, limit: int = 10
+) -> list[SearchResult]:
     if len(query) < 2:
         return []
-    qs = KnowledgeSpace.objects.filter(
-        workspace_id=workspace_id,
-    ).filter(
-        Q(name__icontains=query) | Q(description__icontains=query)
-    ).order_by("-created_at")[:limit]
+    qs = (
+        KnowledgeSpace.objects.filter(workspace_id=workspace_id)
+        .filter(Q(name__icontains=query) | Q(description__icontains=query))
+        .order_by("-created_at")[:limit]
+    )
 
     results = []
     for obj in qs:
@@ -164,52 +179,62 @@ def search_knowledge(query: str, workspace_id: str, limit: int = 10) -> list[Sea
             compute_relevance(obj.name, query, 0.95),
             compute_relevance(obj.description or "", query, 0.85),
         )
-        results.append(SearchResult(
-            id=str(obj.id),
-            type="knowledge",
-            title=obj.name,
-            description=obj.description or "",
-            url=_build_url(workspace_id, "knowledge", str(obj.id)),
-            workspace_id=str(workspace_id),
-            relevance=score,
-            highlights={"title": [title_hl], "description": [desc_hl] if obj.description else []},
-            metadata={},
-            created_at=obj.created_at.isoformat() if obj.created_at else None,
-        ))
+        results.append(
+            SearchResult(
+                id=str(obj.id),
+                type="knowledge",
+                title=obj.name,
+                description=obj.description or "",
+                url=_build_url(workspace_id, "knowledge", str(obj.id)),
+                workspace_id=str(workspace_id),
+                relevance=score,
+                highlights={
+                    "title": [title_hl],
+                    "description": [desc_hl] if obj.description else [],
+                },
+                metadata={},
+                created_at=obj.created_at.isoformat() if obj.created_at else None,
+            )
+        )
 
-    asset_qs = KnowledgeAsset.objects.filter(
-        knowledge_space__workspace_id=workspace_id,
-    ).filter(
-        Q(file_name__icontains=query)
-    ).select_related("knowledge_space").order_by("-created_at")[:limit]
+    asset_qs = (
+        KnowledgeAsset.objects.filter(knowledge_space__workspace_id=workspace_id)
+        .filter(Q(file_name__icontains=query))
+        .select_related("knowledge_space")
+        .order_by("-created_at")[:limit]
+    )
 
     for obj in asset_qs:
         title_hl = highlight_text(obj.file_name, query)
         score = compute_relevance(obj.file_name, query, 0.8)
-        results.append(SearchResult(
-            id=str(obj.id),
-            type="knowledge_asset",
-            title=obj.file_name,
-            description=f"Asset in {obj.knowledge_space.name}",
-            url=_build_url(workspace_id, "knowledge", str(obj.knowledge_space_id)),
-            workspace_id=str(workspace_id),
-            relevance=score,
-            highlights={"title": [title_hl]},
-            metadata={"file_type": obj.file_type, "mime_type": obj.mime_type},
-            created_at=obj.created_at.isoformat() if obj.created_at else None,
-        ))
+        results.append(
+            SearchResult(
+                id=str(obj.id),
+                type="knowledge_asset",
+                title=obj.file_name,
+                description=f"Asset in {obj.knowledge_space.name}",
+                url=_build_url(workspace_id, "knowledge", str(obj.knowledge_space_id)),
+                workspace_id=str(workspace_id),
+                relevance=score,
+                highlights={"title": [title_hl]},
+                metadata={"file_type": obj.file_type, "mime_type": obj.mime_type},
+                created_at=obj.created_at.isoformat() if obj.created_at else None,
+            )
+        )
 
     return results
 
 
-def search_repositories(query: str, workspace_id: str, limit: int = 10) -> list[SearchResult]:
+def search_repositories(
+    query: str, workspace_id: str, limit: int = 10
+) -> list[SearchResult]:
     if len(query) < 2:
         return []
-    qs = Repository.objects.filter(
-        workspace_id=workspace_id,
-    ).filter(
-        Q(github_repo__icontains=query) | Q(description__icontains=query)
-    ).order_by("-created_at")[:limit]
+    qs = (
+        Repository.objects.filter(workspace_id=workspace_id)
+        .filter(Q(github_repo__icontains=query) | Q(description__icontains=query))
+        .order_by("-created_at")[:limit]
+    )
 
     results = []
     for obj in qs:
@@ -219,30 +244,36 @@ def search_repositories(query: str, workspace_id: str, limit: int = 10) -> list[
             compute_relevance(obj.github_repo, query, 0.95),
             compute_relevance(obj.description or "", query, 0.85),
         )
-        results.append(SearchResult(
-            id=str(obj.id),
-            type="repository",
-            title=obj.github_repo,
-            description=obj.description or "",
-            url=_build_url(workspace_id, "repositories", str(obj.id)),
-            workspace_id=str(workspace_id),
-            relevance=score,
-            highlights={"title": [title_hl], "description": [desc_hl] if obj.description else []},
-            metadata={"language": obj.language, "is_private": obj.is_private},
-            created_at=obj.created_at.isoformat() if obj.created_at else None,
-        ))
+        results.append(
+            SearchResult(
+                id=str(obj.id),
+                type="repository",
+                title=obj.github_repo,
+                description=obj.description or "",
+                url=_build_url(workspace_id, "repositories", str(obj.id)),
+                workspace_id=str(workspace_id),
+                relevance=score,
+                highlights={
+                    "title": [title_hl],
+                    "description": [desc_hl] if obj.description else [],
+                },
+                metadata={"language": obj.language, "is_private": obj.is_private},
+                created_at=obj.created_at.isoformat() if obj.created_at else None,
+            )
+        )
     return results
 
 
-def search_notifications(query: str, workspace_id: str, user_id: str | None, limit: int = 10) -> list[SearchResult]:
+def search_notifications(
+    query: str, workspace_id: str, user_id: str | None, limit: int = 10
+) -> list[SearchResult]:
     if len(query) < 2 or not user_id:
         return []
-    qs = Notification.objects.filter(
-        workspace_id=workspace_id,
-        user_id=user_id,
-    ).filter(
-        Q(title__icontains=query) | Q(body__icontains=query)
-    ).order_by("-created_at")[:limit]
+    qs = (
+        Notification.objects.filter(workspace_id=workspace_id, user_id=user_id)
+        .filter(Q(title__icontains=query) | Q(body__icontains=query))
+        .order_by("-created_at")[:limit]
+    )
 
     results = []
     for obj in qs:
@@ -252,28 +283,36 @@ def search_notifications(query: str, workspace_id: str, user_id: str | None, lim
             compute_relevance(obj.title, query, 0.95),
             compute_relevance(obj.body or "", query, 0.85),
         )
-        results.append(SearchResult(
-            id=str(obj.id),
-            type="notification",
-            title=obj.title,
-            description=obj.body or "",
-            url=obj.link or "",
-            workspace_id=str(workspace_id),
-            relevance=score,
-            highlights={"title": [title_hl], "description": [body_hl] if obj.body else []},
-            metadata={"notification_type": obj.notification_type, "read": obj.read_at is not None},
-            created_at=obj.created_at.isoformat() if obj.created_at else None,
-        ))
+        results.append(
+            SearchResult(
+                id=str(obj.id),
+                type="notification",
+                title=obj.title,
+                description=obj.body or "",
+                url=obj.link or "",
+                workspace_id=str(workspace_id),
+                relevance=score,
+                highlights={
+                    "title": [title_hl],
+                    "description": [body_hl] if obj.body else [],
+                },
+                metadata={
+                    "notification_type": obj.notification_type,
+                    "read": obj.read_at is not None,
+                },
+                created_at=obj.created_at.isoformat() if obj.created_at else None,
+            )
+        )
     return results
 
 
 def search_profiles(query: str, limit: int = 10) -> list[SearchResult]:
     if len(query) < 2:
         return []
-    identity_base = getattr(settings, "IDENTITY_SERVICE_URL", "http://identity:8002/api")
+    identity_base = getattr(settings, "IDENTITY_SERVICE_URL", "http://identity:8002")
     try:
         resp = requests.get(
-            f"{identity_base}/profiles/search/",
+            f"{identity_base}/api/profiles/search/",
             params={"q": query, "page_size": limit},
             timeout=2.0,
         )
@@ -284,22 +323,22 @@ def search_profiles(query: str, limit: int = 10) -> list[SearchResult]:
         for item in data.get("results", []):
             display = item.get("display_name") or item.get("username", "")
             score = compute_relevance(display, query, 0.9)
-            results.append(SearchResult(
-                id=item.get("id", ""),
-                type="profile",
-                title=display,
-                description=item.get("bio", ""),
-                url=f"/profiles/{item.get('username', '')}",
-                workspace_id=None,
-                relevance=score,
-                highlights={
-                    "title": [highlight_text(display, query) or display],
-                },
-                metadata={
-                    "username": item.get("username", ""),
-                    "avatar_url": item.get("avatar_url", ""),
-                },
-            ))
+            results.append(
+                SearchResult(
+                    id=item.get("id", ""),
+                    type="profile",
+                    title=display,
+                    description=item.get("bio", ""),
+                    url=f"/profiles/{item.get('username', '')}",
+                    workspace_id=None,
+                    relevance=score,
+                    highlights={"title": [highlight_text(display, query) or display]},
+                    metadata={
+                        "username": item.get("username", ""),
+                        "avatar_url": item.get("avatar_url", ""),
+                    },
+                )
+            )
         return results
     except requests.RequestException as exc:
         logger.warning("profile_search_failed", extra={"error": str(exc)})
@@ -310,6 +349,7 @@ def search_chat(query: str, workspace_id: str, limit: int = 10) -> list[SearchRe
     if len(query) < 2:
         return []
     from apps.chat.dynamodb import ChatMessageRepository as DynamoDBRepository
+
     try:
         repo = DynamoDBRepository()
         rooms = repo.search_messages(query, limit=limit)
@@ -318,20 +358,27 @@ def search_chat(query: str, workspace_id: str, limit: int = 10) -> list[SearchRe
             for msg in messages:
                 content = msg.get("content", "")
                 score = compute_relevance(content, query, 0.8)
-                results.append(SearchResult(
-                    id=msg.get("message_id", ""),
-                    type="chat",
-                    title=msg.get("sender_name", "Unknown"),
-                    description=content,
-                    url=_build_url(workspace_id, "chat", room_id),
-                    workspace_id=str(workspace_id),
-                    relevance=score,
-                    highlights={
-                        "description": [highlight_text(content, query) or content[:200]],
-                    },
-                    metadata={"sender_name": msg.get("sender_name", ""), "room_id": room_id},
-                    created_at=msg.get("created_at"),
-                ))
+                results.append(
+                    SearchResult(
+                        id=msg.get("message_id", ""),
+                        type="chat",
+                        title=msg.get("sender_name", "Unknown"),
+                        description=content,
+                        url=_build_url(workspace_id, "chat", room_id),
+                        workspace_id=str(workspace_id),
+                        relevance=score,
+                        highlights={
+                            "description": [
+                                highlight_text(content, query) or content[:200]
+                            ]
+                        },
+                        metadata={
+                            "sender_name": msg.get("sender_name", ""),
+                            "room_id": room_id,
+                        },
+                        created_at=msg.get("created_at"),
+                    )
+                )
         return results
     except Exception as exc:
         logger.warning("chat_search_failed", extra={"error": str(exc)})
@@ -361,24 +408,43 @@ class SearchService:
     ) -> dict:
         query = query.strip()
         if len(query) < 2:
-            return {"query": query, "total_results": 0, "page": page, "page_size": page_size, "results": [], "facets": {}}
+            return {
+                "query": query,
+                "total_results": 0,
+                "page": page,
+                "page_size": page_size,
+                "results": [],
+                "facets": {},
+            }
 
         source_limit = page_size * 2
         tasks = {}
 
         with ThreadPoolExecutor(max_workers=6) as executor:
             if scope in ("all", "projects"):
-                tasks["project"] = executor.submit(search_projects, query, workspace_id, source_limit)
+                tasks["project"] = executor.submit(
+                    search_projects, query, workspace_id, source_limit
+                )
             if scope in ("all", "tasks"):
-                tasks["task"] = executor.submit(search_tasks, query, workspace_id, source_limit)
+                tasks["task"] = executor.submit(
+                    search_tasks, query, workspace_id, source_limit
+                )
             if scope in ("all", "knowledge"):
-                tasks["knowledge"] = executor.submit(search_knowledge, query, workspace_id, source_limit)
+                tasks["knowledge"] = executor.submit(
+                    search_knowledge, query, workspace_id, source_limit
+                )
             if scope in ("all", "repos"):
-                tasks["repository"] = executor.submit(search_repositories, query, workspace_id, source_limit)
+                tasks["repository"] = executor.submit(
+                    search_repositories, query, workspace_id, source_limit
+                )
             if scope in ("all", "notifications"):
-                tasks["notification"] = executor.submit(search_notifications, query, workspace_id, user_id, source_limit)
+                tasks["notification"] = executor.submit(
+                    search_notifications, query, workspace_id, user_id, source_limit
+                )
             if scope in ("all", "chats"):
-                tasks["chat"] = executor.submit(search_chat, query, workspace_id, source_limit)
+                tasks["chat"] = executor.submit(
+                    search_chat, query, workspace_id, source_limit
+                )
             if scope in ("all", "profiles"):
                 tasks["profile"] = executor.submit(search_profiles, query, source_limit)
 

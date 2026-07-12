@@ -181,6 +181,7 @@ export interface Notification {
   title: string;
   body: string;
   link: string;
+  metadata: Record<string, unknown> | null;
   actor_id: string | null;
   read_at: string | null;
   created_at: string;

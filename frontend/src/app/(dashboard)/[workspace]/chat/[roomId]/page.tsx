@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Hash, Send, Loader2, ChevronDown, Trash2, Edit3, X, Check } from 'lucide-react';
+import { ArrowLeft, Hash, Send, Loader2, ChevronDown, Trash2, Edit3, X, Check } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useChatStore } from '@/lib/stores/chat-store';
 import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
@@ -11,8 +11,7 @@ import { chatEndpoints, profileEndpoints } from '@/lib/api/endpoints';
 import { ChatSocket } from '@/lib/ws/chat-socket';
 import { ChannelSidebar } from '@/components/features/channel-sidebar';
 import { MembersPanel } from '@/components/features/members-panel';
-import { formatRelativeTime } from '@/lib/utils';
-import { avatarUrl } from '@/lib/utils';
+import { formatRelativeTime, avatarUrl } from '@/lib/utils';
 import {
   SkeletonMessage,
   SkeletonChatSidebar,
@@ -23,6 +22,7 @@ import type { ChatMessage } from '@/types/api';
 
 export default function ChatRoomPage() {
   const params = useParams<{ roomId: string; workspace: string }>();
+  const router = useRouter();
   const roomId = params?.roomId ?? '';
   const workspaceSlug = params?.workspace ?? '';
   const workspaceId = useAuthStore(s => s.workspaceId);
@@ -199,6 +199,7 @@ export default function ChatRoomPage() {
         <SkeletonChatSidebar />
         <div className="flex-1 flex flex-col bg-krait-void">
           <div className="h-[49px] border-b border-krait-border px-4 flex items-center gap-2">
+            <SkeletonBlock className="w-4 h-4 rounded" />
             <SkeletonBlock className="w-5 h-5 rounded" />
             <SkeletonLine className="w-32" />
           </div>
@@ -222,8 +223,14 @@ export default function ChatRoomPage() {
 
       <div className="flex-1 flex flex-col min-w-0 bg-krait-void">
         {/* Chat Header */}
-        <div className="h-[49px] border-b border-krait-border flex items-center px-4 shrink-0 bg-krait-void">
-          <Hash className="w-5 h-5 text-text-tertiary mr-2 shrink-0" />
+        <div className="h-[49px] border-b border-krait-border flex items-center px-4 shrink-0 bg-krait-void gap-2">
+          <button
+            onClick={() => router.push(`/${workspaceSlug}/chat`)}
+            className="p-1 -ml-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-krait-surface3 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <Hash className="w-5 h-5 text-text-tertiary shrink-0" />
           <h2 className="font-semibold text-[15px] text-text-primary truncate">
             {room?.name ?? '...'}
           </h2>
@@ -301,6 +308,7 @@ export default function ChatRoomPage() {
                             <img
                               src={src}
                               alt={msg.sender_name}
+                              loading="lazy"
                               className="w-9 h-9 rounded-full object-cover shrink-0 mt-0.5 bg-krait-surface3"
                             />
                           ) : (

@@ -20,7 +20,6 @@ For each conversation:
 import asyncio
 import sys
 from datetime import timedelta
-
 from sqlalchemy import select, text
 
 from app.infrastructure.db.database import async_session_factory
@@ -80,7 +79,9 @@ async def fix_all():
                 print(f"  Progress: {idx}/{total}")
 
         await db.commit()
-        print(f"\nDone! Changed {changed} message timestamps across {total} conversations.")
+        print(
+            f"\nDone! Changed {changed} message timestamps across {total} conversations."
+        )
 
 
 if __name__ == "__main__":

@@ -32,8 +32,11 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
 
   const setCommandPaletteOpen = useUIStore(state => state.setCommandPaletteOpen);
 
-  const { workspaces, workspaceId, setWorkspace } = useAuthStore();
-  const { activeConversationId, clear: clearAiStore } = useAiConversationStore();
+  const workspaces = useAuthStore(s => s.workspaces);
+  const workspaceId = useAuthStore(s => s.workspaceId);
+  const setWorkspace = useAuthStore(s => s.setWorkspace);
+  const activeConversationId = useAiConversationStore(s => s.activeConversationId);
+  const clearAiStore = useAiConversationStore(s => s.clear);
   const detailTitle = useBreadcrumbStore(s => s.detailTitle);
   const pathname = usePathname();
   const [wsOpen, setWsOpen] = useState(false);

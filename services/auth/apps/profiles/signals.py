@@ -1,6 +1,6 @@
 import re
-import secrets
 
+import secrets
 from django.db.models import F
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
@@ -37,12 +37,12 @@ def increment_follow_counters(sender, instance, created, **kwargs):
 
 @receiver(post_delete, sender=UserFollow)
 def decrement_follow_counters(sender, instance, **kwargs):
-    Profile.objects.filter(
-        user=instance.follower, following_count__gt=0
-    ).update(following_count=F("following_count") - 1)
-    Profile.objects.filter(
-        user=instance.following, followers_count__gt=0
-    ).update(followers_count=F("followers_count") - 1)
+    Profile.objects.filter(user=instance.follower, following_count__gt=0).update(
+        following_count=F("following_count") - 1
+    )
+    Profile.objects.filter(user=instance.following, followers_count__gt=0).update(
+        followers_count=F("followers_count") - 1
+    )
 
 
 def _generate_unique_username(user) -> str:

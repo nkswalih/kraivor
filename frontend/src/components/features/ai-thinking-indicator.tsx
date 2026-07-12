@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { SnakeIcon } from '@/components/features/ai-snake-icon';
 
 /**
@@ -20,13 +19,7 @@ const DOTS = [0, 1, 2];
 
 export function ThinkingIndicator() {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0, transition: { duration: 0.12, ease: 'linear' } }}
-      transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-      className="flex items-center gap-2 py-1 select-none"
-    >
+    <div className="flex items-center gap-2 py-1 select-none animate-fade-up">
       <SnakeIcon />
 
       <span className="text-[14px] font-medium text-yellow-300 ai-think-shimmer leading-none">
@@ -47,6 +40,6 @@ export function ThinkingIndicator() {
           </span>
         ))}
       </span>
-    </motion.div>
+    </div>
   );
 }

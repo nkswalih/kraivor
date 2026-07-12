@@ -1,7 +1,7 @@
 import json
+
 import logging
 import uuid
-
 from django.db import transaction
 
 logger = logging.getLogger(__name__)
@@ -53,13 +53,19 @@ def _publish(topic, event, user_id=None):
     except Exception as exc:
         logger.error(
             "kafka.publish.failed",
-            extra={"topic": topic, "event_type": event.get("event_type"), "error": str(exc)},
+            extra={
+                "topic": topic,
+                "event_type": event.get("event_type"),
+                "error": str(exc),
+            },
         )
 
 
 def _delivery_report(err, msg):
     if err is not None:
-        logger.error("kafka.delivery.failed", extra={"error": str(err), "topic": msg.topic()})
+        logger.error(
+            "kafka.delivery.failed", extra={"error": str(err), "topic": msg.topic()}
+        )
 
 
 def publish_profile_updated(profile, old_values=None):
@@ -77,4 +83,19 @@ def publish_profile_updated(profile, old_values=None):
     )
     transaction.on_commit(
         lambda: _publish("profiles", envelope, user_id=profile.user_id)
+    )
+
+
+def publish_follow_new(follower_id: str, target_user_id: str, follower_username: str):
+    envelope = _build_envelope(
+        event_type="profile.follow.new",
+        data={
+            "follower_id": follower_id,
+            "follower_username": follower_username,
+            "target_user_id": target_user_id,
+        },
+        user_id=target_user_id,
+    )
+    transaction.on_commit(
+        lambda: _publish("profiles", envelope, user_id=target_user_id)
     )

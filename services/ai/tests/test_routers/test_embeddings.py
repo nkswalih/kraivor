@@ -1,4 +1,3 @@
-
 import pytest
 
 from app.api.schemas.embeddings import EmbeddingRequest, EmbeddingResponse
@@ -13,6 +12,7 @@ class TestEmbeddingsRouter:
 
     async def test_embedding_response_schema(self):
         from app.api.schemas.embeddings import EmbeddingData, EmbeddingUsage
+
         resp = EmbeddingResponse(
             data=[EmbeddingData(index=0, embedding=[0.1, 0.2, 0.3])],
             model="test",

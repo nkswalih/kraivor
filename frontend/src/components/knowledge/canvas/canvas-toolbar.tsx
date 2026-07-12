@@ -75,8 +75,10 @@ export function CanvasToolbar({ spaceId }: Props) {
   const redo = useKnowledgeStore(s => s.redo);
   const pushUndoState = useKnowledgeStore(s => s.pushUndoState);
   const deleteSelectedElements = useKnowledgeStore(s => s.deleteSelectedElements);
-  const canvas = useKnowledgeStore(s => s.spaces[spaceId]);
-  const store = useKnowledgeStore;
+  const zoom = useKnowledgeStore(s => s.spaces[spaceId]?.viewport.zoom ?? 1);
+  const gridOn = useKnowledgeStore(s => s.spaces[spaceId]?.gridEnabled ?? true);
+  const snapOn = useKnowledgeStore(s => s.spaces[spaceId]?.snapEnabled ?? true);
+  const selectedCount = useKnowledgeStore(s => s.spaces[spaceId]?.selectedElementIds.length ?? 0);
 
   const [shapeOpen, setShapeOpen] = useState(false);
   const shapeRef = useRef<HTMLDivElement>(null);
@@ -91,10 +93,8 @@ export function CanvasToolbar({ spaceId }: Props) {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const zoomPercent = canvas ? Math.round(canvas.viewport.zoom * 100) : 100;
-  const gridOn = canvas?.gridEnabled ?? true;
-  const snapOn = canvas?.snapEnabled ?? true;
-  const hasSelection = canvas ? canvas.selectedElementIds.length > 0 : false;
+  const zoomPercent = Math.round(zoom * 100);
+  const hasSelection = selectedCount > 0;
   const ShapeIcon = shapeIconMap[subTool];
 
   const handleUndo = () => {
@@ -194,7 +194,7 @@ export function CanvasToolbar({ spaceId }: Props) {
         onClick={handleUndo}
         className="p-1.5 rounded-lg text-text-tertiary hover:text-foreground hover:bg-krait-surface3 disabled:opacity-30"
         title="Undo (Ctrl+Z)"
-        disabled={store.getState().undoStack.length === 0}
+        disabled={useKnowledgeStore.getState().undoStack.length === 0}
       >
         <RotateCcw className="w-4 h-4" />
       </button>
@@ -202,7 +202,7 @@ export function CanvasToolbar({ spaceId }: Props) {
         onClick={handleRedo}
         className="p-1.5 rounded-lg text-text-tertiary hover:text-foreground hover:bg-krait-surface3 disabled:opacity-30"
         title="Redo (Ctrl+Shift+Z)"
-        disabled={store.getState().redoStack.length === 0}
+        disabled={useKnowledgeStore.getState().redoStack.length === 0}
       >
         <RotateCw className="w-4 h-4" />
       </button>

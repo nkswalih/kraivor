@@ -5,11 +5,9 @@ import {
   BookOpen,
   Plus,
   Loader2,
-  Search,
-  ExternalLink,
   Trash2,
   MoreHorizontal,
-  Check,
+  Pencil,
   X,
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
@@ -52,12 +50,8 @@ export default function KnowledgePage() {
   const workspaceSlug = params?.workspace ?? '';
   const workspaceId = useAuthStore(s => s.workspaceId);
   const [showCreate, setShowCreate] = useState(false);
-  const [search, setSearch] = useState('');
 
-  const { data: spaces, isLoading } = useKnowledgeList(
-    workspaceId ?? undefined,
-    search || undefined
-  );
+  const { data: spaces, isLoading } = useKnowledgeList(workspaceId ?? undefined);
 
   const groupedSpaces = useMemo(() => {
     if (!spaces) return [];
@@ -74,22 +68,10 @@ export default function KnowledgePage() {
 
   return (
     <div className="flex flex-col h-full animate-fade-up">
-      {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-        <div className="flex items-center gap-3">
-          <h1 className="text-lg font-medium flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-venom-yellow" /> Knowledge Spaces
-          </h1>
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search spaces..."
-              className="pl-8 pr-3 py-1.5 w-48 bg-krait-surface3 border border-border rounded-lg text-[12px] text-foreground placeholder:text-text-tertiary focus:outline-none focus:border-venom-yellow/50"
-            />
-          </div>
-        </div>
+        <h1 className="text-lg font-medium flex items-center gap-2">
+          <BookOpen className="w-5 h-5 text-venom-yellow" /> Knowledge Spaces
+        </h1>
         <button
           onClick={() => setShowCreate(true)}
           className="bg-venom-yellow hover:bg-primary-light text-black text-[12px] font-medium py-1.5 px-3 rounded flex items-center gap-1.5"
@@ -98,8 +80,14 @@ export default function KnowledgePage() {
         </button>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 relative">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)',
+            backgroundSize: '24px 24px',
+          }}
+        />
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -111,24 +99,14 @@ export default function KnowledgePage() {
             <BookOpen className="w-10 h-10 text-muted-foreground mb-3" />
             <h3 className="text-base font-medium text-foreground mb-1">No knowledge spaces</h3>
             <p className="text-[13px] text-muted-foreground max-w-xs mb-4">
-              {search
-                ? 'No spaces match your search.'
-                : "Create a knowledge space to organize your team's documentation and context."}
+              Create a knowledge space to organize your team&apos;s documentation and context.
             </p>
-            {!search && (
-              <button
-                onClick={() => setShowCreate(true)}
-                className="btn-shimmer text-text-inverse text-[12px] font-medium py-2 px-4 rounded flex items-center gap-1.5"
-              >
-                <Plus className="w-3.5 h-3.5" /> Create Knowledge Space
-              </button>
-            )}
-          </div>
-        ) : search ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {spaces.map(space => (
-              <KnowledgeCard key={space.id} space={space} workspaceSlug={workspaceSlug} />
-            ))}
+            <button
+              onClick={() => setShowCreate(true)}
+              className="btn-shimmer text-text-inverse text-[12px] font-medium py-2 px-4 rounded flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" /> Create Knowledge Space
+            </button>
           </div>
         ) : (
           <div>
@@ -136,8 +114,13 @@ export default function KnowledgePage() {
               <div key={category} className="mb-8">
                 <h2 className="text-base font-semibold text-foreground mb-3">{category}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                  {categorySpaces.map(space => (
-                    <KnowledgeCard key={space.id} space={space} workspaceSlug={workspaceSlug} />
+                  {categorySpaces.map((space, i) => (
+                    <KnowledgeCard
+                      key={space.id}
+                      space={space}
+                      workspaceSlug={workspaceSlug}
+                      index={i}
+                    />
                   ))}
                 </div>
               </div>
@@ -151,9 +134,124 @@ export default function KnowledgePage() {
   );
 }
 
+function RenameDialog({
+  open,
+  currentName,
+  currentDescription,
+  onSave,
+  onClose,
+}: {
+  open: boolean;
+  currentName: string;
+  currentDescription: string;
+  onSave: (name: string, description: string) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(currentName);
+  const [description, setDescription] = useState(currentDescription);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setName(currentName);
+      setDescription(currentDescription);
+    }
+  }, [open, currentName, currentDescription]);
+
+  if (!open) return null;
+
+  const handleSave = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      await onSave(name.trim(), description);
+      onClose();
+    } catch {
+      //
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onMouseDown={e => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="w-full max-w-md bg-[#141416] border border-[#27272A] rounded-xl shadow-2xl animate-scale-in">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#27272A]">
+          <h2 className="text-[15px] font-semibold text-[#FAFAFA] flex items-center gap-2">
+            <Pencil className="w-4 h-4 text-venom-yellow" /> Rename Space
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-1 text-text-tertiary hover:text-[#FAFAFA] transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-[12px] font-medium text-text-secondary mb-1.5">Name</label>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Space name"
+              className="w-full px-3 py-2 bg-[#0A0A0B] border border-[#27272A] rounded-lg text-[13px] text-[#FAFAFA] placeholder:text-text-tertiary focus:outline-none focus:border-venom-yellow/50 transition-colors"
+              autoFocus
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleSave();
+                if (e.key === 'Escape') onClose();
+              }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
+              Description <span className="text-text-tertiary">(optional)</span>
+            </label>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="What is this space for?"
+              rows={3}
+              className="w-full px-3 py-2 bg-[#0A0A0B] border border-[#27272A] rounded-lg text-[13px] text-[#FAFAFA] placeholder:text-text-tertiary focus:outline-none focus:border-venom-yellow/50 transition-colors resize-none"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              onClick={onClose}
+              className="px-3 py-1.5 text-[13px] text-text-secondary hover:text-[#FAFAFA] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || !name.trim()}
+              className="px-4 py-1.5 bg-venom-yellow text-black text-[13px] font-medium rounded-lg hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {saving ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Pencil className="w-3.5 h-3.5" />
+              )}
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function KnowledgeCard({
   space,
   workspaceSlug,
+  index = 0,
 }: {
   space: {
     id: string;
@@ -163,160 +261,112 @@ function KnowledgeCard({
     updated_at: string;
   };
   workspaceSlug: string;
+  index?: number;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [editing, setEditing] = useState<'name' | 'description' | null>(null);
-  const [editValue, setEditValue] = useState('');
+  const [showRename, setShowRename] = useState(false);
   const workspaceId = useAuthStore(s => s.workspaceId);
   const deleteMut = useDeleteKnowledge(space.id, workspaceId ?? '');
   const updateMut = useUpdateKnowledge(space.id, workspaceId ?? '');
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (editing) inputRef.current?.focus();
-  }, [editing]);
-
-  const startEdit = (field: 'name' | 'description') => {
-    setEditing(field);
-    setEditValue(field === 'name' ? space.name : (space.description ?? ''));
-  };
-
-  const saveEdit = () => {
-    if (!editing) return;
-    const trimmed = editValue.trim();
-    const payload: { name: string; description?: string } = {
-      name: space.name,
-      description: space.description ?? '',
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
     };
-    if (editing === 'name') payload.name = trimmed || space.name;
-    else payload.description = trimmed;
-    updateMut.mutate(payload);
-    setEditing(null);
-    setEditValue('');
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
+
+  const handleDelete = () => {
+    if (window.confirm(`Delete "${space.name}"? This cannot be undone.`)) {
+      deleteMut.mutate();
+    }
     setMenuOpen(false);
   };
 
-  const cancelEdit = () => {
-    setEditing(null);
-    setEditValue('');
-  };
-
   return (
-    <div
-      onClick={() => router.push(`/${workspaceSlug}/knowledge/${space.id}`)}
-      className="flex flex-col p-4 rounded-lg border border-border bg-krait-surface1 hover:bg-krait-surface2 transition-colors group relative cursor-pointer"
-    >
-      <div className="flex items-start justify-between mb-1">
+    <>
+      <div
+        className="animate-fade-up"
+        style={{ animationDelay: `${index * 0.04}s` }}
+      >
         <div
-          className="flex items-center gap-2.5 min-w-0 flex-1"
-          onClick={e => e.stopPropagation()}
+          onClick={() => router.push(`/${workspaceSlug}/knowledge/${space.id}`)}
+          className="group relative bg-card border border-border rounded-lg p-4 cursor-pointer
+                     hover:border-venom-yellow/40 hover:shadow-venom
+                     transition-all duration-[var(--duration-fast)] ease-strike h-full"
         >
-          <div className="w-8 h-8 rounded-lg bg-venom-yellow/10 flex items-center justify-center shrink-0">
-            <BookOpen className="w-4 h-4 text-venom-yellow" />
-          </div>
-          {editing === 'name' ? (
-            <div className="flex items-center gap-1 flex-1">
-              <input
-                ref={inputRef as React.RefObject<HTMLInputElement>}
-                value={editValue}
-                onChange={e => setEditValue(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') saveEdit();
-                  if (e.key === 'Escape') cancelEdit();
-                }}
-                onBlur={saveEdit}
-                className="flex-1 bg-krait-surface3 border border-border rounded px-1.5 py-0.5 text-[14px] text-foreground focus:outline-none focus:border-venom-yellow/50"
-              />
+          <div className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-transparent group-hover:bg-venom-yellow transition-all duration-[var(--duration-normal)] ease-strike" />
+
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-9 h-9 rounded-lg bg-venom-yellow/10 flex items-center justify-center shrink-0 group-hover:bg-venom-yellow/20 group-hover:scale-105 transition-all duration-[var(--duration-fast)]">
+                <BookOpen className="w-[18px] h-[18px] text-venom-yellow" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-[14px] font-medium text-foreground truncate group-hover:text-venom-yellow transition-colors">
+                  {space.name}
+                </h3>
+                <span className="text-[11px] text-muted-foreground">
+                  Updated {formatRelativeTime(space.updated_at)}
+                </span>
+              </div>
             </div>
-          ) : (
-            <h3
-              onClick={() => startEdit('name')}
-              className="text-[14px] font-medium text-foreground truncate hover:text-venom-yellow transition-colors cursor-text"
-            >
-              {space.name}
-            </h3>
+
+            <div ref={menuRef} className="relative shrink-0" onClick={e => e.stopPropagation()}>
+              <button
+                onClick={e => {
+                  e.preventDefault();
+                  setMenuOpen(!menuOpen);
+                }}
+                className="p-1 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-accent"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-1 w-36 py-1 rounded-lg border border-border bg-popover shadow-lg z-10">
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setShowRename(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-foreground hover:bg-accent"
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Rename
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-destructive hover:bg-accent"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {space.description && (
+            <p className="text-[12px] text-muted-foreground mt-3 leading-relaxed line-clamp-2">
+              {space.description}
+            </p>
           )}
         </div>
-        <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-          <ExternalLink
-            onClick={e => {
-              e.stopPropagation();
-              router.push(`/${workspaceSlug}/knowledge/${space.id}`);
-            }}
-            className="w-3.5 h-3.5 text-text-tertiary opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:text-venom-yellow"
-          />
-          <div className="relative">
-            <button
-              onClick={e => {
-                e.preventDefault();
-                e.stopPropagation();
-                setMenuOpen(!menuOpen);
-              }}
-              className="p-1 text-text-tertiary hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <MoreHorizontal className="w-3.5 h-3.5" />
-            </button>
-            {menuOpen && (
-              <div
-                className="absolute right-0 top-full mt-1 w-32 py-1 rounded-lg border border-border bg-krait-surface2 shadow-lg z-10"
-                onClick={e => e.stopPropagation()}
-              >
-                <button
-                  onClick={() => {
-                    startEdit('name');
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-krait-surface3"
-                >
-                  <BookOpen className="w-3 h-3" /> Rename
-                </button>
-                <button
-                  onClick={() => {
-                    deleteMut.mutate();
-                    setMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-red-400 hover:bg-krait-surface3"
-                >
-                  <Trash2 className="w-3 h-3" /> Delete
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
-      <div className="flex-1" onClick={e => e.stopPropagation()}>
-        {editing === 'description' ? (
-          <div className="flex items-start gap-1 mb-3">
-            <textarea
-              ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-              value={editValue}
-              onChange={e => setEditValue(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Escape') cancelEdit();
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  saveEdit();
-                }
-              }}
-              onBlur={saveEdit}
-              rows={2}
-              className="flex-1 bg-krait-surface3 border border-border rounded px-1.5 py-1 text-[12px] text-foreground resize-none focus:outline-none focus:border-venom-yellow/50"
-            />
-          </div>
-        ) : (
-          <p
-            onClick={() => startEdit('description')}
-            className={`text-[12px] line-clamp-2 mb-3 transition-colors cursor-text ${space.description ? 'text-text-tertiary' : 'text-text-tertiary/40 italic'}`}
-          >
-            {space.description || 'Add description...'}
-          </p>
-        )}
-      </div>
-      <div className="flex items-center justify-between pt-2 border-t border-border/50">
-        <span className="text-[11px] text-text-tertiary">
-          Updated {formatRelativeTime(space.updated_at)}
-        </span>
-      </div>
-    </div>
+
+      <RenameDialog
+        open={showRename}
+        currentName={space.name}
+        currentDescription={space.description ?? ''}
+        onSave={async (name, description) => {
+          updateMut.mutate({ name, description });
+        }}
+        onClose={() => setShowRename(false)}
+      />
+    </>
   );
 }

@@ -1,5 +1,4 @@
 import uuid
-
 from django.db.models import Count, Prefetch, QuerySet
 
 from apps.community.models import Comment, Discussion
@@ -9,7 +8,9 @@ class DiscussionSelector:
     MAX_POPULAR_TAGS = 50
 
     @staticmethod
-    def list_for_workspace(workspace_id: uuid.UUID, tag: str | None = None) -> QuerySet[Discussion]:
+    def list_for_workspace(
+        workspace_id: uuid.UUID, tag: str | None = None
+    ) -> QuerySet[Discussion]:
         qs = Discussion.objects.filter(
             workspace_id=workspace_id, deleted_at__isnull=True
         ).prefetch_related("tags")
@@ -18,7 +19,9 @@ class DiscussionSelector:
         return qs.order_by("-created_at")
 
     @staticmethod
-    def get_detail(discussion_id: uuid.UUID, workspace_id: uuid.UUID) -> Discussion | None:
+    def get_detail(
+        discussion_id: uuid.UUID, workspace_id: uuid.UUID
+    ) -> Discussion | None:
         return (
             Discussion.objects.prefetch_related(
                 "tags",
@@ -41,10 +44,7 @@ class DiscussionSelector:
             Discussion.objects.filter(
                 workspace_id=workspace_id, deleted_at__isnull=True
             )
-            .annotate(
-                vote_score=Count("votes"),
-                comment_count=Count("comments"),
-            )
+            .annotate(vote_score=Count("votes"), comment_count=Count("comments"))
             .order_by("-vote_score", "-created_at")[:limit]
         )
 
@@ -82,7 +82,6 @@ class CommentSelector:
 
     @staticmethod
     def get_replies(comment_id: uuid.UUID) -> QuerySet[Comment]:
-        return (
-            Comment.objects.filter(parent_id=comment_id, deleted_at__isnull=True)
-            .order_by("created_at")
-        )
+        return Comment.objects.filter(
+            parent_id=comment_id, deleted_at__isnull=True
+        ).order_by("created_at")

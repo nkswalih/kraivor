@@ -38,8 +38,7 @@ class ProductionSimulator:
     DEFAULT_USER_COUNTS = [100, 500, 5000, 50000]
 
     async def simulate(
-        self,
-        perf_metrics: PerformanceMetrics,
+        self, perf_metrics: PerformanceMetrics
     ) -> list[SimulationResult]:
         results: list[SimulationResult] = []
         previous_users = 0
@@ -49,9 +48,7 @@ class ProductionSimulator:
             results.append(result)
             if result.status == SimulationStatus.FAILING:
                 breakpoint_val = self._find_exact_breakpoint(
-                    perf_metrics,
-                    previous_users,
-                    concurrent_users,
+                    perf_metrics, previous_users, concurrent_users
                 )
                 result.exact_breakpoint = breakpoint_val
                 result.bottlenecks = result.bottlenecks or ["system_overload"]
@@ -60,9 +57,7 @@ class ProductionSimulator:
         return results
 
     def _simulate_load(
-        self,
-        metrics: PerformanceMetrics,
-        users: int,
+        self, metrics: PerformanceMetrics, users: int
     ) -> SimulationResult:
         arrival_rate = users / 60.0
         avg_response_time = self._get_avg_response_time(metrics) / 1000.0
@@ -127,13 +122,19 @@ class ProductionSimulator:
         )
 
     def _calculate_available_capacity(self, metrics: PerformanceMetrics) -> int:
-        base = max(4 - len(metrics.bottlenecks), 1) if metrics.bottlenecks else 4
-        return base
+        avg_response_time = self._get_avg_response_time(metrics)
+        endpoints = len(metrics.endpoints)
+        bottlenecks = len(metrics.bottlenecks or [])
+        if endpoints == 0:
+            return 1
+        base = max(4, endpoints * 2)
+        capacity = base - min(bottlenecks, base // 2)
+        if avg_response_time > 500:
+            capacity -= 1
+        return max(capacity, 1)
 
     def _find_active_bottlenecks(
-        self,
-        metrics: PerformanceMetrics,
-        users: int,
+        self, metrics: PerformanceMetrics, users: int
     ) -> list[str]:
         if not metrics.endpoints:
             return ["unknown"]
@@ -141,10 +142,7 @@ class ProductionSimulator:
         for em in metrics.endpoints:
             for b in em.bottlenecks:
                 bottleneck_map[b] = bottleneck_map.get(b, 0) + 1
-        sorted_bottlenecks = sorted(
-            bottleneck_map.items(),
-            key=lambda x: -x[1],
-        )
+        sorted_bottlenecks = sorted(bottleneck_map.items(), key=lambda x: -x[1])
         return (
             [b[0] for b in sorted_bottlenecks[:3]]
             if sorted_bottlenecks
@@ -152,10 +150,7 @@ class ProductionSimulator:
         )
 
     def _find_exact_breakpoint(
-        self,
-        metrics: PerformanceMetrics,
-        low: int,
-        high: int,
+        self, metrics: PerformanceMetrics, low: int, high: int
     ) -> int:
         for users in range(low + 1, high):
             arrival_rate = users / 60.0

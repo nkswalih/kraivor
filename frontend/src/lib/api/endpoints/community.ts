@@ -15,12 +15,14 @@ export const communityEndpoints = {
     page?: number;
     tag?: string;
     sort?: SortOption;
+    search?: string;
     workspace_id?: string;
   }) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set('page', String(params.page));
     if (params?.tag) qs.set('tag', params.tag);
     if (params?.sort) qs.set('sort', params.sort);
+    if (params?.search) qs.set('search', params.search);
     if (params?.workspace_id) qs.set('workspace_id', params.workspace_id);
     const query = qs.toString();
     return coreApi.get<PaginatedResponse<Discussion>>(`/community/${query ? `?${query}` : ''}`);

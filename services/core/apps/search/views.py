@@ -24,14 +24,16 @@ class SearchView(APIView):
             )
 
         if len(query) < 2:
-            return Response({
-                "query": query,
-                "total_results": 0,
-                "page": page,
-                "page_size": page_size,
-                "results": [],
-                "facets": {},
-            })
+            return Response(
+                {
+                    "query": query,
+                    "total_results": 0,
+                    "page": page,
+                    "page_size": page_size,
+                    "results": [],
+                    "facets": {},
+                }
+            )
 
         page_size = min(page_size, 50)
         page = max(page, 1)

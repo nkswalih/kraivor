@@ -43,19 +43,24 @@ export function useCheckUsername(username: string) {
 export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ username, ...payload }: { username: string } & ProfileUpdatePayload) =>
-      profileEndpoints.updateProfile(username, payload),
+    mutationFn: (variables: { id: string } & ProfileUpdatePayload) =>
+      profileEndpoints.updateProfile(variables.id, variables),
     onSuccess: (updated, variables) => {
-      qc.setQueryData(profileKeys.detail(variables.username), updated);
+      qc.setQueryData(profileKeys.detail(variables.id), updated);
       qc.setQueryData(profileKeys.myProfile(), updated);
+      qc.invalidateQueries({ queryKey: profileKeys.all() });
     },
   });
 }
 
 export function useUploadProfileImage() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ field, file }: { field: 'avatar' | 'banner'; file: File }) =>
       profileEndpoints.uploadProfileImage(field, file),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: profileKeys.myProfile() });
+    },
   });
 }
 
@@ -65,6 +70,9 @@ export function useFollow(username: string) {
     mutationFn: () => profileEndpoints.follow(username),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: profileKeys.detail(username) });
+      qc.invalidateQueries({ queryKey: profileKeys.followers(username) });
+      qc.invalidateQueries({ queryKey: profileKeys.following(username) });
+      qc.invalidateQueries({ queryKey: profileKeys.myProfile() });
     },
   });
 }
@@ -75,6 +83,9 @@ export function useUnfollow(username: string) {
     mutationFn: () => profileEndpoints.unfollow(username),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: profileKeys.detail(username) });
+      qc.invalidateQueries({ queryKey: profileKeys.followers(username) });
+      qc.invalidateQueries({ queryKey: profileKeys.following(username) });
+      qc.invalidateQueries({ queryKey: profileKeys.myProfile() });
     },
   });
 }
@@ -110,5 +121,48 @@ export function useTopContributors(limit?: number) {
     queryKey: profileKeys.contributors(),
     queryFn: () => profileEndpoints.getTopContributors(limit),
     staleTime: 60_000,
+  });
+}
+
+export function useUserDiscussions(userId: string) {
+  return useQuery({
+    queryKey: [...profileKeys.all(), 'discussions', userId],
+    queryFn: () => profileEndpoints.listUserDiscussions(userId),
+    enabled: !!userId,
+    staleTime: 30_000,
+  });
+}
+
+export function useUserComments(userId: string) {
+  return useQuery({
+    queryKey: [...profileKeys.all(), 'comments', userId],
+    queryFn: () => profileEndpoints.listUserComments(userId),
+    enabled: !!userId,
+    staleTime: 30_000,
+  });
+}
+
+export function useProfileSearch(q: string) {
+  return useQuery({
+    queryKey: [...profileKeys.all(), 'search', q],
+    queryFn: () => profileEndpoints.search(q),
+    enabled: q.length >= 1,
+    staleTime: 30_000,
+  });
+}
+
+export function useAuthorProfiles(authorIds: string[]) {
+  const uniqueIds = authorIds.filter(Boolean);
+  return useQuery({
+    queryKey: [...profileKeys.all(), 'by-ids', ...uniqueIds.sort()],
+    queryFn: () => profileEndpoints.getProfilesByIds(uniqueIds),
+    enabled: uniqueIds.length > 0,
+    staleTime: 60_000,
+    select: data => ({
+      profileMap: data.profiles as Record<
+        string,
+        { username: string; display_name: string; avatar_url: string }
+      >,
+    }),
   });
 }

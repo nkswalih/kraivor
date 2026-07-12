@@ -25,6 +25,7 @@ class AnalysisJobModel(Base, TimestampMixin, SoftDeleteMixin):
     repo_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     branch: Mapped[str] = mapped_column(String(255), default="main")
     deep_scan: Mapped[bool] = mapped_column(Boolean, default=True)
+    depth: Mapped[int] = mapped_column(SmallInteger, default=1)
     simulate_users: Mapped[list[int] | None] = mapped_column(
         ARRAY(Integer), nullable=True, default=[100, 500, 5000]
     )
@@ -54,6 +55,7 @@ class AnalysisJobModel(Base, TimestampMixin, SoftDeleteMixin):
     engine_statuses: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True)
 
     languages_detected: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    language_breakdown: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -64,29 +66,30 @@ class AnalysisJobModel(Base, TimestampMixin, SoftDeleteMixin):
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     queue_wait_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    # Relationships
-    findings = relationship("FindingModel", back_populates="job", lazy="selectin")
+    # Relationships — lazy="raise" prevents accidental N+1 queries in list views.
+    # Use explicit repository methods to load related data when needed.
+    findings = relationship("FindingModel", back_populates="job", lazy="raise")
     dead_code_entries = relationship(
-        "DeadCodeModel", back_populates="job", lazy="selectin"
+        "DeadCodeModel", back_populates="job", lazy="raise"
     )
     error_findings = relationship(
-        "ErrorFindingModel", back_populates="job", lazy="selectin"
+        "ErrorFindingModel", back_populates="job", lazy="raise"
     )
     performance_metrics = relationship(
-        "PerformanceMetricModel", back_populates="job", lazy="selectin"
+        "PerformanceMetricModel", back_populates="job", lazy="raise"
     )
     simulation_results = relationship(
-        "SimulationResultModel", back_populates="job", lazy="selectin"
+        "SimulationResultModel", back_populates="job", lazy="raise"
     )
     reliability_findings = relationship(
-        "ReliabilityFindingModel", back_populates="job", lazy="selectin"
+        "ReliabilityFindingModel", back_populates="job", lazy="raise"
     )
     maintainability_findings = relationship(
-        "MaintainabilityFindingModel", back_populates="job", lazy="selectin"
+        "MaintainabilityFindingModel", back_populates="job", lazy="raise"
     )
     devops_findings = relationship(
-        "DevOpsFindingModel", back_populates="job", lazy="selectin"
+        "DevOpsFindingModel", back_populates="job", lazy="raise"
     )
     enterprise_guide = relationship(
-        "EnterpriseGuideModel", back_populates="job", uselist=False, lazy="selectin"
+        "EnterpriseGuideModel", back_populates="job", uselist=False, lazy="raise"
     )

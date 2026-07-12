@@ -1,9 +1,11 @@
 'use client';
 
-import { Globe, Search } from 'lucide-react';
+import { Globe } from 'lucide-react';
 import { useCommunityStore } from '@/lib/stores/community-store';
 import { Feed } from '@/components/community/feed';
 import { FeedTabs } from '@/components/community/feed-tabs';
+import { FeedToolbar } from '@/components/community/feed-toolbar';
+import { ExploreContent } from '@/components/community/explore-content';
 import { TrendingSidebar } from '@/components/community/trending-sidebar';
 import { TopContributors } from '@/components/community/top-contributors';
 import { CreateDialog } from '@/components/community/create-dialog';
@@ -12,11 +14,15 @@ import { usePopularTags } from '@/lib/hooks/use-community';
 
 export default function CommunityPage() {
   const setCreateDialogOpen = useCommunityStore(s => s.setCreateDialogOpen);
+  const activeTab = useCommunityStore(s => s.activeTab);
+  const activeTag = useCommunityStore(s => s.activeTag);
+  const setActiveTag = useCommunityStore(s => s.setActiveTag);
   const { data: tags } = usePopularTags(10);
 
   return (
     <div className="flex h-full w-full animate-fade-up">
-      <div className="flex-1 overflow-y-auto p-6 max-w-[1000px] mx-auto border-r border-border bg-background">
+      <div className="flex-1 overflow-y-auto border-r border-border bg-background">
+        <div className="p-6 max-w-[1000px] mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-xl font-medium flex items-center gap-2 text-foreground">
@@ -36,17 +42,25 @@ export default function CommunityPage() {
 
         <div className="flex items-center justify-between border-b border-border pb-4 mb-6">
           <FeedTabs />
-          <div className="flex items-center gap-2">
-            <button className="p-1.5 text-muted-foreground hover:text-foreground rounded bg-card border border-border">
-              <Search className="w-4 h-4" />
-            </button>
-          </div>
         </div>
 
-        {/* Active tag filter */}
-        <ActiveTagFilter />
+        <FeedToolbar />
 
-        <Feed />
+        {activeTag && activeTab !== 'news' && activeTab !== 'explore' && (
+          <div className="flex items-center gap-2 mb-4 text-[12px] text-muted-foreground">
+            <span>Filtering by:</span>
+            <span className="text-primary font-medium">#{activeTag}</span>
+            <button
+              onClick={() => setActiveTag(null)}
+              className="text-muted-foreground hover:text-foreground underline"
+            >
+              clear
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'explore' ? <ExploreContent /> : <Feed />}
+        </div>
       </div>
 
       <div className="w-[300px] bg-card p-6 hidden lg:block shrink-0 overflow-y-auto">
@@ -69,26 +83,6 @@ export default function CommunityPage() {
       </div>
 
       <CreateDialog />
-    </div>
-  );
-}
-
-function ActiveTagFilter() {
-  const activeTag = useCommunityStore(s => s.activeTag);
-  const setActiveTag = useCommunityStore(s => s.setActiveTag);
-
-  if (!activeTag) return null;
-
-  return (
-    <div className="flex items-center gap-2 mb-4 text-[12px] text-muted-foreground">
-      <span>Filtering by:</span>
-      <span className="text-primary font-medium">#{activeTag}</span>
-      <button
-        onClick={() => setActiveTag(null)}
-        className="text-muted-foreground hover:text-foreground underline"
-      >
-        clear
-      </button>
     </div>
   );
 }

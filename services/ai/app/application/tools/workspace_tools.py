@@ -24,15 +24,21 @@ def _match_repo(repos: list[dict], name: str) -> dict | None:
 def _format_repos(repos: list[dict]) -> str:
     if not repos:
         return "No repositories found in this workspace."
-    lines = ["## Repositories", "", "| Repo | Language | Score | Status | Last Analyzed |",
-             "|------|----------|-------|--------|---------------|"]
+    lines = [
+        "## Repositories",
+        "",
+        "| Repo | Language | Score | Status | Last Analyzed |",
+        "|------|----------|-------|--------|---------------|",
+    ]
     for r in repos:
         gh = r.get("github_repo", "unknown")
         lang = r.get("language") or "—"
         score = r.get("last_analysis_score")
         score_str = f"{score}/100" if score is not None else "—"
         status = r.get("status", "connected")
-        analyzed = r.get("last_analyzed_at", "")[:10] if r.get("last_analyzed_at") else "—"
+        analyzed = (
+            r.get("last_analyzed_at", "")[:10] if r.get("last_analyzed_at") else "—"
+        )
         lines.append(f"| {gh} | {lang} | {score_str} | {status} | {analyzed} |")
     return "\n".join(lines)
 
@@ -50,9 +56,15 @@ def _format_report(report: dict) -> str:
         parts.append("")
         parts.append("| Category | Score |")
         parts.append("|----------|-------|")
-        for label, val in [("Security", sec), ("Performance", perf),
-                           ("Reliability", rel), ("Maintainability", maint)]:
-            parts.append(f"| {label} | {val}/100 |" if val is not None else f"| {label} | — |")
+        for label, val in [
+            ("Security", sec),
+            ("Performance", perf),
+            ("Reliability", rel),
+            ("Maintainability", maint),
+        ]:
+            parts.append(
+                f"| {label} | {val}/100 |" if val is not None else f"| {label} | — |"
+            )
     findings = report.get("total_findings")
     files = report.get("total_files")
     loc = report.get("total_lines_of_code")
@@ -75,8 +87,12 @@ def _format_report(report: dict) -> str:
 def _format_projects(projects: list[dict]) -> str:
     if not projects:
         return "No projects found in this workspace."
-    lines = ["## Projects", "", "| Name | Status | Tasks | Blocked | Done |",
-             "|------|--------|-------|---------|------|"]
+    lines = [
+        "## Projects",
+        "",
+        "| Name | Status | Tasks | Blocked | Done |",
+        "|------|--------|-------|---------|------|",
+    ]
     for p in projects:
         name = p.get("name", "untitled")
         status = p.get("status", "—")
@@ -109,8 +125,12 @@ def _format_tasks(tasks: list[dict], project_name: str | None = None) -> str:
 def _format_knowledge_spaces(spaces: list[dict]) -> str:
     if not spaces:
         return "No knowledge spaces found."
-    lines = ["## Knowledge Spaces", "", "| Name | Description | Updated |",
-             "|------|-------------|---------|"]
+    lines = [
+        "## Knowledge Spaces",
+        "",
+        "| Name | Description | Updated |",
+        "|------|-------------|---------|",
+    ]
     for s in spaces:
         name = s.get("name", "untitled")
         desc = (s.get("description") or "")[:60]
@@ -122,8 +142,12 @@ def _format_knowledge_spaces(spaces: list[dict]) -> str:
 def _format_notifications(notifications: list[dict]) -> str:
     if not notifications:
         return "No notifications."
-    lines = ["## Notifications", "", "| Title | Type | Read | Created |",
-             "|-------|------|------|---------|"]
+    lines = [
+        "## Notifications",
+        "",
+        "| Title | Type | Read | Created |",
+        "|-------|------|------|---------|",
+    ]
     for n in notifications:
         title = (n.get("title") or "untitled")[:60]
         ntype = n.get("type", "—")
@@ -136,11 +160,17 @@ def _format_notifications(notifications: list[dict]) -> str:
 def _format_discussions(discussions: list[dict]) -> str:
     if not discussions:
         return "No discussions found."
-    lines = ["## Discussions", "", "| Title | Author | Comments | Created |",
-             "|-------|--------|----------|---------|"]
+    lines = [
+        "## Discussions",
+        "",
+        "| Title | Author | Comments | Created |",
+        "|-------|--------|----------|---------|",
+    ]
     for d in discussions:
         title = (d.get("title") or "untitled")[:60]
-        author = (d.get("author") or {}).get("display_name", d.get("created_by", ""))[:20]
+        author = (d.get("author") or {}).get("display_name", d.get("created_by", ""))[
+            :20
+        ]
         comments = d.get("comment_count", 0)
         created = (d.get("created_at") or "")[:10]
         lines.append(f"| {title} | {author} | {comments} | {created} |")
@@ -152,7 +182,9 @@ def _format_comments(comments: list[dict]) -> str:
         return "No comments found."
     lines = ["## Comments", ""]
     for c in comments:
-        author = (c.get("author") or {}).get("display_name", c.get("created_by", ""))[:20]
+        author = (c.get("author") or {}).get("display_name", c.get("created_by", ""))[
+            :20
+        ]
         content = (c.get("content") or "")[:300]
         created = (c.get("created_at") or "")[:10]
         lines.append(f"**{author}** ({created}):")
@@ -169,14 +201,15 @@ class WorkspaceTools:
         repos = await self.client.get_repos(user_id, workspace_id)
         return _format_repos(repos)
 
-    async def get_analysis_report(self, user_id: str, workspace_id: str,
-                                   repo_name: str) -> str:
+    async def get_analysis_report(
+        self, user_id: str, workspace_id: str, repo_name: str
+    ) -> str:
         repos = await self.client.get_repos(user_id, workspace_id)
         repo = _match_repo(repos, repo_name)
         if not repo:
             return f"No repository found matching '{repo_name}' in your workspace."
         report = await self.client.get_analysis_report(
-            user_id, workspace_id, repo["id"],
+            user_id, workspace_id, repo["id"]
         )
         if not report:
             return f"Repository '{repo.get('github_repo', repo_name)}' has not been analyzed yet."
@@ -188,9 +221,13 @@ class WorkspaceTools:
         projects = await self.client.get_projects(user_id, workspace_id)
         return _format_projects(projects)
 
-    async def get_tasks(self, user_id: str, workspace_id: str,
-                         project_name: str | None = None,
-                         status: str | None = None) -> str:
+    async def get_tasks(
+        self,
+        user_id: str,
+        workspace_id: str,
+        project_name: str | None = None,
+        status: str | None = None,
+    ) -> str:
         project_id = None
         if project_name:
             projects = await self.client.get_projects(user_id, workspace_id)
@@ -207,24 +244,27 @@ class WorkspaceTools:
         spaces = await self.client.get_knowledge_spaces(user_id, workspace_id)
         return _format_knowledge_spaces(spaces)
 
-    async def get_notifications(self, user_id: str, workspace_id: str,
-                                 limit: int = 10) -> str:
+    async def get_notifications(
+        self, user_id: str, workspace_id: str, limit: int = 10
+    ) -> str:
         notifications = await self.client.get_notifications(user_id, workspace_id)
         notifications = notifications[:limit]
         return _format_notifications(notifications)
 
-    async def get_discussions(self, user_id: str, workspace_id: str,
-                               limit: int = 10, trending: bool = False) -> str:
+    async def get_discussions(
+        self, user_id: str, workspace_id: str, limit: int = 10, trending: bool = False
+    ) -> str:
         discussions = await self.client.get_discussions(user_id, workspace_id)
         if trending:
-            discussions = sorted(discussions,
-                                 key=lambda d: d.get("comment_count", 0), reverse=True)
+            discussions = sorted(
+                discussions, key=lambda d: d.get("comment_count", 0), reverse=True
+            )
         discussions = discussions[:limit]
         return _format_discussions(discussions)
 
-    async def get_discussion_comments(self, user_id: str, workspace_id: str,
-                                       discussion_title: str,
-                                       limit: int = 20) -> str:
+    async def get_discussion_comments(
+        self, user_id: str, workspace_id: str, discussion_title: str, limit: int = 20
+    ) -> str:
         discussions = await self.client.get_discussions(user_id, workspace_id)
         target = None
         for d in discussions:
@@ -234,7 +274,7 @@ class WorkspaceTools:
         if not target:
             return f"No discussion found matching '{discussion_title}'."
         comments = await self.client.get_discussion_comments(
-            user_id, workspace_id, target["id"],
+            user_id, workspace_id, target["id"]
         )
         comments = comments[:limit]
         return _format_comments(comments)
@@ -248,13 +288,9 @@ WORKSPACE_TOOL_DEFINITIONS = [
         "function": {
             "name": "get_workspace_repos",
             "description": "List all repositories in the user's workspace with analysis scores. "
-                           "Call this when the user asks about repositories, code repos, "
-                           "or mentions a repo name they want information about.",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": [],
-            },
+            "Call this when the user asks about repositories, code repos, "
+            "or mentions a repo name they want information about.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
     {
@@ -262,17 +298,17 @@ WORKSPACE_TOOL_DEFINITIONS = [
         "function": {
             "name": "get_repo_analysis_report",
             "description": "Get the latest code analysis report for a specific repository. "
-                           "Includes scores (overall, security, performance, reliability, "
-                           "maintainability), total findings, languages detected, and stats.",
+            "Includes scores (overall, security, performance, reliability, "
+            "maintainability), total findings, languages detected, and stats.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "repo_name": {
                         "type": "string",
                         "description": "The repository name to get analysis for. "
-                                       "Can be just the name (e.g., 'ai-chatbox') "
-                                       "or full path (e.g., 'owner/ai-chatbox').",
-                    },
+                        "Can be just the name (e.g., 'ai-chatbox') "
+                        "or full path (e.g., 'owner/ai-chatbox').",
+                    }
                 },
                 "required": ["repo_name"],
             },
@@ -283,12 +319,8 @@ WORKSPACE_TOOL_DEFINITIONS = [
         "function": {
             "name": "get_workspace_projects",
             "description": "List all projects in the user's workspace with task counts "
-                           "and current status.",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": [],
-            },
+            "and current status.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
     {
@@ -302,7 +334,7 @@ WORKSPACE_TOOL_DEFINITIONS = [
                     "project_name": {
                         "type": "string",
                         "description": "Project name to filter by (optional). "
-                                       "If omitted, returns all tasks.",
+                        "If omitted, returns all tasks.",
                     },
                     "status": {
                         "type": "string",
@@ -318,12 +350,8 @@ WORKSPACE_TOOL_DEFINITIONS = [
         "function": {
             "name": "get_knowledge_spaces",
             "description": "List knowledge spaces (documentation and canvas spaces) "
-                           "in the workspace.",
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "required": [],
-            },
+            "in the workspace.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
     {
@@ -337,7 +365,7 @@ WORKSPACE_TOOL_DEFINITIONS = [
                     "limit": {
                         "type": "integer",
                         "description": "Number of notifications to return (default 10).",
-                    },
+                    }
                 },
             },
         },
@@ -367,14 +395,14 @@ WORKSPACE_TOOL_DEFINITIONS = [
         "function": {
             "name": "get_discussion_comments",
             "description": "Get comments for a specific discussion thread. Call "
-                           "get_workspace_discussions first to find discussion titles.",
+            "get_workspace_discussions first to find discussion titles.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "discussion_title": {
                         "type": "string",
                         "description": "The title or part of the title of the discussion "
-                                       "to get comments for.",
+                        "to get comments for.",
                     },
                     "limit": {
                         "type": "integer",

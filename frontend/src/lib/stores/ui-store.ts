@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export type Theme = 'light' | 'dark' | 'system';
 
@@ -53,62 +54,70 @@ interface UIActions {
 
 type UIStore = UIState & UIActions;
 
-export const useUIStore = create<UIStore>((set, get) => ({
-  // ─── INITIAL STATE ──────────────────────────────────────────────────
-  sidebarOpen: false,
-  sidebarCollapsed: false,
+export const useUIStore = create<UIStore>()(
+  persist(
+    (set, get) => ({
+      // ─── INITIAL STATE ──────────────────────────────────────────────────
+      sidebarOpen: false,
+      sidebarCollapsed: false,
 
-  isRightPanelOpen: false,
-  rightPanelView: null,
-  rightPanelContextId: null,
-
-  isCommandPaletteOpen: false,
-
-  theme: 'system',
-  toasts: [],
-
-  // ─── ACTIONS ────────────────────────────────────────────────────────
-
-  // Sidebar
-  toggleSidebar: () => set(state => ({ sidebarOpen: !state.sidebarOpen })),
-  setSidebarOpen: open => set({ sidebarOpen: open }),
-  toggleSidebarCollapse: () => set(state => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-
-  // Right Panel
-  openRightPanel: (view = 'ai', contextId = null) =>
-    set({
-      isRightPanelOpen: true,
-      rightPanelView: view,
-      rightPanelContextId: contextId,
-    }),
-  closeRightPanel: () =>
-    set({
       isRightPanelOpen: false,
-      // We intentionally don't clear the view/context so it animates out nicely
+      rightPanelView: null,
+      rightPanelContextId: null,
+
+      isCommandPaletteOpen: false,
+
+      theme: 'system',
+      toasts: [],
+
+      // ─── ACTIONS ────────────────────────────────────────────────────────
+
+      // Sidebar
+      toggleSidebar: () => set(state => ({ sidebarOpen: !state.sidebarOpen })),
+      setSidebarOpen: open => set({ sidebarOpen: open }),
+      toggleSidebarCollapse: () => set(state => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+
+      // Right Panel
+      openRightPanel: (view = 'ai', contextId = null) =>
+        set({
+          isRightPanelOpen: true,
+          rightPanelView: view,
+          rightPanelContextId: contextId,
+        }),
+      closeRightPanel: () =>
+        set({
+          isRightPanelOpen: false,
+          // We intentionally don't clear the view/context so it animates out nicely
+        }),
+      toggleRightPanel: () =>
+        set(state => ({
+          isRightPanelOpen: !state.isRightPanelOpen,
+          // Default to AI view if opening via toggle
+          rightPanelView: !state.isRightPanelOpen ? 'ai' : state.rightPanelView,
+        })),
+
+      // Command Palette
+      setCommandPaletteOpen: open => set({ isCommandPaletteOpen: open }),
+      toggleCommandPalette: () => set(state => ({ isCommandPaletteOpen: !state.isCommandPaletteOpen })),
+
+      // Theme
+      setTheme: theme => set({ theme }),
+
+      // Toasts
+      addToast: toast =>
+        set(state => ({
+          toasts: [...state.toasts, { ...toast, id: Math.random().toString(36).substring(2, 9) }],
+        })),
+      removeToast: id =>
+        set(state => ({
+          toasts: state.toasts.filter(t => t.id !== id),
+        })),
     }),
-  toggleRightPanel: () =>
-    set(state => ({
-      isRightPanelOpen: !state.isRightPanelOpen,
-      // Default to AI view if opening via toggle
-      rightPanelView: !state.isRightPanelOpen ? 'ai' : state.rightPanelView,
-    })),
-
-  // Command Palette
-  setCommandPaletteOpen: open => set({ isCommandPaletteOpen: open }),
-  toggleCommandPalette: () => set(state => ({ isCommandPaletteOpen: !state.isCommandPaletteOpen })),
-
-  // Theme
-  setTheme: theme => set({ theme }),
-
-  // Toasts
-  addToast: toast =>
-    set(state => ({
-      toasts: [...state.toasts, { ...toast, id: Math.random().toString(36).substring(2, 9) }],
-    })),
-  removeToast: id =>
-    set(state => ({
-      toasts: state.toasts.filter(t => t.id !== id),
-    })),
-}));
+    {
+      name: 'kraivor-ui-store',
+      partialize: state => ({ sidebarCollapsed: state.sidebarCollapsed }),
+    }
+  )
+);
 
 export default useUIStore;

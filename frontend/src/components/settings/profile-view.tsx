@@ -123,7 +123,7 @@ export function ProfileView() {
             onClick={() => bannerInputRef.current?.click()}
           >
             {bannerUrl ? (
-              <img src={bannerUrl} alt="" className="w-full h-full object-cover" />
+              <img src={bannerUrl} alt="" loading="lazy" className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-text-tertiary text-[11px]">Banner</div>
             )}
@@ -141,7 +141,7 @@ export function ProfileView() {
           <div className="flex items-end gap-4 -mt-10 pl-4">
             <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
               {avatarUrl ? (
-                <img src={avatarUrl} alt="" className="w-20 h-20 rounded-lg border-2 border-krait-obsidian object-cover" />
+                <img src={avatarUrl} alt="" loading="lazy" className="w-20 h-20 rounded-lg border-2 border-krait-obsidian object-cover" />
               ) : (
                 <div className="w-20 h-20 rounded-lg border-2 border-krait-obsidian bg-muted flex items-center justify-center text-2xl font-bold text-text-primary">
                   {avatarInitial}

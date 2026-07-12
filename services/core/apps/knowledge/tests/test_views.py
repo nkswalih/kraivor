@@ -23,9 +23,8 @@ Scenarios per view:
   - Service exception → HTTP status code mapping
 """
 
-import uuid
-
 import pytest
+import uuid
 from rest_framework import status
 from rest_framework.test import APIRequestFactory
 
@@ -43,9 +42,7 @@ class TestKnowledgeSpaceListView:
         request = make_request(
             "get", "/api/workspaces/x/knowledge/", user_id, data=data
         )
-        return KnowledgeSpaceListView.as_view()(
-            request, workspace_pk=workspace.id
-        )
+        return KnowledgeSpaceListView.as_view()(request, workspace_pk=workspace.id)
 
     def test_returns_200_for_owner(self, workspace, owner_member, owner_id):
         assert self._call(workspace, owner_id).status_code == status.HTTP_200_OK
@@ -93,9 +90,7 @@ class TestKnowledgeSpaceListView:
     def test_returns_403_without_user_id(self, workspace):
         raw = APIRequestFactory().get("/api/workspaces/x/knowledge/", format="json")
         # Deliberately omit raw.user_id
-        response = KnowledgeSpaceListView.as_view()(
-            raw, workspace_pk=workspace.id
-        )
+        response = KnowledgeSpaceListView.as_view()(raw, workspace_pk=workspace.id)
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     # ── Search ────────────────────────────────────────────────────────────────
@@ -141,9 +136,7 @@ class TestKnowledgeSpaceCreateView:
             user_id,
             data=data if data is not None else self._PAYLOAD,
         )
-        return KnowledgeSpaceListView.as_view()(
-            request, workspace_pk=workspace.id
-        )
+        return KnowledgeSpaceListView.as_view()(request, workspace_pk=workspace.id)
 
     def test_returns_201_for_owner(self, workspace, owner_member, owner_id):
         assert self._call(workspace, owner_id).status_code == status.HTTP_201_CREATED
@@ -359,9 +352,7 @@ class TestKnowledgeSpaceUpdateView:
     def test_returns_400_for_blank_name(
         self, workspace, owner_member, owner_id, knowledge_space
     ):
-        response = self._call(
-            owner_id, knowledge_space.id, data={"name": "   "}
-        )
+        response = self._call(owner_id, knowledge_space.id, data={"name": "   "})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "name" in response.data["detail"]
 

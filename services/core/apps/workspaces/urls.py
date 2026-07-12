@@ -6,6 +6,7 @@ from .views import (
     InvitationRevokeView,
     MemberDetailView,
     MemberListCreateView,
+    MyPendingInvitationsView,
     WorkspaceDetailView,
     WorkspaceListView,
 )
@@ -39,6 +40,11 @@ urlpatterns = [
         "workspaces/<str:workspace_pk>/invitations/<uuid:invitation_id>/",
         InvitationRevokeView.as_view(),
         name="workspace-invitation-revoke",
+    ),
+    path(
+        "invitations/pending/",
+        MyPendingInvitationsView.as_view(),
+        name="my-pending-invitations",
     ),
     path(
         "invitations/<str:token>/accept/",

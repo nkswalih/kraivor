@@ -5,9 +5,8 @@ Provides workspace-scoped fixtures (``workspace``, ``user_id``, ``workspace_memb
 ``HTTP_X_USER_ID`` and ``HTTP_X_WORKSPACE_ID`` headers.
 """
 
-import uuid
-
 import pytest
+import uuid
 
 from apps.workspaces.tests.factories import WorkspaceFactory, WorkspaceMemberFactory
 
@@ -41,7 +40,4 @@ def task(project, user_id):
 
 @pytest.fixture
 def auth_headers(user_id, workspace):
-    return {
-        "HTTP_X_USER_ID": user_id,
-        "HTTP_X_WORKSPACE_ID": str(workspace.id),
-    }
+    return {"HTTP_X_USER_ID": user_id, "HTTP_X_WORKSPACE_ID": str(workspace.id)}

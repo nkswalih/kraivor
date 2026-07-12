@@ -1,22 +1,18 @@
 import logging
+import requests
 import uuid
-
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db.models import F
 from django.utils import timezone
-from drf_spectacular.utils import (
-    OpenApiParameter,
-    OpenApiResponse,
-    extend_schema,
-)
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from profiles.constants import (
     ALLOWED_IMAGE_TYPES,
     AVATAR_MAX_BYTES,
     BANNER_MAX_BYTES,
     REPUTATION_EVENTS,
 )
-from profiles.events import publish_profile_updated
+from profiles.events import publish_follow_new, publish_profile_updated
 from profiles.models import Profile
 from profiles.permissions import IsAuthenticatedOrReadOnly
 from profiles.serializers import (
@@ -50,6 +46,36 @@ def _user_id(request) -> str | None:
     return None
 
 
+def _sync_community_author(
+    user_id: str, username: str, display_name: str, avatar_url: str
+) -> None:
+    """Sync denormalized author fields to core service community discussions/comments."""
+    base = getattr(settings, "CORE_SERVICE_URL", "http://core:8002")
+    endpoint = f"{base}/api/community/internal/sync-author/"
+    header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
+    try:
+        resp = requests.post(
+            endpoint,
+            json={
+                "author_id": user_id,
+                "username": username,
+                "display_name": display_name,
+                "avatar_url": avatar_url,
+            },
+            headers={header: "1"},
+            timeout=5,
+        )
+        if resp.status_code != 200:
+            logger.warning(
+                "community_sync.failed",
+                extra={"author_id": user_id, "status": resp.status_code},
+            )
+    except requests.exceptions.RequestException as exc:
+        logger.warning(
+            "community_sync.error", extra={"author_id": user_id, "error": str(exc)}
+        )
+
+
 class ProfileDetailView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
@@ -57,17 +83,28 @@ class ProfileDetailView(APIView):
         summary="Get profile",
         description="Returns profile details by username.",
         tags=["Profiles"],
-        parameters=[OpenApiParameter("username", str, description="Profile username", location=OpenApiParameter.PATH)],
+        parameters=[
+            OpenApiParameter(
+                "username",
+                str,
+                description="Profile username",
+                location=OpenApiParameter.PATH,
+            )
+        ],
         responses={200: ProfileSerializer},
     )
     def get(self, request, username):
         uid = _user_id(request)
         profile = ProfileService.get_by_username(username)
         if not profile or (not profile.is_public and uid != str(profile.user_id)):
-            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         serializer = ProfileSerializer(profile)
         data = serializer.data
-        data["is_following"] = bool(uid) and ProfileService.is_following(uid, str(profile.user_id))
+        data["is_following"] = bool(uid) and ProfileService.is_following(
+            uid, str(profile.user_id)
+        )
         data["is_owner"] = uid is not None and uid == str(profile.user_id)
         return Response(data)
 
@@ -81,7 +118,10 @@ class ProfileDetailView(APIView):
     def patch(self, request, username):
         uid = _user_id(request)
         if not uid:  # pragma: no cover
-            return Response({"detail": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"detail": "Authentication required."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         profile = ProfileService.get_by_username(username)
         if not profile:  # pragma: no cover
             profile = ProfileService.get_by_user_id(uid)
@@ -89,14 +129,32 @@ class ProfileDetailView(APIView):
             display_name = request.data.get("display_name", username)
             profile = Profile(user_id=uid, username=username, display_name=display_name)
         if uid != str(profile.user_id):
-            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN
+            )
+        old_username = profile.username
+        old_display_name = profile.display_name
+        old_avatar_url = profile.avatar_url
         old_values = {}
-        for field in ("display_name", "bio", "avatar_url", "website_url"):
+        for field in ("username", "display_name", "bio", "avatar_url", "website_url"):
             old_values[field] = getattr(profile, field)
         serializer = UpdateProfileSerializer(profile, data=request.data, partial=True)
         if not serializer.is_valid():  # pragma: no cover
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         serializer.save()
+        profile.refresh_from_db()
+        # Sync denormalized author fields to community if identity fields changed
+        if (
+            profile.username != old_username
+            or profile.display_name != old_display_name
+            or profile.avatar_url != old_avatar_url
+        ):
+            _sync_community_author(
+                str(profile.user_id),
+                profile.username,
+                profile.display_name,
+                profile.avatar_url,
+            )
         publish_profile_updated(profile, old_values=old_values)
         return Response(ProfileSerializer(profile).data)
 
@@ -139,7 +197,10 @@ class ProfileSearchView(APIView):
     def get(self, request):
         query = request.query_params.get("q", "").strip()
         if not query:
-            return Response({"detail": "Query parameter 'q' is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Query parameter 'q' is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         page = int(request.query_params.get("page", 1))
         items, total = ProfileService.search(query, page=page, page_size=PAGE_SIZE)
         return Response(
@@ -164,9 +225,13 @@ class FollowerListView(APIView):
     def get(self, request, username):
         profile = ProfileService.get_by_username(username)
         if not profile:  # pragma: no cover
-            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         page = int(request.query_params.get("page", 1))
-        items, total = ProfileService.get_followers(profile, page=page, page_size=PAGE_SIZE)
+        items, total = ProfileService.get_followers(
+            profile, page=page, page_size=PAGE_SIZE
+        )
         return Response(
             {
                 "results": FollowerSerializer(items, many=True).data,
@@ -189,9 +254,13 @@ class FollowingListView(APIView):
     def get(self, request, username):
         profile = ProfileService.get_by_username(username)
         if not profile:  # pragma: no cover
-            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         page = int(request.query_params.get("page", 1))
-        items, total = ProfileService.get_following(profile, page=page, page_size=PAGE_SIZE)
+        items, total = ProfileService.get_following(
+            profile, page=page, page_size=PAGE_SIZE
+        )
         return Response(
             {
                 "results": FollowingSerializer(items, many=True).data,
@@ -214,10 +283,20 @@ class FollowView(APIView):
     def post(self, request, username):
         target = ProfileService.get_by_username(username)
         if not target:  # pragma: no cover
-            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         result = ProfileService.follow(str(request.user.id), str(target.user_id))
         if result is None:
-            return Response({"detail": "Already following or self-follow."}, status=status.HTTP_409_CONFLICT)
+            return Response(
+                {"detail": "Already following or self-follow."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        publish_follow_new(
+            follower_id=str(request.user.id),
+            target_user_id=str(target.user_id),
+            follower_username=getattr(request.user, "username", ""),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(
@@ -229,7 +308,9 @@ class FollowView(APIView):
     def delete(self, request, username):
         target = ProfileService.get_by_username(username)
         if not target:  # pragma: no cover
-            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         ProfileService.unfollow(str(request.user.id), str(target.user_id))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -247,8 +328,12 @@ class FollowStatusView(APIView):
         uid = _user_id(request)
         target = ProfileService.get_by_username(username)
         if not target:  # pragma: no cover
-            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
-        is_following = ProfileService.is_following(uid, str(target.user_id)) if uid else False
+            return Response(
+                {"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        is_following = (
+            ProfileService.is_following(uid, str(target.user_id)) if uid else False
+        )
         return Response({"is_following": is_following})
 
 
@@ -259,7 +344,9 @@ class LeaderboardView(APIView):
         summary="Leaderboard",
         description="Returns leaderboard of profiles ranked by reputation score.",
         tags=["Profiles"],
-        parameters=[OpenApiParameter("page", int, description="Page number (1-indexed)")],
+        parameters=[
+            OpenApiParameter("page", int, description="Page number (1-indexed)")
+        ],
         responses={200: OpenApiResponse(description="Paginated leaderboard")},
     )
     def get(self, request):
@@ -282,7 +369,13 @@ class TopContributorsView(APIView):
         summary="Top contributors",
         description="Returns top contributors ranked by reputation.",
         tags=["Profiles"],
-        parameters=[OpenApiParameter("limit", int, description="Number of contributors to return (default 10)")],
+        parameters=[
+            OpenApiParameter(
+                "limit",
+                int,
+                description="Number of contributors to return (default 10)",
+            )
+        ],
         responses={200: OpenApiResponse(description="Top contributors")},
     )
     def get(self, request):
@@ -298,13 +391,20 @@ class UsernameCheckView(APIView):
         summary="Check username availability",
         description="Check if a username is available for registration.",
         tags=["Profiles"],
-        parameters=[OpenApiParameter("username", str, description="Username to check availability")],
+        parameters=[
+            OpenApiParameter(
+                "username", str, description="Username to check availability"
+            )
+        ],
         responses={200: OpenApiResponse(description="Username availability status")},
     )
     def get(self, request):
         username = request.query_params.get("username", "").strip()
         if not username:  # pragma: no cover
-            return Response({"detail": "username parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "username parameter is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         exists = Profile.objects.filter(username=username).exists()
         return Response({"username": username, "available": not exists})
 
@@ -335,7 +435,9 @@ class ResolveProfilesByIdView(APIView):
         responses={200: OpenApiResponse(description="Profile resolution result")},
     )
     def post(self, request):  # pragma: no cover
-        internal_header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
+        internal_header = getattr(
+            settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"
+        )
         if request.headers.get(internal_header) != "1":
             return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -344,7 +446,7 @@ class ResolveProfilesByIdView(APIView):
             return Response({"profiles": {}}, status=status.HTTP_200_OK)
 
         profiles = Profile.objects.filter(
-            user_id__in=[uuid.UUID(uid) for uid in user_ids if uid],
+            user_id__in=[uuid.UUID(uid) for uid in user_ids if uid]
         )
 
         result = {
@@ -382,13 +484,14 @@ class ProfileUploadView(APIView):  # pragma: no cover
             )
         if not file:
             return Response(
-                {"detail": "No file provided."},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"detail": "No file provided."}, status=status.HTTP_400_BAD_REQUEST
             )
 
         if file.content_type not in ALLOWED_IMAGE_TYPES:
             return Response(
-                {"detail": f"Invalid file type. Allowed: {', '.join(ALLOWED_IMAGE_TYPES)}"},
+                {
+                    "detail": f"Invalid file type. Allowed: {', '.join(ALLOWED_IMAGE_TYPES)}"
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -400,11 +503,7 @@ class ProfileUploadView(APIView):  # pragma: no cover
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        ext_map = {
-            "image/png": "png",
-            "image/jpeg": "jpg",
-            "image/webp": "webp",
-        }
+        ext_map = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}
         ext = ext_map.get(file.content_type, "jpg")
         stamp = timezone.now().strftime("%Y%m%d%H%M%S")
         unique_id = uuid.uuid4().hex[:8]
@@ -484,32 +583,48 @@ class CommunityEventWebhookView(APIView):
         responses={200: OpenApiResponse(description="Event processed")},
     )
     def post(self, request):  # pragma: no cover
-        internal_header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
+        internal_header = getattr(
+            settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"
+        )
         if request.headers.get(internal_header) != "1":
             return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
         event_type = request.data.get("event_type")
         author_id = request.data.get("author_id")
         if not event_type or not author_id:
-            return Response({"error": "event_type and author_id are required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "event_type and author_id are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             author_uuid = uuid.UUID(author_id)
         except (ValueError, TypeError):
-            return Response({"error": "Invalid author_id"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid author_id"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         if event_type == "discussion.created":
             Profile.objects.filter(user_id=author_uuid).update(
-                discussion_count=F("discussion_count") + 1,
+                discussion_count=F("discussion_count") + 1
             )
         elif event_type == "discussion.deleted":
             Profile.objects.filter(user_id=author_uuid, discussion_count__gt=0).update(
-                discussion_count=F("discussion_count") - 1,
+                discussion_count=F("discussion_count") - 1
+            )
+        elif event_type == "comment.created":
+            Profile.objects.filter(user_id=author_uuid).update(
+                comment_count=F("comment_count") + 1
+            )
+        elif event_type == "comment.deleted":
+            Profile.objects.filter(user_id=author_uuid, comment_count__gt=0).update(
+                comment_count=F("comment_count") - 1
             )
         elif event_type == "backfill.user_stats":
             stats = request.data.get("data", {})
             Profile.objects.filter(user_id=author_uuid).update(
                 discussion_count=stats.get("discussion_count", 0),
+                comment_count=stats.get("comment_count", 0),
                 reputation_score=stats.get("reputation_score", 0),
             )
 

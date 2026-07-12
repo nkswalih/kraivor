@@ -3,9 +3,8 @@ OAuth State Manager - CSRF state with Redis
 """
 
 import logging
-import secrets
-
 import redis
+import secrets
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -35,7 +34,8 @@ class OAuthStateManager:
             return state
         except redis.RedisError as e:
             logger.error(
-                "oauth_state_storage_failed", extra={"provider": provider, "error": str(e)}
+                "oauth_state_storage_failed",
+                extra={"provider": provider, "error": str(e)},
             )
             raise OAuthStateError("Failed to create OAuth state") from e
 
@@ -48,7 +48,8 @@ class OAuthStateManager:
             return result > 0
         except redis.RedisError as e:
             logger.error(
-                "oauth_state_validation_failed", extra={"provider": provider, "error": str(e)}
+                "oauth_state_validation_failed",
+                extra={"provider": provider, "error": str(e)},
             )
             raise OAuthStateError("Failed to validate OAuth state") from e
 

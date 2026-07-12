@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import load_only
 
 from app.domain.contracts.repository_provider import AbstractJobRepository
 from app.infrastructure.db.models.analysis_job import AnalysisJobModel
@@ -24,8 +25,7 @@ class JobRepository(AbstractJobRepository):
 
     async def get_by_id(self, job_id: UUID) -> dict[str, object] | None:
         stmt = select(AnalysisJobModel).where(
-            AnalysisJobModel.id == job_id,
-            AnalysisJobModel.deleted_at.is_(None),
+            AnalysisJobModel.id == job_id, AnalysisJobModel.deleted_at.is_(None)
         )
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
@@ -46,20 +46,20 @@ class JobRepository(AbstractJobRepository):
         self, repo_id: UUID, limit: int = 10, offset: int = 0
     ) -> tuple[list[dict[str, object]], int]:
         base = select(AnalysisJobModel).where(
-            AnalysisJobModel.repo_id == repo_id,
-            AnalysisJobModel.deleted_at.is_(None),
+            AnalysisJobModel.repo_id == repo_id, AnalysisJobModel.deleted_at.is_(None)
         )
         count_stmt = select(func.count()).select_from(base.subquery())
         count_result = await self._session.execute(count_stmt)
         total = count_result.scalar() or 0
 
         stmt = (
-            base.order_by(AnalysisJobModel.created_at.desc())
+            base.options(self._list_load_only())
+            .order_by(AnalysisJobModel.created_at.desc())
             .offset(offset)
             .limit(limit)
         )
         result = await self._session.execute(stmt)
-        return [self._to_dict(m) for m in result.scalars().all()], total
+        return [self._to_dict_list(m) for m in result.scalars().all()], total
 
     async def list_by_workspace(
         self, workspace_id: UUID, limit: int = 10, offset: int = 0
@@ -73,12 +73,13 @@ class JobRepository(AbstractJobRepository):
         total = count_result.scalar() or 0
 
         stmt = (
-            base.order_by(AnalysisJobModel.created_at.desc())
+            base.options(self._list_load_only())
+            .order_by(AnalysisJobModel.created_at.desc())
             .offset(offset)
             .limit(limit)
         )
         result = await self._session.execute(stmt)
-        return [self._to_dict(m) for m in result.scalars().all()], total
+        return [self._to_dict_list(m) for m in result.scalars().all()], total
 
     async def hard_delete(self, job_id: UUID) -> dict[str, object] | None:
         job = await self.get_by_id(job_id)
@@ -87,12 +88,12 @@ class JobRepository(AbstractJobRepository):
 
         # These tables have no FK cascade — delete manually
         stmt_del_score = sa_delete(ScoreHistoryModel).where(
-            ScoreHistoryModel.job_id == job_id,
+            ScoreHistoryModel.job_id == job_id
         )
         await self._session.execute(stmt_del_score)
 
         stmt_del_files = sa_delete(FileAnalysisModel).where(
-            FileAnalysisModel.job_id == job_id,
+            FileAnalysisModel.job_id == job_id
         )
         await self._session.execute(stmt_del_files)
 
@@ -115,6 +116,52 @@ class JobRepository(AbstractJobRepository):
         return result.scalar() or 0
 
     @staticmethod
+    def _list_load_only() -> load_only:
+        return load_only(
+            AnalysisJobModel.id,
+            AnalysisJobModel.repo_id,
+            AnalysisJobModel.workspace_id,
+            AnalysisJobModel.repo_url,
+            AnalysisJobModel.branch,
+            AnalysisJobModel.status,
+            AnalysisJobModel.overall_score,
+            AnalysisJobModel.total_findings,
+            AnalysisJobModel.total_files,
+            AnalysisJobModel.total_lines,
+            AnalysisJobModel.progress_pct,
+            AnalysisJobModel.progress_message,
+            AnalysisJobModel.blocked_by,
+            AnalysisJobModel.engine_statuses,
+            AnalysisJobModel.error_message,
+            AnalysisJobModel.started_at,
+            AnalysisJobModel.completed_at,
+            AnalysisJobModel.created_at,
+        )
+
+    @staticmethod
+    def _to_dict_list(model: AnalysisJobModel) -> dict[str, object]:
+        return {
+            "id": model.id,
+            "repo_id": model.repo_id,
+            "workspace_id": model.workspace_id,
+            "repo_url": model.repo_url,
+            "branch": model.branch,
+            "status": model.status,
+            "overall_score": model.overall_score,
+            "total_findings": model.total_findings,
+            "total_files": model.total_files,
+            "total_lines": model.total_lines,
+            "progress_pct": model.progress_pct,
+            "progress_message": model.progress_message,
+            "blocked_by": model.blocked_by,
+            "engine_statuses": model.engine_statuses,
+            "error_message": model.error_message,
+            "started_at": model.started_at,
+            "completed_at": model.completed_at,
+            "created_at": model.created_at,
+        }
+
+    @staticmethod
     def _to_dict(model: AnalysisJobModel) -> dict[str, object]:
         return {
             "id": model.id,
@@ -125,6 +172,7 @@ class JobRepository(AbstractJobRepository):
             "repo_url": model.repo_url,
             "branch": model.branch,
             "deep_scan": model.deep_scan,
+            "depth": model.depth,
             "simulate_users": model.simulate_users,
             "status": model.status,
             "progress_pct": model.progress_pct,

@@ -1,15 +1,10 @@
 import uuid
-
 from django.db import models
 from django.utils import timezone
 
 
 class OAuthIdentity(models.Model):
-    PROVIDER_CHOICES = [
-        ("github", "GitHub"),
-        ("google", "Google"),
-        ("apple", "Apple"),
-    ]
+    PROVIDER_CHOICES = [("github", "GitHub"), ("google", "Google"), ("apple", "Apple")]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
@@ -40,7 +35,9 @@ class OAuthIdentity(models.Model):
 
 class RefreshToken(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="refresh_tokens")
+    user = models.ForeignKey(
+        "users.User", on_delete=models.CASCADE, related_name="refresh_tokens"
+    )
     token_hash = models.CharField(max_length=255)
     device_id = models.CharField(max_length=255, null=True, blank=True)
     device_name = models.CharField(max_length=255, null=True, blank=True)

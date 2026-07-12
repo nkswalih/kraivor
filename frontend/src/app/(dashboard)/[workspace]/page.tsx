@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+
 import {
   GitBranch,
   MessageSquare,
@@ -43,10 +43,9 @@ function StatCard({
   loading?: boolean;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
+    <div
       className="group relative bg-krait-surface1 border border-krait-border rounded-lg p-4 flex flex-col
+                 animate-fade-up
                  hover:border-venom-yellow/40 hover:shadow-venom transition-all duration-[var(--duration-fast)] ease-strike"
     >
       {/* Snake band active indicator */}
@@ -63,7 +62,7 @@ function StatCard({
       ) : (
         <span className="text-2xl font-medium text-text-primary">{value}</span>
       )}
-    </motion.div>
+    </div>
   );
 }
 
@@ -111,12 +110,10 @@ function RecentChatActivity({
   return (
     <div className="space-y-0.5">
       {recent.map((room, i) => (
-        <motion.div
+        <div
           key={room.id}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.04 }}
-          className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-krait-surface2 transition-colors cursor-pointer group"
+          className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-krait-surface2 transition-colors cursor-pointer group animate-fade-up"
+          style={{ animationDelay: `${i * 0.04}s` }}
         >
           <div className="w-8 h-8 rounded-md bg-krait-surface2 border border-krait-border flex items-center justify-center shrink-0">
             <Hash className="w-3.5 h-3.5 text-text-tertiary group-hover:text-venom-yellow transition-colors" />
@@ -130,7 +127,7 @@ function RecentChatActivity({
           <span className="text-[11px] text-text-tertiary shrink-0 font-mono">
             {room.last_message_at ? formatRelativeTime(room.last_message_at) : ''}
           </span>
-        </motion.div>
+        </div>
       ))}
     </div>
   );
@@ -177,12 +174,10 @@ function RecentRepositories({
   return (
     <div className="space-y-0.5">
       {recent.map((repo, i) => (
-        <motion.div
+        <div
           key={repo.id}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.04 }}
-          className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-krait-surface2 transition-colors cursor-pointer group"
+          className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-krait-surface2 transition-colors cursor-pointer group animate-fade-up"
+          style={{ animationDelay: `${i * 0.04}s` }}
         >
           <div className="w-8 h-8 rounded-md bg-krait-surface2 border border-krait-border flex items-center justify-center shrink-0">
             <GitBranch className="w-3.5 h-3.5 text-text-tertiary group-hover:text-venom-yellow transition-colors" />
@@ -196,7 +191,7 @@ function RecentRepositories({
           <Badge variant={repo.status === 'connected' ? 'success' : 'default'}>
             {repo.status === 'connected' ? 'Connected' : 'Disconnected'}
           </Badge>
-        </motion.div>
+        </div>
       ))}
     </div>
   );
@@ -262,19 +257,18 @@ function ActiveMembers({
           null;
 
         return (
-          <motion.div
+          <div
             key={member.user_id}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.04 }}
-            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-krait-surface2 transition-colors group"
+            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-krait-surface2 transition-colors group animate-fade-up"
+            style={{ animationDelay: `${i * 0.04}s` }}
           >
             <div className="relative shrink-0">
               {src ? (
-                <img
-                  src={src}
-                  alt=""
-                  className="w-8 h-8 rounded-full object-cover border border-krait-border"
+              <img
+                src={src}
+                alt=""
+                loading="lazy"
+                className="w-8 h-8 rounded-full object-cover border border-krait-border"
                 />
               ) : (
                 <div className="w-8 h-8 rounded-full bg-krait-surface3 border border-krait-border flex items-center justify-center text-xs font-medium text-text-primary">
@@ -299,7 +293,7 @@ function ActiveMembers({
               </p>
             </div>
             <Badge variant={member.role === 'owner' ? 'venom' : 'default'}>{member.role}</Badge>
-          </motion.div>
+          </div>
         );
       })}
     </div>
@@ -344,11 +338,10 @@ function KnowledgeSpaces({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {display.map((space, i) => (
-        <motion.div
+        <div
           key={space.id}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.05 }}
+          className="animate-fade-up"
+          style={{ animationDelay: `${i * 0.05}s` }}
         >
           <Link
             href={`/${workspaceSlug}/knowledge/${space.id}`}
@@ -371,7 +364,7 @@ function KnowledgeSpaces({
               </p>
             )}
           </Link>
-        </motion.div>
+        </div>
       ))}
     </div>
   );
@@ -393,6 +386,22 @@ function SectionHeader({ title, href }: { title: string; href?: string }) {
           View all <ArrowRight className="w-3 h-3" />
         </Link>
       )}
+    </div>
+  );
+}
+
+function AnalysisCardSkeleton() {
+  return (
+    <div className="p-4 rounded-lg bg-krait-surface1 border border-krait-border animate-pulse">
+      <div className="flex items-start justify-between mb-2">
+        <div className="w-4 h-4 rounded bg-krait-surface3" />
+        <div className="w-14 h-3 rounded bg-krait-surface3" />
+      </div>
+      <div className="w-2/3 h-4 rounded bg-krait-surface3 mt-3" />
+      <div className="flex items-center gap-4 mt-3">
+        <div className="w-10 h-5 rounded bg-krait-surface3" />
+        <div className="w-16 h-3 rounded bg-krait-surface3" />
+      </div>
     </div>
   );
 }
@@ -449,18 +458,21 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="p-8 max-w-[1100px] w-full mx-auto">
-        <DashboardError
-          message={error instanceof Error ? error.message : 'An unexpected error occurred'}
-        />
+      <div className="h-full overflow-y-auto">
+        <div className="p-8 max-w-[1100px] w-full mx-auto">
+          <DashboardError
+            message={error instanceof Error ? error.message : 'An unexpected error occurred'}
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 max-w-[1100px] w-full mx-auto">
+    <div className="h-full overflow-y-auto">
+      <div className="p-8 max-w-[1100px] w-full mx-auto">
       {/* Page header */}
-      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+      <div className="mb-8 animate-fade-up">
         <div className="flex items-center gap-3 mb-1">
           <h1 className="text-xl font-semibold text-text-primary tracking-tight">
             {isLoading ? (
@@ -480,7 +492,7 @@ export default function DashboardPage() {
             `${stats.repoCount} repositories · ${stats.memberCount} members · ${stats.roomCount} rooms`
           )}
         </div>
-      </motion.div>
+      </div>
 
       {/* Row 1: Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
@@ -515,25 +527,18 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Analysis */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.06 }}
-        className="mb-8"
-      >
+      <div className="mb-8 animate-fade-up" style={{ animationDelay: '0.06s' }}>
         <SectionHeader title="Recent Analysis" href={`/${workspaceSlug}/analysis`} />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {isLoading
-            ? Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} variant="rect" className="h-28" />
-              ))
+            ? Array.from({ length: 4 }).map((_, i) => <AnalysisCardSkeleton key={i} />)
             : recentJobs.slice(0, 4).map((job: AnalysisJob) => (
                 <Link
                   key={job.job_id}
                   href={`/${workspaceSlug}/analysis/jobs/${job.job_id}`}
                   className="block p-4 rounded-lg bg-krait-surface1 border border-krait-border
                              hover:border-venom-yellow/30 hover:shadow-venom
-                             transition-all duration-[var(--duration-normal)] ease-strike group"
+                             transition-all duration-200 ease-out group"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <GitBranch className="w-4 h-4 text-venom-yellow/60 group-hover:text-venom-yellow transition-colors" />
@@ -579,7 +584,7 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-      </motion.div>
+      </div>
 
       {/* Row 2: 3-column middle section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
@@ -604,26 +609,17 @@ export default function DashboardPage() {
       </div>
 
       {/* Row 3: Knowledge Spaces */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
+      <div className="animate-fade-up" style={{ animationDelay: '0.1s' }}>
         <SectionHeader title="Knowledge Spaces" href={`/${workspaceSlug}/knowledge`} />
         <KnowledgeSpaces
           spaces={knowledgeSpaces}
           loading={isLoading}
           workspaceSlug={workspaceSlug}
         />
-      </motion.div>
+      </div>
 
       {/* Quick Actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="mt-8"
-      >
+      <div className="mt-8 animate-fade-up" style={{ animationDelay: '0.15s' }}>
         <SectionHeader title="Quick Actions" />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Link
@@ -654,7 +650,8 @@ export default function DashboardPage() {
             Create Knowledge Space
           </Link>
         </div>
-      </motion.div>
+      </div>
+      </div>
     </div>
   );
 }

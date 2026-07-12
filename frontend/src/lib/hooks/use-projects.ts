@@ -193,7 +193,7 @@ export function useKnowledgeSpacesList(workspaceId: string) {
 export function useTaskSearch(workspaceId: string, search: string) {
   return useQuery({
     queryKey: ['taskSearch', workspaceId, search],
-    queryFn: () => taskEndpoints.list(workspaceId, { page: 1 }),
+    queryFn: () => taskEndpoints.list(workspaceId, { page: 1, search }),
     enabled: !!workspaceId && search.length > 0,
     staleTime: 10_000,
   });

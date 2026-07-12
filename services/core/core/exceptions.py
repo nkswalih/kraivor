@@ -1,10 +1,7 @@
 import logging
 import traceback
-
 from django.conf import settings
-from django.core.exceptions import (
-    ObjectDoesNotExist,
-)
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import JsonResponse
@@ -108,9 +105,7 @@ def core_exception_handler(exc, context):
         status_code = response.status_code
 
         response.data = _build_rfc_7807(
-            detail=flat_detail or str(exc),
-            code=code,
-            status_code=status_code,
+            detail=flat_detail or str(exc), code=code, status_code=status_code
         )
         return response
 
@@ -136,9 +131,11 @@ def core_exception_handler(exc, context):
         "exception.unhandled",
         extra={
             "error": str(exc),
-            "traceback": "".join(traceback.format_tb(exc.__traceback__))
-            if exc.__traceback__
-            else None,
+            "traceback": (
+                "".join(traceback.format_tb(exc.__traceback__))
+                if exc.__traceback__
+                else None
+            ),
         },
     )
 

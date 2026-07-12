@@ -1,5 +1,4 @@
 import logging
-
 from profiles.constants import REPUTATION_EVENTS
 from profiles.tasks import apply_reputation_event
 
@@ -15,7 +14,9 @@ def handle_community_event(event: dict):
         return
     author_id = data.get("author_id")
     if not author_id:
-        logger.warning("consumer.reputation.missing_author", extra={"event_type": event_type})
+        logger.warning(
+            "consumer.reputation.missing_author", extra={"event_type": event_type}
+        )
         return
     apply_reputation_event.delay(author_id, event_type, delta)
 

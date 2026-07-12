@@ -1,5 +1,4 @@
 import uuid
-
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
@@ -49,7 +48,12 @@ class InvitationRevokeView(WorkspaceDetailView):
         summary="Revoke invitation",
         responses={204: OpenApiResponse(description="No content")},
     )
-    def delete(self, request: Request, workspace_pk: str | None = None, invitation_id: str | None = None) -> Response:
+    def delete(
+        self,
+        request: Request,
+        workspace_pk: str | None = None,
+        invitation_id: str | None = None,
+    ) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk, request.user_id)
         try:
             inv_id = uuid.UUID(str(invitation_id))
@@ -73,12 +77,28 @@ class InvitationRevokeView(WorkspaceDetailView):
 
 
 @extend_schema(tags=["Workspace Invitations"])
+class MyPendingInvitationsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="List my pending invitations",
+        description="Returns all pending invitations for the current user's email across all workspaces.",
+        responses={200: WorkspaceInvitationSerializer(many=True)},
+    )
+    def get(self, request: Request) -> Response:
+        email = getattr(request, "user_email", None)
+        if not email:
+            return Response([], status=status.HTTP_200_OK)
+        invitations = InvitationService().list_my_pending_invitations(email=email)
+        return Response(WorkspaceInvitationSerializer(invitations, many=True).data)
+
+
+@extend_schema(tags=["Workspace Invitations"])
 class InvitationAcceptView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="Accept invitation",
-        responses={200: InvitationAcceptResponseSerializer},
+        summary="Accept invitation", responses={200: InvitationAcceptResponseSerializer}
     )
     def post(self, request: Request, token: str | None = None) -> Response:
         if not token:

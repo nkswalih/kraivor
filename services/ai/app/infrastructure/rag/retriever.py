@@ -41,7 +41,9 @@ class Retriever:
                     "repo_id, line_start, line_end, "
                     "1 - (embedding <=> :query_embedding) as similarity "
                     "FROM ai.code_embeddings "
-                    "WHERE " + where_clause + " "  # nosec - where_clause uses safe fragments with parameterized values
+                    "WHERE "
+                    + where_clause
+                    + " "  # nosec - where_clause uses safe fragments with parameterized values
                     "AND 1 - (embedding <=> :query_embedding) > :min_score "
                     "ORDER BY similarity DESC "
                     "LIMIT :top_k"
@@ -52,15 +54,17 @@ class Retriever:
 
         ranked = []
         for row in rows:
-            ranked.append({
-                "file_path": row["file_path"],
-                "content": row["content"],
-                "language": row["language"],
-                "repo_id": row["repo_id"],
-                "score": float(row["similarity"]),
-                "line_start": row["line_start"],
-                "line_end": row["line_end"],
-            })
+            ranked.append(
+                {
+                    "file_path": row["file_path"],
+                    "content": row["content"],
+                    "language": row["language"],
+                    "repo_id": row["repo_id"],
+                    "score": float(row["similarity"]),
+                    "line_start": row["line_start"],
+                    "line_end": row["line_end"],
+                }
+            )
 
         ranked.sort(key=lambda x: x["score"], reverse=True)
         return ranked[:top_k]

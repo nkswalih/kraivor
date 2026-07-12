@@ -6,6 +6,7 @@ import type {
   AnalysisJob,
   AnalysisMetadataResponse,
   JobListResponse,
+  JobStatistics,
   StartAnalysisRequest,
   FindingsSummary,
   Report,
@@ -26,6 +27,7 @@ export function useJob(jobId: string | null) {
     queryKey: ['analysis-job', jobId],
     queryFn: () => analysisService.jobs.get(jobId!),
     enabled: !!jobId,
+    staleTime: 60_000,
     refetchInterval: (query) => {
       const data = query.state.data;
       if (!data) return 2000;
@@ -42,7 +44,13 @@ export function useJobsList(page = 1, pageSize = 20, workspaceId?: string) {
     queryKey: ['analysis-jobs', workspaceId, page, pageSize],
     queryFn: () => analysisService.jobs.list(page, pageSize, workspaceId),
     enabled: !!workspaceId,
-    refetchInterval: 5000,
+    staleTime: 30_000,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data) return 5000;
+      const hasRunningJob = data.jobs.some(j => !terminalStatuses.has(j.status));
+      return hasRunningJob ? 5000 : false;
+    },
   });
 }
 
@@ -90,7 +98,7 @@ export function useFindings(
   filters?: { severity?: string; category?: string; includeDismissed?: boolean; page?: number; pageSize?: number }
 ) {
   return useQuery({
-    queryKey: ['analysis-findings', jobId, filters],
+    queryKey: ['analysis-findings', jobId, JSON.stringify(filters)],
     queryFn: () =>
       analysisService.findings.list({
         jobId: jobId!,
@@ -101,6 +109,7 @@ export function useFindings(
         pageSize: filters?.pageSize,
       }),
     enabled: !!jobId,
+    staleTime: 60_000,
   });
 }
 
@@ -120,6 +129,7 @@ export function useFindingsSummary(jobId: string | null) {
     queryKey: ['analysis-findings-summary', jobId],
     queryFn: () => analysisService.findings.summary(jobId!),
     enabled: !!jobId,
+    staleTime: 60_000,
   });
 }
 
@@ -130,6 +140,7 @@ export function useReport(jobId: string | null) {
     queryKey: ['analysis-report', jobId],
     queryFn: () => analysisService.reports.byJob(jobId!),
     enabled: !!jobId,
+    staleTime: 60_000,
   });
 }
 
@@ -141,6 +152,7 @@ export function useAnalysisMetadata(jobId: string | null) {
     queryFn: () => analysisService.reports.metadata(jobId!),
     enabled: !!jobId,
     retry: false,
+    staleTime: 60_000,
   });
 }
 
@@ -151,6 +163,7 @@ export function useDeadCode(jobId: string | null) {
     queryKey: ['analysis-dead-code', jobId],
     queryFn: () => analysisService.deadCode.list(jobId!),
     enabled: !!jobId,
+    staleTime: 60_000,
   });
 }
 
@@ -161,6 +174,7 @@ export function useErrorFindings(jobId: string | null) {
     queryKey: ['analysis-error-findings', jobId],
     queryFn: () => analysisService.errorFindings.list(jobId!),
     enabled: !!jobId,
+    staleTime: 60_000,
   });
 }
 
@@ -171,6 +185,7 @@ export function usePerfMetrics(jobId: string | null) {
     queryKey: ['analysis-perf-metrics', jobId],
     queryFn: () => analysisService.perfMetrics.list(jobId!),
     enabled: !!jobId,
+    staleTime: 60_000,
   });
 }
 
@@ -181,6 +196,19 @@ export function useSimulationResults(jobId: string | null) {
     queryKey: ['analysis-simulation', jobId],
     queryFn: () => analysisService.simulation.list(jobId!),
     enabled: !!jobId,
+    staleTime: 60_000,
+  });
+}
+
+// ─── Re-Enrich (regenerate AI enrichment only) ─────────
+
+export function useReEnrich() {
+  const queryClient = useQueryClient();
+  return useMutation<{ status: string; enriched: boolean }, Error, string>({
+    mutationFn: (jobId) => analysisService.jobs.reEnrich(jobId),
+    onSuccess: (_data, jobId) => {
+      queryClient.invalidateQueries({ queryKey: ['analysis-guide', jobId] });
+    },
   });
 }
 
@@ -192,6 +220,7 @@ export function useEnterpriseGuide(jobId: string | null) {
     queryFn: () => analysisService.enterpriseGuide.get(jobId!),
     enabled: !!jobId,
     retry: false,
+    staleTime: 60_000,
   });
 }
 
@@ -202,10 +231,11 @@ export function useScoreHistory(repoId: string | null, limit = 50) {
     queryKey: ['analysis-score-history', repoId, limit],
     queryFn: () => analysisService.scoreHistory.list(repoId!, limit),
     enabled: !!repoId,
+    staleTime: 60_000,
   });
 }
 
-// ─── Category Counts (for nav cards) ───────────────────
+// ─── Job Statistics (consolidated counts) ──────────────
 
 export interface CategoryCounts {
   findings: number;
@@ -216,6 +246,16 @@ export interface CategoryCounts {
   hasGuide: boolean;
 }
 
+export function useJobStatistics(jobId: string | null) {
+  return useQuery<JobStatistics>({
+    queryKey: ['analysis-job-statistics', jobId],
+    queryFn: () => analysisService.jobs.statistics(jobId!),
+    enabled: !!jobId,
+    staleTime: 60_000,
+  });
+}
+
+/** @deprecated Use useJobStatistics instead – fires 6 separate HTTP requests. */
 export function useCategoryCounts(jobId: string | null) {
   const find = useFindings(jobId, { pageSize: 1 });
   const dc = useDeadCode(jobId);

@@ -14,12 +14,16 @@ logger = get_logger(__name__)
 
 _LANGUAGE_EXTENSIONS: dict[str, list[str]] = {
     "python": [".py", ".pyi", ".pyx"],
-    "javascript": [".js", ".mjs", ".cjs"],
+    "javascript": [".js", ".jsx", ".mjs", ".cjs"],
     "typescript": [".ts", ".tsx"],
     "go": [".go"],
     "java": [".java"],
     "rust": [".rs"],
     "ruby": [".rb"],
+    "csharp": [".cs"],
+    "php": [".php"],
+    "kotlin": [".kt", ".kts"],
+    "elixir": [".ex", ".exs"],
     "dockerfile": ["Dockerfile", ".dockerfile"],
     "yaml": [".yml", ".yaml"],
     "json": [".json"],
@@ -105,8 +109,7 @@ class RepositoryFetcher:
         """
         os.makedirs(settings.analysis.ephemeral_path, exist_ok=True)
         dest = tempfile.mkdtemp(
-            prefix="kraivor_analysis_",
-            dir=settings.analysis.ephemeral_path,
+            prefix="kraivor_analysis_", dir=settings.analysis.ephemeral_path
         )
 
         # Add token to URL for private repos
@@ -132,13 +135,10 @@ class RepositoryFetcher:
         stderr_path = ""
         try:
             stderr_fd, stderr_path = tempfile.mkstemp(
-                suffix=".git_stderr",
-                dir=settings.analysis.ephemeral_path,
+                suffix=".git_stderr", dir=settings.analysis.ephemeral_path
             )
             proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=stderr_fd,
+                *cmd, stdout=asyncio.subprocess.DEVNULL, stderr=stderr_fd
             )
             os.close(stderr_fd)
             stderr_fd = None
@@ -167,6 +167,26 @@ class RepositoryFetcher:
             if stderr_path and os.path.exists(stderr_path):
                 with contextlib.suppress(OSError):
                     os.unlink(stderr_path)
+
+    async def list_branches(self, repo_url: str) -> list[str]:
+        import re
+
+        logger.info("listing_branches", url=repo_url)
+        proc = await asyncio.create_subprocess_exec(
+            "git",
+            "ls-remote",
+            "--heads",
+            repo_url,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        stdout, _ = await proc.communicate()
+        branches: list[str] = []
+        for line in stdout.decode().splitlines():
+            m = re.search(r"refs/heads/(.+)$", line)
+            if m:
+                branches.append(m.group(1))
+        return branches
 
     async def detect_languages(self, repo_path: str) -> list[str]:
         return await asyncio.to_thread(self._detect_languages_sync, repo_path)
@@ -208,11 +228,7 @@ class RepositoryFetcher:
                 lang = self._detect_language(file)
                 size = os.path.getsize(full_path)
 
-                entry = {
-                    "path": rel_path,
-                    "size": size,
-                    "language": lang,
-                }
+                entry = {"path": rel_path, "size": size, "language": lang}
 
                 if lang not in tree:
                     tree[lang] = []
@@ -261,11 +277,7 @@ class RepositoryFetcher:
                 try:
                     size = os.path.getsize(full_path)
                     if size > settings.analysis.max_file_size_bytes:
-                        logger.warning(
-                            "file_too_large",
-                            path=rel_path,
-                            size=size,
-                        )
+                        logger.warning("file_too_large", path=rel_path, size=size)
                         continue
 
                     with open(full_path, encoding="utf-8", errors="replace") as f:
@@ -281,11 +293,7 @@ class RepositoryFetcher:
                         }
                     )
                 except (OSError, PermissionError, UnicodeDecodeError) as e:
-                    logger.warning(
-                        "file_read_error",
-                        path=rel_path,
-                        error=str(e),
-                    )
+                    logger.warning("file_read_error", path=rel_path, error=str(e))
                     continue
 
         return files

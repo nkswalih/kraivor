@@ -46,10 +46,7 @@ class S3Storage(AbstractStorage):
     ) -> str:
         try:
             self._client.put_object(
-                Bucket=self._bucket,
-                Key=key,
-                Body=data,
-                ContentType=content_type,
+                Bucket=self._bucket, Key=key, Body=data, ContentType=content_type
             )
             logger.info("storage_upload", key=key, size=len(data))
             return key

@@ -4,6 +4,7 @@ Revision ID: 002
 Revises: 001
 Create Date: 2026-06-30
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -23,9 +24,7 @@ def upgrade() -> None:
 
     # add model, message_count, is_archived, last_message_at
     op.add_column(
-        "conversations",
-        sa.Column("model", sa.String(100), nullable=True),
-        schema="ai",
+        "conversations", sa.Column("model", sa.String(100), nullable=True), schema="ai"
     )
     op.add_column(
         "conversations",
@@ -39,11 +38,7 @@ def upgrade() -> None:
     )
     op.add_column(
         "conversations",
-        sa.Column(
-            "last_message_at",
-            sa.DateTime(timezone=True),
-            nullable=True,
-        ),
+        sa.Column("last_message_at", sa.DateTime(timezone=True), nullable=True),
         schema="ai",
     )
 
@@ -80,14 +75,10 @@ def upgrade() -> None:
         schema="ai",
     )
     op.add_column(
-        "messages",
-        sa.Column("tokens_input", sa.Integer(), nullable=True),
-        schema="ai",
+        "messages", sa.Column("tokens_input", sa.Integer(), nullable=True), schema="ai"
     )
     op.add_column(
-        "messages",
-        sa.Column("tokens_output", sa.Integer(), nullable=True),
-        schema="ai",
+        "messages", sa.Column("tokens_output", sa.Integer(), nullable=True), schema="ai"
     )
 
     # add updated_at and deleted_at from TimestampMixin
@@ -111,7 +102,9 @@ def upgrade() -> None:
     op.drop_column("messages", "token_count", schema="ai")
 
     # add indexes
-    op.create_index(op.f("ix_ai_messages_user_id"), "messages", ["user_id"], schema="ai")
+    op.create_index(
+        op.f("ix_ai_messages_user_id"), "messages", ["user_id"], schema="ai"
+    )
     op.create_index(
         op.f("ix_ai_conversations_user_id"), "conversations", ["user_id"], schema="ai"
     )
@@ -127,9 +120,7 @@ def downgrade() -> None:
     # --- messages ---
     op.drop_index(op.f("ix_ai_messages_user_id"), table_name="messages", schema="ai")
     op.add_column(
-        "messages",
-        sa.Column("token_count", sa.Integer(), nullable=True),
-        schema="ai",
+        "messages", sa.Column("token_count", sa.Integer(), nullable=True), schema="ai"
     )
     op.drop_column("messages", "deleted_at", schema="ai")
     op.drop_column("messages", "updated_at", schema="ai")
@@ -139,7 +130,9 @@ def downgrade() -> None:
 
     # --- conversations ---
     op.drop_index(
-        op.f("ix_ai_conversations_workspace_id"), table_name="conversations", schema="ai"
+        op.f("ix_ai_conversations_workspace_id"),
+        table_name="conversations",
+        schema="ai",
     )
     op.drop_index(
         op.f("ix_ai_conversations_user_id"), table_name="conversations", schema="ai"

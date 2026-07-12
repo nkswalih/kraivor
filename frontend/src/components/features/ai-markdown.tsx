@@ -1,8 +1,18 @@
 'use client';
 
+import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { AiCodeBlock } from '@/components/features/ai-code-block';
+import { useDebounce } from '@/lib/hooks/use-debounce';
+import {
+  MarkdownTable,
+  MarkdownTHead,
+  MarkdownTBody,
+  MarkdownTR,
+  MarkdownTH,
+  MarkdownTD,
+} from '@/components/features/markdown-table';
 
 interface AiMarkdownProps {
   content: string;
@@ -90,38 +100,21 @@ const Link = (props: any) => (
 
 const HR = () => <hr className="my-6 border-krait-border" />;
 
-const Table = (props: any) => (
-  <div className="my-4 overflow-x-auto rounded-lg border border-krait-border">
-    <table className="w-full text-[13px] text-text-secondary border-collapse" style={{ minWidth: 'max-content' }} {...props} />
-  </div>
-);
-
-const THead = (props: any) => (
-  <thead className="bg-krait-surface3 border-b border-krait-border" {...props} />
-);
-
-const TBody = (props: any) => (
-  <tbody className="divide-y divide-krait-border align-top" {...props} />
-);
-
-const TR = (props: any) => (
-  <tr className="even:bg-krait-surface1/50" {...props} />
-);
-
-const TH = (props: any) => (
-  <th className="px-4 py-2.5 text-left text-[12px] font-semibold text-text-primary uppercase tracking-wider whitespace-nowrap" {...props} />
-);
-
-const TD = (props: any) => (
-  <td className="px-4 py-2.5 text-[13px] text-text-secondary whitespace-pre-wrap break-words" {...props} />
-);
+const Table = (props: any) => <MarkdownTable {...props} />;
+const THead = (props: any) => <MarkdownTHead {...props} />;
+const TBody = (props: any) => <MarkdownTBody {...props} />;
+const TR = (props: any) => <MarkdownTR {...props} />;
+const TH = (props: any) => <MarkdownTH {...props} />;
+const TD = (props: any) => <MarkdownTD {...props} />;
 
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-export function AiMarkdown({ content, isStreaming }: AiMarkdownProps) {
+export const AiMarkdown = memo(function AiMarkdown({ content, isStreaming }: AiMarkdownProps) {
+  const displayContent = useDebounce(content, isStreaming ? 200 : 0);
+
   return (
     <div className="prose-custom max-w-none">
-      {content ? (
+      {displayContent ? (
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
@@ -147,7 +140,7 @@ export function AiMarkdown({ content, isStreaming }: AiMarkdownProps) {
             td: TD,
           }}
         >
-          {content}
+          {displayContent}
         </ReactMarkdown>
       ) : null}
       {isStreaming && (
@@ -155,4 +148,4 @@ export function AiMarkdown({ content, isStreaming }: AiMarkdownProps) {
       )}
     </div>
   );
-}
+}, (prev, next) => prev.content === next.content);

@@ -15,11 +15,7 @@ class AppBaseError(Exception):
         super().__init__(self.message)
 
     def to_dict(self) -> dict[str, object]:
-        return {
-            "error": self.code,
-            "message": self.message,
-            "details": self.details,
-        }
+        return {"error": self.code, "message": self.message, "details": self.details}
 
 
 class NotFoundError(AppBaseError):

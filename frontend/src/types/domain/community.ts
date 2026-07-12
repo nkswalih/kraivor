@@ -78,3 +78,5 @@ export interface PaginatedResponse<T> {
 }
 
 export type SortOption = 'latest' | 'trending' | 'top';
+export type ActiveTab = 'home' | 'trending' | 'explore' | 'news';
+export type ViewMode = 'list' | 'grid';

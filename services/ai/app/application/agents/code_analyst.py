@@ -16,9 +16,15 @@ class CodeAnalystNode:
         client = LLMClient(api_key=api_key, provider=provider, model=route["model"])
         context = state.get("assembled_context", "")
 
-        response = await client.generate([
-            {"role": "system", "content": CODE_ANALYST_SYSTEM_PROMPT},
-            {"role": "user", "content": f"Analyze this code:\n\n{context}\n\nUser message: {state.get('message', '')}"},
-        ], max_tokens=route["max_tokens"])
+        response = await client.generate(
+            [
+                {"role": "system", "content": CODE_ANALYST_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": f"Analyze this code:\n\n{context}\n\nUser message: {state.get('message', '')}",
+                },
+            ],
+            max_tokens=route["max_tokens"],
+        )
 
         return {"code_findings": [response["content"]]}

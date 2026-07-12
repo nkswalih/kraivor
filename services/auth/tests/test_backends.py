@@ -6,7 +6,9 @@ from django.test import override_settings
 class TestJWKSTokenBackend:
     """JWKSTokenBackend.encode tested with HS256 (no RSA key needed)."""
 
-    def backend(self, algorithm="HS256", signing_key="test-secret-key-32-bytes-long-!!"):
+    def backend(
+        self, algorithm="HS256", signing_key="test-secret-key-32-bytes-long-!!"
+    ):
         from authentication.backends import JWKSTokenBackend
 
         return JWKSTokenBackend(algorithm=algorithm, signing_key=signing_key)
@@ -31,6 +33,7 @@ class TestJWKSTokenBackend:
 
     def test_encode_with_bytes_from_jwt(self):
         from unittest.mock import patch
+
         backend = self.backend()
         with patch("authentication.backends.jwt.encode", return_value=b"bytes-token"):
             token = backend.encode({"sub": "123"})

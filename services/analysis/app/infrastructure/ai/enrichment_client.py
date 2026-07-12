@@ -12,6 +12,7 @@ class AiEnrichmentClient:
         self.base_url = settings.ai.url.rstrip("/")
         self.endpoint = settings.ai.enrich_endpoint
         self.timeout = settings.ai.timeout
+        self.internal_header_name = settings.ai.internal_request_header
 
     async def enrich_findings(
         self,
@@ -22,6 +23,7 @@ class AiEnrichmentClient:
         frameworks: list[str] | None = None,
     ) -> dict[str, object] | None:
         url = f"{self.base_url}{self.endpoint}"
+        logger.info("ai_enrichment_starting", url=url, findings_count=len(findings))
         payload = {
             "findings": findings,
             "overall_score": overall_score,
@@ -32,17 +34,35 @@ class AiEnrichmentClient:
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(url, json=payload)
+                response = await client.post(
+                    url, json=payload, headers={self.internal_header_name: "true"}
+                )
                 response.raise_for_status()
-                return dict(response.json())
+                data = response.json()
+                logger.info(
+                    "ai_enrichment_success", url=url, status=response.status_code
+                )
+                return dict(data)
         except httpx.TimeoutException:
-            logger.warning("ai_enrichment_timeout", url=url)
+            logger.error(
+                "ai_enrichment_timeout", url=url, timeout=self.timeout, exc_info=True
+            )
             return None
         except httpx.HTTPStatusError as e:
-            logger.warning(
-                "ai_enrichment_http_error", status=e.response.status_code, url=url
+            body = (e.response.text[:1000]) if e.response else ""
+            logger.error(
+                "ai_enrichment_http_error",
+                status=e.response.status_code,
+                url=url,
+                response=body,
             )
             return None
         except Exception as e:
-            logger.warning("ai_enrichment_failed", error=str(e), url=url)
+            logger.error(
+                "ai_enrichment_failed",
+                url=url,
+                error=str(e),
+                error_type=type(e).__name__,
+                exc_info=True,
+            )
             return None

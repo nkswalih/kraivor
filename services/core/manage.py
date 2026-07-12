@@ -1,7 +1,8 @@
 #!/usr/bin/env python
+from pathlib import Path
+
 import os
 import sys
-from pathlib import Path
 
 # Add project root and apps directory to Python path
 core_dir = Path(__file__).resolve().parent

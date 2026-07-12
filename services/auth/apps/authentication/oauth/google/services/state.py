@@ -12,9 +12,8 @@ Flow:
 from __future__ import annotations
 
 import logging
-import secrets
-
 import redis
+import secrets
 from authentication.oauth.base import OAuthStateService
 from django.conf import settings
 

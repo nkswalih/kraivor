@@ -25,10 +25,7 @@ class ProfileFactory(factory.django.DjangoModelFactory):
         user = kwargs.pop("user", None)
         if user is None:
             user = UserFactory()
-        profile, created = Profile.objects.get_or_create(
-            user=user,
-            defaults=kwargs,
-        )
+        profile, created = Profile.objects.get_or_create(user=user, defaults=kwargs)
         if not created and kwargs:
             for key, value in kwargs.items():
                 setattr(profile, key, value)

@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import dynamic from 'next/dynamic';
 import {
   ArrowLeft,
   Loader2,
@@ -17,6 +18,7 @@ import {
   Trash2,
   PanelRightOpen,
   BarChart3,
+  Star,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -25,7 +27,7 @@ import {
   useJob,
   useReport,
   useFindingsSummary,
-  useCategoryCounts,
+  useJobStatistics,
   useScoreHistory,
   useDeleteJob,
   useStartAnalysis,
@@ -35,14 +37,24 @@ import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { JobStatusBadge } from '@/components/analysis/job-status-badge';
 import { ProgressBar } from '@/components/analysis/progress-bar';
 import { BlockedOverall } from '@/components/analysis/blocked-overall';
-import { AnalysisInsightsSidebar } from '@/components/analysis/sidebar/AnalysisInsightsSidebar';
 import { HeroCard } from '@/components/analysis/hero-card';
 import { EngineCard } from '@/components/analysis/engine-card';
 import { MetricCard, MetricCardSkeleton } from '@/components/analysis/metric-card';
 import { ChartCard } from '@/components/analysis/chart-card';
 import { AnalysisModuleCard, AnalysisModuleCardSkeleton } from '@/components/analysis/analysis-module-card';
-import { AnalysisTrendChart } from '@/components/analysis/analysis-trend-chart';
-import { SeverityDonutChart } from '@/components/analysis/severity-donut-chart';
+
+const AnalysisTrendChart = dynamic(
+  () => import('@/components/analysis/analysis-trend-chart').then(m => ({ default: m.AnalysisTrendChart })),
+  { ssr: false },
+);
+const SeverityDonutChart = dynamic(
+  () => import('@/components/analysis/severity-donut-chart').then(m => ({ default: m.SeverityDonutChart })),
+  { ssr: false },
+);
+const AnalysisInsightsSidebar = dynamic(
+  () => import('@/components/analysis/sidebar/AnalysisInsightsSidebar').then(m => ({ default: m.AnalysisInsightsSidebar })),
+  { ssr: false },
+);
 
 export default function JobDetailPage() {
   const params = useParams<{ workspace: string; jobId: string }>();
@@ -61,7 +73,7 @@ export default function JobDetailPage() {
   const { data: report } = useReport(jobId);
   const { data: summary, isLoading: isSummaryLoading, error: summaryError } = useFindingsSummary(jobId);
   const { data: findingsData } = useFindings(jobId);
-  const { data: counts, isLoading: isCountsLoading } = useCategoryCounts(jobId);
+  const { data: stats, isLoading: isCountsLoading } = useJobStatistics(jobId);
   const { data: scoreHistory, isLoading: isScoreHistoryLoading, error: scoreHistoryError } = useScoreHistory(
     job?.repo_id ?? null,
   );
@@ -126,6 +138,9 @@ export default function JobDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['analysis-simulation', jobId] });
       queryClient.invalidateQueries({ queryKey: ['analysis-guide', jobId] });
       queryClient.invalidateQueries({ queryKey: ['analysis-score-history', job?.repo_id] });
+      queryClient.invalidateQueries({ queryKey: ['analysis-job-statistics', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['analysis-guide', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['analysis-metadata', jobId] });
     }
   }, [job?.status, jobId, job?.repo_id, queryClient]);
 
@@ -268,7 +283,7 @@ export default function JobDetailPage() {
           )}
 
           {isComplete && (
-            <div className="space-y-8 max-w-4xl">
+            <div className="space-y-8 max-w-5xl mx-auto">
               {/* Blocked Overall Banner */}
               {job.blocked_by.length > 0 && (
                 <BlockedOverall blockedBy={job.blocked_by} />
@@ -328,59 +343,69 @@ export default function JobDetailPage() {
                   Repository Summary
                 </h3>
                 {isCountsLoading ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                    {[1,2,3,4,5].map(i => <MetricCardSkeleton key={i} />)}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {[1,2,3,4,5,6].map(i => <MetricCardSkeleton key={i} />)}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <MetricCard
                       icon={Activity}
-                      value={counts.findings}
+                      value={stats?.findings_count ?? 0}
                       title="Findings"
                       subtitle="Issues detected in codebase"
-                      status={counts.findings > 0 ? 'attention' : 'healthy'}
+                      status={(stats?.findings_count ?? 0) > 0 ? 'attention' : 'healthy'}
                       color="green"
                       index={0}
                       onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/findings`)}
                     />
                     <MetricCard
                       icon={Bug}
-                      value={counts.deadCode}
+                      value={stats?.dead_code_count ?? 0}
                       title="Dead Code"
                       subtitle="Unused files, methods, imports"
-                      status={counts.deadCode > 0 ? 'attention' : 'healthy'}
+                      status={(stats?.dead_code_count ?? 0) > 0 ? 'attention' : 'healthy'}
                       color="orange"
                       index={1}
                       onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/dead-code`)}
                     />
                     <MetricCard
                       icon={AlertTriangle}
-                      value={counts.errors}
+                      value={stats?.error_findings_count ?? 0}
                       title="Error Patterns"
                       subtitle="Exception & reliability issues"
-                      status={counts.errors > 0 ? 'attention' : 'healthy'}
+                      status={(stats?.error_findings_count ?? 0) > 0 ? 'attention' : 'healthy'}
                       color="red"
                       index={2}
                       onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/errors`)}
                     />
                     <MetricCard
                       icon={Zap}
-                      value={counts.perf}
+                      value={stats?.performance_metrics_count ?? 0}
                       title="Performance"
                       subtitle="Bottlenecks & latency metrics"
-                      status={counts.perf > 0 ? 'attention' : 'healthy'}
+                      status={(stats?.performance_metrics_count ?? 0) > 0 ? 'attention' : 'healthy'}
                       color="blue"
                       index={3}
                       onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/performance`)}
                     />
                     <MetricCard
+                      icon={Star}
+                      value={stats?.counts_by_category?.quality ?? 0}
+                      title="Code Churn"
+                      subtitle="Hotspot files from commit history"
+                      status={(stats?.counts_by_category?.quality ?? 0) > 0 ? 'attention' : 'healthy'}
+                      color="pink"
+                      index={4}
+                      onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/findings?category=quality`)}
+                    />
+                    <MetricCard
                       icon={FileText}
-                      value={counts.hasGuide ? 'Ready' : '—'}
+                      value={stats?.enterprise_guide_exists ? 'Ready' : '—'}
                       title="Enterprise Guide"
                       subtitle="AI-assisted analysis summary"
-                      status={counts.hasGuide ? 'available' : 'pending'}
+                      status={stats?.enterprise_guide_exists ? 'available' : 'pending'}
                       color="purple"
-                      index={4}
+                      index={5}
                       onClick={() => router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/guide`)}
                     />
                   </div>
@@ -402,7 +427,7 @@ export default function JobDetailPage() {
                       href={`/${workspaceSlug}/analysis/jobs/${jobId}/findings`}
                       icon={Activity}
                       title="Findings"
-                      count={counts.findings + (counts.findings !== 1 ? ' Findings' : ' Finding')}
+                      count={(stats?.findings_count ?? 0) + ((stats?.findings_count ?? 0) !== 1 ? ' Findings' : ' Finding')}
                       description="Browse every issue detected during analysis. Review severity, category, and file-level details."
                       stats={summary ? [
                         { label: 'Critical', value: summary.by_severity.critical ?? 0, color: '#ef4444' },
@@ -417,7 +442,7 @@ export default function JobDetailPage() {
                       href={`/${workspaceSlug}/analysis/jobs/${jobId}/dead-code`}
                       icon={Bug}
                       title="Dead Code"
-                      count={counts.deadCode + (counts.deadCode !== 1 ? ' Entries' : ' Entry')}
+                      count={(stats?.dead_code_count ?? 0) + ((stats?.dead_code_count ?? 0) !== 1 ? ' Entries' : ' Entry')}
                       description="Unused files, methods, and imports in your codebase. Clean up to reduce maintenance burden."
                       color="orange"
                       actionLabel="Open Dead Code"
@@ -427,7 +452,7 @@ export default function JobDetailPage() {
                       href={`/${workspaceSlug}/analysis/jobs/${jobId}/errors`}
                       icon={AlertTriangle}
                       title="Error Patterns"
-                      count={counts.errors + (counts.errors !== 1 ? ' Patterns' : ' Pattern')}
+                      count={(stats?.error_findings_count ?? 0) + ((stats?.error_findings_count ?? 0) !== 1 ? ' Patterns' : ' Pattern')}
                       description="Unhandled exceptions, retry loops, and silent failures. Fix reliability issues before they reach production."
                       color="red"
                       actionLabel="Open Error Analysis"
@@ -437,7 +462,7 @@ export default function JobDetailPage() {
                       href={`/${workspaceSlug}/analysis/jobs/${jobId}/performance`}
                       icon={Zap}
                       title="Performance"
-                      count={counts.perf + (counts.perf !== 1 ? ' Metrics' : ' Metric')}
+                      count={(stats?.performance_metrics_count ?? 0) + ((stats?.performance_metrics_count ?? 0) !== 1 ? ' Metrics' : ' Metric')}
                       description="Endpoint analysis, simulation results, and latency metrics. Optimize slow paths and reduce response times."
                       stats={report ? [
                         { label: 'Score', value: report.performance_score ?? '—', color: '#3b82f6' },
@@ -447,14 +472,24 @@ export default function JobDetailPage() {
                       index={3}
                     />
                     <AnalysisModuleCard
+                      href={`/${workspaceSlug}/analysis/jobs/${jobId}/findings?category=quality`}
+                      icon={Star}
+                      title="Code Churn"
+                      count={(stats?.counts_by_category?.quality ?? 0) + ((stats?.counts_by_category?.quality ?? 0) !== 1 ? ' Issues' : ' Issue')}
+                      description="Files with high change frequency and spread ownership. Review churn hotspots for refactoring opportunities."
+                      color="pink"
+                      actionLabel="Open Churn Analysis"
+                      index={4}
+                    />
+                    <AnalysisModuleCard
                       href={`/${workspaceSlug}/analysis/jobs/${jobId}/guide`}
                       icon={FileText}
                       title="Enterprise Guide"
-                      count={counts.hasGuide ? 'AI Generated' : 'Not Generated'}
+                      count={stats?.enterprise_guide_exists ? 'AI Generated' : 'Not Generated'}
                       description="Architecture review, security checklist, and deployment guidance tailored to your codebase."
                       color="purple"
                       actionLabel="Open Guide"
-                      index={4}
+                      index={5}
                     />
                   </div>
                 )}

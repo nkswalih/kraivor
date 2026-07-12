@@ -61,7 +61,8 @@ export class ChatSocket {
 
   private scheduleReconnect() {
     if (this.reconnectAttempts >= this.maxReconnects) return;
-    const delay = Math.min(1000 * 2 ** this.reconnectAttempts, 30000);
+    const base = Math.min(1000 * 2 ** this.reconnectAttempts, 30000);
+    const delay = base * (0.5 + Math.random() * 0.5);
     this.reconnectTimer = setTimeout(() => {
       this.reconnectAttempts++;
       if (this.roomId) this.connect(this.roomId);

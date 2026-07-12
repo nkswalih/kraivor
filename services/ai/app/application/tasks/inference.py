@@ -10,9 +10,7 @@ def run_inference(self, user_id: str, message: str, conversation_id: str | None 
     async def _run():
         svc = ChatService()
         result = await svc.chat(
-            user_id=user_id,
-            message=message,
-            conversation_id=conversation_id,
+            user_id=user_id, message=message, conversation_id=conversation_id
         )
         return result
 

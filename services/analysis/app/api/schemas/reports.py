@@ -28,6 +28,7 @@ class ReportResponse(BaseModel):
     total_files: int = 0
     total_lines_of_code: int = 0
     languages_detected: list[str] = []
+    language_breakdown: list[dict] = []
     duration_seconds: int | None = None
     completed_at: datetime | None = None
     report_url: str | None = None

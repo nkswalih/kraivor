@@ -5,6 +5,7 @@ from langgraph.graph.message import add_messages
 
 class AgentState(TypedDict):
     user_id: str
+    user_name: str | None
     workspace_id: str
     message: str
     conversation_id: str | None
@@ -23,6 +24,7 @@ class AgentState(TypedDict):
     context_analysis: list[dict] | None
     context_history: list[dict] | None
     assembled_context: str | None
+    user_context: str | None
 
     messages: Annotated[list, add_messages]
     tool_results: str | None

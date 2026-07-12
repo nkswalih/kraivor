@@ -4,13 +4,12 @@ authentication/tests/test_google_oauth.py
 Production-grade Google OAuth tests for Kraivor Identity Service.
 """
 
-from unittest.mock import MagicMock, patch
-
 import pytest
 from authentication.oauth.base import OAuthUserInfo
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
+from unittest.mock import MagicMock, patch
 
 VALID_CLAIMS = {
     "sub": "google-sub-123456",
@@ -130,7 +129,9 @@ class TestGoogleStateService:
 
 
 class TestGoogleIDTokenVerifier:
-    @patch("authentication.oauth.google.services.verifier.google_id_token.verify_oauth2_token")
+    @patch(
+        "authentication.oauth.google.services.verifier.google_id_token.verify_oauth2_token"
+    )
     def test_valid_token_returns_user_info(self, mock_verify, verifier):
         mock_verify.return_value = VALID_CLAIMS
 
@@ -140,7 +141,9 @@ class TestGoogleIDTokenVerifier:
         assert user_info.provider_user_id == "google-sub-123456"
         assert user_info.email == "testuser@gmail.com"
 
-    @patch("authentication.oauth.google.services.verifier.google_id_token.verify_oauth2_token")
+    @patch(
+        "authentication.oauth.google.services.verifier.google_id_token.verify_oauth2_token"
+    )
     def test_unverified_email_raises(self, mock_verify, verifier):
         from authentication.oauth.google.services.verifier import (
             GoogleIDTokenVerificationError,
@@ -153,7 +156,9 @@ class TestGoogleIDTokenVerifier:
         with pytest.raises(GoogleIDTokenVerificationError):
             verifier.verify({"id_token": "jwt"})
 
-    @patch("authentication.oauth.google.services.verifier.google_id_token.verify_oauth2_token")
+    @patch(
+        "authentication.oauth.google.services.verifier.google_id_token.verify_oauth2_token"
+    )
     def test_invalid_issuer_raises(self, mock_verify, verifier):
         from authentication.oauth.google.services.verifier import (
             GoogleIDTokenVerificationError,
@@ -236,10 +241,7 @@ class TestGoogleOAuthCallbackView:
         mock_user.email = "test@gmail.com"
         mock_user.name = "Test User"
 
-        MockIdentity.return_value.get_or_create.return_value = (
-            mock_user,
-            True,
-        )
+        MockIdentity.return_value.get_or_create.return_value = (mock_user, True)
 
         mock_tokens = MagicMock()
         mock_tokens.access_token = "kraivor.access.token"
@@ -249,83 +251,40 @@ class TestGoogleOAuthCallbackView:
 
         MockTokenService.return_value.generate_tokens.return_value = mock_tokens
 
-        response = client.get(
-            callback_url,
-            {
-                "state": "validstate",
-                "code": "authcode",
-            },
-        )
+        response = client.get(callback_url, {"state": "validstate", "code": "authcode"})
 
         assert response.status_code == 302
 
-        assert response.url.startswith(
-            "http://testfrontend/oauth/success"
-        )
+        assert response.url.startswith("http://testfrontend/oauth/success")
 
         assert "access_token=" in response.url
 
         assert "refresh_token" in response.cookies
 
     @patch("authentication.oauth.google.views.GoogleStateService")
-    def test_invalid_state_returns_400(
-        self,
-        MockState,
-        client,
-        callback_url,
-    ):
+    def test_invalid_state_returns_400(self, MockState, client, callback_url):
         MockState.return_value.consume.return_value = False
 
-        response = client.get(
-            callback_url,
-            {
-                "state": "badstate",
-                "code": "code",
-            },
-        )
+        response = client.get(callback_url, {"state": "badstate", "code": "code"})
 
         assert response.status_code == 400
 
     @patch("authentication.oauth.google.views.GoogleStateService")
-    def test_missing_state_returns_400(
-        self,
-        MockState,
-        client,
-        callback_url,
-    ):
-        response = client.get(
-            callback_url,
-            {
-                "code": "code",
-            },
-        )
+    def test_missing_state_returns_400(self, MockState, client, callback_url):
+        response = client.get(callback_url, {"code": "code"})
 
         assert response.status_code == 400
 
     @patch("authentication.oauth.google.views.GoogleStateService")
-    def test_oauth_denied_by_user(
-        self,
-        MockState,
-        client,
-        callback_url,
-    ):
-        response = client.get(
-            callback_url,
-            {
-                "error": "access_denied",
-            },
-        )
+    def test_oauth_denied_by_user(self, MockState, client, callback_url):
+        response = client.get(callback_url, {"error": "access_denied"})
 
         assert response.status_code == 400
 
     @patch("authentication.oauth.google.views.GoogleTokenExchanger")
     @patch("authentication.oauth.google.views.GoogleStateService")
     def test_exchange_failure_returns_502(
-        self,
-        MockState,
-        MockExchanger,
-        client,
-        callback_url,
+        self, MockState, MockExchanger, client, callback_url
     ):
         from authentication.oauth.google.services.exchange import (
             GoogleTokenExchangeError,
@@ -333,15 +292,11 @@ class TestGoogleOAuthCallbackView:
 
         MockState.return_value.consume.return_value = True
 
-        MockExchanger.return_value.exchange.side_effect = GoogleTokenExchangeError("fail")
-
-        response = client.get(
-            callback_url,
-            {
-                "state": "state",
-                "code": "code",
-            },
+        MockExchanger.return_value.exchange.side_effect = GoogleTokenExchangeError(
+            "fail"
         )
+
+        response = client.get(callback_url, {"state": "state", "code": "code"})
 
         assert response.status_code == 502
 
@@ -349,12 +304,7 @@ class TestGoogleOAuthCallbackView:
     @patch("authentication.oauth.google.views.GoogleTokenExchanger")
     @patch("authentication.oauth.google.views.GoogleStateService")
     def test_invalid_id_token_returns_401(
-        self,
-        MockState,
-        MockExchanger,
-        MockVerifier,
-        client,
-        callback_url,
+        self, MockState, MockExchanger, MockVerifier, client, callback_url
     ):
         from authentication.oauth.google.services.verifier import (
             GoogleIDTokenVerificationError,
@@ -364,15 +314,11 @@ class TestGoogleOAuthCallbackView:
 
         MockExchanger.return_value.exchange.return_value = MOCK_TOKENS_RESPONSE
 
-        MockVerifier.return_value.verify.side_effect = GoogleIDTokenVerificationError("invalid")
-
-        response = client.get(
-            callback_url,
-            {
-                "state": "state",
-                "code": "code",
-            },
+        MockVerifier.return_value.verify.side_effect = GoogleIDTokenVerificationError(
+            "invalid"
         )
+
+        response = client.get(callback_url, {"state": "state", "code": "code"})
 
         assert response.status_code == 401
 
@@ -410,10 +356,7 @@ class TestRefreshCookieSecurity:
         mock_user.email = "test@gmail.com"
         mock_user.name = "Test User"
 
-        MockIdentity.return_value.get_or_create.return_value = (
-            mock_user,
-            False,
-        )
+        MockIdentity.return_value.get_or_create.return_value = (mock_user, False)
 
         mock_tokens = MagicMock()
         mock_tokens.access_token = "access"
@@ -423,13 +366,7 @@ class TestRefreshCookieSecurity:
 
         MockTokenService.return_value.generate_tokens.return_value = mock_tokens
 
-        response = client.get(
-            callback_url,
-            {
-                "state": "state",
-                "code": "code",
-            },
-        )
+        response = client.get(callback_url, {"state": "state", "code": "code"})
 
         cookie = response.cookies["refresh_token"]
 

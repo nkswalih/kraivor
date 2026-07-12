@@ -17,9 +17,7 @@ def handle_profile_updated(event: dict):
     update_author_denormalization.delay(user_id, username, display_name, avatar_url)
 
 
-EVENT_HANDLERS = {
-    "profile.updated": handle_profile_updated,
-}
+EVENT_HANDLERS = {"profile.updated": handle_profile_updated}
 
 
 def dispatch_event(event_type: str, event: dict):

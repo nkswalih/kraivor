@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import {
   useComments,
@@ -10,8 +10,9 @@ import {
   useRemoveCommentVote,
 } from '@/lib/hooks/use-community';
 import { useAuthStore } from '@/lib/stores/auth-store';
-import { useMyProfile } from '@/lib/hooks/use-profiles';
+import { useAuthorProfiles, useMyProfile } from '@/lib/hooks/use-profiles';
 import { Avatar } from '@/components/profiles/avatar';
+import { Skeleton } from '@/components/ui/shadcn';
 import {
   MessageSquare,
   ChevronDown,
@@ -166,10 +167,12 @@ function ReplyList({
   discussionId,
   commentId,
   depth = 0,
+  resolvedAuthors,
 }: {
   discussionId: string;
   commentId: string;
   depth?: number;
+  resolvedAuthors?: Record<string, { username: string; display_name: string; avatar_url: string }>;
 }) {
   const { data: replies } = useReplies(discussionId, commentId);
   const [showReplies, setShowReplies] = useState(false);
@@ -196,6 +199,7 @@ function ReplyList({
               discussionId={discussionId}
               comment={reply}
               depth={depth + 1}
+              resolvedAuthors={resolvedAuthors}
             />
           ))}
         </div>
@@ -208,26 +212,33 @@ function CommentItem({
   discussionId,
   comment,
   depth = 0,
+  resolvedAuthors,
 }: {
   discussionId: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   comment: any;
   depth?: number;
+  resolvedAuthors?: Record<string, { username: string; display_name: string; avatar_url: string }>;
 }) {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const isAuthenticated = useAuthStore(s => !!s.accessToken);
   const params = useParams();
   const workspace = params?.workspace as string;
 
+  const author = comment.author_id ? resolvedAuthors?.[comment.author_id] : undefined;
+  const authorUsername = author?.username ?? comment.author_username;
+  const authorDisplayName = author?.display_name ?? comment.author_display_name;
+  const authorAvatarUrl = author?.avatar_url ?? comment.author_avatar_url;
+
   return (
     <div className={`${depth > 0 ? 'border-l-2 border-border pl-3' : ''} py-2`}>
       <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-1">
-        <Avatar src={comment.author_avatar_url} name={comment.author_display_name} size="sm" />
+        <Avatar src={authorAvatarUrl} name={authorDisplayName} size="sm" />
         <Link
-          href={`/${workspace}/profile/${comment.author_username}`}
+          href={`/${workspace}/profile/${authorUsername}`}
           className="font-medium text-foreground hover:underline"
         >
-          {comment.author_display_name}
+          {authorDisplayName}
         </Link>
         <span>·</span>
         <span>{timeAgo(comment.created_at)}</span>
@@ -272,6 +283,13 @@ export function CommentsSection({ discussionId }: CommentsSectionProps) {
   const user = useAuthStore(s => s.user);
   const isAuthenticated = useAuthStore(s => !!s.accessToken);
   const { data: myProfile } = useMyProfile();
+
+  const authorIds = useMemo(
+    () => [...new Set((data?.results ?? []).map(c => c.author_id).filter(Boolean))],
+    [data?.results]
+  );
+  const { data: resolvedData } = useAuthorProfiles(authorIds);
+  const resolvedAuthors = resolvedData?.profileMap ?? {};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -349,16 +367,20 @@ export function CommentsSection({ discussionId }: CommentsSectionProps) {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2].map(i => (
-            <div key={i} className="animate-pulse">
-              <div className="h-3 bg-muted rounded w-1/4 mb-2" />
-              <div className="h-8 bg-muted rounded" />
+            <div key={i} className="flex gap-3">
+              <Skeleton variant="circle" className="w-6 h-6 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-3 w-32" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
             </div>
           ))}
         </div>
       ) : (
         <div className="space-y-2">
           {data?.results.map(comment => (
-            <CommentItem key={comment.id} discussionId={discussionId} comment={comment} />
+            <CommentItem key={comment.id} discussionId={discussionId} comment={comment} resolvedAuthors={resolvedAuthors} />
           ))}
           {data?.results.length === 0 && (
             <p className="text-[13px] text-muted-foreground text-center py-8">

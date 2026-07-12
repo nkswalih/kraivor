@@ -1,86 +1,64 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
-import { aiApi, type EnrichResponse } from '@/lib/api/ai-api';
-import type { AiSummaryCard, Finding, Report } from '@/types/domain/analysis';
+import type { AiSummaryCard } from '@/types/domain/analysis';
 import { BotMessageSquare } from 'lucide-react';
+import { MarkdownRenderer } from '@/components/ui/markdown/markdown-renderer';
+
+function SummarySkeleton() {
+  return (
+    <div className="space-y-2.5 p-1">
+      {[100, 88, 75, 92, 66].map((w, i) => (
+        <div
+          key={i}
+          className="h-2.5 rounded bg-krait-surface2 animate-shimmer"
+          style={{ width: `${w}%` }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export function AIExecutiveSummaryCard({
   data,
-  findings,
-  report,
-  jobId,
   isLoading,
   className,
 }: {
   data: AiSummaryCard;
-  findings: Finding[] | null | undefined;
-  report: Report | null | undefined;
-  jobId: string | null;
   isLoading?: boolean;
   className?: string;
 }) {
-  const hasFindings = findings && findings.length > 0 && jobId;
-
-  const { data: enrichment, isLoading: isEnriching } = useQuery<EnrichResponse>({
-    queryKey: ['ai-enrichment', jobId],
-    queryFn: () =>
-      aiApi.enrichAnalysis({
-        findings: (findings ?? []).map(f => ({
-          title: f.title,
-          category: f.category,
-          severity: f.severity,
-          description: f.description,
-          recommendation: f.recommendation,
-          file_path: f.file_path ?? '',
-          line_start: f.line_start,
-          line_end: f.line_end,
-          code_snippet: f.code_snippet ?? '',
-        })),
-        overall_score: report?.overall_score ?? null,
-        tier: null,
-        languages: report?.languages_detected ?? null,
-        frameworks: null,
-      }),
-    enabled: !!hasFindings,
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
-  });
-
-  const summary = enrichment?.ai_executive_summary ?? data.summary;
-  const isAiGenerated = enrichment?.ai_executive_summary ? true : data.isAiGenerated;
-  const busy = isLoading || isEnriching;
+  const summary = data.summary;
+  const isAiGenerated = data.isAiGenerated;
+  const busy = isLoading;
 
   return (
-    <div className={cn('bg-card border border-border rounded-xl p-4', className)}>
-      <div className="flex items-center justify-between mb-3">
+    <div className={cn('bg-card border border-border rounded-xl', className)}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <h3 className="text-[13px] font-semibold text-foreground flex items-center gap-1.5">
-          <BotMessageSquare className="w-3.5 h-3.5 text-venom-yellow" />
+          <BotMessageSquare className="w-3.5 h-3.5 text-venom-yellow shrink-0" />
           AI Executive Summary
         </h3>
         {!isAiGenerated && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-venom-yellow/10 text-venom-yellow font-medium uppercase tracking-wider">
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-venom-yellow/10 text-venom-yellow font-medium uppercase tracking-wider shrink-0">
             Preview
           </span>
         )}
       </div>
 
-      {busy ? (
-        <div className="space-y-2">
-          <div className="h-3 bg-krait-surface2 rounded animate-shimmer" />
-          <div className="h-3 bg-krait-surface2 rounded animate-shimmer w-11/12" />
-          <div className="h-3 bg-krait-surface2 rounded animate-shimmer w-4/5" />
-          <div className="h-3 bg-krait-surface2 rounded animate-shimmer w-3/4" />
-        </div>
-      ) : (
-        <div className="text-[12px] text-text-secondary leading-relaxed whitespace-pre-wrap">
-          {summary}
-        </div>
-      )}
+      {/* Body with independent scroll */}
+      <div className="max-h-[360px] overflow-y-auto px-4 py-3 scrollbar-thin">
+        {busy ? (
+          <SummarySkeleton />
+        ) : (
+          <MarkdownRenderer content={summary} compact />
+        )}
+      </div>
 
+      {/* Footer hint */}
       {!isAiGenerated && !busy && (
-        <p className="mt-3 text-[10px] text-text-tertiary italic border-t border-border pt-3">
+        <p className="px-4 pb-3 pt-0 text-[10px] text-text-tertiary italic border-t border-border mt-0">
           Static preview — AI summary will appear after analysis completes.
         </p>
       )}

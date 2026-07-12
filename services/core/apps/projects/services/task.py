@@ -7,6 +7,9 @@ from django.http import Http404
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
+from apps.notifications.tasks import dispatch_notification
+from apps.notifications.utils import fanout_to_workspace_members
+
 from ..constants import (
     MAX_DEPENDENCY_DEPTH,
     POSITION_MULTIPLIER,
@@ -38,8 +41,7 @@ class TaskService:
             )
             .annotate(
                 subtask_count=Count(
-                    "subtasks",
-                    filter=Q(subtasks__deleted_at__isnull=True),
+                    "subtasks", filter=Q(subtasks__deleted_at__isnull=True)
                 )
             )
             .order_by("status", "position", "-created_at")
@@ -53,7 +55,9 @@ class TaskService:
         return qs
 
     @staticmethod
-    def list_for_workspace(workspace_id: str, **filters: Any) -> QuerySet:  # noqa: ANN401
+    def list_for_workspace(
+        workspace_id: str, **filters: Any
+    ) -> QuerySet:  # noqa: ANN401
         qs = (
             Task.objects.filter(project__workspace_id=workspace_id)
             .select_related("project")
@@ -84,8 +88,7 @@ class TaskService:
     ) -> Task:
         status = validated_data.get("status", TaskStatus.BACKLOG)
         initial_position = TaskService.calculate_initial_position(
-            project_id=str(project.id),
-            status=status,
+            project_id=str(project.id), status=status
         )
         task = Task.objects.create(
             project=project,
@@ -98,6 +101,38 @@ class TaskService:
         TaskEventPublisher.publish_task_created(task, reporter_id)
         if task.assignee_id:
             TaskEventPublisher.publish_task_assigned(task, assigned_by=reporter_id)
+
+        workspace_id = str(project.workspace_id)
+        metadata = {
+            "status": task.status,
+            "priority": task.priority,
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+        }
+
+        fanout_to_workspace_members(
+            workspace_id=workspace_id,
+            notification_type="task.created",
+            title=f"New Task: {title}",
+            body=f"Task '{title}' [{task.status}] [Priority: {task.priority}] was created.",
+            link=f"/workspaces/{workspace_id}/tasks/{task.id}",
+            metadata=metadata,
+            actor_id=reporter_id,
+            exclude_user_id=reporter_id,
+        )
+
+        if task.assignee_id and str(task.assignee_id) != reporter_id:
+            dispatch_notification.delay(
+                user_id=str(task.assignee_id),
+                notification_type="task.assigned",
+                title=f"Task assigned: {title}",
+                body=f"You were assigned task '{title}' [{task.status}] [Priority: {task.priority}].",
+                link=f"/workspaces/{workspace_id}/tasks/{task.id}",
+                metadata=metadata,
+                workspace_id=workspace_id,
+                actor_id=reporter_id,
+            )
+
         logger.info("Task created: id=%s project=%s", task.id, project.id)
         return task
 
@@ -115,8 +150,7 @@ class TaskService:
                 )
                 .annotate(
                     subtask_count=Count(
-                        "subtasks",
-                        filter=Q(subtasks__deleted_at__isnull=True),
+                        "subtasks", filter=Q(subtasks__deleted_at__isnull=True)
                     )
                 )
                 .get(id=task_id, project__workspace_id=workspace_id)
@@ -132,22 +166,61 @@ class TaskService:
             setattr(task, field, value)
         task.save()
         new_assignee_id = str(task.assignee_id) if task.assignee_id else None
+        workspace_id = str(task.project.workspace_id)
+        metadata = {
+            "status": task.status,
+            "priority": task.priority,
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+        }
+
         if new_assignee_id and new_assignee_id != old_assignee_id:
             TaskEventPublisher.publish_task_assigned(task, assigned_by=user_id)
+            if new_assignee_id != user_id:
+                dispatch_notification.delay(
+                    user_id=new_assignee_id,
+                    notification_type="task.assigned",
+                    title=f"Task assigned: {task.title}",
+                    body=f"You were assigned task '{task.title}' [{task.status}] [Priority: {task.priority}].",
+                    link=f"/workspaces/{workspace_id}/tasks/{task.id}",
+                    metadata=metadata,
+                    workspace_id=workspace_id,
+                    actor_id=user_id,
+                )
+
         if task.status != old_status:
             if task.status == TaskStatus.BLOCKED:
                 TaskEventPublisher.publish_task_blocked(task, user_id)
+                if task.assignee_id and str(task.assignee_id) != user_id:
+                    dispatch_notification.delay(
+                        user_id=str(task.assignee_id),
+                        notification_type="task.blocked",
+                        title=f"Task blocked: {task.title}",
+                        body=f"Task '{task.title}' is blocked [Priority: {task.priority}].",
+                        link=f"/workspaces/{workspace_id}/tasks/{task.id}",
+                        metadata=metadata,
+                        workspace_id=workspace_id,
+                        actor_id=user_id,
+                    )
             elif task.status == TaskStatus.DONE:
                 TaskEventPublisher.publish_task_completed(task, user_id)
+                if task.assignee_id and str(task.assignee_id) != user_id:
+                    dispatch_notification.delay(
+                        user_id=str(task.assignee_id),
+                        notification_type="task.completed",
+                        title=f"Task completed: {task.title}",
+                        body=f"Task '{task.title}' has been completed.",
+                        link=f"/workspaces/{workspace_id}/tasks/{task.id}",
+                        metadata=metadata,
+                        workspace_id=workspace_id,
+                        actor_id=user_id,
+                    )
         logger.info("Task updated: id=%s", task.id)
         return task
 
     @staticmethod
     def update_status(
-        task: Task,
-        new_status: str,
-        position: float | None,
-        user_id: str,
+        task: Task, new_status: str, position: float | None, user_id: str
     ) -> Task:
         old_status = task.status
         task.status = new_status
@@ -155,15 +228,44 @@ class TaskService:
             task.position = position
         else:
             task.position = TaskService.calculate_initial_position(
-                project_id=str(task.project_id),
-                status=new_status,
+                project_id=str(task.project_id), status=new_status
             )
         task.save(update_fields=["status", "position", "updated_at"])
+        workspace_id = str(task.project.workspace_id)
+        metadata = {
+            "status": task.status,
+            "priority": task.priority,
+            "task_id": str(task.id),
+            "project_id": str(task.project_id),
+        }
+
         if new_status != old_status:
             if new_status == TaskStatus.BLOCKED:
                 TaskEventPublisher.publish_task_blocked(task, user_id)
+                if task.assignee_id and str(task.assignee_id) != user_id:
+                    dispatch_notification.delay(
+                        user_id=str(task.assignee_id),
+                        notification_type="task.blocked",
+                        title=f"Task blocked: {task.title}",
+                        body=f"Task '{task.title}' is blocked [Priority: {task.priority}].",
+                        link=f"/workspaces/{workspace_id}/tasks/{task.id}",
+                        metadata=metadata,
+                        workspace_id=workspace_id,
+                        actor_id=user_id,
+                    )
             elif new_status == TaskStatus.DONE:
                 TaskEventPublisher.publish_task_completed(task, user_id)
+                if task.assignee_id and str(task.assignee_id) != user_id:
+                    dispatch_notification.delay(
+                        user_id=str(task.assignee_id),
+                        notification_type="task.completed",
+                        title=f"Task completed: {task.title}",
+                        body=f"Task '{task.title}' has been completed.",
+                        link=f"/workspaces/{workspace_id}/tasks/{task.id}",
+                        metadata=metadata,
+                        workspace_id=workspace_id,
+                        actor_id=user_id,
+                    )
         return task
 
     @staticmethod
@@ -177,10 +279,7 @@ class TaskService:
 
     @staticmethod
     def add_dependency(
-        task: Task,
-        target_task_id: str,
-        relationship_type: str,
-        user_id: str,
+        task: Task, target_task_id: str, relationship_type: str, user_id: str
     ) -> TaskLink:
         source_id = str(task.id)
         if source_id == target_task_id:
@@ -203,30 +302,25 @@ class TaskService:
     @staticmethod
     def remove_dependency(task: Task, dependency_id: str) -> None:
         deleted_count, _ = TaskLink.objects.filter(
-            id=dependency_id,
-            source_task_id=task.id,
+            id=dependency_id, source_task_id=task.id
         ).delete()
         if deleted_count == 0:
             raise Http404(f"Dependency {dependency_id} not found.")
 
     @staticmethod
     def add_repository(
-        task: Task,
-        repository_id: str,
-        workspace_id: str,
+        task: Task, repository_id: str, workspace_id: str
     ) -> TaskRepositoryLink:
         from apps.repositories.models import Repository
 
         try:
             repository = Repository.objects.get(
-                id=repository_id,
-                workspace_id=workspace_id,
+                id=repository_id, workspace_id=workspace_id
             )
         except Repository.DoesNotExist:
             raise ValidationError("Repository not found in this workspace.") from None
         link, created = TaskRepositoryLink.objects.get_or_create(
-            task=task,
-            repository=repository,
+            task=task, repository=repository
         )
         if not created:
             raise ValidationError("This repository is already linked to the task.")
@@ -235,32 +329,27 @@ class TaskService:
     @staticmethod
     def remove_repository(task: Task, link_id: str) -> None:
         deleted_count, _ = TaskRepositoryLink.objects.filter(
-            id=link_id,
-            task=task,
+            id=link_id, task=task
         ).delete()
         if deleted_count == 0:
             raise Http404(f"Repository link {link_id} not found.")
 
     @staticmethod
     def add_knowledge(
-        task: Task,
-        knowledge_space_id: str,
-        workspace_id: str,
+        task: Task, knowledge_space_id: str, workspace_id: str
     ) -> TaskKnowledgeLink:
         from apps.knowledge.models import KnowledgeSpace
 
         try:
             knowledge_space = KnowledgeSpace.objects.get(
-                id=knowledge_space_id,
-                workspace_id=workspace_id,
+                id=knowledge_space_id, workspace_id=workspace_id
             )
         except KnowledgeSpace.DoesNotExist:
             raise ValidationError(
                 "Knowledge space not found in this workspace."
             ) from None
         link, created = TaskKnowledgeLink.objects.get_or_create(
-            task=task,
-            knowledge_space=knowledge_space,
+            task=task, knowledge_space=knowledge_space
         )
         if not created:
             raise ValidationError("This knowledge space is already linked to the task.")
@@ -269,8 +358,7 @@ class TaskService:
     @staticmethod
     def remove_knowledge(task: Task, link_id: str) -> None:
         deleted_count, _ = TaskKnowledgeLink.objects.filter(
-            id=link_id,
-            task=task,
+            id=link_id, task=task
         ).delete()
         if deleted_count == 0:
             raise Http404(f"Knowledge link {link_id} not found.")
@@ -278,9 +366,7 @@ class TaskService:
     @staticmethod
     def calculate_initial_position(project_id: str, status: str) -> float:
         result = Task.objects.filter(
-            project_id=project_id,
-            status=status,
-            deleted_at__isnull=True,
+            project_id=project_id, status=status, deleted_at__isnull=True
         ).aggregate(max_pos=Max("position"))
         max_position = result["max_pos"] or 0.0
         return max_position + POSITION_MULTIPLIER
@@ -330,9 +416,7 @@ class TaskService:
     def _rebalance_positions(project_id: str, status: str) -> None:
         tasks = list(
             Task.objects.filter(
-                project_id=project_id,
-                status=status,
-                deleted_at__isnull=True,
+                project_id=project_id, status=status, deleted_at__isnull=True
             ).order_by("position", "-created_at")
         )
         with transaction.atomic():
@@ -355,7 +439,7 @@ class TaskService:
                 continue
             visited.add(current_id)
             outgoing_ids = TaskLink.objects.filter(
-                source_task_id=current_id,
+                source_task_id=current_id
             ).values_list("target_task_id", flat=True)
             for next_id in outgoing_ids:
                 queue.append((str(next_id), depth + 1))

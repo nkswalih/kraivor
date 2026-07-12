@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import FindingStatus
@@ -17,7 +17,15 @@ class FindingRepository(AbstractFindingRepository):
 
     async def save_many(self, findings: list[Finding]) -> int:
         models = [self._to_model(f) for f in findings]
-        self._session.add_all(models)
+        batch_size = 200
+        for i in range(0, len(models), batch_size):
+            batch = models[i : i + batch_size]
+            rows = [
+                {c.name: getattr(m, c.name) for c in FindingModel.__table__.columns}
+                for m in batch
+            ]
+            stmt = insert(FindingModel)
+            await self._session.execute(stmt, rows)
         await self._session.flush()
         return len(models)
 
@@ -51,10 +59,7 @@ class FindingRepository(AbstractFindingRepository):
         total = count_result.scalar() or 0
 
         stmt = (
-            stmt.order_by(
-                FindingModel.severity.asc(),
-                FindingModel.line_start.asc(),
-            )
+            stmt.order_by(FindingModel.severity.asc(), FindingModel.line_start.asc())
             .offset(offset)
             .limit(limit)
         )
@@ -126,10 +131,7 @@ class FindingRepository(AbstractFindingRepository):
         return dict(result.all())  # type: ignore[arg-type]
 
     async def update_ai_fields(
-        self,
-        finding_id: UUID,
-        is_ai_enriched: bool,
-        ai_explanation: str,
+        self, finding_id: UUID, is_ai_enriched: bool, ai_explanation: str
     ) -> None:
         stmt = (
             update(FindingModel)
@@ -187,9 +189,9 @@ class FindingRepository(AbstractFindingRepository):
             rule_id=model.rule_id or "",
             category=Category(model.category),
             severity=Severity(model.severity),
-            status=FindingStatus(model.status)
-            if model.status
-            else FindingStatus.ACTIVE,
+            status=(
+                FindingStatus(model.status) if model.status else FindingStatus.ACTIVE
+            ),
             title=model.title,
             description=model.description or "",
             recommendation=model.recommendation or "",

@@ -51,9 +51,11 @@ class SecurityNoAuthRule(BaseRule):
                     RuleViolation(
                         rule_id=self.rule_id,
                         category=self.category,
-                        severity=Severity.CRITICAL
-                        if method in ("POST", "PUT", "DELETE", "PATCH")
-                        else Severity.HIGH,
+                        severity=(
+                            Severity.CRITICAL
+                            if method in ("POST", "PUT", "DELETE", "PATCH")
+                            else Severity.HIGH
+                        ),
                         title=f"Missing authentication on {method} {path}",
                         description=(
                             "This endpoint requires no authentication. "
@@ -573,7 +575,9 @@ class SecurityXSSRule(BaseRule):
     rule_id: str = "SEC-XSS"
     category: Category = Category.SECURITY
     severity: Severity = Severity.CRITICAL
-    description: str = "Detects Cross-Site Scripting from unsanitized user input in output/execution contexts"
+    description: str = (
+        "Detects Cross-Site Scripting from unsanitized user input in output/execution contexts"
+    )
     file_patterns: list[str] = [
         "*.py",
         "*.js",
@@ -661,9 +665,11 @@ class SecurityMissingAuthzRule(BaseRule):
                         RuleViolation(
                             rule_id=self.rule_id,
                             category=self.category,
-                            severity=Severity.CRITICAL
-                            if method in ("POST", "PUT", "DELETE", "PATCH")
-                            else Severity.HIGH,
+                            severity=(
+                                Severity.CRITICAL
+                                if method in ("POST", "PUT", "DELETE", "PATCH")
+                                else Severity.HIGH
+                            ),
                             title=f"Missing authorization check on {method} {path}",
                             description="Endpoint has authentication but no authorization check for role or permissions",
                             file_path=file_path,

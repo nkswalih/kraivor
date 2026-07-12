@@ -23,12 +23,17 @@ function timeAgo(date: string): string {
 
 interface DiscussionCardProps {
   discussion: Discussion;
+  resolvedAuthor?: { username: string; display_name: string; avatar_url: string } | null;
 }
 
-export function DiscussionCard({ discussion }: DiscussionCardProps) {
+export function DiscussionCard({ discussion, resolvedAuthor }: DiscussionCardProps) {
   const router = useRouter();
   const params = useParams();
   const workspace = params?.workspace as string;
+
+  const authorUsername = resolvedAuthor?.username ?? discussion.author_username;
+  const authorDisplayName = resolvedAuthor?.display_name ?? discussion.author_display_name;
+  const authorAvatarUrl = resolvedAuthor?.avatar_url ?? discussion.author_avatar_url;
 
   return (
     <div
@@ -50,16 +55,16 @@ export function DiscussionCard({ discussion }: DiscussionCardProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-1.5">
             <Avatar
-              src={discussion.author_avatar_url}
-              name={discussion.author_display_name}
+              src={authorAvatarUrl}
+              name={authorDisplayName}
               size="sm"
             />
             <Link
-              href={`/${workspace}/profile/${discussion.author_username}`}
+              href={`/${workspace}/profile/${authorUsername}`}
               onClick={e => e.stopPropagation()}
               className="font-medium text-foreground hover:underline"
             >
-              {discussion.author_display_name}
+              {authorDisplayName}
             </Link>
             <span>·</span>
             <span>{timeAgo(discussion.created_at)}</span>

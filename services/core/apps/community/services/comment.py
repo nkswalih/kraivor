@@ -42,7 +42,7 @@ class CommentService:
                     "replies",
                     queryset=Comment.objects.filter(deleted_at__isnull=True),
                     to_attr="_all_replies",
-                ),
+                )
             )
         if sort == "top":
             qs = qs.order_by("-upvote_count", "-created_at")
@@ -62,7 +62,7 @@ class CommentService:
                     "votes",
                     queryset=Vote.objects.filter(user_id=user_id),
                     to_attr="_user_votes",
-                ),
+                )
             )
         return list(qs.order_by("created_at"))
 

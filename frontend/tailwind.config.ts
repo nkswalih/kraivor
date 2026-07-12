@@ -67,8 +67,9 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['Geist', '-apple-system', 'sans-serif'],
-        mono: ['IBM Plex Mono', 'monospace'],
+        sans: ['var(--font-geist-sans)', 'var(--font-inter)', '-apple-system', 'sans-serif'],
+        mono: ['var(--font-jetbrains-mono)', 'IBM Plex Mono', 'monospace'],
+        display: ['var(--font-geist-sans)', 'var(--font-inter)', '-apple-system', 'sans-serif'],
       },
       borderRadius: {
         lg: 'var(--radius)',

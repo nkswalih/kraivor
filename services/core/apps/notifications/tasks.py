@@ -3,9 +3,8 @@ Celery tasks for notification dispatch and lifecycle management.
 """
 
 import logging
-from datetime import timedelta
-
 from celery import shared_task
+from datetime import timedelta
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -27,6 +26,7 @@ def dispatch_notification(
     title: str,
     body: str = "",
     link: str = "",
+    metadata: dict | None = None,
     workspace_id: str | None = None,
     actor_id: str | None = None,
     send_push: bool = True,
@@ -44,6 +44,7 @@ def dispatch_notification(
         title:             Human-readable title
         body:              Human-readable body text
         link:              Deep link URL
+        metadata:          Optional structured metadata (status, priority, etc.)
         workspace_id:      Optional workspace context
         actor_id:          Optional user who triggered the notification
         send_push:         Whether to send a Firebase push notification
@@ -63,6 +64,7 @@ def dispatch_notification(
             title=title,
             body=body,
             link=link,
+            metadata=metadata or {},
             workspace_id=workspace_id,
             actor_id=actor_id,
         )
@@ -76,6 +78,14 @@ def dispatch_notification(
             extra={"user_id": user_id, "error": str(exc)},
         )
         raise self.retry(exc=exc, countdown=30 * (2**self.request.retries)) from exc
+
+    # Invalidate unread count cache so the red dot updates dynamically
+    try:
+        from core.cache import CacheService
+
+        CacheService.delete(f"notif:unread:{user_id}")
+    except Exception:
+        pass
 
     # ── 2. Broadcast via Channels ──────────────────────────────────────────
     try:
@@ -97,6 +107,7 @@ def dispatch_notification(
                     "title": title,
                     "body": body,
                     "link": link,
+                    "metadata": metadata or {},
                     "workspace_id": workspace_id or "",
                     "actor_id": actor_id or "",
                     "created_at": datetime.now(tz=UTC).isoformat(),
@@ -117,15 +128,16 @@ def dispatch_notification(
             for token in tokens:
                 from apps.notifications.firebase import send_push_notification
 
+                push_data = {
+                    "notification_id": str(notif.id),
+                    "type": notification_type,
+                    "link": link,
+                }
+                if metadata:
+                    push_data["metadata"] = metadata
+
                 send_push_notification(
-                    token=token,
-                    title=title,
-                    body=body,
-                    data={
-                        "notification_id": str(notif.id),
-                        "type": notification_type,
-                        "link": link,
-                    },
+                    token=token, title=title, body=body, data=push_data
                 )
         except Exception as exc:
             logger.warning(
@@ -147,6 +159,7 @@ def dispatch_notification(
                     "title": title,
                     "body": body,
                     "link": link,
+                    "metadata": metadata or {},
                     "workspace_id": workspace_id or "",
                     "actor_id": actor_id or "",
                 }

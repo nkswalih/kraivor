@@ -1,5 +1,6 @@
 import asyncio
 import os
+import zipfile
 from typing import cast
 from uuid import UUID, uuid4
 
@@ -15,36 +16,11 @@ from app.core.constants import TriggerType
 from app.core.logging import get_logger
 from app.dependencies.auth import JWTPayload, get_current_user
 from app.infrastructure.db.unit_of_work import UnitOfWork
+from app.infrastructure.git.repository_fetcher import RepositoryFetcher
 from app.infrastructure.messaging.producer import EventProducer
 from app.infrastructure.storage.s3 import S3Storage
 
 _background_tasks: set[asyncio.Task[None]] = set()
-
-
-_EXT_TO_LANG: dict[str, str] = {
-    ".py": "python",
-    ".pyi": "python",
-    ".pyx": "python",
-    ".js": "javascript",
-    ".mjs": "javascript",
-    ".cjs": "javascript",
-    ".ts": "typescript",
-    ".tsx": "typescript",
-    ".go": "go",
-    ".java": "java",
-    ".rs": "rust",
-    ".rb": "ruby",
-    ".yml": "yaml",
-    ".yaml": "yaml",
-    ".json": "json",
-    ".md": "markdown",
-    ".mdx": "markdown",
-    ".sh": "shell",
-    ".bash": "shell",
-    ".sql": "sql",
-    "Dockerfile": "dockerfile",
-    ".dockerfile": "dockerfile",
-}
 
 logger = get_logger(__name__)
 
@@ -55,8 +31,6 @@ router = APIRouter(prefix="/api/v1/files", tags=["files"])
 async def upload_file(
     workspace_id: str,
     file: UploadFile,
-    repo_url: str = "",
-    branch: str = "main",
     uow: UnitOfWork = Depends(get_uow),
     user: JWTPayload = Depends(get_current_user),
 ) -> JobStatusResponse:
@@ -64,6 +38,12 @@ async def upload_file(
 
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
+
+    if not file.filename.endswith(".zip"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only .zip archives are supported. Please upload a project zip file.",
+        )
 
     contents = await file.read()
     if len(contents) > settings.analysis.max_file_size_bytes:
@@ -73,37 +53,65 @@ async def upload_file(
         )
 
     job_id = uuid4()
-    s3_key = f"uploads/{workspace_id}/{job_id}/{file.filename}"
+    extract_dir = os.path.join(settings.analysis.ephemeral_path, "uploads", str(job_id))
+    os.makedirs(extract_dir, exist_ok=True)
+
+    zip_path = os.path.join(extract_dir, file.filename)
+    with open(zip_path, "wb") as f:
+        f.write(contents)
+
+    extracted_root = os.path.join(extract_dir, "src")
+    os.makedirs(extracted_root, exist_ok=True)
+
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            zf.extractall(extracted_root)
+    except zipfile.BadZipFile as err:
+        raise HTTPException(
+            status_code=400, detail="Invalid or corrupted zip file"
+        ) from err
+
+    fetcher = RepositoryFetcher()
+    source_files = await fetcher.get_source_files(extracted_root)
+
+    if not source_files:
+        raise HTTPException(
+            status_code=400,
+            detail="No supported source files found in the uploaded archive",
+        )
 
     storage = S3Storage()
-    content_type = file.content_type or "application/octet-stream"
-    await storage.upload(s3_key, contents, content_type=content_type)
+    file_analysis_records: list[dict[str, object]] = []
 
-    ext = os.path.splitext(file.filename)[1].lower()
-    language = _EXT_TO_LANG.get(ext, "unknown")
+    for sf in source_files:
+        rel_path = cast(str, sf["path"])
+        content = cast(str, sf.get("content", ""))
+        s3_key = f"uploads/{workspace_id}/{job_id}/{rel_path}"
 
-    await uow.file_analyses.save_many(
-        [
+        await storage.upload(s3_key, content.encode("utf-8"), content_type="text/plain")
+
+        file_analysis_records.append(
             {
                 "job_id": job_id,
                 "workspace_id": UUID(workspace_id),
-                "original_filename": file.filename,
-                "file_size_bytes": len(contents),
-                "language": language,
+                "original_filename": rel_path,
+                "file_size_bytes": cast(int, sf.get("size_bytes", 0)),
+                "language": cast(str, sf.get("language", "unknown")),
                 "s3_key": s3_key,
                 "id": uuid4(),
             }
-        ]
-    )
+        )
 
-    settings = get_settings()
+    if file_analysis_records:
+        await uow.file_analyses.save_many(file_analysis_records)
+
     cmd = StartAnalysisCommand(
         repo_id=uuid4(),
         workspace_id=UUID(workspace_id),
         triggered_by=UUID(user.sub),
         trigger_type=TriggerType.API,
-        repo_url=repo_url or f"file://{file.filename}",
-        branch=branch,
+        repo_url=f"local://{extracted_root}",
+        branch="main",
         deep_scan=False,
         depth=1,
     )

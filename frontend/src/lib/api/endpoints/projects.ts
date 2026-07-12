@@ -50,6 +50,7 @@ export const taskEndpoints = {
       assignee_id?: string;
       priority?: TaskPriority;
       page?: number;
+      search?: string;
     }
   ) => {
     const qs = new URLSearchParams();
@@ -58,6 +59,7 @@ export const taskEndpoints = {
     if (params?.assignee_id) qs.set('assignee_id', params.assignee_id);
     if (params?.priority) qs.set('priority', params.priority);
     if (params?.page) qs.set('page', String(params.page));
+    if (params?.search) qs.set('search', params.search);
     const query = qs.toString();
     return coreApi.get<PaginatedResponse<Task>>(
       `/workspaces/${workspaceId}/tasks/${query ? `?${query}` : ''}`

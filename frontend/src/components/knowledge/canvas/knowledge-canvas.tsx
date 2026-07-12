@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useKnowledgeStore } from '@/lib/stores/knowledge-store';
 import { useCanvasKeyboard } from '@/lib/hooks/use-canvas';
+import { useRafBatcher } from '@/lib/hooks/use-raf-batcher';
 import { CanvasElementRenderer } from '../elements/canvas-element';
 import { CanvasToolbar } from './canvas-toolbar';
 import { CanvasMinimap } from './canvas-minimap';
@@ -130,6 +131,12 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     controlPoint: Position | null;
   } | null>(null);
 
+  const viewportBatcher = useRafBatcher<{
+    x: number;
+    y: number;
+    zoom: number;
+  }>();
+
   useCanvasKeyboard(spaceId);
 
   const getCanvasRect = useCallback(() => {
@@ -199,11 +206,14 @@ export function KnowledgeCanvas({ spaceId }: Props) {
       if (panRef.current.active) {
         const dx = e.clientX - panRef.current.startX;
         const dy = e.clientY - panRef.current.startY;
-        state.setViewport(spaceId, {
-          ...c.viewport,
-          x: panRef.current.startVx + dx,
-          y: panRef.current.startVy + dy,
-        });
+        viewportBatcher.schedule(
+          {
+            ...c.viewport,
+            x: panRef.current.startVx + dx,
+            y: panRef.current.startVy + dy,
+          },
+          v => store.getState().setViewport(spaceId, v)
+        );
         return;
       }
 
@@ -325,11 +335,8 @@ export function KnowledgeCanvas({ spaceId }: Props) {
         if (selectionRef.current.active) {
           const el = selectionRectRef.current;
           if (el) {
-            const left = Math.min(selectionRef.current.startX, world.x);
-            const top = Math.min(selectionRef.current.startY, world.y);
             el.style.display = 'block';
-            el.style.left = left + 'px';
-            el.style.top = top + 'px';
+            el.style.transform = `translate(${Math.min(selectionRef.current.startX, world.x)}px, ${Math.min(selectionRef.current.startY, world.y)}px)`;
             el.style.width = Math.abs(world.x - selectionRef.current.startX) + 'px';
             el.style.height = Math.abs(world.y - selectionRef.current.startY) + 'px';
           }
@@ -554,19 +561,18 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     };
   }, [store, spaceId, selectedTool, arrowStart, findElementAtPoint, screenToWorld]);
 
-  const handleCanvasClick = () => {
+  const handleCanvasClick = useCallback(() => {
     if (createRef.current?.active) return;
     if (selectionRef.current.justSelected) {
       selectionRef.current.justSelected = false;
       return;
     }
     const state = store.getState();
-    const c = state.spaces[spaceId];
     state.setSelectedElements(spaceId, []);
     if (arrowStart) {
       state.clearArrowStart();
     }
-  };
+  }, [store, spaceId, arrowStart]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     const state = store.getState();
@@ -760,11 +766,14 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     const my = e.clientY - rect.top;
     const worldX = (mx - c.viewport.x) / c.viewport.zoom;
     const worldY = (my - c.viewport.y) / c.viewport.zoom;
-    state.setViewport(spaceId, {
-      x: mx - worldX * newZoom,
-      y: my - worldY * newZoom,
-      zoom: newZoom,
-    });
+    viewportBatcher.schedule(
+      {
+        x: mx - worldX * newZoom,
+        y: my - worldY * newZoom,
+        zoom: newZoom,
+      },
+      v => store.getState().setViewport(spaceId, v)
+    );
   };
 
   const wheelRef = useRef(handleWheel);
@@ -777,7 +786,7 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     return () => el.removeEventListener('wheel', handler);
   }, []);
 
-  const handleElementDragStart = (e: React.MouseEvent, elementId: string) => {
+  const handleElementDragStart = useCallback((e: React.MouseEvent, elementId: string) => {
     e.stopPropagation();
     const state = store.getState();
     const c = state.spaces[spaceId];
@@ -785,7 +794,7 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     const el = c.elements.find(ee => ee.id === elementId);
     if (!el || el.locked) return;
 
-    if (selectedTool === 'arrow') {
+    if (state.selectedTool === 'arrow') {
       const world = screenToWorld(e.clientX, e.clientY);
       if (!world) return;
       const centerX = el.position.x + el.size.width / 2;
@@ -829,9 +838,9 @@ export function KnowledgeCanvas({ spaceId }: Props) {
       startArrowPts,
       startArrowCp,
     };
-  };
+  }, [store, spaceId, screenToWorld]);
 
-  const handleElementResizeStart = (e: React.MouseEvent, elementId: string) => {
+  const handleElementResizeStart = useCallback((e: React.MouseEvent, elementId: string) => {
     e.stopPropagation();
     e.preventDefault();
     const state = store.getState();
@@ -853,9 +862,9 @@ export function KnowledgeCanvas({ spaceId }: Props) {
       handlePos: pos,
     };
     state.setEditingElementId(null);
-  };
+  }, [store, spaceId]);
 
-  const handleArrowPointDragStart = (
+  const handleArrowPointDragStart = useCallback((
     e: React.MouseEvent,
     elementId: string,
     pointType: 'start' | 'end' | 'intermediate' | 'control',
@@ -886,9 +895,9 @@ export function KnowledgeCanvas({ spaceId }: Props) {
       points: pts.map(([x, y]) => [x, y] as [number, number]),
       controlPoint: cp,
     };
-  };
+  }, [store, spaceId]);
 
-  const handleElementSelect = (elementId: string, multi: boolean) => {
+  const handleElementSelect = useCallback((elementId: string, multi: boolean) => {
     const state = store.getState();
     const c = state.spaces[spaceId];
     if (!c) return;
@@ -904,9 +913,9 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     } else {
       state.setSelectedElements(spaceId, [elementId]);
     }
-  };
+  }, [store, spaceId]);
 
-  const handleElementDoubleClick = (elementId: string) => {
+  const handleElementDoubleClick = useCallback((elementId: string) => {
     const state = store.getState();
     const c = state.spaces[spaceId];
     if (!c) return;
@@ -916,7 +925,22 @@ export function KnowledgeCanvas({ spaceId }: Props) {
       state.setEditingElementId(elementId);
       state.setSelectedElements(spaceId, [elementId]);
     }
-  };
+  }, [store, spaceId]);
+
+  const handleEditEnd = useCallback(() => {
+    const state = store.getState();
+    const id = state.editingElementId;
+    if (id) {
+      const el = state.spaces[spaceId]?.elements.find(e => e.id === id);
+      if (el && el.type === 'text') {
+        const textData = el.data as { text?: string };
+        if (!textData.text || textData.text === 'Edit me') {
+          state.removeElement(spaceId, id);
+        }
+      }
+    }
+    state.setEditingElementId(null);
+  }, [store, spaceId]);
 
   const handleCanvasDoubleClick = (e: React.MouseEvent) => {
     const state = store.getState();
@@ -1172,10 +1196,24 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [store, arrowStart]);
 
-  const sortedElements = canvas ? [...canvas.elements].sort((a, b) => a.zIndex - b.zIndex) : [];
+  const sortedElements = useMemo(
+    () => (canvas ? [...canvas.elements].sort((a, b) => a.zIndex - b.zIndex) : []),
+    [canvas?.elements]
+  );
   const viewport = canvas?.viewport ?? { x: 0, y: 0, zoom: 1 };
   const gridEnabled = canvas?.gridEnabled ?? true;
   const gridSize = canvas?.gridSize ?? 20;
+
+  const gridSvg = useMemo(() => {
+    if (!gridEnabled) return undefined;
+    const size = gridSize * viewport.zoom;
+    const dotColor =
+      typeof window !== 'undefined'
+        ? getComputedStyle(document.documentElement).getPropertyValue('--krait-border').trim() || '#2c2c33'
+        : '#2c2c33';
+    const dot = `<circle cx="0.5" cy="0.5" r="0.5" fill="${dotColor}"/>`;
+    return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'%3E${encodeURIComponent(dot)}%3C/svg%3E")`;
+  }, [gridEnabled, gridSize, Math.round(viewport.zoom * 10)]);
 
   return (
     <div className="relative flex-1 overflow-hidden bg-krait-void">
@@ -1193,11 +1231,7 @@ export function KnowledgeCanvas({ spaceId }: Props) {
                 : 'cursor-default'
         }`}
         style={{
-          backgroundImage: gridEnabled
-            ? `radial-gradient(circle, var(--krait-border) 1px, transparent 1px)`
-            : undefined,
-          backgroundSize: `${gridSize * viewport.zoom}px ${gridSize * viewport.zoom}px`,
-          backgroundPosition: `${viewport.x}px ${viewport.y}px`,
+          backgroundImage: gridSvg,
         }}
         onClick={handleCanvasClick}
         onDoubleClick={handleCanvasDoubleClick}
@@ -1230,20 +1264,7 @@ export function KnowledgeCanvas({ spaceId }: Props) {
               onResizeStart={handleElementResizeStart}
               onArrowPointDragStart={handleArrowPointDragStart}
               onDoubleClick={handleElementDoubleClick}
-              onEditEnd={() => {
-                const state = store.getState();
-                const id = state.editingElementId;
-                if (id) {
-                  const el = state.spaces[spaceId]?.elements.find(e => e.id === id);
-                  if (el && el.type === 'text') {
-                    const textData = el.data as { text?: string };
-                    if (!textData.text || textData.text === 'Edit me') {
-                      state.removeElement(spaceId, id);
-                    }
-                  }
-                }
-                state.setEditingElementId(null);
-              }}
+              onEditEnd={handleEditEnd}
             />
           ))}
 
@@ -1252,6 +1273,8 @@ export function KnowledgeCanvas({ spaceId }: Props) {
             className="absolute pointer-events-none"
             style={{
               display: 'none',
+              left: 0,
+              top: 0,
               border: '1.5px solid #eab308',
               backgroundColor: 'rgba(234, 179, 8, 0.15)',
               zIndex: 9999,

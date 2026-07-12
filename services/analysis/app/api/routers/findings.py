@@ -68,8 +68,7 @@ async def dismiss_findings_endpoint(
         raise HTTPException(status_code=400, detail="finding_ids must not be empty")
 
     command = DismissFindingsCommand(
-        finding_ids=body.finding_ids,
-        dismissed=body.dismissed,
+        finding_ids=body.finding_ids, dismissed=body.dismissed
     )
     count = await dismiss_findings(command, uow)
     await uow.commit()

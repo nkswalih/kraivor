@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   useMyProfile,
@@ -20,6 +20,7 @@ export default function EditProfilePage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const { data: profile, isLoading, isError } = useMyProfile();
   const updateMutation = useUpdateProfile();
   const uploadMutation = useUploadProfileImage();
@@ -63,9 +64,14 @@ export default function EditProfilePage() {
   useEffect(() => {
     if (!isLoading && !isError && profile && !profile.is_owner) {
       toast.error("You don't have permission to edit this profile.");
-      router.replace(`/profile/${editUsername}`);
+      const from = searchParams.get('from');
+      if (from) {
+        router.replace(`/${from}/profile/${editUsername}`);
+      } else {
+        router.replace(`/profile/${editUsername}`);
+      }
     }
-  }, [isLoading, isError, profile, editUsername, router]);
+  }, [isLoading, isError, profile, editUsername, router, searchParams]);
 
   if (isLoading) {
     return (
@@ -120,7 +126,8 @@ export default function EditProfilePage() {
       }
 
       const result = await updateMutation.mutateAsync({
-        username: editUsername,
+        id: profile.username,
+        username: editUsername !== profile.username ? editUsername : undefined,
         display_name: displayName || undefined,
         bio: bio || undefined,
         avatar_url: avatarUrl || undefined,
@@ -134,7 +141,12 @@ export default function EditProfilePage() {
       });
 
       toast.success('Profile updated successfully');
-      router.push(`/profile/${result.username}`);
+      const from = searchParams.get('from');
+      if (from) {
+        router.push(`/${from}/profile/${result.username}`);
+      } else {
+        router.push(`/profile/${result.username}`);
+      }
     } catch {
       toast.error('Failed to update profile');
     }
@@ -143,7 +155,14 @@ export default function EditProfilePage() {
   return (
     <div className="max-w-2xl mx-auto p-6 w-full">
       <button
-        onClick={() => router.push(`/profile/${editUsername}`)}
+        onClick={() => {
+          const from = searchParams.get('from');
+          if (from) {
+            router.push(`/${from}/profile/${editUsername}`);
+          } else {
+            router.push(`/profile/${editUsername}`);
+          }
+        }}
         className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground mb-4 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -164,6 +183,7 @@ export default function EditProfilePage() {
               <img
                 src={bannerPreview || profile.banner_url}
                 alt=""
+                loading="lazy"
                 className="w-full h-full object-cover"
               />
             )}
@@ -191,6 +211,7 @@ export default function EditProfilePage() {
               <img
                 src={avatarPreview || profile.avatar_url}
                 alt=""
+                loading="lazy"
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -378,7 +399,14 @@ export default function EditProfilePage() {
           <Button
             type="button"
             variant="ghost"
-            onClick={() => router.push(`/profile/${editUsername}`)}
+            onClick={() => {
+              const from = searchParams.get('from');
+              if (from) {
+                router.push(`/${from}/profile/${editUsername}`);
+              } else {
+                router.push(`/profile/${editUsername}`);
+              }
+            }}
           >
             Cancel
           </Button>

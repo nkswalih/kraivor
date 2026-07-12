@@ -2,7 +2,7 @@ import logging
 
 from app.core.config import settings
 from app.infrastructure.llm.client import LLMClient
-from app.infrastructure.llm.router import ModelRouter
+from app.infrastructure.llm.router import FREE_MODELS, ModelRouter
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,9 @@ class EnrichmentService:
                 result = await self._enrich_category(category, cat_findings)
                 enriched_map[category] = result
             except Exception as e:
-                logger.warning("category_enrichment_failed", category=category, error=str(e))
+                logger.warning(
+                    "category_enrichment_failed category=%s error=%s", category, str(e)
+                )
                 enriched_map[category] = [
                     {**f, "ai_explanation": ""} for f in cat_findings
                 ]
@@ -93,22 +95,19 @@ class EnrichmentService:
         ai_executive_summary = ""
         try:
             ai_executive_summary = await self._generate_executive_summary(
-                enriched_findings, overall_score, tier, languages, frameworks,
+                enriched_findings, overall_score, tier, languages, frameworks
             )
         except Exception as e:
-            logger.warning("executive_summary_generation_failed", error=str(e))
+            logger.warning("executive_summary_generation_failed error=%s", str(e))
 
         return {
             "findings": enriched_findings,
             "ai_executive_summary": ai_executive_summary,
         }
 
-    async def _enrich_category(
-        self, category: str, findings: list[dict],
-    ) -> list[dict]:
+    async def _enrich_category(self, category: str, findings: list[dict]) -> list[dict]:
         route_key = CATEGORY_ROUTES.get(category, "code_review")
         route = self.router.get_route(route_key)
-        model = route["model"]
 
         system_prompt = CATEGORY_PROMPTS.get(
             category,
@@ -138,51 +137,75 @@ class EnrichmentService:
             f"Findings:\n{findings_text}"
         )
 
-        client = LLMClient(
-            api_key=settings.openrouter__master__key,
-            provider=model.split("/")[0],
-            model=model,
-        )
-        result = await client.generate(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.3,
-            max_tokens=route.get("max_tokens", 4096),
-            response_format={"type": "json_object"},
-        )
+        last_error: Exception | None = None
+        for model in FREE_MODELS:
+            try:
+                client = LLMClient(
+                    api_key=settings.openrouter__master__key,
+                    provider="openrouter",
+                    model=model,
+                )
+                result = await client.generate(
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=0.3,
+                    max_tokens=route.get("max_tokens", 4096),
+                    response_format={"type": "json_object"},
+                )
 
-        enriched_items: list[dict] = []
-        try:
-            import json
-            parsed = json.loads(result["content"])
-            items = parsed if isinstance(parsed, list) else parsed.get("findings", parsed.get("items", []))
-            for item in items:
-                idx = item.get("index", 0)
-                if 1 <= idx <= len(findings):
-                    enriched_finding = dict(findings[idx - 1])
-                    enriched_finding["ai_explanation"] = item.get("ai_explanation", "")
-                    enriched_finding["ai_recommendation"] = item.get("ai_recommendation", "")
-                    enriched_finding["is_ai_enriched"] = True
-                    enriched_items.append(enriched_finding)
-        except (json.JSONDecodeError, KeyError) as e:
-            logger.warning("failed_to_parse_enrichment_response", category=category, error=str(e))
-            for f in findings:
-                enriched_finding = dict(f)
-                enriched_finding["ai_explanation"] = ""
-                enriched_finding["is_ai_enriched"] = False
-                enriched_items.append(enriched_finding)
+                enriched_items: list[dict] = []
+                try:
+                    import json
 
-        remaining = len(findings) - len(enriched_items)
-        if remaining > 0:
-            for f in findings[len(enriched_items):]:
-                enriched_finding = dict(f)
-                enriched_finding["ai_explanation"] = ""
-                enriched_finding["is_ai_enriched"] = False
-                enriched_items.append(enriched_finding)
+                    parsed = json.loads(result["content"])
+                    items = (
+                        parsed
+                        if isinstance(parsed, list)
+                        else parsed.get("findings", parsed.get("items", []))
+                    )
+                    for item in items:
+                        idx = item.get("index", 0)
+                        if 1 <= idx <= len(findings):
+                            enriched_finding = dict(findings[idx - 1])
+                            enriched_finding["ai_explanation"] = item.get(
+                                "ai_explanation", ""
+                            )
+                            enriched_finding["ai_recommendation"] = item.get(
+                                "ai_recommendation", ""
+                            )
+                            enriched_finding["is_ai_enriched"] = True
+                            enriched_items.append(enriched_finding)
+                except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
+                    logger.warning(
+                        "failed_to_parse_enrichment_response category=%s model=%s error=%s",
+                        category,
+                        model,
+                        str(e),
+                    )
+                    raise
 
-        return enriched_items
+                remaining = len(findings) - len(enriched_items)
+                if remaining > 0:
+                    for f in findings[len(enriched_items) :]:
+                        enriched_finding = dict(f)
+                        enriched_finding["ai_explanation"] = ""
+                        enriched_finding["is_ai_enriched"] = False
+                        enriched_items.append(enriched_finding)
+
+                return enriched_items
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    "enrichment_model_failed model=%s category=%s error=%s",
+                    model,
+                    category,
+                    str(e),
+                )
+                continue
+
+        raise last_error  # type: ignore[misc]
 
     async def _generate_executive_summary(
         self,
@@ -192,9 +215,6 @@ class EnrichmentService:
         languages: list[str] | None,
         frameworks: list[str] | None,
     ) -> str:
-        route = self.router.get_route("architecture_review")
-        model = route["model"]
-
         system_prompt = (
             "You are a technical lead writing an executive summary of a production readiness "
             "analysis. Synthesize the findings below into a clear, actionable narrative.\n\n"
@@ -206,7 +226,9 @@ class EnrichmentService:
             "Be concise and business-focused. Use Markdown."
         )
 
-        critical = [f for f in findings if str(f.get("severity", "")).upper() == "CRITICAL"]
+        critical = [
+            f for f in findings if str(f.get("severity", "")).upper() == "CRITICAL"
+        ]
         high = [f for f in findings if str(f.get("severity", "")).upper() == "HIGH"]
         categories = {f.get("category", "") for f in findings}
 
@@ -232,18 +254,27 @@ class EnrichmentService:
             for f in high[:10]:
                 user_prompt += f"- {f.get('title', '')} ({f.get('file_path', '')})\n"
 
-        client = LLMClient(
-            api_key=settings.openrouter__master__key,
-            provider=model.split("/")[0],
-            model=model,
-        )
-        result = await client.generate(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.4,
-            max_tokens=1024,
-        )
+        last_error: Exception | None = None
+        for model in FREE_MODELS:
+            try:
+                client = LLMClient(
+                    api_key=settings.openrouter__master__key,
+                    provider="openrouter",
+                    model=model,
+                )
+                result = await client.generate(
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=0.4,
+                    max_tokens=1024,
+                )
 
-        return result["content"]
+                return result["content"]
+            except Exception as e:
+                last_error = e
+                logger.warning("summary_model_failed model=%s error=%s", model, str(e))
+                continue
+
+        raise last_error  # type: ignore[misc]

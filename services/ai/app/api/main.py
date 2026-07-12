@@ -1,6 +1,6 @@
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -53,6 +53,7 @@ def create_app() -> FastAPI:
         embeddings,
         health,
     )
+
     app.include_router(health.router, prefix="/v1")
     app.include_router(chat.router, prefix="/v1")
     app.include_router(embeddings.router, prefix="/v1")

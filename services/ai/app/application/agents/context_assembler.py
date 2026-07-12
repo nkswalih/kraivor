@@ -28,10 +28,14 @@ class ContextAssemblerNode:
             query = ". ".join(filter(None, [message, *hints]))
             try:
                 results = await self.retriever.retrieve(
-                    query=query, repo_ids=repo_ids, workspace_id=workspace_id,
+                    query=query, repo_ids=repo_ids, workspace_id=workspace_id
                 )
             except Exception as e:
                 logger.error("RAG retrieval failed: %s", e)
 
-        assembled = f"# Code Context\n\n{results}\n\n# Conversation History\n\n{history}" if results else ""
+        assembled = (
+            f"# Code Context\n\n{results}\n\n# Conversation History\n\n{history}"
+            if results
+            else ""
+        )
         return {"assembled_context": assembled, "context_code": results}

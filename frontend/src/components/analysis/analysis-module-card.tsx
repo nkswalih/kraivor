@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { ArrowRight, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 
-export type ModuleColor = 'green' | 'orange' | 'blue' | 'red' | 'purple';
+export type ModuleColor = 'green' | 'orange' | 'blue' | 'red' | 'purple' | 'pink';
 
 const MODULE_COLORS: Record<ModuleColor, { container: string; icon: string; glow: string }> = {
   green: { container: 'bg-green-500/10', icon: 'text-green-400', glow: 'rgba(74,222,128,0.15)' },
@@ -12,6 +12,7 @@ const MODULE_COLORS: Record<ModuleColor, { container: string; icon: string; glow
   blue: { container: 'bg-blue-500/10', icon: 'text-blue-400', glow: 'rgba(96,165,250,0.15)' },
   red: { container: 'bg-red-500/10', icon: 'text-red-400', glow: 'rgba(248,113,113,0.15)' },
   purple: { container: 'bg-purple-500/10', icon: 'text-purple-400', glow: 'rgba(192,132,252,0.15)' },
+  pink: { container: 'bg-pink-500/10', icon: 'text-pink-400', glow: 'rgba(236,72,153,0.15)' },
 };
 
 function ModuleCardStat({ label, value, color }: { label: string; value: string | number; color?: string }) {

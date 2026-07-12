@@ -43,12 +43,7 @@ class RedisRateLimiter:
         url = redis_url or settings.REDIS_URL
         self.client: redis.Redis = redis.from_url(url, decode_responses=True)
 
-    def check(
-        self,
-        key: str,
-        limit: int,
-        window_seconds: int,
-    ) -> tuple[bool, int, int]:
+    def check(self, key: str, limit: int, window_seconds: int) -> tuple[bool, int, int]:
         """
         Atomically increment the counter for *key* and check against *limit*.
 

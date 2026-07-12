@@ -1,11 +1,7 @@
 import logging
 import uuid
-
 from django.conf import settings
-from drf_spectacular.utils import (
-    OpenApiResponse,
-    extend_schema,
-)
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -40,7 +36,11 @@ class SignUpView(APIView):
         description="Registers a new user account and sends a verification email.",
         tags=["Users"],
         request=SignUpSerializer,
-        responses={201: OpenApiResponse(description="Registration successful. Verification email sent.")},
+        responses={
+            201: OpenApiResponse(
+                description="Registration successful. Verification email sent."
+            )
+        },
     )
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
@@ -55,7 +55,9 @@ class SignUpView(APIView):
             email_service.send_verification_email(user, token)
             email_sent = True
         except Exception:
-            logger.exception("Failed to send verification email to %s after signup", user.email)
+            logger.exception(
+                "Failed to send verification email to %s after signup", user.email
+            )
             email_sent = False
 
         return Response(
@@ -99,7 +101,10 @@ class VerifyEmailView(APIView):
         token = request.data.get("token", "").strip()
         if not token:
             return Response(
-                {"error": "Verification token is required.", "error_code": "missing_token"},
+                {
+                    "error": "Verification token is required.",
+                    "error_code": "missing_token",
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -174,7 +179,9 @@ class ResendVerificationView(APIView):
         description="Rate limited: maximum 3 requests per hour per email (Redis-backed).",
         tags=["Users"],
         responses={
-            200: OpenApiResponse(description="Verification email resent or rate-limited"),
+            200: OpenApiResponse(
+                description="Verification email resent or rate-limited"
+            ),
             429: OpenApiResponse(description="Rate limit exceeded"),
         },
     )
@@ -189,7 +196,9 @@ class ResendVerificationView(APIView):
         # Redis rate limit check BEFORE DB lookup (fail fast, prevent enumeration)
         rate_key = f"resend_verification:{email}"
         try:
-            rate_limiter.is_allowed(rate_key, limit=_RESEND_LIMIT, window_seconds=_RESEND_WINDOW)
+            rate_limiter.is_allowed(
+                rate_key, limit=_RESEND_LIMIT, window_seconds=_RESEND_WINDOW
+            )
         except RateLimitExceededError as exc:
             response = Response(
                 {
@@ -208,7 +217,7 @@ class ResendVerificationView(APIView):
         except User.DoesNotExist:
             return Response(
                 {
-                    "message": "If that email exists and is unverified, a new link has been sent.",
+                    "message": "If that email exists and is unverified, a new link has been sent."
                 },
                 status=status.HTTP_200_OK,
             )
@@ -236,9 +245,7 @@ class ResendVerificationView(APIView):
             )
 
         return Response(
-            {
-                "message": "Verification email resent. Please check your inbox.",
-            },
+            {"message": "Verification email resent. Please check your inbox."},
             status=status.HTTP_200_OK,
         )
 
@@ -283,7 +290,9 @@ class ResolveUsersView(APIView):
         responses={200: OpenApiResponse(description="User resolution result")},
     )
     def post(self, request):
-        internal_header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
+        internal_header = getattr(
+            settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"
+        )
         if request.headers.get(internal_header) != "1":
             return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -297,10 +306,7 @@ class ResolveUsersView(APIView):
             email_verified=True,
         )
 
-        result = {
-            user.email: {"id": str(user.id), "name": user.name}
-            for user in users
-        }
+        result = {user.email: {"id": str(user.id), "name": user.name} for user in users}
 
         return Response({"users": result})
 
@@ -333,7 +339,9 @@ class ResolveUsersByIdView(APIView):
         responses={200: OpenApiResponse(description="User resolution result")},
     )
     def post(self, request):
-        internal_header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
+        internal_header = getattr(
+            settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"
+        )
         if request.headers.get(internal_header) != "1":
             return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 

@@ -22,10 +22,7 @@ def upgrade() -> None:
         schema="analysis",
     )
     op.create_index(
-        "idx_results_status",
-        "analysis_results",
-        ["status"],
-        schema="analysis",
+        "idx_results_status", "analysis_results", ["status"], schema="analysis"
     )
 
 

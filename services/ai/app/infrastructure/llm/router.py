@@ -1,3 +1,15 @@
+FREE_MODELS = [
+    "google/gemma-4-31b-it:free",
+    "nvidia/nemotron-3-nano-30b-a3b:free",
+    "poolside/laguna-xs-2.1:free",
+    "openai/gpt-oss-120b:free",
+    "tencent/hy3:free",
+    "poolside/laguna-m.1:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "cohere/north-mini-code:free",
+]
+
+
 class ModelRouter:
     TASK_ROUTES = {
         "intent_classify": {
@@ -49,9 +61,14 @@ class ModelRouter:
 
     TIER_ACCESS = {
         "free": [
-            "openai/gpt-4o-mini",
-            "mistralai/mistral-large",
-            "openrouter/auto",
+            "google/gemma-4-31b-it:free",
+            "nvidia/nemotron-3-nano-30b-a3b:free",
+            "poolside/laguna-xs-2.1:free",
+            "openai/gpt-oss-120b:free",
+            "tencent/hy3:free",
+            "poolside/laguna-m.1:free",
+            "nvidia/nemotron-3-ultra-550b-a55b:free",
+            "cohere/north-mini-code:free",
         ],
         "pro": [
             "openai/gpt-4o",
@@ -62,7 +79,8 @@ class ModelRouter:
     }
 
     def get_route(self, task: str) -> dict:
-        return self.TASK_ROUTES.get(task, self.TASK_ROUTES["simple_qa"])
+        route = self.TASK_ROUTES.get(task, self.TASK_ROUTES["simple_qa"])
+        return {**route, "fallback_models": FREE_MODELS}
 
     def get_model(self, task: str, tier: str = "free") -> str:
         route = self.get_route(task)
@@ -70,4 +88,7 @@ class ModelRouter:
         tier_models = self.TIER_ACCESS.get(tier, self.TIER_ACCESS["free"])
         if "*" in tier_models or model in tier_models:
             return model
-        return route["fallback"] or model
+        fallback = route.get("fallback")
+        if fallback:
+            return fallback
+        return model

@@ -1,10 +1,10 @@
+from typing import Annotated
+
 import base64
 import os
 import uuid
-from datetime import UTC, datetime
-from typing import Annotated
-
 from cryptography.fernet import Fernet
+from datetime import UTC, datetime
 from fastapi import APIRouter, Depends
 
 from app.api.dependencies.auth import JWTPayload, get_current_user
@@ -27,10 +27,7 @@ provisioner = KeyProvisioner(encrypter=encrypter)
 
 
 @router.post("/api-keys", response_model=KeyResponse)
-async def create_api_key(
-    request: CreateKeyRequest,
-    user: CurrentUser,
-):
+async def create_api_key(request: CreateKeyRequest, user: CurrentUser):
     return KeyResponse(
         id=str(uuid.uuid4()),
         key=f"sk-{uuid.uuid4().hex}",
@@ -42,14 +39,9 @@ async def create_api_key(
 
 
 @router.post("/api-keys/provision", response_model=ProvisionResponse)
-async def provision_provider_key(
-    request: ProvisionRequest,
-    user: CurrentUser,
-):
+async def provision_provider_key(request: ProvisionRequest, user: CurrentUser):
     result = await provisioner.provision_openrouter_key(
-        user_id=user.sub,
-        user_email=user.email,
-        tier=request.tier or "free",
+        user_id=user.sub, user_email=user.email, tier=request.tier or "free"
     )
     return ProvisionResponse(
         provider=request.provider,

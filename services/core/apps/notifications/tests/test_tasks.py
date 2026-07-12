@@ -1,8 +1,7 @@
 import uuid
 from datetime import timedelta
-from unittest.mock import patch
-
 from django.utils import timezone
+from unittest.mock import patch
 
 from apps.notifications.models import FCMToken, Notification
 from apps.notifications.tasks import (

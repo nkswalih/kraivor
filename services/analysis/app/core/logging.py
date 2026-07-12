@@ -18,11 +18,7 @@ def bootstrap_logging() -> None:
     use_json = settings.logging.json_format and not is_dev
 
     level = getattr(logging, settings.logging.level, logging.INFO)
-    logging.basicConfig(
-        format="%(message)s",
-        stream=sys.stdout,
-        level=level,
-    )
+    logging.basicConfig(format="%(message)s", stream=sys.stdout, level=level)
 
     # Suppress noisy library loggers
     for logger_name in (
@@ -46,9 +42,11 @@ def bootstrap_logging() -> None:
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             structlog.processors.UnicodeDecoder(),
-            structlog.dev.ConsoleRenderer()
-            if is_dev or not use_json
-            else structlog.processors.JSONRenderer(),
+            (
+                structlog.dev.ConsoleRenderer()
+                if is_dev or not use_json
+                else structlog.processors.JSONRenderer()
+            ),
         ],
         wrapper_class=structlog.stdlib.BoundLogger,
         context_class=dict,

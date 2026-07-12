@@ -1,4 +1,3 @@
-
 import pytest
 
 from app.api.schemas.api_key import CreateKeyRequest, ProvisionRequest

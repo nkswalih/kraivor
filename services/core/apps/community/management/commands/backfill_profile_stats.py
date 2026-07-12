@@ -1,11 +1,10 @@
 import logging
-
 import requests
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db.models import Count, Q
 
-from apps.community.models import Discussion, Vote
+from apps.community.models import Comment, Discussion, Vote
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +17,7 @@ def _identity_endpoint(path: str) -> str:
 
 
 class Command(BaseCommand):
-    help = "Backfill discussion_count and reputation_score on auth profiles from core data."
+    help = "Backfill discussion_count, comment_count, and reputation_score on auth profiles from core data."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -60,10 +59,21 @@ class Command(BaseCommand):
             .values_list("discussion__author_id", "cnt")
         )
 
+        # Count top-level comments per author (on non-deleted discussions)
+        comment_counts = dict(
+            Comment.objects.filter(
+                parent__isnull=True, discussion__deleted_at__isnull=True
+            )
+            .values("author_id")
+            .annotate(cnt=Count("id"))
+            .values_list("author_id", "cnt")
+        )
+
         all_author_ids = (
             set(disc_counts.keys())
             | set(upvotes.keys())
             | set(downvotes.keys())
+            | set(comment_counts.keys())
         )
 
         if not all_author_ids:
@@ -81,12 +91,13 @@ class Command(BaseCommand):
         for author_id in all_author_ids:
             author_id_str = str(author_id)
             dc = disc_counts.get(author_id, 0)
+            cc = comment_counts.get(author_id, 0)
             uv = upvotes.get(author_id, 0)
             dv = downvotes.get(author_id, 0)
             rep = dc * 5 + uv * 2 - dv * 1
 
             self.stdout.write(
-                f"  {author_id_str}: discussions={dc}, upvotes={uv}, "
+                f"  {author_id_str}: discussions={dc}, comments={cc}, upvotes={uv}, "
                 f"downvotes={dv}, reputation={rep}"
             )
 
@@ -101,6 +112,7 @@ class Command(BaseCommand):
                         "author_id": author_id_str,
                         "data": {
                             "discussion_count": dc,
+                            "comment_count": cc,
                             "reputation_score": rep,
                         },
                     },
@@ -123,7 +135,5 @@ class Command(BaseCommand):
                 failed += 1
 
         self.stdout.write(
-            self.style.SUCCESS(
-                f"Done. {success} succeeded, {failed} failed."
-            )
+            self.style.SUCCESS(f"Done. {success} succeeded, {failed} failed.")
         )

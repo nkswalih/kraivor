@@ -24,5 +24,5 @@ jobs:
 
       - uses: wagoid/commitlint-github-action@v6
         with:
-          extends: "@commitlint/config-conventional"
+          configFile: .commitlintrc
           helpURL: https://www.conventionalcommits.org/en/v1.0.0/

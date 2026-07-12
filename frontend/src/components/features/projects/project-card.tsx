@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { GitBranch, BookOpen, AlertCircle } from 'lucide-react';
 import type { Project } from '@/types/domain/projects';
-import { cn } from '@/lib/utils';
+import { cn, hexToRgba } from '@/lib/utils';
 
 const STATUS_BADGE: Record<string, { text: string; className: string }> = {
   planning: {
@@ -37,20 +37,40 @@ export function ProjectCard({ project, workspaceSlug }: ProjectCardProps) {
   const progress =
     project.task_count > 0 ? Math.round((project.done_task_count / project.task_count) * 100) : 0;
 
+  const projectColor = project.color || '#78716c';
+
   return (
     <Link
       href={`/${workspaceSlug}/projects/${project.id}`}
       className={cn(
-        'group block',
+        'group block relative',
         'bg-[var(--krait-surface-1)] border border-[var(--krait-border)] rounded-[8px]',
         'p-5',
         'hover:border-[var(--krait-border-hi)]',
         'hover:shadow-[var(--shadow-venom)]',
         'transition-all duration-150'
       )}
+      style={{
+        background: `
+          linear-gradient(to right, ${hexToRgba(projectColor, 0.06)}, transparent 50%),
+          var(--krait-surface-1)
+        `,
+      }}
     >
-      <div className="flex items-start justify-between mb-4">
-        <div className="w-9 h-9 rounded-[6px] bg-[var(--krait-surface-2)] border border-[var(--krait-border)] flex items-center justify-center text-[18px] shrink-0">
+      {/* Snake band */}
+      <div
+        className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full transition-all duration-200"
+        style={{ background: projectColor }}
+      />
+
+      <div className="flex items-start justify-between mb-4 pl-2">
+        <div
+          className="w-9 h-9 rounded-[6px] flex items-center justify-center text-[18px] shrink-0 transition-colors duration-200"
+          style={{
+            background: hexToRgba(projectColor, 0.15),
+            borderColor: hexToRgba(projectColor, 0.3),
+          }}
+        >
           {project.icon || '\uD83D\uDCCB'}
         </div>
         <span className={cn('text-[11px] font-medium px-2 py-0.5 rounded border', badge.className)}>

@@ -1,6 +1,5 @@
-import logging
-
 import jwt
+import logging
 from django.conf import settings
 from rest_framework_simplejwt.backends import TokenBackend as BaseTokenBackend
 

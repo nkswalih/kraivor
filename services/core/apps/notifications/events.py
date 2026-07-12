@@ -6,7 +6,6 @@ member changes and dispatches Celery tasks for notification delivery.
 """
 
 import logging
-
 from django.db.models.signals import post_save, pre_delete
 from django.dispatch import receiver
 

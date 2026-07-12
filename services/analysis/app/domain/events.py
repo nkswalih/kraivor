@@ -99,6 +99,94 @@ class AnalysisCompleted(DomainEvent):
 
 
 @dataclass(kw_only=True)
+class EngineStarted(DomainEvent):
+    event_type: str = "engine.started"
+    job_id: UUID
+    engine_name: str
+    current_step: str = "starting"
+
+    def to_dict(self) -> dict[str, object]:
+        base = super().to_dict()
+        base.update(
+            {
+                "job_id": str(self.job_id),
+                "engine_name": self.engine_name,
+                "status": "running",
+                "current_step": self.current_step,
+            }
+        )
+        return base
+
+
+@dataclass(kw_only=True)
+class EngineProgressed(DomainEvent):
+    event_type: str = "engine.progressed"
+    job_id: UUID
+    engine_name: str
+    progress: int = 0
+    current_step: str = ""
+    processed_files: int = 0
+    total_files: int = 0
+    elapsed_time: float = 0.0
+
+    def to_dict(self) -> dict[str, object]:
+        base = super().to_dict()
+        base.update(
+            {
+                "job_id": str(self.job_id),
+                "engine_name": self.engine_name,
+                "status": "running",
+                "progress": self.progress,
+                "current_step": self.current_step,
+                "processed_files": self.processed_files,
+                "total_files": self.total_files,
+                "elapsed_time": self.elapsed_time,
+            }
+        )
+        return base
+
+
+@dataclass(kw_only=True)
+class EngineCompleted(DomainEvent):
+    event_type: str = "engine.completed"
+    job_id: UUID
+    engine_name: str
+    duration_seconds: float = 0.0
+
+    def to_dict(self) -> dict[str, object]:
+        base = super().to_dict()
+        base.update(
+            {
+                "job_id": str(self.job_id),
+                "engine_name": self.engine_name,
+                "status": "completed",
+                "duration_seconds": self.duration_seconds,
+            }
+        )
+        return base
+
+
+@dataclass(kw_only=True)
+class EngineFailed(DomainEvent):
+    event_type: str = "engine.failed"
+    job_id: UUID
+    engine_name: str
+    error_message: str = ""
+
+    def to_dict(self) -> dict[str, object]:
+        base = super().to_dict()
+        base.update(
+            {
+                "job_id": str(self.job_id),
+                "engine_name": self.engine_name,
+                "status": "failed",
+                "error_message": self.error_message,
+            }
+        )
+        return base
+
+
+@dataclass(kw_only=True)
 class AnalysisFailed(DomainEvent):
     event_type: str = "analysis.failed"
     job_id: UUID

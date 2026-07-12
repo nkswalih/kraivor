@@ -1,5 +1,4 @@
 import uuid
-
 from django.db.models import Count, Prefetch, Q, QuerySet
 
 from apps.workspaces.models import Workspace, WorkspaceInvitation, WorkspaceMember
@@ -62,8 +61,7 @@ class WorkspaceSelector:
     def list_user_workspaces(user_id: uuid.UUID) -> QuerySet[Workspace]:
         return (
             Workspace.objects.filter(
-                members__user_id=user_id,
-                members__deleted_at__isnull=True,
+                members__user_id=user_id, members__deleted_at__isnull=True
             )
             .annotate(
                 active_member_count=Count(

@@ -32,9 +32,7 @@ MIDDLEWARE = [
 
 REST_FRAMEWORK = {
     **base_settings.REST_FRAMEWORK,
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "core.middleware.test_auth.TestAuthentication",
-    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": ["core.middleware.test_auth.TestAuthentication"],
 }
 
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]

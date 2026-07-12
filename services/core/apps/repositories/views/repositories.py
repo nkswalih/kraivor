@@ -1,6 +1,6 @@
-import logging
 from typing import TYPE_CHECKING
 
+import logging
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
@@ -89,7 +89,12 @@ class RepositoryDetailView(WorkspaceContextMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(summary="Get repository", responses={200: RepositorySerializer})
-    def get(self, request: Request, workspace_pk: str | None = None, repo_id: str | None = None) -> Response:
+    def get(
+        self,
+        request: Request,
+        workspace_pk: str | None = None,
+        repo_id: str | None = None,
+    ) -> Response:
         self._get_workspace_or_404(workspace_pk)
         repo = RepositoryService().get_repository(
             repo_id=repo_id, workspace_id=workspace_pk
@@ -102,7 +107,12 @@ class RepositoryDetailView(WorkspaceContextMixin, APIView):
         summary="Disconnect repository",
         responses={204: OpenApiResponse(description="No content")},
     )
-    def delete(self, request: Request, workspace_pk: str | None = None, repo_id: str | None = None) -> Response:
+    def delete(
+        self,
+        request: Request,
+        workspace_pk: str | None = None,
+        repo_id: str | None = None,
+    ) -> Response:
         workspace = self._get_workspace_or_404(workspace_pk)
         try:
             RepositoryService().disconnect_repository(
@@ -126,6 +136,4 @@ class GitHubRepoSearchView(WorkspaceContextMixin, APIView):
         query = query.strip()
         service = GitHubAppInstallationService()
         repos = service.list_available_repos(workspace=workspace, search=query)
-        return Response(
-            InstallationRepoItemSerializer(repos, many=True).data
-        )
+        return Response(InstallationRepoItemSerializer(repos, many=True).data)

@@ -14,7 +14,9 @@ class SearchResultSerializer(serializers.Serializer):
     url = serializers.CharField()
     workspace_id = serializers.UUIDField(allow_null=True)
     relevance = serializers.FloatField()
-    highlights = serializers.DictField(child=serializers.ListField(child=serializers.CharField()), default=dict)
+    highlights = serializers.DictField(
+        child=serializers.ListField(child=serializers.CharField()), default=dict
+    )
     metadata = serializers.DictField(default=dict)
     created_at = serializers.DateTimeField(allow_null=True)
 
@@ -43,16 +45,39 @@ class ProjectSearchSerializer(serializers.ModelSerializer):
 class TaskSearchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = ["id", "title", "description", "status", "priority", "project_id", "created_at"]
+        fields = [
+            "id",
+            "title",
+            "description",
+            "status",
+            "priority",
+            "project_id",
+            "created_at",
+        ]
 
 
 class RepositorySearchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Repository
-        fields = ["id", "github_repo", "description", "language", "workspace_id", "created_at"]
+        fields = [
+            "id",
+            "github_repo",
+            "description",
+            "language",
+            "workspace_id",
+            "created_at",
+        ]
 
 
 class NotificationSearchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ["id", "title", "body", "notification_type", "workspace_id", "user_id", "created_at"]
+        fields = [
+            "id",
+            "title",
+            "body",
+            "notification_type",
+            "workspace_id",
+            "user_id",
+            "created_at",
+        ]

@@ -11,9 +11,7 @@ from rest_framework.test import APIClient
 @pytest.fixture
 def user(db, django_user_model):
     return django_user_model.objects.create(
-        email="view-test@example.com",
-        name="View Tester",
-        email_verified=True,
+        email="view-test@example.com", name="View Tester", email_verified=True
     )
 
 
@@ -21,6 +19,7 @@ def user(db, django_user_model):
 def auth_client(user):
     """APIClient authenticated as `user` via JWT."""
     from authentication.tokens import get_token_service
+
     client = APIClient()
     token_service = get_token_service()
     tokens = token_service.generate_tokens(user, "test-device", "127.0.0.1", "pytest")
@@ -54,24 +53,22 @@ class TestAPIKeyCreate:
 
     def test_raw_key_not_in_db(self, auth_client, list_create_url):
         resp = auth_client.post(
-            list_create_url,
-            {"name": "Key", "scopes": ["ai:chat"]},
-            format="json",
+            list_create_url, {"name": "Key", "scopes": ["ai:chat"]}, format="json"
         )
         raw_key = resp.json()["raw_key"]
         assert not APIKey.objects.filter(key_hash=raw_key).exists()
 
     def test_invalid_scope_returns_400(self, auth_client, list_create_url):
         resp = auth_client.post(
-            list_create_url,
-            {"name": "Bad", "scopes": ["fake:scope"]},
-            format="json",
+            list_create_url, {"name": "Bad", "scopes": ["fake:scope"]}, format="json"
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_unauthenticated_returns_401(self, list_create_url):
         client = APIClient()
-        resp = client.post(list_create_url, {"name": "Key", "scopes": ["ai:chat"]}, format="json")
+        resp = client.post(
+            list_create_url, {"name": "Key", "scopes": ["ai:chat"]}, format="json"
+        )
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
 
@@ -91,7 +88,9 @@ class TestAPIKeyList:
         for key in resp.json()["api_keys"]:
             assert "raw_key" not in key
 
-    def test_list_excludes_revoked_keys(self, auth_client, user, list_create_url, revoke_url):
+    def test_list_excludes_revoked_keys(
+        self, auth_client, user, list_create_url, revoke_url
+    ):
         result = create_api_key(user, "Key", ["analysis:read"])
         auth_client.delete(revoke_url(result.api_key.id))
         resp = auth_client.get(list_create_url)
@@ -118,6 +117,7 @@ class TestAPIKeyRevoke:
         )
         result = create_api_key(other, "Other's Key", ["analysis:read"])
         from authentication.tokens import get_token_service
+
         token_service = get_token_service()
         tokens = token_service.generate_tokens(user, "d", "127.0.0.1", "pytest")
         client = APIClient()
@@ -139,6 +139,7 @@ class TestAPIKeyAuthentication:
 
     def test_revoked_api_key_returns_401(self, user, list_create_url):
         from api_keys.services.key_service import revoke_api_key
+
         result = create_api_key(user, "Key", ["analysis:read"])
         revoke_api_key(user, str(result.api_key.id))
         client = APIClient()
@@ -148,6 +149,7 @@ class TestAPIKeyAuthentication:
 
     def test_invalid_api_key_returns_401(self, list_create_url):
         from api_keys.services.generator import generate_api_key
+
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {generate_api_key()[0]}")
         resp = client.get(list_create_url)

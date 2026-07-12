@@ -11,14 +11,13 @@ Covers:
 
 from __future__ import annotations
 
+import jwt
 import uuid
 from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, patch
-
-import jwt
 from django.conf import settings
 from django.test import TestCase
 from rest_framework.test import APIClient
+from unittest.mock import MagicMock, patch
 from users.models import User
 from users.rate_limiter import RateLimitExceededError, RedisRateLimiter
 from users.verification import (
@@ -181,7 +180,9 @@ class TestRedisRateLimiter(TestCase):
 
     def test_first_request_is_allowed(self):
         limiter = self._make_limiter([(1, 3600)])
-        allowed, remaining, retry_after = limiter.check("key", limit=3, window_seconds=3600)
+        allowed, remaining, retry_after = limiter.check(
+            "key", limit=3, window_seconds=3600
+        )
         self.assertTrue(allowed)
         self.assertEqual(remaining, 2)
         self.assertEqual(retry_after, 0)
@@ -194,7 +195,9 @@ class TestRedisRateLimiter(TestCase):
 
     def test_fourth_request_is_blocked(self):
         limiter = self._make_limiter([(4, 2700)])
-        allowed, remaining, retry_after = limiter.check("key", limit=3, window_seconds=3600)
+        allowed, remaining, retry_after = limiter.check(
+            "key", limit=3, window_seconds=3600
+        )
         self.assertFalse(allowed)
         self.assertEqual(remaining, 0)
         self.assertEqual(retry_after, 2700)
@@ -242,7 +245,9 @@ class TestVerifyEmailView(TestCase):
         self.assertIn("hint", response.data)
 
     def test_invalid_token_returns_400(self):
-        response = self.client.post(self.url, {"token": "bad.token.here"}, format="json")
+        response = self.client.post(
+            self.url, {"token": "bad.token.here"}, format="json"
+        )
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data["error_code"], "invalid_token")
 
@@ -307,7 +312,9 @@ class TestResendVerificationView(TestCase):
     def test_rate_limit_exceeded_returns_429(self, mock_limiter):
         mock_limiter.is_allowed.side_effect = RateLimitExceededError(retry_after=2700)
         make_user(email="ratelimited@example.com", verified=False)
-        response = self.client.post(self.url, {"email": "ratelimited@example.com"}, format="json")
+        response = self.client.post(
+            self.url, {"email": "ratelimited@example.com"}, format="json"
+        )
         self.assertEqual(response.status_code, 429)
         self.assertEqual(response.data["error_code"], "rate_limit_exceeded")
         self.assertIn("Retry-After", response)
@@ -316,7 +323,9 @@ class TestResendVerificationView(TestCase):
     def test_nonexistent_email_returns_200_anti_enumeration(self, mock_limiter):
         """Should return 200 even for unknown emails (prevents enumeration)."""
         mock_limiter.is_allowed.return_value = True
-        response = self.client.post(self.url, {"email": "nobody@example.com"}, format="json")
+        response = self.client.post(
+            self.url, {"email": "nobody@example.com"}, format="json"
+        )
         self.assertEqual(response.status_code, 200)
 
     def test_missing_email_returns_400(self):

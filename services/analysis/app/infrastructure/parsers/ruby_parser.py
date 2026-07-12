@@ -18,33 +18,24 @@ class RubyParser(AbstractParser):
         r"class\s+(\w+(?:::\w+)*)(?:\s*<\s*(\w+(?:::\w+)*))?(?=\s*$|\s*\n|\s*#)",
         re.MULTILINE,
     )
-    _MODULE_DECL = re.compile(
-        r"module\s+(\w+(?:::\w+)*)(?=\s*$|\s*\n)",
-    )
+    _MODULE_DECL = re.compile(r"module\s+(\w+(?:::\w+)*)(?=\s*$|\s*\n)")
     _METHOD_DECL = re.compile(
-        r"(?:def\s+)(?:self\.)?(\w+(?:[?!]|[=])?)\s*(?:\(([^)]*)\))?\s*$",
-        re.MULTILINE,
+        r"(?:def\s+)(?:self\.)?(\w+(?:[?!]|[=])?)\s*(?:\(([^)]*)\))?\s*$", re.MULTILINE
     )
     _RAILS_ROUTE = re.compile(
-        r"(?:get|post|put|patch|delete)\s+[\"']([^\"']+)[\"']\s*=>\s*[\"'](\w+#\w+)[\"']",
+        r"(?:get|post|put|patch|delete)\s+[\"']([^\"']+)[\"']\s*=>\s*[\"'](\w+#\w+)[\"']"
     )
     _RAILS_ROUTE_BLOCK = re.compile(
-        r"(?:get|post|put|patch|delete)\s+[\"']([^\"']+)[\"'](?:\s*,\s*(?:to:\s*[\"'](\w+#\w+)[\"']|controller:\s*[\"'](\w+)[\"']))?",
+        r"(?:get|post|put|patch|delete)\s+[\"']([^\"']+)[\"'](?:\s*,\s*(?:to:\s*[\"'](\w+#\w+)[\"']|controller:\s*[\"'](\w+)[\"']))?"
     )
-    _REQUIRE = re.compile(
-        r"require(?:_relative)?\s+[\"']([^\"']+)[\"']",
-    )
-    _INCLUDE = re.compile(
-        r"include\s+(\w+(?:::\w+)*)",
-    )
-    _EXTEND = re.compile(
-        r"extend\s+(\w+(?:::\w+)*)",
-    )
+    _REQUIRE = re.compile(r"require(?:_relative)?\s+[\"']([^\"']+)[\"']")
+    _INCLUDE = re.compile(r"include\s+(\w+(?:::\w+)*)")
+    _EXTEND = re.compile(r"extend\s+(\w+(?:::\w+)*)")
     _ATTR_ACCESSOR = re.compile(
-        r"attr_(?:accessor|reader|writer)\s+(?::(\w+)(?:\s*,\s*:(\w+))*)",
+        r"attr_(?:accessor|reader|writer)\s+(?::(\w+)(?:\s*,\s*:(\w+))*)"
     )
     _COMPLEXITY_KW = re.compile(
-        r"\b(?:if|elsif|unless|for|while|until|case|when|catch|rescue)\b",
+        r"\b(?:if|elsif|unless|for|while|until|case|when|catch|rescue)\b"
     )
 
     async def parse(self, file_path: str, content: str) -> ParsedFile:

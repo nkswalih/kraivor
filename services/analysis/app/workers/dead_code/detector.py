@@ -231,9 +231,7 @@ class DeadCodeDetector:
                     )
 
     def _detect_unreachable_code(self) -> None:
-        [
-            re.compile(r"return\s+.*\n\s+(?!return|raise|pass|$)"),
-        ]
+        [re.compile(r"return\s+.*\n\s+(?!return|raise|pass|$)")]
         for pf in self.parsed_files:
             content = pf.content
             lines = content.split("\n")

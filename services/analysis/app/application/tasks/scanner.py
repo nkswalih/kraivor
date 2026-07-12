@@ -99,12 +99,7 @@ async def task_parse(prev_result: dict[str, object]) -> dict[str, object]:
     async with UnitOfWork() as uow:
         producer = EventProducer()
         metadata = await handle_stage_parse(
-            cmd,
-            parser,
-            uow,
-            producer,
-            repo_path,
-            files,
+            cmd, parser, uow, producer, repo_path, files
         )
         await uow.commit()
 
@@ -125,13 +120,7 @@ async def task_rules(prev_result: dict[str, object]) -> dict[str, object]:
             parsed_files.append(pf)
 
         producer = EventProducer()
-        summary = await handle_stage_rules(
-            cmd,
-            _REGISTRY,
-            uow,
-            producer,
-            parsed_files,
-        )
+        summary = await handle_stage_rules(cmd, _REGISTRY, uow, producer, parsed_files)
         await uow.commit()
 
     prev_result["rule_violations"] = summary
@@ -163,10 +152,7 @@ async def task_save_findings(prev_result: dict[str, object]) -> dict[str, object
                     violations.extend(v)
                 except Exception:
                     logger.warning(
-                        "rule_failed",
-                        rule_id=rule.rule_id,
-                        file=pf.path,
-                        job_id=job_id,
+                        "rule_failed", rule_id=rule.rule_id, file=pf.path, job_id=job_id
                     )
 
         findings = await handle_save_findings(cmd, uow, violations, job)

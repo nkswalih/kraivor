@@ -206,8 +206,7 @@ def _merge_dicts[T](*dicts: dict[str, T]) -> dict[str, T]:
 
 
 ALL_PACKAGE_JSON_SIGNATURES: dict[str, DetectedTechnology] = _merge_dicts(
-    NODE_FRAMEWORKS,
-    FRONTEND_FRAMEWORKS,
+    NODE_FRAMEWORKS, FRONTEND_FRAMEWORKS
 )
 
 ALL_PYTHON_SIGNATURES: dict[str, DetectedTechnology] = PYTHON_FRAMEWORKS

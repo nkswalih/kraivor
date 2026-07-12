@@ -30,8 +30,7 @@ class WorkspaceListView(APIView):
     pagination_class = CursorPagination
 
     @extend_schema(
-        summary="List workspaces",
-        responses={200: WorkspaceListSerializer(many=True)},
+        summary="List workspaces", responses={200: WorkspaceListSerializer(many=True)}
     )
     def get(self, request: Request) -> Response:
         user_id = request.user_id
@@ -83,10 +82,7 @@ class WorkspaceDetailView(APIView):
             raise NotFound("Workspace not found.")
         return workspace
 
-    @extend_schema(
-        summary="Get workspace",
-        responses={200: WorkspaceDetailSerializer},
-    )
+    @extend_schema(summary="Get workspace", responses={200: WorkspaceDetailSerializer})
     def get(self, request: Request, pk: str | None = None) -> Response:
         workspace = self._get_workspace_or_404(pk, request.user_id)
         return Response(

@@ -28,9 +28,7 @@ def app() -> FastAPI:
 def app_with_auth_override(app: FastAPI) -> Generator[FastAPI, None, None]:
     async def mock_get_current_user() -> JWTPayload:
         return JWTPayload(
-            sub="user-123",
-            workspace_ids=["ws-123"],
-            email="test@example.com",
+            sub="user-123", workspace_ids=["ws-123"], email="test@example.com"
         )
 
     app.dependency_overrides = {}
@@ -84,6 +82,7 @@ class TestScoreHistoryHandler:
             score=score,
             findings=findings,
             languages=["python"],
+            language_breakdown=[{"name": "python", "percentage": 100.0}],
             total_files=10,
             total_lines=500,
             duration_seconds=42,
@@ -152,6 +151,7 @@ class TestScoreHistoryHandler:
             score=score,
             findings=findings,
             languages=["python"],
+            language_breakdown=[{"name": "python", "percentage": 100.0}],
             total_files=10,
             total_lines=500,
             duration_seconds=42,
@@ -201,9 +201,7 @@ class TestScoreHistoryAPI:
 
         async def mock_user() -> JWTPayload:
             return JWTPayload(
-                sub="user-123",
-                workspace_ids=["ws-123"],
-                email="test@example.com",
+                sub="user-123", workspace_ids=["ws-123"], email="test@example.com"
             )
 
         app.dependency_overrides[get_current_user] = mock_user
@@ -234,9 +232,7 @@ class TestScoreHistoryAPI:
 
         async def mock_user() -> JWTPayload:
             return JWTPayload(
-                sub="user-123",
-                workspace_ids=["ws-123"],
-                email="test@example.com",
+                sub="user-123", workspace_ids=["ws-123"], email="test@example.com"
             )
 
         app.dependency_overrides[get_current_user] = mock_user

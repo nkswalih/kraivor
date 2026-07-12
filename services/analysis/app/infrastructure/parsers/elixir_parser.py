@@ -14,54 +14,30 @@ class ElixirParser(AbstractParser):
     language: str = "elixir"
     supported_extensions: list[str] = [".ex", ".exs"]
 
-    _MODULE_DECL = re.compile(
-        r"defmodule\s+(\w+(?:\.\w+)*)\s+do",
-    )
-    _DEF_DECL = re.compile(
-        r"def(?:p|macro|guard)?\s+(\w+)\s*\(([^)]*)\)",
-    )
-    _DEF_IMPLICIT = re.compile(
-        r"def(?:p|macro|guard)?\s+(\w+)(?!\s*\()",
-    )
-    _ALIAS = re.compile(
-        r"alias\s+(\w+(?:\.\w+)*)",
-    )
-    _IMPORT = re.compile(
-        r"import\s+(\w+(?:\.\w+)*)",
-    )
-    _USE = re.compile(
-        r"use\s+(\w+(?:\.\w+)*)",
-    )
-    _REQUIRE = re.compile(
-        r"require\s+(\w+(?:\.\w+)*)",
-    )
-    _STRUCT = re.compile(
-        r"defstruct\s+(\[[^\]]*\])",
-    )
+    _MODULE_DECL = re.compile(r"defmodule\s+(\w+(?:\.\w+)*)\s+do")
+    _DEF_DECL = re.compile(r"def(?:p|macro|guard)?\s+(\w+)\s*\(([^)]*)\)")
+    _DEF_IMPLICIT = re.compile(r"def(?:p|macro|guard)?\s+(\w+)(?!\s*\()")
+    _ALIAS = re.compile(r"alias\s+(\w+(?:\.\w+)*)")
+    _IMPORT = re.compile(r"import\s+(\w+(?:\.\w+)*)")
+    _USE = re.compile(r"use\s+(\w+(?:\.\w+)*)")
+    _REQUIRE = re.compile(r"require\s+(\w+(?:\.\w+)*)")
+    _STRUCT = re.compile(r"defstruct\s+(\[[^\]]*\])")
     _PHOENIX_ROUTE_GET = re.compile(
-        r"get\s+[\"']([^\"']+)[\"']\s*,\s*(\w+(?:\.\w+)?(?:,\s*\[?:?\w+\])?)",
+        r"get\s+[\"']([^\"']+)[\"']\s*,\s*(\w+(?:\.\w+)?(?:,\s*\[?:?\w+\])?)"
     )
     _PHOENIX_ROUTE_POST = re.compile(
-        r"post\s+[\"']([^\"']+)[\"']\s*,\s*(\w+(?:\.\w+)?)",
+        r"post\s+[\"']([^\"']+)[\"']\s*,\s*(\w+(?:\.\w+)?)"
     )
-    _PHOENIX_ROUTE_PUT = re.compile(
-        r"put\s+[\"']([^\"']+)[\"']\s*,\s*(\w+(?:\.\w+)?)",
-    )
+    _PHOENIX_ROUTE_PUT = re.compile(r"put\s+[\"']([^\"']+)[\"']\s*,\s*(\w+(?:\.\w+)?)")
     _PHOENIX_ROUTE_PATCH = re.compile(
-        r"patch\s+[\"']([^\"']+)[\"']\s*,\s*(\w+(?:\.\w+)?)",
+        r"patch\s+[\"']([^\"']+)[\"']\s*,\s*(\w+(?:\.\w+)?)"
     )
     _PHOENIX_ROUTE_DELETE = re.compile(
-        r"delete\s+[\"']([^\"']+)[\"']\s*,\s*(\w+(?:\.\w+)?)",
+        r"delete\s+[\"']([^\"']+)[\"']\s*,\s*(\w+(?:\.\w+)?)"
     )
-    _PHOENIX_RESOURCES = re.compile(
-        r"resources\s+[\"']([^\"']+)[\"']",
-    )
-    _COMPLEXITY_KW = re.compile(
-        r"\b(?:if|unless|cond|case|for|try|catch|rescue)\b",
-    )
-    _PIPE = re.compile(
-        r"\s\|>\s",
-    )
+    _PHOENIX_RESOURCES = re.compile(r"resources\s+[\"']([^\"']+)[\"']")
+    _COMPLEXITY_KW = re.compile(r"\b(?:if|unless|cond|case|for|try|catch|rescue)\b")
+    _PIPE = re.compile(r"\s\|>\s")
 
     async def parse(self, file_path: str, content: str) -> ParsedFile:
         parsed = ParsedFile(

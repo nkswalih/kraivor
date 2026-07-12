@@ -1,7 +1,6 @@
 import base64
 import logging
 import os
-
 from cryptography.fernet import Fernet
 
 from app.core.config import settings
@@ -24,7 +23,11 @@ def _model_to_provider(model: str) -> str:
         return "google"
     if "anthropic" in model_lower or "claude" in model_lower:
         return "anthropic"
-    if "openai" in model_lower or "gpt" in model_lower or "text-embedding" in model_lower:
+    if (
+        "openai" in model_lower
+        or "gpt" in model_lower
+        or "text-embedding" in model_lower
+    ):
         return "openai"
     if "deepseek" in model_lower:
         return "openrouter"
@@ -32,24 +35,20 @@ def _model_to_provider(model: str) -> str:
 
 
 async def resolve_provider_key(
-    db_session,
-    encrypter: Fernet,
-    user_id: str,
-    preferred_model: str | None = None,
+    db_session, encrypter: Fernet, user_id: str, preferred_model: str | None = None
 ) -> tuple[str, str]:
     from sqlalchemy import select
 
     from app.infrastructure.db.models.api_key import ApiKey
 
     result = await db_session.execute(
-        select(ApiKey).where(
-            ApiKey.user_id == user_id,
-            not ApiKey.revoked,
-        )
+        select(ApiKey).where(ApiKey.user_id == user_id, not ApiKey.revoked)
     )
     key_record = result.scalar_one_or_none()
     if not key_record:
-        logger.warning("no provisioned key for user %s, falling back to master key", user_id)
+        logger.warning(
+            "no provisioned key for user %s, falling back to master key", user_id
+        )
         return settings.openrouter__master__key, "openrouter"
 
     provider = _model_to_provider(preferred_model or "openrouter")
@@ -81,7 +80,9 @@ class KeyResolver:
     def __init__(self, encrypter: Fernet | None = None):
         self.encrypter = encrypter or _default_encrypter
 
-    async def resolve(self, user_id: str, preferred_model: str | None = None) -> tuple[str, str]:
+    async def resolve(
+        self, user_id: str, preferred_model: str | None = None
+    ) -> tuple[str, str]:
         from app.infrastructure.db.database import async_session_factory
 
         async with async_session_factory() as session:

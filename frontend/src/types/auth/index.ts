@@ -44,6 +44,7 @@ export interface OTPVerifyRequest {
 export interface RegisterCredentials {
   email: string;
   password: string;
+  password_confirm: string;
   name: string;
   organizationName?: string;
 }

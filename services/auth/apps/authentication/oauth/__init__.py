@@ -1,7 +1,3 @@
-OAUTH_PROVIDERS = [
-    ("github", "GitHub"),
-    ("google", "Google"),
-    ("apple", "Apple"),
-]
+OAUTH_PROVIDERS = [("github", "GitHub"), ("google", "Google"), ("apple", "Apple")]
 
 __all__ = ["OAUTH_PROVIDERS"]

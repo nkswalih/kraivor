@@ -56,9 +56,9 @@ class ChatRoomListSerializer(serializers.ModelSerializer):
             return 0
         user_id: str = str(getattr(request, "user_id", ""))
         # If no participant record exists (e.g. workspace rooms), all messages are unread
-        participant: ChatRoomParticipant | None = (
-            ChatRoomParticipant.objects.filter(room=obj, user_id=user_id).first()
-        )
+        participant: ChatRoomParticipant | None = ChatRoomParticipant.objects.filter(
+            room=obj, user_id=user_id
+        ).first()
         if not participant:
             return obj.message_count
         count: int = obj.message_count - participant.last_read_message_count

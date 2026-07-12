@@ -38,14 +38,10 @@ async def health_check() -> HealthResponse:
         async for _ in get_db_session():
             pass
         deps["database"] = DependencyHealth(
-            status="healthy",
-            latency_ms=round((time.monotonic() - start) * 1000, 2),
+            status="healthy", latency_ms=round((time.monotonic() - start) * 1000, 2)
         )
     except Exception as e:
-        deps["database"] = DependencyHealth(
-            status="unhealthy",
-            error=str(e),
-        )
+        deps["database"] = DependencyHealth(status="unhealthy", error=str(e))
 
     start = time.monotonic()
     try:
@@ -54,14 +50,10 @@ async def health_check() -> HealthResponse:
             resp = await client.get(str(settings.jwt.jwks_url))
             resp.raise_for_status()
         deps["identity"] = DependencyHealth(
-            status="healthy",
-            latency_ms=round((time.monotonic() - start) * 1000, 2),
+            status="healthy", latency_ms=round((time.monotonic() - start) * 1000, 2)
         )
     except Exception as e:
-        deps["identity"] = DependencyHealth(
-            status="degraded",
-            error=str(e),
-        )
+        deps["identity"] = DependencyHealth(status="degraded", error=str(e))
 
     start = time.monotonic()
     try:
@@ -70,14 +62,10 @@ async def health_check() -> HealthResponse:
         await cache.client.ping() if cache.client else None
         await cache.close()
         deps["redis"] = DependencyHealth(
-            status="healthy",
-            latency_ms=round((time.monotonic() - start) * 1000, 2),
+            status="healthy", latency_ms=round((time.monotonic() - start) * 1000, 2)
         )
     except Exception as e:
-        deps["redis"] = DependencyHealth(
-            status="degraded",
-            error=str(e),
-        )
+        deps["redis"] = DependencyHealth(status="degraded", error=str(e))
 
     start = time.monotonic()
     try:
@@ -86,24 +74,17 @@ async def health_check() -> HealthResponse:
         storage = S3Storage()
         await storage.exists("health-check")
         deps["s3"] = DependencyHealth(
-            status="healthy",
-            latency_ms=round((time.monotonic() - start) * 1000, 2),
+            status="healthy", latency_ms=round((time.monotonic() - start) * 1000, 2)
         )
     except Exception as e:
-        deps["s3"] = DependencyHealth(
-            status="degraded",
-            error=str(e),
-        )
+        deps["s3"] = DependencyHealth(status="degraded", error=str(e))
 
     overall = "ok"
     for _name, dep in deps.items():
         if dep.status == "unhealthy":
             overall = "degraded"
 
-    return HealthResponse(
-        status=overall,
-        dependencies=deps,
-    )
+    return HealthResponse(status=overall, dependencies=deps)
 
 
 @router.get("/health/ready")

@@ -2,9 +2,7 @@ from fastapi import FastAPI
 from prometheus_client import Counter, Gauge, Histogram, make_asgi_app
 
 http_requests = Counter(
-    "ai_http_requests_total",
-    "Total HTTP requests",
-    ["method", "endpoint", "status"],
+    "ai_http_requests_total", "Total HTTP requests", ["method", "endpoint", "status"]
 )
 
 http_duration = Histogram(
@@ -15,9 +13,7 @@ http_duration = Histogram(
 )
 
 llm_calls = Counter(
-    "ai_llm_calls_total",
-    "LLM API calls",
-    ["provider", "model", "status"],
+    "ai_llm_calls_total", "LLM API calls", ["provider", "model", "status"]
 )
 
 llm_duration = Histogram(
@@ -28,21 +24,13 @@ llm_duration = Histogram(
 )
 
 llm_cost = Counter(
-    "ai_llm_cost_total_usd",
-    "Total LLM cost in USD",
-    ["model", "user_id"],
+    "ai_llm_cost_total_usd", "Total LLM cost in USD", ["model", "user_id"]
 )
 
-llm_tokens = Counter(
-    "ai_llm_tokens_total",
-    "Tokens processed",
-    ["model", "type"],
-)
+llm_tokens = Counter("ai_llm_tokens_total", "Tokens processed", ["model", "type"])
 
 agent_calls = Counter(
-    "ai_agent_calls_total",
-    "Agent invocations",
-    ["agent_name", "status"],
+    "ai_agent_calls_total", "Agent invocations", ["agent_name", "status"]
 )
 
 agent_duration = Histogram(
@@ -52,17 +40,9 @@ agent_duration = Histogram(
     buckets=[0.5, 1, 2, 5, 10, 30, 60],
 )
 
-cache_hits = Counter(
-    "ai_cache_hits_total",
-    "Cache hits",
-    ["cache_type"],
-)
+cache_hits = Counter("ai_cache_hits_total", "Cache hits", ["cache_type"])
 
-cache_misses = Counter(
-    "ai_cache_misses_total",
-    "Cache misses",
-    ["cache_type"],
-)
+cache_misses = Counter("ai_cache_misses_total", "Cache misses", ["cache_type"])
 
 active_streams = Gauge("ai_active_streams", "Active SSE streams")
 active_keys = Gauge("ai_active_api_keys", "Active API keys")

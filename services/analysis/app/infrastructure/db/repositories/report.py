@@ -23,13 +23,14 @@ class ReportRepository(AbstractReportRepository):
                 total_files=report.total_files_analyzed,
                 duration_seconds=report.duration_seconds,
                 languages_detected=report.languages_detected,
+                language_breakdown=report.language_breakdown,
                 overall_score=report.scores.overall if report.scores else None,
                 performance_score=report.scores.performance if report.scores else None,
                 security_score=report.scores.security if report.scores else None,
                 reliability_score=report.scores.reliability if report.scores else None,
-                maintainability_score=report.scores.maintainability
-                if report.scores
-                else None,
+                maintainability_score=(
+                    report.scores.maintainability if report.scores else None
+                ),
                 devops_score=report.scores.devops if report.scores else None,
                 critical_count=report.scores.critical_count if report.scores else 0,
                 high_count=report.scores.high_count if report.scores else 0,
@@ -104,12 +105,16 @@ class ReportRepository(AbstractReportRepository):
         languages: list[str] = []
         if job.languages_detected:
             languages = list(job.languages_detected)
+        language_breakdown: list[dict] = []
+        if job.language_breakdown:
+            language_breakdown = list(job.language_breakdown)
         return Report(
             job_id=job.id,
             repo_id=job.repo_id,
             workspace_id=job.workspace_id,
             branch=job.branch,
             languages_detected=languages,
+            language_breakdown=language_breakdown,
             duration_seconds=job.duration_seconds,
             completed_at=job.completed_at,  # type: ignore[arg-type]
             scores=score,

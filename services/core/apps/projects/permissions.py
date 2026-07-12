@@ -11,7 +11,6 @@ These permission classes remain available for other call sites that need explici
 """
 
 import logging
-
 from rest_framework.permissions import BasePermission
 
 from apps.workspaces.models import WorkspaceMember
@@ -30,8 +29,7 @@ class IsWorkspaceMember(BasePermission):
             return False
 
         return WorkspaceMember.objects.filter(
-            workspace_id=workspace_id,
-            user_id=user_id,
+            workspace_id=workspace_id, user_id=user_id
         ).exists()
 
 
@@ -45,7 +43,5 @@ class IsProjectOwnerOrWorkspaceAdmin(BasePermission):
             return True
 
         return WorkspaceMember.objects.filter(
-            workspace_id=obj.workspace_id,
-            user_id=user_id,
-            role__in=["owner", "admin"],
+            workspace_id=obj.workspace_id, user_id=user_id, role__in=["owner", "admin"]
         ).exists()

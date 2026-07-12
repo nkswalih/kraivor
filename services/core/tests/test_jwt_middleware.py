@@ -7,12 +7,11 @@ Covers:
   - Internal requests bypass JWT verification
 """
 
-from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, patch
-
 import jwt
 import pytest
+from datetime import UTC, datetime, timedelta
 from django.test import RequestFactory
+from unittest.mock import MagicMock, patch
 
 
 def generate_test_jwt(

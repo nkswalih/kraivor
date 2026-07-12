@@ -13,12 +13,12 @@ Usage:
     repos = client.list_installation_repos(installation_id=12345)
 """
 
-import logging
-import time
 from typing import Any
 
 import jwt as pyjwt
+import logging
 import requests
+import time
 from django.conf import settings
 
 logger = logging.getLogger(__name__)

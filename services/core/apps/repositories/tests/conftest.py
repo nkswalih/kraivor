@@ -19,11 +19,10 @@ Request factory helper:
                           set on the raw WSGIRequest are accessible on the wrapper.
 """
 
-import uuid
-from unittest.mock import patch
-
 import pytest
+import uuid
 from rest_framework.test import APIRequestFactory
+from unittest.mock import patch
 
 from apps.repositories.models import Repository
 from apps.workspaces.constants import WorkspacePlan, WorkspaceRole

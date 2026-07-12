@@ -7,8 +7,12 @@ import { CreateWorkspaceDialog } from '@/components/features/create-workspace-di
 
 export function WorkspaceGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated, isLoading, workspaceId, workspaceSlug, workspaces, initWorkspace } =
-    useAuthStore();
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
+  const isLoading = useAuthStore(s => s.isLoading);
+  const workspaceId = useAuthStore(s => s.workspaceId);
+  const workspaceSlug = useAuthStore(s => s.workspaceSlug);
+  const workspaces = useAuthStore(s => s.workspaces);
+  const initWorkspace = useAuthStore(s => s.initWorkspace);
   const [showCreate, setShowCreate] = useState(false);
   const [checked, setChecked] = useState(false);
 

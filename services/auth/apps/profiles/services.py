@@ -1,5 +1,4 @@
 import logging
-
 from django.db.models import Q
 from profiles.models import Profile, UserFollow
 
@@ -39,7 +38,10 @@ class ProfileService:
 
     @staticmethod
     def get_followers(
-        profile: Profile, page: int = 1, page_size: int = 20, request_user_id: str | None = None
+        profile: Profile,
+        page: int = 1,
+        page_size: int = 20,
+        request_user_id: str | None = None,
     ):
         qs = (
             UserFollow.objects.filter(following=profile.user)
@@ -53,7 +55,10 @@ class ProfileService:
 
     @staticmethod
     def get_following(
-        profile: Profile, page: int = 1, page_size: int = 20, request_user_id: str | None = None
+        profile: Profile,
+        page: int = 1,
+        page_size: int = 20,
+        request_user_id: str | None = None,
     ):
         qs = (
             UserFollow.objects.filter(follower=profile.user)

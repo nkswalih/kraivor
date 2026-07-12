@@ -1,5 +1,4 @@
 import logging
-
 from rest_framework import serializers
 
 from ..constants import TaskLinkType, TaskPriority, TaskStatus, TaskType
@@ -114,8 +113,7 @@ class TaskCreateSerializer(serializers.Serializer):
 
         workspace_id = self.context.get("workspace_id")
         if not WorkspaceMember.objects.filter(
-            workspace_id=workspace_id,
-            user_id=value,
+            workspace_id=workspace_id, user_id=value
         ).exists():
             raise serializers.ValidationError(
                 "Assignee must be an active workspace member."

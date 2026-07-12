@@ -18,9 +18,7 @@ depends_on: str | None = None
 
 def upgrade() -> None:
     op.add_column(
-        "analysis_jobs",
-        sa.Column("blocked_by", JSON, nullable=True),
-        schema="analysis",
+        "analysis_jobs", sa.Column("blocked_by", JSON, nullable=True), schema="analysis"
     )
     op.add_column(
         "analysis_jobs",

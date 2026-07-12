@@ -6,8 +6,4 @@ def get_detector() -> FrameworkDetector:
     return FrameworkDetector()
 
 
-__all__ = [
-    "DetectedTechnology",
-    "DetectionResult",
-    "get_detector",
-]
+__all__ = ["DetectedTechnology", "DetectionResult", "get_detector"]

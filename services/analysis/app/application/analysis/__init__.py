@@ -1,12 +1,10 @@
-from app.application.analysis.commands import (
-    ProcessStageCommand,
-    StartAnalysisCommand,
-)
+from app.application.analysis.commands import ProcessStageCommand, StartAnalysisCommand
 from app.application.analysis.handler import (
     get_findings_summary,
     get_job_status,
     get_report,
     handle_analysis_failure,
+    handle_re_enrich,
     handle_save_findings,
     handle_stage_clone,
     handle_stage_finalize,
@@ -37,6 +35,7 @@ __all__ = [
     "get_job_status",
     "get_report",
     "handle_analysis_failure",
+    "handle_re_enrich",
     "handle_save_findings",
     "handle_stage_clone",
     "handle_stage_finalize",

@@ -1,6 +1,5 @@
-from unittest.mock import AsyncMock
-
 import pytest
+from unittest.mock import AsyncMock
 
 from app.infrastructure.rag.chunker import SemanticChunker
 from app.infrastructure.rag.embedder import Embedder
@@ -27,8 +26,10 @@ class TestChunker:
         assert all("file_path" in c for c in chunks)
 
     async def test_chunk_fallback_no_ast(self, monkeypatch):
-        monkeypatch.setattr("app.infrastructure.rag.chunker.SemanticChunker._chunk_with_ast",
-                            AsyncMock(side_effect=ImportError))
+        monkeypatch.setattr(
+            "app.infrastructure.rag.chunker.SemanticChunker._chunk_with_ast",
+            AsyncMock(side_effect=ImportError),
+        )
         chunker = SemanticChunker(chunk_size=100, overlap=10)
         chunks = await chunker.chunk_file("test.txt", "a " * 500, "text")
         assert len(chunks) >= 1

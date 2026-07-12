@@ -35,10 +35,7 @@ class FCMTokenCreateView(APIView):
 class FCMTokenDeleteView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(
-        summary="Remove FCM token",
-        responses={204: None},
-    )
+    @extend_schema(summary="Remove FCM token", responses={204: None})
     def delete(self, request: Request, pk: str | None = None) -> Response:
         deleted = NotificationSelector.delete_fcm_token(request.user_id, pk)
         if not deleted:

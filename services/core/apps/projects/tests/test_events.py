@@ -8,9 +8,8 @@ Covers:
   - ``task.overdue`` bypasses ``transaction.on_commit`` (Celery context).
 """
 
-from unittest.mock import patch
-
 import pytest
+from unittest.mock import patch
 
 from ..events import ProjectEventPublisher, TaskEventPublisher, _build_envelope
 

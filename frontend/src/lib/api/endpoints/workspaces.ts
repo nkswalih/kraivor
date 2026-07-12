@@ -48,4 +48,7 @@ export const workspaceEndpoints = {
 
   acceptInvitation: (token: string) =>
     coreApi.post<InvitationAcceptResponse>(`/invitations/${token}/accept/`),
+
+  myPendingInvitations: () =>
+    coreApi.get<WorkspaceInvitation[]>('/invitations/pending/'),
 };

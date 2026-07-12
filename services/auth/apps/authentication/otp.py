@@ -11,9 +11,8 @@ Handles:
 from __future__ import annotations
 
 import logging
-import secrets
-
 import redis
+import secrets
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -73,7 +72,9 @@ class OTPService:
     def generate_otp(self, email: str) -> str:
         """Generate a 6-digit OTP."""
         # Generate cryptographically secure random number
-        otp = "".join(secrets.choice("0123456789") for _ in range(settings.OTP_CODE_LENGTH))
+        otp = "".join(
+            secrets.choice("0123456789") for _ in range(settings.OTP_CODE_LENGTH)
+        )
         return otp
 
     def store_otp(self, email: str, otp: str) -> None:
@@ -149,7 +150,9 @@ class OTPService:
                 if attempts >= settings.OTP_MAX_ATTEMPTS:
                     self.client.delete(otp_key)
                     self.client.delete(attempts_key)
-                    raise OTPInvalidError("Too many failed attempts. Please request a new OTP.")
+                    raise OTPInvalidError(
+                        "Too many failed attempts. Please request a new OTP."
+                    )
 
                 raise OTPInvalidError("Invalid OTP code.")
 
@@ -161,10 +164,14 @@ class OTPService:
 
             return True
         except redis.exceptions.ConnectionError as e:
-            logger.warning(f"Redis unavailable in verify_otp: {e}. Allowing OTP verification.")
+            logger.warning(
+                f"Redis unavailable in verify_otp: {e}. Allowing OTP verification."
+            )
             return True  # Allow verification if Redis is down
         except redis.exceptions.TimeoutError as e:
-            logger.warning(f"Redis timeout in verify_otp: {e}. Allowing OTP verification.")
+            logger.warning(
+                f"Redis timeout in verify_otp: {e}. Allowing OTP verification."
+            )
             return True  # Allow verification if Redis is down
 
     def check_resend_rate_limit(self, email: str) -> None:
@@ -176,9 +183,13 @@ class OTPService:
             if ttl > 0:
                 raise OTPRateLimitError(retry_after=ttl)
         except redis.exceptions.ConnectionError as e:
-            logger.warning(f"Redis unavailable in check_resend_rate_limit: {e}. Allowing resend.")
+            logger.warning(
+                f"Redis unavailable in check_resend_rate_limit: {e}. Allowing resend."
+            )
         except redis.exceptions.TimeoutError as e:
-            logger.warning(f"Redis timeout in check_resend_rate_limit: {e}. Allowing resend.")
+            logger.warning(
+                f"Redis timeout in check_resend_rate_limit: {e}. Allowing resend."
+            )
 
     def record_resend(self, email: str) -> None:
         """Record that OTP was requested for resend rate limiting."""
@@ -190,7 +201,9 @@ class OTPService:
             pipe.setex(resend_key, wait_seconds, 1)
             pipe.execute()
         except redis.exceptions.ConnectionError as e:
-            logger.warning(f"Redis unavailable in record_resend: {e}. Cannot track resend.")
+            logger.warning(
+                f"Redis unavailable in record_resend: {e}. Cannot track resend."
+            )
         except redis.exceptions.TimeoutError as e:
             logger.warning(f"Redis timeout in record_resend: {e}. Cannot track resend.")
 
@@ -220,11 +233,7 @@ This code expires in {settings.OTP_EXPIRE_MINUTES} minutes.
 If you didn't request this code, please ignore this email.
 """
         try:
-            email_service.send_email(
-                to_email=email,
-                subject=subject,
-                message=message,
-            )
+            email_service.send_email(to_email=email, subject=subject, message=message)
         except Exception:
             logger.exception(f"Failed to send OTP email to {email}")
 

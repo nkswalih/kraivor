@@ -7,5 +7,5 @@ export default function AIWorkspacePage() {
   const params = useParams<{ workspace: string }>();
   const workspaceSlug = params?.workspace ?? '';
 
-  return <AiChatView workspaceSlug={workspaceSlug} />;
+  return <AiChatView key="welcome" workspaceSlug={workspaceSlug} />;
 }

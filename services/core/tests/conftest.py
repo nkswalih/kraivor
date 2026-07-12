@@ -16,6 +16,7 @@ This conftest.py handles the two environment-specific concerns:
 """
 
 import pytest
+from unittest.mock import MagicMock, patch
 from django.urls import NoReverseMatch, reverse
 
 
@@ -78,3 +79,20 @@ def celery_task_always_eager(settings):
     )
     settings.CELERY_BROKER_URL = "memory://"  # in-memory broker, no network
     settings.CELERY_RESULT_BACKEND = "cache+memory://"
+
+
+@pytest.fixture(autouse=True)
+def mock_chat_provisioner():
+    """
+    Mock the chat provisioning service so tests never hit DynamoDB.
+
+    Workspace.post_save and WorkspaceMember.post_delete signals call
+    get_provisioner() which tries to write to DynamoDB.  In CI there are
+    no AWS credentials, so every Workspace.objects.create() would fail.
+    """
+    mock_provisioner = MagicMock()
+    with patch(
+        "apps.chat.services.provisioning.get_provisioner",
+        return_value=mock_provisioner,
+    ):
+        yield mock_provisioner

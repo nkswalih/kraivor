@@ -31,7 +31,8 @@ Rules:
 - If the user is just greeting or chatting, set "needs_context": false and "needs_rag": false
 - "needs_context": true only when the answer depends on the user's specific code/repository
 - "needs_rag": true only when you need to search the repository for relevant code
-- "needs_tools": true ONLY for workspace_query — this tells the system to fetch live data from the user's workspace via tools
+- "needs_tools": true for workspace_query AND for web_search queries — this tells the system to fetch live data via tools
+- Use needs_tools=true when the user asks about current events, today's date, latest news, recent information, or anything requiring real-time data
 - For greetings and simple questions, the response can be generated directly
 - For repository analysis, architecture, security, performance — set needs_rag to true
 - Keep complexity: simple | moderate | complex

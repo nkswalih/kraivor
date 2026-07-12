@@ -44,6 +44,10 @@ Available tools and when to use them:
 - get_user_notifications: User asks about notifications, alerts, updates
 - get_workspace_discussions: User asks about community discussions or posts
 - get_discussion_comments: User wants to see comments on a specific discussion
+- get_current_date: User asks about today's date, current time, or any time-related question
+- web_search: User asks about current events, latest news, recent information, or anything not in your training data. Always prefer web_search for real-time information
+- web_fetch: User wants to read the content of a specific webpage URL
+- remember_user_fact: User tells you something about themselves, their preferences, corrects you, or shares project context. Always call this when the user shares personal info or preferences
 
 Respond with comprehensive, structured markdown. The user should never need to ask
 "show me more details" — give them everything up front."""

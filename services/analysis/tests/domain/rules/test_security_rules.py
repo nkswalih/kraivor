@@ -247,7 +247,7 @@ class TestSecurityMissingAuthzRule:
                 "has_auth": True,
                 "line_start": 1,
                 "snippet": "@app.post('/api/admin')",
-            },
+            }
         ]
         result = await rule.analyze("routes.py", "", {"routes": routes})
         assert len(result) >= 1
@@ -262,7 +262,7 @@ class TestSecurityMissingAuthzRule:
                 "has_auth": True,
                 "line_start": 1,
                 "snippet": "@app.post('/api/admin')\n@roles_required('admin')",
-            },
+            }
         ]
         result = await rule.analyze("routes.py", "", {"routes": routes})
         assert len(result) == 0
@@ -287,7 +287,7 @@ class TestSecurityCSRFRule:
     async def test_skips_get_only_routes(self) -> None:
         rule = SecurityCSRFRule()
         routes = [
-            {"path": "/api/data", "method": "GET", "line_start": 1, "snippet": ""},
+            {"path": "/api/data", "method": "GET", "line_start": 1, "snippet": ""}
         ]
         result = await rule.analyze("routes.py", "", {"routes": routes})
         assert len(result) == 0
@@ -363,9 +363,9 @@ class TestSecurityEdgeCases:
         ]
         for rule in rules:
             result = await rule.analyze("test.py", "", {})
-            assert len(result) == 0, (
-                f"{rule.rule_id} returned violations on empty content"
-            )
+            assert (
+                len(result) == 0
+            ), f"{rule.rule_id} returned violations on empty content"
 
     async def test_missing_routes_ast_key(self) -> None:
         no_auth = SecurityNoAuthRule()
@@ -390,9 +390,9 @@ class TestSecurityEdgeCases:
         content = 'API_KEY = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8g9h0"'
         result = await rule.analyze("test_fixture.py", content, {})
         for v in result:
-            assert v.severity == "info", (
-                f"Expected INFO severity on fixture files, got {v.severity}"
-            )
+            assert (
+                v.severity == "info"
+            ), f"Expected INFO severity on fixture files, got {v.severity}"
 
     async def test_malformed_content_no_crash(self) -> None:
         rule = SecuritySQLInjectionRule()

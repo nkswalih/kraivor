@@ -1,8 +1,6 @@
 import asyncio
 import os
-import tempfile
 import zipfile
-from pathlib import Path
 from typing import cast
 from uuid import UUID, uuid4
 
@@ -55,11 +53,7 @@ async def upload_file(
         )
 
     job_id = uuid4()
-    extract_dir = os.path.join(
-        settings.analysis.ephemeral_path,
-        "uploads",
-        str(job_id),
-    )
+    extract_dir = os.path.join(settings.analysis.ephemeral_path, "uploads", str(job_id))
     os.makedirs(extract_dir, exist_ok=True)
 
     zip_path = os.path.join(extract_dir, file.filename)
@@ -72,13 +66,13 @@ async def upload_file(
     try:
         with zipfile.ZipFile(zip_path, "r") as zf:
             zf.extractall(extracted_root)
-    except zipfile.BadZipFile:
-        raise HTTPException(status_code=400, detail="Invalid or corrupted zip file")
+    except zipfile.BadZipFile as err:
+        raise HTTPException(
+            status_code=400, detail="Invalid or corrupted zip file"
+        ) from err
 
     fetcher = RepositoryFetcher()
     source_files = await fetcher.get_source_files(extracted_root)
-    languages = await fetcher.detect_languages(extracted_root)
-    loc = await fetcher.count_loc(extracted_root)
 
     if not source_files:
         raise HTTPException(
@@ -94,11 +88,7 @@ async def upload_file(
         content = cast(str, sf.get("content", ""))
         s3_key = f"uploads/{workspace_id}/{job_id}/{rel_path}"
 
-        await storage.upload(
-            s3_key,
-            content.encode("utf-8"),
-            content_type="text/plain",
-        )
+        await storage.upload(s3_key, content.encode("utf-8"), content_type="text/plain")
 
         file_analysis_records.append(
             {

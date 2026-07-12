@@ -42,15 +42,11 @@ class EventProducer:
                 channel = f"events:{event.event_type}"
                 await self._redis.publish(channel, json.dumps(event_data))
                 logger.info(
-                    "event_published",
-                    event_type=event.event_type,
-                    channel=channel,
+                    "event_published", event_type=event.event_type, channel=channel
                 )
             except Exception as e:
                 logger.error(
-                    "event_publish_failed",
-                    event_type=event.event_type,
-                    error=str(e),
+                    "event_publish_failed", event_type=event.event_type, error=str(e)
                 )
 
         # Publish to Kafka (if configured)
@@ -65,15 +61,11 @@ class EventProducer:
                     key=str(getattr(event, "job_id", event.event_id)),
                 )
                 logger.info(
-                    "event_published_kafka",
-                    event_type=event.event_type,
-                    topic=topic,
+                    "event_published_kafka", event_type=event.event_type, topic=topic
                 )
             except Exception as e:
                 logger.error(
-                    "kafka_publish_failed",
-                    event_type=event.event_type,
-                    error=str(e),
+                    "kafka_publish_failed", event_type=event.event_type, error=str(e)
                 )
 
     async def close(self) -> None:

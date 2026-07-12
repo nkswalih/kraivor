@@ -64,11 +64,7 @@ class MaintainabilityDetector:
             1
             for f in findings
             if f.maintainability_type
-            in (
-                "high_cyclomatic_complexity",
-                "deep_nesting",
-                "deep_inheritance",
-            )
+            in ("high_cyclomatic_complexity", "deep_nesting", "deep_inheritance")
         )
         long_methods_count = sum(
             1 for f in findings if f.maintainability_type == "long_method"

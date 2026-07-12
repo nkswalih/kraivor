@@ -50,9 +50,5 @@ class ParserError(DomainError):
         file_path: str = "",
         details: dict[str, object] | None = None,
     ) -> None:
-        detail = {
-            "language": language,
-            "file_path": file_path,
-            **(details or {}),
-        }
+        detail = {"language": language, "file_path": file_path, **(details or {})}
         super().__init__(message=message, code="parser_error", details=detail)

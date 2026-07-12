@@ -103,11 +103,7 @@ class TestDeadCodeDetector:
             classes=[
                 __import__(
                     "app.domain.contracts.parser", fromlist=["ParsedClass"]
-                ).ParsedClass(
-                    name="OldModel",
-                    line_start=1,
-                    line_end=2,
-                )
+                ).ParsedClass(name="OldModel", line_start=1, line_end=2)
             ],
         )
         detector = DeadCodeDetector([pf])

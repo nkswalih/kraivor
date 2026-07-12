@@ -19,34 +19,22 @@ class PhpParser(AbstractParser):
         re.MULTILINE,
     )
     _INTERFACE_DECL = re.compile(
-        r"interface\s+(\w+)(?:\s+extends\s+([^{]+?))?(?=\s*\{)",
+        r"interface\s+(\w+)(?:\s+extends\s+([^{]+?))?(?=\s*\{)"
     )
-    _TRAIT_DECL = re.compile(
-        r"trait\s+(\w+)(?=\s*\{)",
-    )
-    _ENUM_DECL = re.compile(
-        r"enum\s+(\w+)(?:\s*:\s*\w+)?(?=\s*\{)",
-    )
+    _TRAIT_DECL = re.compile(r"trait\s+(\w+)(?=\s*\{)")
+    _ENUM_DECL = re.compile(r"enum\s+(\w+)(?:\s*:\s*\w+)?(?=\s*\{)")
     _FUNCTION_DECL = re.compile(
-        r"(?:public|private|protected|static|abstract|final)?\s*(?:static\s+)?(?:public|private|protected)?\s*(?:static\s+)?function\s+(\w+)\s*\(",
+        r"(?:public|private|protected|static|abstract|final)?\s*(?:static\s+)?(?:public|private|protected)?\s*(?:static\s+)?function\s+(\w+)\s*\("
     )
     _LARAVEL_ROUTE = re.compile(
-        r"Route::(?:get|post|put|patch|delete|options|any|match|resource|group|redirect|permanentRedirect|view)\([\"']([^\"']+)[\"']",
+        r"Route::(?:get|post|put|patch|delete|options|any|match|resource|group|redirect|permanentRedirect|view)\([\"']([^\"']+)[\"']"
     )
-    _SYMFONY_ROUTE = re.compile(
-        r"#\[Route\([\"']([^\"']+)[\"']",
-    )
-    _USE_IMPORT = re.compile(
-        r"use\s+([\w\\\\]+)(?:\s+as\s+(\w+))?\s*;",
-    )
-    _NAMESPACE = re.compile(
-        r"namespace\s+([\w\\\\]+)\s*;",
-    )
-    _ATTRIBUTE = re.compile(
-        r"#\[(\w+(?:\([^)]*\))?)\]",
-    )
+    _SYMFONY_ROUTE = re.compile(r"#\[Route\([\"']([^\"']+)[\"']")
+    _USE_IMPORT = re.compile(r"use\s+([\w\\\\]+)(?:\s+as\s+(\w+))?\s*;")
+    _NAMESPACE = re.compile(r"namespace\s+([\w\\\\]+)\s*;")
+    _ATTRIBUTE = re.compile(r"#\[(\w+(?:\([^)]*\))?)\]")
     _COMPLEXITY_KW = re.compile(
-        r"\b(?:if|elseif|for|foreach|while|switch|case|catch)\b",
+        r"\b(?:if|elseif|for|foreach|while|switch|case|catch)\b"
     )
 
     async def parse(self, file_path: str, content: str) -> ParsedFile:

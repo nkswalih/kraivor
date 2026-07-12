@@ -323,11 +323,7 @@ class DevopsAnalyzer:
     def _analyze_terraform(self, fp: str, content: str) -> list[DevOpsFinding]:
         findings: list[DevOpsFinding] = []
         is_tf = any(
-            [
-                fp.endswith(".tf"),
-                fp.endswith(".tfvars"),
-                fp.endswith(".tfstate"),
-            ]
+            [fp.endswith(".tf"), fp.endswith(".tfvars"), fp.endswith(".tfstate")]
         )
         if not is_tf:
             return findings
@@ -824,12 +820,7 @@ class DevopsAnalyzer:
 
     def _analyze_env(self, fp: str, content: str) -> list[DevOpsFinding]:
         findings: list[DevOpsFinding] = []
-        is_env_file = any(
-            [
-                ".env" in fp,
-                fp.endswith(".env"),
-            ]
-        )
+        is_env_file = any([".env" in fp, fp.endswith(".env")])
         if not is_env_file:
             return findings
         if "example" in fp or "template" in fp or "dist" in fp or ".env.sample" in fp:

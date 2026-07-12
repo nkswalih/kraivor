@@ -17,9 +17,9 @@ class FindingRepository(AbstractFindingRepository):
 
     async def save_many(self, findings: list[Finding]) -> int:
         models = [self._to_model(f) for f in findings]
-        BATCH_SIZE = 200
-        for i in range(0, len(models), BATCH_SIZE):
-            batch = models[i : i + BATCH_SIZE]
+        batch_size = 200
+        for i in range(0, len(models), batch_size):
+            batch = models[i : i + batch_size]
             rows = [
                 {c.name: getattr(m, c.name) for c in FindingModel.__table__.columns}
                 for m in batch
@@ -59,10 +59,7 @@ class FindingRepository(AbstractFindingRepository):
         total = count_result.scalar() or 0
 
         stmt = (
-            stmt.order_by(
-                FindingModel.severity.asc(),
-                FindingModel.line_start.asc(),
-            )
+            stmt.order_by(FindingModel.severity.asc(), FindingModel.line_start.asc())
             .offset(offset)
             .limit(limit)
         )
@@ -134,10 +131,7 @@ class FindingRepository(AbstractFindingRepository):
         return dict(result.all())  # type: ignore[arg-type]
 
     async def update_ai_fields(
-        self,
-        finding_id: UUID,
-        is_ai_enriched: bool,
-        ai_explanation: str,
+        self, finding_id: UUID, is_ai_enriched: bool, ai_explanation: str
     ) -> None:
         stmt = (
             update(FindingModel)
@@ -195,9 +189,9 @@ class FindingRepository(AbstractFindingRepository):
             rule_id=model.rule_id or "",
             category=Category(model.category),
             severity=Severity(model.severity),
-            status=FindingStatus(model.status)
-            if model.status
-            else FindingStatus.ACTIVE,
+            status=(
+                FindingStatus(model.status) if model.status else FindingStatus.ACTIVE
+            ),
             title=model.title,
             description=model.description or "",
             recommendation=model.recommendation or "",

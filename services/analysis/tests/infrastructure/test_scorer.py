@@ -70,12 +70,7 @@ class TestNoData:
 
     def test_violations_only_in_active_categories(self) -> None:
         """Categories with zero violations return None even if others have data."""
-        score = scorer.calculate(
-            [
-                v("security", "critical"),
-                v("security", "high"),
-            ]
-        )
+        score = scorer.calculate([v("security", "critical"), v("security", "high")])
         assert score.security == 75  # 100 - 15 - 10 (both single-count, factor 1.0)
         assert score.performance is None
         assert score.reliability is None
@@ -92,11 +87,7 @@ class TestLogNormalizedScoring:
     def test_single_violation_same_as_old_model(self) -> None:
         """A single violation of any severity produces a factor of 1.0
         when total_files=0 (n_files=1)."""
-        score = scorer.calculate(
-            [
-                v("security", "critical"),
-            ]
-        )
+        score = scorer.calculate([v("security", "critical")])
         assert score.security == 85  # 100 - 15 * 1.0
 
     def test_same_rule_severity_accumulates_logarithmically(self) -> None:
@@ -134,12 +125,7 @@ class TestLogNormalizedScoring:
     def test_linear_fallback_when_total_files_is_zero(self) -> None:
         """With total_files=0, n_files becomes 1 and factor=1.0 for
         any single-count rule, matching the old linear model."""
-        score = scorer.calculate(
-            [
-                v("security", "critical"),
-                v("security", "critical"),
-            ]
-        )
+        score = scorer.calculate([v("security", "critical"), v("security", "critical")])
         # single group: count=2, n=1 → log(3)/log(2)≈1.585, penalty=15*1.585≈23.77
         # security≈76
         assert score.security == 76
@@ -166,12 +152,7 @@ class TestLogNormalizedScoring:
 
     def test_large_project_single_violation_has_minimal_impact(self) -> None:
         """On a 10k-file project, a single violation's penalty is tiny."""
-        score = scorer.calculate(
-            [
-                v("security", "critical"),
-            ],
-            total_files=10000,
-        )
+        score = scorer.calculate([v("security", "critical")], total_files=10000)
         # count=1, factor=log(2)/log(10001)≈0.693/9.210≈0.075
         # penalty=15*0.075≈1.13 → security≈99
         assert score.security == 99
@@ -184,10 +165,7 @@ class TestLogNormalizedScoring:
 
 class TestCriticalFloor:
     def test_all_perfect_scores_mean(self) -> None:
-        violations = [
-            v("security", "info"),
-            v("performance", "info"),
-        ]
+        violations = [v("security", "info"), v("performance", "info")]
         score = scorer.calculate(violations)
         assert score.overall == 100
         assert score.performance == 100
@@ -269,9 +247,7 @@ class TestCapacityPenalties:
 
     def test_performance_degraded(self) -> None:
         cap = capacity_metrics(status="degraded", breaks_at=3000)
-        violations = [
-            v("performance", "medium"),
-        ]
+        violations = [v("performance", "medium")]
         score = scorer.calculate(violations, capacity=cap)
         # 100 - 5 (medium) - 20 (degraded) = 75
         assert score.performance == 75
@@ -325,7 +301,7 @@ class TestSeverityCounts:
                 category="security",
                 severity="unknown",
                 title="Bad severity",
-            ),
+            )
         ]
         score = scorer.calculate(violations)
         assert score.findings_count == 0
@@ -338,10 +314,7 @@ class TestSeverityCounts:
 
 class TestMixedCategories:
     def test_some_categories_have_data_others_none(self) -> None:
-        violations = [
-            v("security", "high"),
-            v("performance", "medium"),
-        ]
+        violations = [v("security", "high"), v("performance", "medium")]
         score = scorer.calculate(violations)
         assert score.security == 90
         assert score.performance == 95
@@ -373,20 +346,12 @@ class TestEdgeCases:
         assert score.security == 55
 
     def test_overall_capped_at_100(self) -> None:
-        score = scorer.calculate(
-            [
-                v("security", "info"),
-                v("performance", "info"),
-            ]
-        )
+        score = scorer.calculate([v("security", "info"), v("performance", "info")])
         assert score.overall is not None and score.overall <= 100
         assert score.overall == 100
 
     def test_violation_category_not_in_scorer_list_ignored(self) -> None:
-        violations = [
-            v("dead_code", "medium"),
-            v("error", "high"),
-        ]
+        violations = [v("dead_code", "medium"), v("error", "high")]
         score = scorer.calculate(violations)
         assert score.performance is None
         assert score.security is None

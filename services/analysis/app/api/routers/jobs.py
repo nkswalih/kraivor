@@ -25,7 +25,11 @@ from app.application.analysis.handler import (
     handle_start_analysis,
     list_jobs,
 )
-from app.application.analysis.queries import GetJobStatisticsQuery, GetJobStatusQuery, ListJobsQuery
+from app.application.analysis.queries import (
+    GetJobStatisticsQuery,
+    GetJobStatusQuery,
+    ListJobsQuery,
+)
 from app.application.tasks.pipeline import run_full_analysis
 from app.core.constants import TriggerType
 from app.core.logging import get_logger

@@ -15,7 +15,7 @@ class TestProductionSimulator:
                     p95_latency_ms=25,
                     p99_latency_ms=50,
                     max_concurrent_users=10000,
-                ),
+                )
             ],
             overall_rpm=2000,
             breaks_at_concurrent_users=10000,
@@ -38,7 +38,7 @@ class TestProductionSimulator:
                     p99_latency_ms=1000,
                     max_concurrent_users=500,
                     bottlenecks=["n_plus_one"],
-                ),
+                )
             ],
             overall_rpm=100,
             breaks_at_concurrent_users=500,
@@ -61,7 +61,7 @@ class TestProductionSimulator:
                     p99_latency_ms=5000,
                     max_concurrent_users=100,
                     bottlenecks=["n_plus_one", "sync_external_call"],
-                ),
+                )
             ],
             overall_rpm=50,
             breaks_at_concurrent_users=100,
@@ -90,7 +90,7 @@ class TestProductionSimulator:
                     p99_latency_ms=500,
                     max_concurrent_users=2000,
                     bottlenecks=["many_db_queries"],
-                ),
+                )
             ],
             overall_rpm=500,
             breaks_at_concurrent_users=2000,
@@ -113,7 +113,7 @@ class TestProductionSimulator:
                     p99_latency_ms=750,
                     max_concurrent_users=500,
                     bottlenecks=["sync_external_call", "n_plus_one"],
-                ),
+                )
             ],
             overall_rpm=300,
             breaks_at_concurrent_users=500,
@@ -139,8 +139,8 @@ class TestProductionSimulator:
                     p95_latency_ms=25,
                     p99_latency_ms=50,
                     max_concurrent_users=10000,
-                ),
-            ],
+                )
+            ]
         )
         simulator = ProductionSimulator()
         results = await simulator.simulate(metrics)

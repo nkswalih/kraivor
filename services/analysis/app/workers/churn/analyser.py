@@ -43,9 +43,7 @@ class ChurnAnalyser:
             logger.info("churn_skipped", reason="depth_too_shallow", depth=self._depth)
             return []
 
-        return await asyncio.get_event_loop().run_in_executor(
-            None, self._analyze_sync
-        )
+        return await asyncio.get_event_loop().run_in_executor(None, self._analyze_sync)
 
     def _analyze_sync(self) -> list[ChurnFinding]:
         try:
@@ -94,12 +92,7 @@ class ChurnAnalyser:
             "--name-only",
             "--diff-filter=AM",
         ]
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         result.check_returncode()
 
         files: list[str] = []
@@ -140,7 +133,7 @@ class ChurnAnalyser:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
         if result.returncode != 0:
             return 0
-        authors = {l.strip() for l in result.stdout.splitlines() if l.strip()}
+        authors = {line.strip() for line in result.stdout.splitlines() if line.strip()}
         return len(authors)
 
     @staticmethod
@@ -153,17 +146,12 @@ class ChurnAnalyser:
 
 
 def finding_from_churn(
-    churn: ChurnFinding,
-    job_id: object,
-    repo_id: object,
-    workspace_id: object,
+    churn: ChurnFinding, job_id: object, repo_id: object, workspace_id: object
 ) -> dict[str, object]:
     severity = (
         Severity.HIGH
         if churn.change_count >= 10
-        else Severity.MEDIUM
-        if churn.change_count >= 5
-        else Severity.LOW
+        else Severity.MEDIUM if churn.change_count >= 5 else Severity.LOW
     )
 
     multi_author_note = ""

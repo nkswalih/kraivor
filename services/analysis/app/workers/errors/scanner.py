@@ -100,8 +100,7 @@ class ErrorScanner:
     ) -> list[ErrorFinding]:
         findings: list[ErrorFinding] = []
         pattern = re.compile(
-            r"except\s+(\w+(?:\s*,\s*\w+)*)\s*:\s*\n\s*pass",
-            re.MULTILINE,
+            r"except\s+(\w+(?:\s*,\s*\w+)*)\s*:\s*\n\s*pass", re.MULTILINE
         )
         for match in pattern.finditer(content):
             line_num = content[: match.start()].count("\n") + 1

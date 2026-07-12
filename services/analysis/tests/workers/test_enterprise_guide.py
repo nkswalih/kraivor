@@ -83,9 +83,7 @@ class TestEnterpriseGuideGenerator:
         score = Score(overall=85)
         generator = EnterpriseGuideGenerator()
         guide = await generator.generate(
-            findings=[],
-            scores=score,
-            perf_metrics=perf_metrics,
+            findings=[], scores=score, perf_metrics=perf_metrics
         )
         assert guide.capacity_analysis is not None
         assert guide.capacity_analysis["estimated_rpm"] == 1500
@@ -127,15 +125,11 @@ class TestEnterpriseGuideGenerator:
                 line_start=1,
                 evidence="Import 'os' is never used",
                 confidence=0.95,
-            ),
+            )
         ]
         score = Score(overall=85)
         generator = EnterpriseGuideGenerator()
-        guide = await generator.generate(
-            findings=[],
-            scores=score,
-            dead_code=dead_code,
-        )
+        guide = await generator.generate(findings=[], scores=score, dead_code=dead_code)
         total_issues = len(guide.medium_issues)
         assert total_issues >= 1
 
@@ -148,15 +142,11 @@ class TestEnterpriseGuideGenerator:
                 description="Catches all exceptions",
                 file_path="app.py",
                 line_start=10,
-            ),
+            )
         ]
         score = Score(overall=85)
         generator = EnterpriseGuideGenerator()
-        guide = await generator.generate(
-            findings=[],
-            scores=score,
-            errors=errors,
-        )
+        guide = await generator.generate(findings=[], scores=score, errors=errors)
         high_count = len(guide.high_issues)
         assert high_count >= 1
 
@@ -168,13 +158,11 @@ class TestEnterpriseGuideGenerator:
                 status="degraded",
                 overall_rpm=800,
                 error_rate_pct=5.0,
-            ),
+            )
         ]
         generator = EnterpriseGuideGenerator()
         guide = await generator.generate(
-            findings=[],
-            scores=score,
-            simulation=sim_results,
+            findings=[], scores=score, simulation=sim_results
         )
         assert "5000" in guide.executive_summary
 

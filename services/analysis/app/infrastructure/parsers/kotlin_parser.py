@@ -19,37 +19,29 @@ class KotlinParser(AbstractParser):
         re.MULTILINE,
     )
     _INTERFACE_DECL = re.compile(
-        r"(?:fun\s+)?interface\s+(\w+)(?:<[^>]*>)?(?:\s*:\s*([^{]+?))?(?=\s*\{)",
+        r"(?:fun\s+)?interface\s+(\w+)(?:<[^>]*>)?(?:\s*:\s*([^{]+?))?(?=\s*\{)"
     )
     _FUNCTION_DECL = re.compile(
         r"(?:(?:public|private|protected|internal|open|override|abstract|suspend|inline|tailrec|external|infix|operator)\s+)?(?:fun\s+)(?:<[^>]+>\s+)?(\w+)\s*\(([^)]*)\)\s*(?::\s*[^{]+)?(?=\s*\{|=)",
         re.MULTILINE,
     )
     _PROPERTY_DECL = re.compile(
-        r"(?:public|private|protected|internal|open|override|lateinit|val|var)\s+(?:val|var)\s+(\w+)\s*(?::\s*\w+(?:<[^>]*>)?(?:\?)?)?\s*(?:=\s*[^,;\n]+|get\s*\(\)|set\s*\([^)]*\))?",
+        r"(?:public|private|protected|internal|open|override|lateinit|val|var)\s+(?:val|var)\s+(\w+)\s*(?::\s*\w+(?:<[^>]*>)?(?:\?)?)?\s*(?:=\s*[^,;\n]+|get\s*\(\)|set\s*\([^)]*\))?"
     )
-    _IMPORT = re.compile(
-        r"import\s+([\w.*]+)\s*",
-    )
-    _PACKAGE = re.compile(
-        r"package\s+([\w.]+)\s*",
-    )
-    _ANNOTATION = re.compile(
-        r"@(\w+(?:\([^)]*\))?)",
-    )
+    _IMPORT = re.compile(r"import\s+([\w.*]+)\s*")
+    _PACKAGE = re.compile(r"package\s+([\w.]+)\s*")
+    _ANNOTATION = re.compile(r"@(\w+(?:\([^)]*\))?)")
     _KTOR_ROUTE = re.compile(
-        r"(?:routing\s*\{[\s\S]*?)(get|post|put|delete|patch)\s*\{\s*",
+        r"(?:routing\s*\{[\s\S]*?)(get|post|put|delete|patch)\s*\{\s*"
     )
     _KTOR_ROUTE_SIMPLE = re.compile(
-        r"(?:get|post|put|delete|patch)\s*\(\s*[\"']([^\"']+)[\"']\s*\)",
+        r"(?:get|post|put|delete|patch)\s*\(\s*[\"']([^\"']+)[\"']\s*\)"
     )
     _SPRING_BOOT_ROUTE = re.compile(
         r"@(GetMapping|PostMapping|PutMapping|DeleteMapping|PatchMapping)"
-        r"(?:\(\s*(?:value\s*=\s*)?[\"']([^\"']+)[\"']\s*\))?",
+        r"(?:\(\s*(?:value\s*=\s*)?[\"']([^\"']+)[\"']\s*\))?"
     )
-    _COMPLEXITY_KW = re.compile(
-        r"\b(?:if|for|while|when|catch)\b",
-    )
+    _COMPLEXITY_KW = re.compile(r"\b(?:if|for|while|when|catch)\b")
 
     async def parse(self, file_path: str, content: str) -> ParsedFile:
         parsed = ParsedFile(

@@ -1,7 +1,4 @@
-from app.application.analysis.commands import (
-    ProcessStageCommand,
-    StartAnalysisCommand,
-)
+from app.application.analysis.commands import ProcessStageCommand, StartAnalysisCommand
 from app.application.analysis.handler import (
     get_findings_summary,
     get_job_status,

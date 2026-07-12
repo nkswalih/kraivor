@@ -384,11 +384,7 @@ class MernParser(AbstractParser):
             fields = self._parse_mongoose_fields(schema_body)
 
             schemas.append(
-                {
-                    "name": schema_name,
-                    "fields": fields,
-                    "line_start": line_start,
-                }
+                {"name": schema_name, "fields": fields, "line_start": line_start}
             )
 
         for match in self._MONGOOSE_MODEL.finditer(content):
@@ -396,11 +392,7 @@ class MernParser(AbstractParser):
             schema_ref = match.group(2)
             line_start = content[: match.start()].count("\n") + 1
             models.append(
-                {
-                    "name": model_name,
-                    "schema": schema_ref,
-                    "line_start": line_start,
-                }
+                {"name": model_name, "schema": schema_ref, "line_start": line_start}
             )
 
         if schemas:

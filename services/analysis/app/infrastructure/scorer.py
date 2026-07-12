@@ -40,10 +40,7 @@ class ProductionReadinessScorer(AbstractScorer):
     SIMULATION_DEGRADED_PENALTY = 20.0
     CRITICAL_FLOOR_THRESHOLD = 50.0
 
-    BLOCKING_STATUSES: set[str] = {
-        EngineStatus.FAILED,
-        EngineStatus.NOT_CONFIGURED,
-    }
+    BLOCKING_STATUSES: set[str] = {EngineStatus.FAILED, EngineStatus.NOT_CONFIGURED}
 
     def calculate(
         self,

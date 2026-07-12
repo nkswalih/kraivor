@@ -96,9 +96,11 @@ def get_current_user(request: Request) -> JWTPayload:
         return JWTPayload(
             sub=request.headers.get("X-User-ID", ""),
             email=request.headers.get("X-Email", ""),
-            workspace_ids=request.headers.get("X-Workspace-IDs", "").split(",")
-            if request.headers.get("X-Workspace-IDs")
-            else [],
+            workspace_ids=(
+                request.headers.get("X-Workspace-IDs", "").split(",")
+                if request.headers.get("X-Workspace-IDs")
+                else []
+            ),
             roles={},
         )
 

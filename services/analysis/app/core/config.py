@@ -2,11 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import (
-    BaseModel,
-    Field,
-    SecretStr,
-)
+from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -41,14 +37,7 @@ class S3Settings(BaseModel):
 
 class JWTSettings(BaseModel):
     jwks_url: str = "http://identity:8001/.well-known/jwks.json"
-    algorithm: Literal[
-        "RS256",
-        "RS384",
-        "RS512",
-        "ES256",
-        "ES384",
-        "ES512",
-    ] = "RS256"
+    algorithm: Literal["RS256", "RS384", "RS512", "ES256", "ES384", "ES512"] = "RS256"
     audience: str = "kraivor"
     issuer: str = "kraivor-identity"
     verify_expiration: bool = True

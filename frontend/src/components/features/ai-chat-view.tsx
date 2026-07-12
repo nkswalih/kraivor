@@ -318,7 +318,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
           <div
             ref={listRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto scroll-smooth"
+            className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth"
           >
             {/* Chat header — editable title + pin */}
             <div className="px-4 pt-4 pb-1">

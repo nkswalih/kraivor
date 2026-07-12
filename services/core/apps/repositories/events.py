@@ -16,10 +16,11 @@ Publishing contract:
 """
 
 import json
+from typing import TYPE_CHECKING
+
 import logging
 import uuid
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .models import Repository

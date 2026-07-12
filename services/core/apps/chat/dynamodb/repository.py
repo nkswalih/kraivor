@@ -65,10 +65,10 @@ class ChatV2Repository:
             if exc.response["Error"]["Code"] == "ConditionalCheckFailedException":
                 logger.debug("counter.exists", extra={"room_id": room_id})
                 return False
-            logger.error(
+            logger.warning(
                 "counter.init_failed", extra={"room_id": room_id, "error": str(exc)}
             )
-            raise
+            return False
 
     def allocate_seq(self, room_id: str) -> int:
         """Atomically increment and return the next seq number for the room."""

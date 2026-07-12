@@ -23,11 +23,11 @@ failed.
 """
 
 import json
+
 import logging
+import requests
 import signal
 import sys
-
-import requests
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
@@ -239,9 +239,7 @@ def _dispatch_fanout_event(event_type: str, data: dict) -> None:
     """
     workspace_id = data.get("workspace_id")
     if not workspace_id:
-        logger.warning(
-            "consumer.fanout.no_workspace", extra={"event_type": event_type}
-        )
+        logger.warning("consumer.fanout.no_workspace", extra={"event_type": event_type})
         return
 
     from apps.notifications.utils import fanout_to_workspace_members

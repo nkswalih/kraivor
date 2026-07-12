@@ -1,5 +1,4 @@
 import uuid
-
 from django.db.models import Prefetch, Q, QuerySet
 
 from apps.knowledge.models import KnowledgeAsset, KnowledgeSpace
@@ -8,7 +7,9 @@ from core.cache import CacheService
 
 class KnowledgeSpaceSelector:
     @staticmethod
-    def list_for_workspace(workspace_id: uuid.UUID, search: str | None = None) -> QuerySet[KnowledgeSpace]:
+    def list_for_workspace(
+        workspace_id: uuid.UUID, search: str | None = None
+    ) -> QuerySet[KnowledgeSpace]:
         qs = KnowledgeSpace.objects.filter(
             workspace_id=workspace_id, deleted_at__isnull=True
         ).select_related("workspace")
@@ -51,6 +52,8 @@ class KnowledgeAssetSelector:
 
     @staticmethod
     def get_detail(asset_id: uuid.UUID, space_id: uuid.UUID) -> KnowledgeAsset | None:
-        return KnowledgeAsset.objects.select_related("knowledge_space").filter(
-            id=asset_id, knowledge_space_id=space_id, deleted_at__isnull=True
-        ).first()
+        return (
+            KnowledgeAsset.objects.select_related("knowledge_space")
+            .filter(id=asset_id, knowledge_space_id=space_id, deleted_at__isnull=True)
+            .first()
+        )

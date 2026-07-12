@@ -5,7 +5,7 @@ from ..models import KnowledgeAsset
 
 class KnowledgeAssetInputSerializer(serializers.Serializer):
     file = serializers.FileField(
-        help_text="The file to upload (image, PDF, or document).",
+        help_text="The file to upload (image, PDF, or document)."
     )
 
 

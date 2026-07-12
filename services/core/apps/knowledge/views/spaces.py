@@ -1,6 +1,6 @@
-import uuid
 from typing import TYPE_CHECKING
 
+import uuid
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound
@@ -80,12 +80,12 @@ class KnowledgeSpaceListView(WorkspaceContextMixin, APIView):
         serializer.is_valid(raise_exception=True)
         try:
             space = KnowledgeSpaceService().create_knowledge_space(
-                workspace=workspace, actor_id=request.user_id, **serializer.validated_data
+                workspace=workspace,
+                actor_id=request.user_id,
+                **serializer.validated_data,
             )
         except KnowledgePermissionError as e:
-            return Response(
-                {"detail": str(e)}, status=status.HTTP_403_FORBIDDEN
-            )
+            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
         return Response(
             KnowledgeSpaceSerializer(space).data, status=status.HTTP_201_CREATED
         )
@@ -115,14 +115,14 @@ class KnowledgeSpaceDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         try:
             updated = KnowledgeSpaceService().update_knowledge_space(
-                knowledge_space=space, actor_id=request.user_id, updates=serializer.validated_data
+                knowledge_space=space,
+                actor_id=request.user_id,
+                updates=serializer.validated_data,
             )
         except KnowledgePermissionError as e:
-            return Response(
-                {"detail": str(e)}, status=status.HTTP_403_FORBIDDEN
-            )
+            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
         return Response(KnowledgeSpaceSerializer(updated).data)
-    
+
     @extend_schema(
         summary="Delete knowledge space",
         responses={204: OpenApiResponse(description="No content")},
@@ -134,7 +134,5 @@ class KnowledgeSpaceDetailView(APIView):
                 knowledge_space=space, actor_id=request.user_id
             )
         except KnowledgePermissionError as e:
-            return Response(
-                {"detail": str(e)}, status=status.HTTP_403_FORBIDDEN
-            )
+            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
         return Response(status=status.HTTP_204_NO_CONTENT)

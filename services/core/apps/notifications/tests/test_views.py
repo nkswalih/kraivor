@@ -1,5 +1,4 @@
 import uuid
-
 from rest_framework import status
 
 from apps.notifications.models import FCMToken, Notification
@@ -153,9 +152,7 @@ class TestNotificationViewSetMarkRead:
 
     def test_mark_read_others_notification_404(self, notification, other_user_id, db):
         request = _build_request(
-            "patch",
-            f"/api/notifications/{notification.id}/",
-            user_id=other_user_id,
+            "patch", f"/api/notifications/{notification.id}/", user_id=other_user_id
         )
         view = NotificationDetailView.as_view()
         response = view(request, pk=str(notification.id))
@@ -182,9 +179,7 @@ class TestNotificationViewSetDismiss:
 
     def test_dismiss_others_notification_404(self, notification, other_user_id, db):
         request = _build_request(
-            "delete",
-            f"/api/notifications/{notification.id}/",
-            user_id=other_user_id,
+            "delete", f"/api/notifications/{notification.id}/", user_id=other_user_id
         )
         view = NotificationDetailView.as_view()
         response = view(request, pk=str(notification.id))

@@ -1,5 +1,4 @@
 import logging
-
 import requests
 from django.conf import settings
 from drf_spectacular.utils import OpenApiResponse, extend_schema
@@ -7,6 +6,9 @@ from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from apps.notifications.tasks import dispatch_notification
+from apps.notifications.utils import fanout_to_workspace_members
 
 from ..events import (
     publish_discussion_created,
@@ -21,8 +23,6 @@ from ..serializers import (
     UpdateDiscussionSerializer,
 )
 from ..services import DiscussionService, VoteService
-from apps.notifications.tasks import dispatch_notification
-from apps.notifications.utils import fanout_to_workspace_members
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,11 @@ def _sync_profile_counters(event_type: str, author_id: str) -> None:
         if resp.status_code != 200:
             logger.warning(
                 "profile_sync.failed",
-                extra={"event_type": event_type, "author_id": author_id, "status": resp.status_code},
+                extra={
+                    "event_type": event_type,
+                    "author_id": author_id,
+                    "status": resp.status_code,
+                },
             )
     except requests.exceptions.RequestException as exc:
         logger.warning(
@@ -154,7 +158,8 @@ class DiscussionDetailView(APIView):
 
     @extend_schema(
         tags=["Community"],
-        summary="Get discussion", responses={200: DiscussionDetailSerializer}
+        summary="Get discussion",
+        responses={200: DiscussionDetailSerializer},
     )
     def get(self, request: Request, discussion_id: str) -> Response:
         discussion = DiscussionService.get_detail(discussion_id)

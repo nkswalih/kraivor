@@ -10,7 +10,11 @@ from .views import (
 
 urlpatterns = [
     path("notifications/", NotificationListView.as_view(), name="notification-list"),
-    path("notifications/unread_count/", UnreadCountView.as_view(), name="notification-unread-count"),
+    path(
+        "notifications/unread_count/",
+        UnreadCountView.as_view(),
+        name="notification-unread-count",
+    ),
     path(
         "notifications/<uuid:pk>/",
         NotificationDetailView.as_view(),

@@ -21,11 +21,19 @@ urlpatterns = [
     path("api/auth/", include("api_keys.urls")),
     path("api/profiles/", include("profiles.urls")),
     # Internal service-to-service: retrieve a user's stored GitHub OAuth token
-    path("api/oauth/github/token/", GitHubOAuthTokenView.as_view(), name="github-oauth-token"),
+    path(
+        "api/oauth/github/token/",
+        GitHubOAuthTokenView.as_view(),
+        name="github-oauth-token",
+    ),
     path(".well-known/jwks.json", JWKSView.as_view(), name="jwks"),
     path("api/health/", health_check, name="health"),
     # OpenAPI / Swagger
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path(
+        "api/docs/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
 ]

@@ -7,10 +7,10 @@ Covers:
   - JWK format validation
 """
 
-from datetime import UTC
 from pathlib import Path
 
 from authentication.jwks import JWKSView
+from datetime import UTC
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -28,7 +28,8 @@ def generate_test_rsa_keypair():
         encryption_algorithm=serialization.NoEncryption(),
     )
     public_pem = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
     return private_pem, public_pem
 
@@ -181,9 +182,8 @@ class TestIntegrationEndToEndJWT(TestCase):
         self.private_pem, self.public_pem = generate_test_rsa_keypair()
 
     def test_identity_issues_token_core_verifies(self):
-        from datetime import datetime, timedelta
-
         import jwt
+        from datetime import datetime, timedelta
 
         temp_dir = Path(__file__).parent.parent / ".keys"
         temp_dir.mkdir(exist_ok=True)
@@ -222,7 +222,6 @@ class TestIntegrationEndToEndJWT(TestCase):
 
             # Step 3: Core/Analysis/AI services verify the token using JWKS
             import base64
-
             from cryptography.hazmat.primitives.asymmetric import rsa
 
             # Convert JWK back to public key for verification
@@ -246,7 +245,9 @@ class TestIntegrationEndToEndJWT(TestCase):
             # Verify claims
             self.assertEqual(decoded["sub"], "user-integration-123")
             self.assertEqual(decoded["email"], "integration@kraivor.test")
-            self.assertEqual(decoded["workspace_ids"], ["ws-integration-1", "ws-integration-2"])
+            self.assertEqual(
+                decoded["workspace_ids"], ["ws-integration-1", "ws-integration-2"]
+            )
             self.assertEqual(decoded["roles"]["ws-integration-1"], "owner")
 
         finally:
@@ -256,9 +257,8 @@ class TestIntegrationEndToEndJWT(TestCase):
                 private_key_path.unlink()
 
     def test_expired_token_is_rejected(self):
-        from datetime import datetime, timedelta
-
         import jwt
+        from datetime import datetime, timedelta
 
         temp_dir = Path(__file__).parent.parent / ".keys"
         temp_dir.mkdir(exist_ok=True)
@@ -289,7 +289,6 @@ class TestIntegrationEndToEndJWT(TestCase):
 
             # Try to decode - should fail with ExpiredSignatureError
             import base64
-
             from cryptography.hazmat.primitives.asymmetric import rsa
 
             jwk = jwks["keys"][0]

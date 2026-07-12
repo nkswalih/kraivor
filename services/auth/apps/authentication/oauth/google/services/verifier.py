@@ -17,7 +17,6 @@ The google-auth library handles certificate fetching, caching, and validation.
 from __future__ import annotations
 
 import logging
-
 from authentication.oauth.base import OAuthIdentityVerifier, OAuthUserInfo
 from django.conf import settings
 from google.auth.exceptions import GoogleAuthError
@@ -72,13 +71,13 @@ class GoogleIDTokenVerifier(OAuthIdentityVerifier):
         try:
             # verify_oauth2_token validates: signature, aud, iss, exp
             claims = google_id_token.verify_oauth2_token(
-                id_token=raw_id_token,
-                request=_transport,
-                audience=self._client_id,
+                id_token=raw_id_token, request=_transport, audience=self._client_id
             )
         except GoogleAuthError as exc:
             logger.warning("google_id_token_verification_failed: %s", exc)
-            raise GoogleIDTokenVerificationError(f"ID token verification failed: {exc}") from exc
+            raise GoogleIDTokenVerificationError(
+                f"ID token verification failed: {exc}"
+            ) from exc
         except ValueError as exc:
             # google-auth raises ValueError for malformed tokens
             logger.warning("google_id_token_malformed: %s", exc)

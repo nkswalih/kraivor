@@ -39,11 +39,7 @@ DEBUG = env("DEBUG", default=False)
 # ALLOWED HOSTS - STAGING
 # =============================================================================
 ALLOWED_HOSTS = env.list(
-    "ALLOWED_HOSTS",
-    default=[
-        "staging.your-domain.com",
-        "staging-api.your-domain.com",
-    ],
+    "ALLOWED_HOSTS", default=["staging.your-domain.com", "staging-api.your-domain.com"]
 )
 
 # =============================================================================
@@ -60,7 +56,9 @@ CORS_ALLOW_CREDENTIALS = env.bool("CORS_ALLOW_CREDENTIALS", default=True)
 
 SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)
 SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=60)  # Shorter for staging
-SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool(
+    "SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True
+)
 SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=False)
 
 # =============================================================================

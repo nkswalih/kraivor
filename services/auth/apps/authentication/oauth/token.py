@@ -12,7 +12,6 @@ Security:
 """
 
 import logging
-
 from django.conf import settings
 from rest_framework import status
 from rest_framework.request import Request
@@ -46,13 +45,12 @@ class GitHubOAuthTokenView(APIView):
 
     def get(self, request: Request) -> Response:
         # ── Verify internal request header ──────────────────────────────────
-        internal_header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
+        internal_header = getattr(
+            settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"
+        )
         if request.headers.get(internal_header) != "1":
             logger.warning("github.token.missing_internal_header")
-            return Response(
-                {"error": "Forbidden"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
         # ── Extract user ID ─────────────────────────────────────────────────
         user_id = request.headers.get("X-User-ID")
@@ -65,15 +63,10 @@ class GitHubOAuthTokenView(APIView):
         # ── Fetch OAuth identity ────────────────────────────────────────────
         try:
             oauth_identity = OAuthIdentity.objects.get(
-                user_id=user_id,
-                provider="github",
-                deleted_at__isnull=True,
+                user_id=user_id, provider="github", deleted_at__isnull=True
             )
         except OAuthIdentity.DoesNotExist:
-            logger.info(
-                "github.token.not_found",
-                extra={"user_id": user_id},
-            )
+            logger.info("github.token.not_found", extra={"user_id": user_id})
             return Response(
                 {"error": "No GitHub account connected"},
                 status=status.HTTP_404_NOT_FOUND,

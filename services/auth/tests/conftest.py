@@ -4,17 +4,17 @@ Pytest configuration and fixtures for Identity Service.
 Modern production-grade testing architecture with reusable fixtures.
 """
 
-import os
-import sys
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import django
+import os
 import pytest
+import sys
 from authentication.security import reset_lockout_manager
+from datetime import UTC, datetime, timedelta
 from django.conf import settings
 from rest_framework.test import APIClient
+from unittest.mock import MagicMock, patch
 from users.models import User
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -305,11 +305,7 @@ def temp_jwks_keys(test_rsa_keys, tmp_path):
     public_path.write_bytes(test_rsa_keys["public_pem"])
     private_path.write_bytes(test_rsa_keys["private_pem"])
 
-    return {
-        "public_path": public_path,
-        "private_path": private_path,
-        "dir": keys_dir,
-    }
+    return {"public_path": public_path, "private_path": private_path, "dir": keys_dir}
 
 
 @pytest.fixture(scope="session")

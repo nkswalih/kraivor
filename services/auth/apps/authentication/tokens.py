@@ -12,12 +12,12 @@ This service handles all JWT token operations with security best practices:
 This implements KRV-013: Refresh Token Rotation
 """
 
+from dataclasses import dataclass
+
 import hashlib
 import logging
 import secrets
-from dataclasses import dataclass
 from datetime import timedelta
-
 from django.conf import settings
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -109,11 +109,7 @@ class TokenService:
         self.RefreshToken = RefreshToken
 
     def generate_tokens(
-        self,
-        user,
-        device_id: str = "",
-        ip_address: str = "",
-        user_agent: str = "",
+        self, user, device_id: str = "", ip_address: str = "", user_agent: str = ""
     ) -> TokenPair:
         """
         Generate access and refresh token pair with token tracking.
@@ -179,13 +175,12 @@ class TokenService:
                 },
             )
         except Exception as e:
-            logger.error("token_store_failed", extra={"user_id": str(user.id), "error": str(e)})
+            logger.error(
+                "token_store_failed", extra={"user_id": str(user.id), "error": str(e)}
+            )
 
     def validate_and_rotate(
-        self,
-        refresh_token: str,
-        ip_address: str = "",
-        user_agent: str = "",
+        self, refresh_token: str, ip_address: str = "", user_agent: str = ""
     ) -> tuple:
         """
         Validate refresh token and rotate (invalidate old, issue new).
@@ -233,14 +228,11 @@ class TokenService:
 
         try:
             stored_token = self.RefreshToken.objects.select_related("user").get(
-                token_hash=token_hash,
-                user=user,
-                revoked=False,
+                token_hash=token_hash, user=user, revoked=False
             )
         except self.RefreshToken.DoesNotExist as exc:
             token_exists = self.RefreshToken.objects.filter(
-                user=user,
-                token_hash=token_hash,
+                user=user, token_hash=token_hash
             ).exists()
 
             if token_exists:
@@ -253,7 +245,9 @@ class TokenService:
                     },
                 )
                 self._revoke_all_user_tokens(user)
-                raise TokenReusedError("Replay attack detected - all sessions invalidated") from exc
+                raise TokenReusedError(
+                    "Replay attack detected - all sessions invalidated"
+                ) from exc
 
             raise TokenInvalidError("Token not found or already used") from exc
 
@@ -261,10 +255,7 @@ class TokenService:
             raise TokenExpiredError("Refresh token has expired")
 
         new_tokens = self.generate_tokens(
-            user=user,
-            device_id=device_id,
-            ip_address=ip_address,
-            user_agent=user_agent,
+            user=user, device_id=device_id, ip_address=ip_address, user_agent=user_agent
         )
 
         stored_token.revoked = True
@@ -304,9 +295,7 @@ class TokenService:
             token_hash = _hash_token(refresh_token)
 
             stored_token = self.RefreshToken.objects.get(
-                token_hash=token_hash,
-                user=user,
-                revoked=False,
+                token_hash=token_hash, user=user, revoked=False
             )
 
             if stored_token.expires_at <= timezone.now():
@@ -342,8 +331,12 @@ class TokenService:
 
     def revoke_all_user_tokens(self, user) -> int:
         """Revoke ALL refresh tokens for a user (logout from all devices)."""
-        count = self.RefreshToken.objects.filter(user=user, revoked=False).update(revoked=True)
-        logger.info("all_tokens_revoked", extra={"user_id": str(user.id), "count": count})
+        count = self.RefreshToken.objects.filter(user=user, revoked=False).update(
+            revoked=True
+        )
+        logger.info(
+            "all_tokens_revoked", extra={"user_id": str(user.id), "count": count}
+        )
         return count
 
     def _revoke_all_user_tokens(self, user) -> None:
@@ -353,9 +346,7 @@ class TokenService:
     def get_active_sessions(self, user) -> list:
         """Get list of active sessions for a user."""
         tokens = self.RefreshToken.objects.filter(
-            user=user,
-            revoked=False,
-            expires_at__gt=timezone.now(),
+            user=user, revoked=False, expires_at__gt=timezone.now()
         ).order_by("-created_at")
 
         return [

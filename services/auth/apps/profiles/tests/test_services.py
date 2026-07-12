@@ -58,7 +58,9 @@ class TestProfileService:
         ProfileService.follow(str(user.id), str(other_user.id))
         result = ProfileService.unfollow(str(user.id), str(other_user.id))
         assert result is True
-        assert not UserFollow.objects.filter(follower=user, following=other_user).exists()
+        assert not UserFollow.objects.filter(
+            follower=user, following=other_user
+        ).exists()
 
     def test_unfollow_nonexistent(self, user, other_user):
         result = ProfileService.unfollow(str(user.id), str(other_user.id))

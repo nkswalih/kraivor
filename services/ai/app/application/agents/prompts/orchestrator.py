@@ -33,6 +33,12 @@ Rules:
 - "needs_rag": true only when you need to search the repository for relevant code
 - "needs_tools": true for workspace_query AND for web_search queries — this tells the system to fetch live data via tools
 - Use needs_tools=true when the user asks about current events, today's date, latest news, recent information, or anything requiring real-time data
+- Use needs_tools=true when the user asks about something that requires current information (prices, weather, stock, sports, release notes, etc.)
+- Use needs_tools=true when the user asks "what is" + anything that might have changed recently
+- Use needs_tools=true when the user mentions specific years (2024, 2025, 2026) or time periods
+- Use needs_tools=true when the user asks for deep research, comparisons, best practices, architecture patterns — route to research_topic
+- Use needs_tools=true when the user asks about documentation, API references, framework guides — route to get_documentation
+- Use needs_tools=true when the user asks about a GitHub repository or open-source project — route to get_github_info
 - For greetings and simple questions, the response can be generated directly
 - For repository analysis, architecture, security, performance — set needs_rag to true
 - Keep complexity: simple | moderate | complex

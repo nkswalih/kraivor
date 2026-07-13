@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { MessagesSquare, Shield, FileText, Gauge, CheckCircle, BotMessageSquare, Pin, PinOff, Pencil, Check, X } from 'lucide-react';
 import { AiInput } from '@/components/features/ai-input';
 import { aiApi } from '@/lib/api/ai-api';
-import type { ConversationSummary } from '@/lib/api/ai-api';
+import type { ConversationSummary, ModelItem } from '@/lib/api/ai-api';
 
 interface AiWelcomeProps {
   workspaceAvatar?: string | null;
@@ -20,6 +20,7 @@ interface AiWelcomeProps {
   selectedModel: string;
   onModelSelect: (id: string) => void;
   showBanner: boolean;
+  models?: ModelItem[];
 }
 
 const SUGGESTIONS = [
@@ -43,6 +44,7 @@ export function AiWelcome({
   selectedModel,
   onModelSelect,
   showBanner,
+  models,
 }: AiWelcomeProps) {
   const [editingConv, setEditingConv] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -99,6 +101,7 @@ export function AiWelcome({
             selectedModel={selectedModel}
             onModelSelect={onModelSelect}
             showBanner={showBanner}
+            models={models}
           />
         </div>
 

@@ -68,6 +68,12 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
     staleTime: 60_000,
   });
 
+  const modelsQuery = useQuery({
+    queryKey: ['ai-models'],
+    queryFn: () => aiApi.listModels(),
+    staleTime: 300_000,
+  });
+
   const repoIds = reposData?.map(r => r.id) ?? [];
 
   const convListQuery = useQuery({
@@ -311,6 +317,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
           selectedModel={selectedModel}
           onModelSelect={setSelectedModel}
           showBanner={false}
+          models={modelsQuery.data}
         />
       ) : (
         <>
@@ -431,6 +438,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
                 selectedModel={selectedModel}
                 onModelSelect={setSelectedModel}
                 showBanner={rateLimited}
+                models={modelsQuery.data}
               />
             </div>
             <p className="text-center text-[11px] text-text-tertiary mt-2.5 px-4">

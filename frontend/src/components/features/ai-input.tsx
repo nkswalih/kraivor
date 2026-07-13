@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { createPortal } from 'react-dom';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, SlidersHorizontal, ArrowUp, ArrowUpCircle, X, BotMessageSquare } from 'lucide-react';
-import { ModelSelector, getModelIcon, getModelName, getModelGroup } from '@/components/features/model-selector';
-import { aiApi } from '@/lib/api/ai-api';
-import { toast } from 'sonner';
+import { Plus, SlidersHorizontal, ArrowUp, ArrowUpCircle } from 'lucide-react';
+import { ModelSelector, getModelIcon, getModelName } from '@/components/features/model-selector';
+import { ByokKeyDialog, ApiKeysPanel } from '@/components/features/byok-key-dialog';
+import type { ModelItem } from '@/lib/api/ai-api';
 
 interface AiInputProps {
   value: string;
@@ -16,86 +17,10 @@ interface AiInputProps {
   selectedModel: string;
   onModelSelect: (id: string) => void;
   showBanner: boolean;
+  models?: ModelItem[];
 }
 
 const MAX_HEIGHT = 240;
-
-/* ─── API Key Dialog ──────────────────────────────────── */
-
-function ApiKeyDialog({
-  modelId,
-  modelName,
-  onClose,
-  onSuccess,
-}: {
-  modelId: string;
-  modelName: string;
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
-  const [submitting, setSubmitting] = useState(false);
-
-  const providerMap: Record<string, string> = {
-    'claude-sonnet': 'anthropic',
-    'gpt-5o': 'openai',
-    'deepseek-coder': 'openrouter',
-    'grok-4': 'openrouter',
-  };
-
-  const handleSubmit = async () => {
-    if (submitting) return;
-    setSubmitting(true);
-    try {
-      const provider = providerMap[modelId] ?? 'openrouter';
-      await aiApi.provisionApiKey(provider);
-      toast.success(`${modelName} activated`);
-      onSuccess();
-    } catch {
-      toast.error('Failed to activate model. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#18181C] border border-[#27272A] rounded-xl p-5 max-w-sm w-full mx-4 shadow-2xl">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <BotMessageSquare className="w-4 h-4 text-venom-yellow" />
-            <h3 className="text-[14px] font-semibold text-[#f2f2f3]">{modelName}</h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md text-[#5e5e72] hover:text-[#f2f2f3] transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <p className="text-[12px] text-[#9898a6] mb-4">
-          Activate {modelName} through Kraivor AI. Provider access is managed via your workspace plan.
-        </p>
-        <div className="flex items-center gap-2 justify-end">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 rounded-md border border-[#27272A] text-[12px] text-[#9898a6] hover:text-[#f2f2f3] transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="px-3 py-1.5 rounded-md bg-venom-yellow text-black text-[12px] font-medium hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {submitting ? 'Activating...' : 'Activate'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Main Component ──────────────────────────────────── */
 
 export function AiInput({
   value,
@@ -106,13 +31,16 @@ export function AiInput({
   selectedModel,
   onModelSelect,
   showBanner,
+  models,
 }: AiInputProps) {
   const [showModelSelector, setShowModelSelector] = useState(false);
-  const [popupAbove, setPopupAbove] = useState(false);
-  const [apiKeyDialog, setApiKeyDialog] = useState<string | null>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLDivElement>(null);
+  const [popupPos, setPopupPos] = useState<{ top: number; left: number; above: boolean } | null>(null);
+  const [byokProvider, setByokProvider] = useState<string | null>(null);
+  const [showApiKeysPanel, setShowApiKeysPanel] = useState(false);
+  const [apiKeysEditProvider, setApiKeysEditProvider] = useState<string | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
 
   /* ─── Auto-resize textarea ───────────────────────────── */
   const autoResize = useCallback(() => {
@@ -143,48 +71,73 @@ export function AiInput({
     onKeyDown(e);
   };
 
-  /* ─── Choose up/down based on available viewport space ──── */
-  useEffect(() => {
-    if (!showModelSelector) return;
-    const btn = buttonRef.current;
-    if (!btn) return;
-    const rect = btn.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    setPopupAbove(spaceBelow < 320 && spaceAbove > spaceBelow);
-  }, [showModelSelector]);
+  /* ─── Toggle dropdown (position via fixed + portal) ──── */
+  const toggleModelSelector = useCallback(() => {
+    setShowModelSelector(prev => {
+      if (prev) return false;
+      const btn = buttonRef.current;
+      if (!btn) return true;
+      const rect = btn.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const above = spaceBelow < 420 && rect.top > spaceBelow;
+      setPopupPos({
+        top: above ? rect.top - 8 : rect.bottom + 8,
+        left: Math.max(8, rect.right - 272),
+        above,
+      });
+      return true;
+    });
+  }, []);
 
-  /* ─── Close model selector on outside click ──────────────── */
+  /* ─── Close on outside click / escape ────────────────── */
   useEffect(() => {
     if (!showModelSelector) return;
-    const handleClick = (e: MouseEvent) => {
-      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
-        setShowModelSelector(false);
-      }
+    const handlePointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (popupRef.current?.contains(target) || buttonRef.current?.contains(target)) return;
+      setShowModelSelector(false);
     };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowModelSelector(false);
+    };
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [showModelSelector]);
 
+  /* ─── Model select: check if BYOK → show key dialog ──── */
   const handleModelSelect = (id: string) => {
     setShowModelSelector(false);
-    const group = getModelGroup(id);
-    if (group === 'api-key') {
-      setApiKeyDialog(id);
-    } else {
-      onModelSelect(id);
+    const model = (models || []).find(m => m.id === id);
+    if (model?.tier === 'byok') {
+      setByokProvider(model.provider);
+      return;
     }
+    onModelSelect(id);
   };
 
-  const dialogModel = apiKeyDialog ? getModelName(apiKeyDialog) : '';
+  const handleByokSave = () => {
+    if (byokProvider) {
+      const model = (models || []).find(m => m.provider === byokProvider && m.tier === 'byok');
+      if (model) onModelSelect(model.id);
+    }
+    setByokProvider(null);
+  };
+
+  /* ─── Settings panel: edit provider → opens key dialog ── */
+  const handleApiKeysEdit = (provider: string) => {
+    setShowApiKeysPanel(false);
+    setApiKeysEditProvider(provider);
+  };
 
   return (
     <div className="flex items-end gap-2.5 max-w-[720px] mx-auto">
-      {/* Joined banner + input block */}
       <div className="flex-1 min-w-0">
-        {/* Banner (free plan alert) — top-outer corners rounded, bottom flat */}
         {showBanner && (
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-950/40 border border-blue-800/30 border-b-0 rounded-t-[20px]">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-950/40 border border-blue-800/30 border-b-0 rounded-t-[20px]">
             <ArrowUpCircle className="w-4 h-4 text-blue-400 shrink-0" strokeWidth={1.8} />
             <span className="text-[13px] text-[#f2f2f3]">
               You&rsquo;ve run out of free AI responses.{' '}
@@ -198,20 +151,16 @@ export function AiInput({
           </div>
         )}
 
-        {/* Main input container */}
         <div
           className={`bg-krait-surface2 border border-krait-border/50 focus-within:border-venom-yellow/40 hover:border-krait-borderHi/70 transition-all duration-200 shadow-sm focus-within:shadow-[0_0_0_1px_rgba(250,204,21,0.06)] ${
             showBanner ? 'rounded-b-[20px] border-t-0' : 'rounded-[20px]'
           }`}
         >
-          {/* Textarea area */}
           <div className="px-4 pt-3.5 min-h-[36px] flex items-start">
             <textarea
               ref={textareaRef}
               value={value}
-              onChange={e => {
-                onChange(e.target.value);
-              }}
+              onChange={e => onChange(e.target.value)}
               onKeyDown={handleKeyDownInner}
               placeholder="Do anything with AI..."
               rows={1}
@@ -221,9 +170,7 @@ export function AiInput({
             />
           </div>
 
-          {/* Bottom row: icons left, model pill right */}
-          <div className="flex items-center justify-between px-4 pb-3 pt-2 relative">
-            {/* Left: Action Icons */}
+          <div className="flex items-center justify-between px-4 pb-3 pt-2">
             <div className="flex items-center gap-2.5">
               <button
                 type="button"
@@ -235,20 +182,19 @@ export function AiInput({
               <button
                 type="button"
                 disabled={isStreaming}
+                onClick={() => setShowApiKeysPanel(true)}
                 className="text-text-tertiary hover:text-text-secondary transition-colors disabled:opacity-30"
+                title="Manage API Keys"
               >
                 <SlidersHorizontal className="w-4 h-4" strokeWidth={1.8} />
               </button>
             </div>
 
-            {/* Right: Send + Model Pill */}
             <div className="flex items-center gap-1.5">
-              
-
-              <div ref={buttonRef}>
               <button
+                ref={buttonRef}
                 type="button"
-                onClick={() => setShowModelSelector(v => !v)}
+                onClick={toggleModelSelector}
                 className="flex items-center gap-1.5 px-2 py-1 bg-krait-surface3 border border-krait-border/60 rounded-md hover:border-krait-borderHi transition-colors"
               >
                 <span className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
@@ -259,8 +205,7 @@ export function AiInput({
                   <ArrowUp className="w-2.5 h-2.5 text-text-tertiary" strokeWidth={2.5} />
                 </div>
               </button>
-            </div>
-            <button
+              <button
                 type="button"
                 onClick={onSend}
                 disabled={!value.trim() || isStreaming}
@@ -269,32 +214,47 @@ export function AiInput({
                 <ArrowUp className="w-3 h-3" strokeWidth={2.5} />
               </button>
             </div>
-
-            {/* Model selector popup (flips up/down based on space) */}
-            {showModelSelector && (
-              <div
-                ref={popupRef}
-                className={`absolute right-0 z-50 ${
-                  popupAbove ? 'bottom-full mb-2' : 'top-full mt-2'
-                }`}
-              >
-                <ModelSelector selected={selectedModel} onSelect={handleModelSelect} />
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* API Key Dialog */}
-      {apiKeyDialog && (
-        <ApiKeyDialog
-          modelId={apiKeyDialog}
-          modelName={dialogModel}
-          onClose={() => setApiKeyDialog(null)}
-          onSuccess={() => {
-            onModelSelect(apiKeyDialog);
-            setApiKeyDialog(null);
+      {showModelSelector && popupPos && createPortal(
+        <div
+          ref={popupRef}
+          style={{
+            position: 'fixed',
+            top: popupPos.above ? undefined : popupPos.top,
+            bottom: popupPos.above ? `calc(100vh - ${popupPos.top}px)` : undefined,
+            left: popupPos.left,
+            zIndex: 2147483647,
           }}
+          onPointerDown={e => e.stopPropagation()}
+        >
+          <ModelSelector selected={selectedModel} onSelect={handleModelSelect} models={models} />
+        </div>,
+        document.body,
+      )}
+
+      {byokProvider && (
+        <ByokKeyDialog
+          provider={byokProvider}
+          onClose={() => setByokProvider(null)}
+          onSave={handleByokSave}
+        />
+      )}
+
+      {showApiKeysPanel && (
+        <ApiKeysPanel
+          onClose={() => setShowApiKeysPanel(false)}
+          onEdit={handleApiKeysEdit}
+        />
+      )}
+
+      {apiKeysEditProvider && (
+        <ByokKeyDialog
+          provider={apiKeysEditProvider}
+          onClose={() => setApiKeysEditProvider(null)}
+          onSave={() => setApiKeysEditProvider(null)}
         />
       )}
     </div>

@@ -19,6 +19,10 @@ class ApiKey(Base, UUIDMixin, TimestampMixin):
     openrouter_subkey_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     groq_key_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     google_key_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    anthropic_key_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    openai_key_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    deepseek_key_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+    xai_key_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     active_provider: Mapped[str] = mapped_column(String(50), default="openrouter")
 
     rate_limit_rpm: Mapped[int] = mapped_column(Integer, default=60)

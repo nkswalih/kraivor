@@ -3,6 +3,7 @@ from langgraph.graph import END, StateGraph
 from app.application.agents.architecture import ArchitectureAnalystNode
 from app.application.agents.code_analyst import CodeAnalystNode
 from app.application.agents.context_assembler import ContextAssemblerNode
+from app.application.agents.evidence_gatherer import EvidenceGathererNode
 from app.application.agents.explainer import ExplainerNode
 from app.application.agents.orchestrator import OrchestratorNode
 from app.application.agents.performance import PerformanceAnalystNode
@@ -28,6 +29,7 @@ def build_agent_graph(client=None) -> StateGraph:
 
         builder.add_node("tool_executor", _NoopToolExecutor())
 
+    builder.add_node("evidence_gatherer", EvidenceGathererNode())
     builder.add_node("context_assembler", ContextAssemblerNode())
     builder.add_node("code_analyst", CodeAnalystNode())
     builder.add_node("security_analyst", SecurityAnalystNode())
@@ -43,10 +45,13 @@ def build_agent_graph(client=None) -> StateGraph:
 
         needs_tools = state.get("needs_tools", False)
         needs_rag = state.get("needs_rag", False)
+        needs_evidence = state.get("needs_evidence", False)
         required = state.get("required_agents", [])
 
         if needs_tools:
             return "tool_executor"
+        if needs_evidence:
+            return "evidence_gatherer"
         if needs_rag or required:
             return "context_assembler"
         return "explainer"
@@ -64,6 +69,15 @@ def build_agent_graph(client=None) -> StateGraph:
         tool_results = state.get("tool_results")
         if tool_results:
             return "explainer"
+        return "explainer"
+
+    def route_after_evidence(state: AgentState) -> str:
+        """After gathering evidence, go to context assembler to combine with code RAG."""
+        needs_rag = state.get("needs_rag", False)
+        required = state.get("required_agents", [])
+
+        if needs_rag or required:
+            return "context_assembler"
         return "explainer"
 
     def route_after_context(state: AgentState) -> str:
@@ -110,6 +124,7 @@ def build_agent_graph(client=None) -> StateGraph:
         route_after_orchestrator,
         {
             "tool_executor": "tool_executor",
+            "evidence_gatherer": "evidence_gatherer",
             "context_assembler": "context_assembler",
             "explainer": "explainer",
             "end": END,
@@ -122,6 +137,14 @@ def build_agent_graph(client=None) -> StateGraph:
             "context_assembler": "context_assembler",
             "explainer": "explainer",
             "end": END,
+        },
+    )
+    builder.add_conditional_edges(
+        "evidence_gatherer",
+        route_after_evidence,
+        {
+            "context_assembler": "context_assembler",
+            "explainer": "explainer",
         },
     )
     builder.add_conditional_edges("context_assembler", route_after_context)

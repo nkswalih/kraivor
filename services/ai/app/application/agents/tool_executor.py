@@ -38,8 +38,27 @@ class ToolExecutorNode:
             "get_discussion_comments": self.tools.get_discussion_comments,
             "get_current_date": self.tools.get_current_date,
             "web_search": self.tools.web_search,
+            "web_search_news": self.tools.web_search_news,
+            "web_search_instant": self.tools.web_search_instant,
             "web_fetch": self.tools.web_fetch,
+            "browse_web": self.tools.browse_web,
             "remember_user_fact": self.tools.remember_user_fact,
+            "research_topic": self.tools.research_topic,
+            "verify_fact": self.tools.verify_fact,
+            "get_documentation": self.tools.get_documentation,
+            "get_github_info": self.tools.get_github_info,
+            "search_knowledge": self.tools.search_knowledge,
+            "store_knowledge": self.tools.store_knowledge,
+            "get_knowledge_stats": self.tools.get_knowledge_stats,
+            "get_entity_graph": self.tools.get_entity_graph,
+            "get_top_entities": self.tools.get_top_entities,
+            "run_proactive_learning": self.tools.run_proactive_learning,
+            "summarize_knowledge": self.tools.summarize_knowledge,
+            "resolve_conflicts": self.tools.resolve_conflicts,
+            "submit_feedback": self.tools.submit_feedback,
+            "deduplicate_knowledge": self.tools.deduplicate_knowledge,
+            "export_knowledge": self.tools.export_knowledge,
+            "knowledge_health": self.tools.knowledge_health,
         }
 
     async def __call__(self, state: dict) -> dict:
@@ -48,8 +67,9 @@ class ToolExecutorNode:
         user_context = state.get("user_context")
         workspace_id = state.get("workspace_id", "")
         message = state.get("message", "")
+        user_model = state.get("model")
         history = state.get("context_history") or []
-        route = self.router.get_route("tool_calling")
+        route = self.router.get_route_for_user("tool_calling", user_model)
         api_key, provider = await self.key_resolver.resolve(user_id, route["model"])
         client = LLMClient(api_key=api_key, provider=provider, model=route["model"])
 

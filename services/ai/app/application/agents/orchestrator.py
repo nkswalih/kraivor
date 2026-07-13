@@ -17,12 +17,15 @@ logger = logging.getLogger(__name__)
 _DIRECT_INTENTS = {
     "greeting",
     "conversation",
+    "unknown",
+}
+
+_EVIDENCE_INTENTS = {
     "question",
     "programming",
-    "code_generation",
-    "writing",
-    "translation",
+    "documentation",
     "planning",
+    "translation",
     "devops",
     "security_audit",
     "data_science",
@@ -32,7 +35,8 @@ _DIRECT_INTENTS = {
     "database_design",
     "testing",
     "full_stack",
-    "unknown",
+    "code_generation",
+    "writing",
 }
 
 _INTENT_PROMPT_MAP = {
@@ -66,26 +70,39 @@ class OrchestratorNode:
         user_name = state.get("user_name")
         user_context = state.get("user_context")
         message = state.get("message", "")
-        route = self.router.get_route("intent_classify")
+        user_model = state.get("model")
+        route = self.router.get_route_for_user("intent_classify", user_model)
         history = state.get("context_history") or []
 
         api_key, provider = await self.key_resolver.resolve(user_id, route["model"])
         client = LLMClient(api_key=api_key, provider=provider, model=route["model"])
 
-        response = await client.generate(
-            [
-                {"role": "system", "content": ORCHESTRATOR_SYSTEM_PROMPT},
-                {"role": "user", "content": message},
-            ],
-            max_tokens=route["max_tokens"],
-            response_format={"type": "json_object"},
-        )
+        gen_kwargs = {
+            "max_tokens": route["max_tokens"],
+        }
+        # Only use json_object format for native OpenAI (not OpenRouter)
+        if provider == "openai":
+            gen_kwargs["response_format"] = {"type": "json_object"}
+
+        # Build intent classification messages — include recent history so the
+        # classifier understands context (e.g. "continue" after a long answer).
+        classify_msgs = [
+            {"role": "system", "content": ORCHESTRATOR_SYSTEM_PROMPT},
+        ]
+        if history:
+            for h in history[-8:]:
+                classify_msgs.append(
+                    {"role": h.get("role", "user"), "content": h.get("content", "")[:600]}
+                )
+        classify_msgs.append({"role": "user", "content": message})
+
+        response = await client.generate(classify_msgs, **gen_kwargs)
 
         try:
             analysis = json.loads(response["content"])
         except (json.JSONDecodeError, KeyError):
             analysis = {
-                "intent": "conversation",
+                "intent": "question",
                 "complexity": "simple",
                 "needs_context": False,
                 "needs_rag": False,
@@ -98,8 +115,11 @@ class OrchestratorNode:
         needs_rag = analysis.get("needs_rag", False)
         needs_tools = analysis.get("needs_tools", False)
 
-        # Route to tool executor for workspace queries that need live data
-        if needs_tools or (intent == "workspace_query"):
+        # Route to tool executor for workspace queries that need live data.
+        # But if the intent is a knowledge question, prioritize evidence gathering
+        # over tool execution — workspace tools can't answer "what is Kraivor?"
+        is_workspace_query = needs_tools and intent not in _EVIDENCE_INTENTS
+        if is_workspace_query or (intent == "workspace_query"):
             return {
                 "intent": intent,
                 "complexity": analysis.get("complexity", "simple"),
@@ -107,15 +127,16 @@ class OrchestratorNode:
                 "context_hints": analysis.get("context_hints", []),
                 "needs_rag": False,
                 "needs_tools": True,
+                "needs_evidence": False,
                 "response": None,
             }
 
-        # For direct-response intents that don't need context, generate immediately
+        # For direct-response intents (greeting, casual chat), generate immediately
         if intent in _DIRECT_INTENTS and not needs_context and not needs_rag:
             intent_prompt = _INTENT_PROMPT_MAP.get(intent, RESPOND_DIRECT_PROMPT)
             intent_prompt = _format_prompt(intent_prompt, user_name, user_context)
             intent_route_name = _INTENT_ROUTE_MAP.get(intent, "simple_qa")
-            respond_route = self.router.get_route(intent_route_name)
+            respond_route = self.router.get_route_for_user(intent_route_name, user_model)
             api_key, provider = await self.key_resolver.resolve(
                 user_id, respond_route["model"]
             )
@@ -124,9 +145,9 @@ class OrchestratorNode:
             )
 
             messages = []
-            for h in history[-10:]:
+            for h in history[-15:]:
                 messages.append(
-                    {"role": h.get("role", "user"), "content": h.get("content", "")}
+                    {"role": h.get("role", "user"), "content": h.get("content", "")[:1000]}
                 )
             messages.append({"role": "system", "content": intent_prompt})
             messages.append({"role": "user", "content": message})
@@ -142,6 +163,20 @@ class OrchestratorNode:
                 "usage": result,
                 "required_agents": [],
                 "context_hints": [],
+                "needs_evidence": False,
+            }
+
+        # For evidence-gathering intents, route through the knowledge pipeline
+        if intent in _EVIDENCE_INTENTS:
+            return {
+                "intent": intent,
+                "complexity": analysis.get("complexity", "simple"),
+                "required_agents": analysis.get("required_agents", []),
+                "context_hints": analysis.get("context_hints", []),
+                "needs_rag": needs_rag,
+                "needs_tools": False,
+                "needs_evidence": True,
+                "response": None,
             }
 
         return {
@@ -151,5 +186,6 @@ class OrchestratorNode:
             "context_hints": analysis.get("context_hints", []),
             "needs_rag": needs_rag,
             "needs_tools": needs_tools,
+            "needs_evidence": False,
             "response": None,
         }

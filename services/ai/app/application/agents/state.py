@@ -36,5 +36,9 @@ class AgentState(TypedDict):
     architecture_findings: list[dict] | None
     performance_findings: list[dict] | None
 
+    evidence: str | None
+    evidence_sources: list[dict] | None
+    needs_evidence: bool
+
     response: str | None
     usage: dict | None

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/hooks';
@@ -26,7 +26,10 @@ import {
   Building2,
   PanelLeftClose,
   PanelLeftOpen,
-  BotMessageSquare
+  BotMessageSquare,
+  ChevronDown,
+  ChevronRight,
+  Brain
 } from 'lucide-react';
 
 export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
@@ -36,6 +39,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
   const workspaceId = useAuthStore(s => s.workspaceId);
   const collapsed = useUIStore(s => s.sidebarCollapsed);
   const toggleCollapse = useUIStore(s => s.toggleSidebarCollapse);
+  const [aiDropdownOpen, setAiDropdownOpen] = useState(true);
 
   const { data: profile } = useQuery({
     queryKey: ['my-profile'],
@@ -76,7 +80,6 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
     { name: 'Home', icon: Home, href: `/${workspaceSlug}` },
     { name: 'Repositories', icon: GitBranch, href: `/${workspaceSlug}/repositories` },
     { name: 'Analysis', icon: Activity, href: `/${workspaceSlug}/analysis` },
-    { name: 'AI Workspace', icon: BotMessageSquare, href: `/${workspaceSlug}/ai` },
     { name: 'Knowledge', icon: Edit3, href: `/${workspaceSlug}/knowledge` },
     { name: 'Projects', icon: KanbanSquare, href: `/${workspaceSlug}/projects` },
     { name: 'Tasks', icon: CheckSquare, href: `/${workspaceSlug}/tasks` },
@@ -84,9 +87,14 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
     { name: 'Community', icon: Globe, href: `/${workspaceSlug}/community` },
   ];
 
+  const aiSubItems = [
+    { name: 'AI Agent', icon: BotMessageSquare, href: `/${workspaceSlug}/ai` },
+    { name: 'AI Knowledge', icon: Brain, href: `/${workspaceSlug}/knowledge/dashboard` },
+  ];
+
   return (
     <aside
-      className={`${collapsed ? 'w-[60px]' : 'w-[240px]'} flex-shrink-0 flex flex-col bg-krait-obsidian border-r border-krait-border h-full select-none transition-[width] duration-200`}
+    className={`${collapsed ? 'w-[60px]' : 'w-[240px]'} flex-shrink-0 flex flex-col bg-krait-obsidian border-r border-krait-border h-full select-none transition-[width] duration-200`}
     >
       {/* Top bar: logo + collapse */}
       <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-2 h-12 shrink-0`}>
@@ -110,6 +118,52 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
 
       {/* Main Navigation */}
       <div className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+
+        {/* AI Workspace Dropdown */}
+        <div>
+          <button
+            onClick={() => setAiDropdownOpen(!aiDropdownOpen)}
+            className={cn(
+              'flex items-center rounded-[6px] transition-colors text-[13px] font-medium w-full',
+              collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-2.5 py-1.5',
+              aiSubItems.some(sub => pathname.startsWith(sub.href))
+                ? 'bg-krait-surface1 text-text-primary'
+                : 'text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary'
+            )}
+          >
+            {aiDropdownOpen ? (
+              <ChevronDown className="w-4 h-4 shrink-0" />
+            ) : (
+              <ChevronRight className="w-4 h-4 shrink-0" />
+            )}
+            <span className={collapsed ? 'hidden' : ''}>AI Workspace</span>
+          </button>
+
+          {!collapsed && aiDropdownOpen && (
+            <div className="ml-2 mt-0.5 space-y-0.5">
+              {aiSubItems.map(sub => {
+                const isActive = pathname.startsWith(sub.href);
+                return (
+                  <Link
+                    key={sub.name}
+                    href={sub.href}
+                    className={cn(
+                      'flex items-center rounded-[6px] transition-colors text-[13px] font-medium gap-2.5 pl-4 pr-2.5 py-1.5',
+                      isActive
+                        ? 'bg-krait-surface1 text-text-primary'
+                        : 'text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary'
+                    )}
+                  >
+                    <sub.icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-text-primary' : 'text-text-secondary')} />
+                    <span>{sub.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Regular Nav Items */}
         {navItems.map(item => {
           const isActive =
             item.href === `/${workspaceSlug}`
@@ -147,7 +201,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
           );
         })}
 
-        <div className="my-3 border-t border-krait-border" />
+        {/* <div className="my-3 border-t border-krait-border" /> */}
       </div>
 
       {/* Bottom Section */}

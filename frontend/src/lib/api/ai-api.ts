@@ -8,19 +8,65 @@ const AI_BASE = '/api/ai';
 /* ─── Frontend model ID → Backend model ID mapping ──────── */
 
 const MODEL_MAP: Record<string, string> = {
+  // Kraivor
   'krait-2.0': 'openrouter/auto',
-  'groq-llama': 'nvidia/nemotron-3-ultra-550b-a55b:free',
-  'gemini-flash': 'google/gemini-flash-1.5',
-  'claude-sonnet': 'anthropic/claude-3.5-sonnet',
-  'gpt-5o': 'openai/gpt-4o',
-  'deepseek-coder': 'deepseek/deepseek-coder',
-  'grok-4': 'xai/grok-4',
-  'llama-4': 'meta/llama-4',
-  'mistral-large': 'mistralai/mistral-large',
+  // Free (OpenRouter)
+  'cohere-north-mini-code': 'cohere/north-mini-code:free',
+  'nvidia-nemotron-ultra': 'nvidia/nemotron-3-ultra-550b-a55b:free',
+  'tencent-hy3': 'tencent/hy3:free',
+  'poolside-laguna-xs': 'poolside/laguna-xs-2.1:free',
+  'poolside-laguna-m': 'poolside/laguna-m.1:free',
+  'nvidia-nemotron-super': 'nvidia/nemotron-3-super-120b-a12b:free',
+  'google-gemma-4': 'google/gemma-4-31b-it:free',
+  'nvidia-nemotron-nano': 'nvidia/nemotron-3-nano-30b-a3b:free',
+  'openai-gpt-oss': 'openai/gpt-oss-120b:free',
+  // BYOK - Anthropic
+  'claude-fable-5': 'anthropic/claude-fable-5',
+  'claude-opus-4-8': 'anthropic/claude-opus-4-8',
+  'claude-opus-4-7': 'anthropic/claude-opus-4-7',
+  'claude-sonnet-5': 'anthropic/claude-sonnet-5',
+  'claude-sonnet-4-6': 'anthropic/claude-sonnet-4-6',
+  // BYOK - OpenAI
+  'gpt-5.6-sol': 'openai/gpt-5.6-sol',
+  'gpt-5.6-terra': 'openai/gpt-5.6-terra',
+  'gpt-5.5': 'openai/gpt-5.5',
+  'gpt-5.4': 'openai/gpt-5.4',
+  // BYOK - Google
+  'gemini-3.5-flash': 'google/gemini-3.5-flash',
+  'gemini-3.1-pro': 'google/gemini-3.1-pro',
+  // BYOK - DeepSeek
+  'deepseek-v4-pro': 'deepseek/deepseek-v4-pro',
+  // BYOK - xAI
+  'grok-4.3': 'xai/grok-4.3',
 };
 
 export function resolveModelId(frontendId: string): string {
   return MODEL_MAP[frontendId] ?? frontendId;
+}
+
+/* ─── Model listing types ────────────────────────────────── */
+
+export type ModelTier = 'kraivor' | 'free' | 'byok';
+
+export interface ModelItem {
+  id: string;
+  name: string;
+  tier: ModelTier;
+  provider: string;
+  backendModel: string;
+  latency?: string;
+  context?: string;
+  icon?: string;
+}
+
+/* ─── BYOK types ──────────────────────────────────────────── */
+
+export type ByokProvider = 'openrouter' | 'anthropic' | 'openai' | 'google' | 'deepseek' | 'xai' | 'groq';
+
+export interface ByokKeyStatus {
+  hasKey: boolean;
+  provider: ByokProvider;
+  modelCount: number;
 }
 
 /* ─── Auth helper ────────────────────────────────────────── */
@@ -130,6 +176,28 @@ export const aiApi = {
   async getMessages(conversationId: string): Promise<MessageListResponse> {
     return aiFetch<MessageListResponse>(`/v1/conversations/${conversationId}/messages?limit=500`);
   },
+
+  /* ─── Dynamic model listing ─────────────────────────────── */
+
+  async listModels(): Promise<ModelItem[]> {
+    return aiFetch<ModelItem[]>('/v1/models');
+  },
+
+  /* ─── BYOK key management ──────────────────────────────── */
+
+  async submitByokKey(provider: ByokProvider, apiKey: string): Promise<{ ok: boolean }> {
+    return aiPost('/v1/byok/submit', { provider, api_key: apiKey });
+  },
+
+  async getByokStatus(): Promise<{ providers: Record<string, boolean> }> {
+    return aiFetch<{ providers: Record<string, boolean> }>('/v1/byok/status');
+  },
+
+  async removeByokKey(provider: ByokProvider): Promise<{ ok: boolean }> {
+    return aiFetch(`/v1/byok/${provider}`, { method: 'DELETE' } as RequestInit);
+  },
+
+  /* ─── Send message ─────────────────────────────────────── */
 
   async sendMessage(payload: SendMessagePayload): Promise<ChatMessage> {
     const model = payload.model ? resolveModelId(payload.model) : undefined;

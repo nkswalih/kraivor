@@ -79,3 +79,47 @@ def invalidate_knowledge_asset_count(sender, instance, **kwargs):
 def invalidate_repository_count(sender, instance, **kwargs):
     if instance.workspace_id:
         CacheService.delete(f"repo:count:{instance.workspace_id}")
+
+
+# ── Knowledge Auto-Indexing ──────────────────────────────────────────────────
+
+
+@receiver(post_save, sender="knowledge.KnowledgeSpace")
+def index_knowledge_space_on_save(sender, instance, created, **kwargs):
+    """Auto-index KnowledgeSpace canvas content into the AI knowledge base.
+
+    Fires asynchronously via a background thread to avoid blocking the save.
+    Only indexes when canvas_data has elements.
+    """
+    canvas_data = instance.canvas_data
+    if not canvas_data or not canvas_data.get("elements"):
+        return
+
+    import threading
+
+    def _send_to_ai():
+        import httpx
+        import os
+
+        ai_url = os.environ.get("AI_SERVICE_URL", "http://ai:8004")
+        try:
+            httpx.post(
+                f"{ai_url}/v1/knowledge/index-canvas",
+                json={
+                    "workspace_id": str(instance.workspace_id),
+                    "knowledge_space_id": str(instance.id),
+                    "canvas_data": canvas_data,
+                    "knowledge_space_name": instance.name,
+                },
+                headers={
+                    "X-Internal-Request": "true",
+                    "X-User-ID": str(instance.created_by_id or ""),
+                    "X-Workspace-IDs": str(instance.workspace_id),
+                },
+                timeout=30.0,
+            )
+        except Exception:
+            pass
+
+    thread = threading.Thread(target=_send_to_ai, daemon=True)
+    thread.start()

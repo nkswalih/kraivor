@@ -173,13 +173,36 @@ async def list_conversations(
 async def get_messages(
     db: AsyncSession, conversation_id: str, limit: int = 100, offset: int = 0
 ) -> list[MessageEntity]:
-    result = await db.execute(
-        select(Message)
-        .where(Message.conversation_id == conversation_id)
-        .order_by(Message.created_at.asc())
-        .offset(offset)
-        .limit(limit)
-    )
+    """Return messages ordered oldest-first for the given conversation.
+
+    When ``limit`` is set and ``offset`` is 0 the query returns the *last*
+    ``limit`` messages (most-recent window) while still ordering them
+    oldest-first so callers get a chronologically correct conversation.
+    """
+    if offset == 0 and limit:
+        # Subquery: grab the IDs of the most-recent N messages, ordered desc,
+        # then reverse so the outer query returns them in ascending (oldest-first)
+        # chronological order.
+        subq = (
+            select(Message.id)
+            .where(Message.conversation_id == conversation_id)
+            .order_by(Message.created_at.desc())
+            .limit(limit)
+            .subquery()
+        )
+        result = await db.execute(
+            select(Message)
+            .where(Message.id.in_(select(subq.c.id)))
+            .order_by(Message.created_at.asc())
+        )
+    else:
+        result = await db.execute(
+            select(Message)
+            .where(Message.conversation_id == conversation_id)
+            .order_by(Message.created_at.asc())
+            .offset(offset)
+            .limit(limit)
+        )
     rows = result.scalars().all()
     return [
         MessageEntity(

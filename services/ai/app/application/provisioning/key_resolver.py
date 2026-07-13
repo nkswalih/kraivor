@@ -8,30 +8,64 @@ from app.core.exceptions import InsufficientQuotaError
 
 logger = logging.getLogger(__name__)
 
+# ── Maps provider name → column on ai.api_keys ──────────────
 PROVIDER_FIELD_MAP = {
     "openrouter": "openrouter_subkey_encrypted",
     "groq": "groq_key_encrypted",
     "google": "google_key_encrypted",
+    "anthropic": "anthropic_key_encrypted",
+    "openai": "openai_key_encrypted",
+    "deepseek": "deepseek_key_encrypted",
+    "xai": "xai_key_encrypted",
 }
+
+# ── Smart key detection: prefix → provider ──────────────────
+_KEY_PREFIX_MAP = [
+    ("sk-or-v1-", "openrouter"),
+    ("sk-ant-", "anthropic"),
+    ("sk-", "openai"),
+    ("AIza", "google"),
+    ("gsk_", "groq"),
+    ("sk-", "deepseek"),   # deepseek also uses sk- prefix but different base
+    ("xai-", "xai"),
+]
+
+
+def detect_provider_from_key(api_key: str) -> str | None:
+    """Detect which provider an API key belongs to based on its prefix."""
+    for prefix, provider in _KEY_PREFIX_MAP:
+        if api_key.startswith(prefix):
+            return provider
+    return None
 
 
 def _model_to_provider(model: str) -> str:
     model_lower = model.lower()
     if "groq" in model_lower or "llama" in model_lower or "mixtral" in model_lower:
         return "groq"
-    if "gemini" in model_lower:
+    if "gemini" in model_lower or "gemma" in model_lower:
         return "google"
     if "anthropic" in model_lower or "claude" in model_lower:
         return "anthropic"
-    if (
-        "openai" in model_lower
-        or "gpt" in model_lower
-        or "text-embedding" in model_lower
-    ):
+    if "openai" in model_lower or "gpt" in model_lower or "text-embedding" in model_lower:
         return "openai"
     if "deepseek" in model_lower:
+        return "deepseek"
+    if "xai" in model_lower or "grok" in model_lower:
+        return "xai"
+    if "nvidia" in model_lower or "nemotron" in model_lower:
+        return "openrouter"
+    if "tencent" in model_lower or "hy3" in model_lower:
+        return "openrouter"
+    if "poolside" in model_lower or "laguna" in model_lower:
+        return "openrouter"
+    if "cohere" in model_lower or "north" in model_lower:
         return "openrouter"
     return "openrouter"
+
+
+# ── Fallback order when the preferred provider has no key ────
+_FALLBACK_ORDER = ["openrouter", "groq", "google", "anthropic", "openai", "deepseek", "xai"]
 
 
 async def resolve_provider_key(
@@ -62,12 +96,16 @@ async def resolve_provider_key(
         except Exception:
             logger.warning("key_decryption_failed", user_id=user_id, provider=provider)
 
-    for fallback_provider in ["openrouter", "groq", "google"]:
+    # Walk fallback chain — always try OpenRouter first since it can proxy any model
+    for fallback_provider in _FALLBACK_ORDER:
         fb_field = PROVIDER_FIELD_MAP.get(fallback_provider)
         encrypted = getattr(key_record, fb_field, None) if fb_field else None
         if encrypted:
-            decrypted = encrypter.decrypt(encrypted.encode())
-            return decrypted.decode(), fallback_provider
+            try:
+                decrypted = encrypter.decrypt(encrypted.encode())
+                return decrypted.decode(), fallback_provider
+            except Exception:
+                continue
 
     raise InsufficientQuotaError("No usable provider keys available")
 

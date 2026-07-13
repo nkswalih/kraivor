@@ -52,6 +52,7 @@ def create_app() -> FastAPI:
         conversations,
         embeddings,
         health,
+        knowledge,
     )
 
     app.include_router(health.router, prefix="/v1")
@@ -60,6 +61,7 @@ def create_app() -> FastAPI:
     app.include_router(api_keys.router, prefix="/v1")
     app.include_router(analysis.router)
     app.include_router(conversations.router, prefix="/v1")
+    app.include_router(knowledge.router, prefix="/v1")
 
     return app
 

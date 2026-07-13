@@ -27,6 +27,9 @@ dependencies = [
     "structlog>=24.0",
     "sentence-transformers>=3.0",
     "duckduckgo-search>=6.0",
+    "ddgs>=9.0",
+    "trafilatura>=1.6",
+    "tavily-python>=0.3",
     "tree-sitter>=0.22",
     "tree-sitter-python>=0.21",
     "tree-sitter-javascript>=0.21",
@@ -37,6 +40,10 @@ dependencies = [
     "aiokafka>=0.10",
     "google-generativeai>=0.7",
     "alembic>=1.13",
+    "pymupdf>=1.24",
+    "langdetect>=1.0.9",
+    "argostranslate>=1.9",
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]

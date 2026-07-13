@@ -1,216 +1,171 @@
 'use client';
 
+import { useState, useEffect, useMemo } from 'react';
+import { Lightning } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
+import type { ModelItem, ModelTier } from '@/lib/api/ai-api';
+import { aiApi } from '@/lib/api/ai-api';
+import { MODEL_ICONS, KraitIcon } from './model-icons';
 
-/* ─── Brand SVG Icons (originals restored) ─────────────── */
+/* ─── Fallback models (static, if API fails) ────────────── */
 
-function KraitIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0">
-      <path
-        d="M12 2C8 2 4 5 4 9c0 2.5 1.3 4.7 3.3 6 .5.3 1 .7 1.3 1.1.3.4.4.8.4 1.3v3.1c0 .6.4 1 1 1s1-.4 1-1v-3.1c0-.5.1-.9.4-1.3.3-.4.8-.8 1.3-1.1 2-1.3 3.3-3.5 3.3-6 0-4-4-7-8-7zm0 10c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"
-        fill="#EAB308"
-      />
-    </svg>
-  );
-}
+const FALLBACK_MODELS: ModelItem[] = [
+  // ── Kraivor AI (free, built-in) ──
+  { id: 'krait-2.0', name: 'Krait 2.0', tier: 'kraivor', provider: 'kraivor', backendModel: 'openrouter/auto', latency: '0.4s', context: '128K' },
 
-function ClaudeIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 100 100" fill="#D97757" className="shrink-0">
-      <path d="m19.6 66.5 19.7-11 .3-1-.3-.5h-1l-3.3-.2-11.2-.3L14 53l-9.5-.5-2.4-.5L0 49l.2-1.5 2-1.3 2.9.2 6.3.5 9.5.6 6.9.4L38 49.1h1.6l.2-.7-.5-.4-.4-.4L29 41l-10.6-7-5.6-4.1-3-2-1.5-2-.6-4.2 2.7-3 3.7.3.9.2 3.7 2.9 8 6.1L37 36l1.5 1.2.6-.4.1-.3-.7-1.1L33 25l-6-10.4-2.7-4.3-.7-2.6c-.3-1-.4-2-.4-3l3-4.2L28 0l4.2.6L33.8 2l2.6 6 4.1 9.3L47 29.9l2 3.8 1 3.4.3 1h.7v-.5l.5-7.2 1-8.7 1-11.2.3-3.2 1.6-3.8 3-2L61 2.6l2 2.9-.3 1.8-1.1 7.7L59 27.1l-1.5 8.2h.9l1-1.1 4.1-5.4 6.9-8.6 3-3.5L77 13l2.3-1.8h4.3l3.1 4.7-1.4 4.9-4.4 5.6-3.7 4.7-5.3 7.1-3.2 5.7.3.4h.7l12-2.6 6.4-1.1 7.6-1.3 3.5 1.6.4 1.6-1.4 3.4-8.2 2-9.6 2-14.3 3.3-.2.1.2.3 6.4.6 2.8.2h6.8l12.6 1 3.3 2 1.9 2.7-.3 2-5.1 2.6-6.8-1.6-16-3.8-5.4-1.3h-.8v.4l4.6 4.5 8.3 7.5L89 80.1l.5 2.4-1.3 2-1.4-.2-9.2-7-3.6-3-8-6.8h-.5v.7l1.8 2.7 9.8 14.7.5 4.5-.7 1.4-2.6 1-2.7-.6-5.8-8-6-9-4.7-8.2-.5.4-2.9 30.2-1.3 1.5-3 1.2-2.5-2-1.4-3 1.4-6.2 1.6-8 1.3-6.4 1.2-7.9.7-2.6v-.2H49L43 72l-9 12.3-7.2 7.6-1.7.7-3-1.5.3-2.8L24 86l10-12.8 6-7.9 4-4.6-.1-.5h-.3L17.2 77.4l-4.7.6-2-2 .2-3 1-1 8-5.5Z" />
-    </svg>
-  );
-}
+  // ── Free Models (OpenRouter) ──
+  { id: 'cohere-north-mini-code', name: 'Cohere North Mini', tier: 'free', provider: 'cohere', backendModel: 'cohere/north-mini-code:free', latency: '0.6s', context: '128K' },
+  { id: 'nvidia-nemotron-ultra', name: 'Nvidia Nemotron Ultra', tier: 'free', provider: 'nvidia', backendModel: 'nvidia/nemotron-3-ultra-550b-a55b:free', latency: '2.0s', context: '1M' },
+  { id: 'tencent-hy3', name: 'Tencent HY3', tier: 'free', provider: 'tencent', backendModel: 'tencent/hy3:free', latency: '3.4s', context: '262K' },
+  { id: 'poolside-laguna-xs', name: 'Poolside Laguna XS', tier: 'free', provider: 'poolside', backendModel: 'poolside/laguna-xs-2.1:free', latency: '0.8s', context: '128K' },
+  { id: 'poolside-laguna-m', name: 'Poolside Laguna M', tier: 'free', provider: 'poolside', backendModel: 'poolside/laguna-m.1:free', latency: '1.2s', context: '128K' },
+  { id: 'nvidia-nemotron-super', name: 'Nvidia Nemotron Super', tier: 'free', provider: 'nvidia', backendModel: 'nvidia/nemotron-3-super-120b-a12b:free', latency: '2.5s', context: '128K' },
+  { id: 'google-gemma-4', name: 'Google Gemma 4', tier: 'free', provider: 'google', backendModel: 'google/gemma-4-31b-it:free', latency: '1.0s', context: '128K' },
+  { id: 'nvidia-nemotron-nano', name: 'Nvidia Nemotron Nano', tier: 'free', provider: 'nvidia', backendModel: 'nvidia/nemotron-3-nano-30b-a3b:free', latency: '0.6s', context: '128K' },
+  { id: 'openai-gpt-oss', name: 'OpenAI GPT OSS', tier: 'free', provider: 'openai', backendModel: 'openai/gpt-oss-120b:free', latency: '1.8s', context: '128K' },
 
-function OpenAIIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="#10A37F"
-      fillRule="evenodd"
-      className="shrink-0"
-    >
-      <path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z" />
-    </svg>
-  );
-}
-
-function GeminiIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" className="shrink-0">
-      <defs>
-        <linearGradient
-          id="gemini-grad"
-          x1="0"
-          y1="0"
-          x2="24"
-          y2="24"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#4285F4" />
-          <stop offset="0.35" stopColor="#8B5CF6" />
-          <stop offset="0.65" stopColor="#EC4899" />
-          <stop offset="1" stopColor="#F59E0B" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M12 2C8 8 6 10 2 12c4 2 6 4 10 10 4-6 6-8 10-10-4-2-6-4-10-10z"
-        fill="url(#gemini-grad)"
-        fillOpacity="0.92"
-      />
-    </svg>
-  );
-}
-
-function GrokIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 34 34" fill="#FFFFFF" className="shrink-0">
-      <g transform="translate(0.5, 0.5)">
-        <path d="M13.2371 21.0407L24.3186 12.8506C24.8619 12.4491 25.6384 12.6057 25.8973 13.2294C27.2597 16.5185 26.651 20.4712 23.9403 23.1851C21.2297 25.8989 17.4581 26.4941 14.0108 25.1386L10.2449 26.8843C15.6463 30.5806 22.2053 29.6665 26.304 25.5601C29.5551 22.3051 30.562 17.8683 29.6205 13.8673L29.629 13.8758C28.2637 7.99809 29.9647 5.64871 33.449 0.844576C33.5314 0.730667 33.6139 0.616757 33.6964 0.5L29.1113 5.09055V5.07631L13.2343 21.0436" />
-        <path d="M10.9503 23.0313C7.07343 19.3235 7.74185 13.5853 11.0498 10.2763C13.4959 7.82722 17.5036 6.82767 21.0021 8.2971L24.7595 6.55998C24.0826 6.07017 23.215 5.54334 22.2195 5.17313C17.7198 3.31926 12.3326 4.24192 8.67479 7.90126C5.15635 11.4239 4.0499 16.8403 5.94992 21.4622C7.36924 24.9165 5.04257 27.3598 2.69884 29.826C1.86829 30.7002 1.0349 31.5745 0.36364 32.5L10.9474 23.0341" />
-      </g>
-    </svg>
-  );
-}
-
-function DeepSeekIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 60 60" fill="#4D6BFE" className="shrink-0">
-      <g transform="translate(2, 6)">
-        <path d="M55.6128 3.4712c-.5953-.2917-.8517.2642-1.1998.5466-.1191.0911-.2198.2095-.3206.3188-.8701.9292-1.8867 1.5398-3.2148 1.4668-1.9417-.1094-3.5995.5012-5.065 1.9863-.3114-1.8313-1.3463-2.9248-2.9217-3.6262-.8242-.3645-1.6577-.729-2.2348-1.5217-.403-.5647-.5129-1.1934-.7144-1.813-.1283-.3735-.2565-.7563-.687-.8201-.4671-.0728-.6503.3188-.8335.647-.7327 1.3394-1.0166 2.8154-.9892 4.3096.0641 3.3621 1.4838 6.0406 4.3047 7.9449.3206.2187.403.4372.3023.7563-.1924.656-.4214 1.2937-.6228 1.9497-.1283.4192-.3207.5103-.7694.3279-1.5479-.6467-2.8852-1.6035-4.0667-2.7605-2.0058-1.9407-3.8193-4.0818-6.0815-5.7583-.5312-.3918-1.0625-.7561-1.6121-1.1025-2.3081-2.2412.3023-4.0818.9068-4.3003.6319-.2278.2198-1.0115-1.8227-1.0022-2.0425.009-3.9109.6924-6.2922 1.6035-.348.1367-.7145.2368-1.09.3188-2.1615-.4099-4.4055-.5012-6.7502-.2368-4.4147.4919-7.9408 2.5784-10.5328 6.1409C.1914 13.1289-.5413 17.9941.3563 23.0691c.9434 5.3481 3.6727 9.7761 7.8676 13.2385 4.3506 3.5896 9.3606 5.3481 15.0758 5.011 3.4713-.2004 7.3364-.665 11.6961-4.355 1.099.5467 2.2531.7652 4.1674.9292 1.4746.1367 2.8943-.0728 3.9933-.3005 1.7219-.3645 1.6029-1.959.9801-2.2505-5.0466-2.3506-3.9385-1.394-4.9459-2.1685 2.5645-3.0339 6.4297-6.1865 7.9409-16.4001.119-.8108.0183-1.3211 0-1.9771-.0092-.4008.0824-.5556.5404-.6013 1.2639-.1458 2.4912-.4919 3.6178-1.1115 3.2698-1.7857 4.5886-4.7195 4.9-8.2364.0459-.5376-.0091-1.0935-.577-1.3757ZM27.119 35.123c-4.8909-3.8447-7.263-5.1113-8.2431-5.0566-.9159.0547-.751 1.1025-.5496 1.7859.2107.6741.4855 1.1389.8701 1.731.2656.3918.4489.9748-.2655 1.4123-1.5754.9749-4.314-.3281-4.4423-.3918-3.1872-1.877-5.8525-4.3553-7.7302-7.7444-1.8135-3.262-2.8667-6.7605-3.0408-10.4961-.0458-.9019.2198-1.221 1.1174-1.3848 1.1815-.2187 2.3997-.2644 3.5812-.0913 4.9918.729 9.2415 2.9612 12.8043 6.4963 2.0333 2.0135 3.572 4.419 5.1566 6.7696 1.6852 2.4963 3.4987 4.8745 5.8068 6.8242.8151.6833 1.4654 1.2026 2.0882 1.5854-1.8775.2095-5.01.2552-7.1532-1.4397Z" />
-      </g>
-    </svg>
-  );
-}
-
-function LlamaIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="#1877F2" className="shrink-0">
-      <path d="M12 2C8.5 2 5 4.5 5 8.5c0 2.5 1.5 4.8 3.5 6.5.5.4 1 .8 1.5 1.2.3.2.6.5.8.8.2.3.3.6.3.9v3.6c0 .6.4 1 1 1s1-.4 1-1v-3.6c0-.3.1-.6.3-.9.2-.3.5-.5.8-.8.5-.4 1-.8 1.5-1.2 2-1.7 3.5-4 3.5-6.5C19 4.5 15.5 2 12 2zm0 12c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z" />
-    </svg>
-  );
-}
-
-function MistralIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 129 91" className="shrink-0">
-      <g fill="#FF8205">
-        <rect x="18.292" y="0" width="18.293" height="18.123" fill="#FFD800" />
-        <rect x="91.473" y="0" width="18.293" height="18.123" fill="#FFD800" />
-        <rect x="18.292" y="18.121" width="36.586" height="18.123" fill="#FFAF00" />
-        <rect x="73.181" y="18.121" width="36.586" height="18.123" fill="#FFAF00" />
-        <rect x="18.292" y="36.243" width="91.476" height="18.122" fill="#FF8205" />
-        <rect x="18.292" y="54.37" width="18.293" height="18.123" fill="#FA500F" />
-        <rect x="54.883" y="54.37" width="18.293" height="18.123" fill="#FA500F" />
-        <rect x="91.473" y="54.37" width="18.293" height="18.123" fill="#FA500F" />
-        <rect x="0" y="72.504" width="54.89" height="18.123" fill="#E10500" />
-        <rect x="73.181" y="72.504" width="54.89" height="18.123" fill="#E10500" />
-      </g>
-    </svg>
-  );
-}
-
-/* ─── Data ─────────────────────────────────────────────── */
-
-interface ModelItem {
-  id: string;
-  name: string;
-  group: 'free' | 'api-key' | 'open';
-  icon: ReactNode;
-}
-
-const MODELS: ModelItem[] = [
-  // ── Kraivor Free ──
-  { id: 'krait-2.0', name: 'Krait 2.0', group: 'free', icon: <KraitIcon /> },
-  { id: 'groq-llama', name: 'Groq Llama', group: 'free', icon: <GrokIcon /> },
-  { id: 'gemini-flash', name: 'Gemini Flash', group: 'free', icon: <GeminiIcon /> },
-
-  // ── API Key ──
-  { id: 'claude-sonnet', name: 'Claude Sonnet', group: 'api-key', icon: <ClaudeIcon /> },
-  { id: 'gpt-5o', name: 'GPT-5o', group: 'api-key', icon: <OpenAIIcon /> },
-  { id: 'deepseek-coder', name: 'DeepSeek Coder', group: 'api-key', icon: <DeepSeekIcon /> },
-  { id: 'grok-4', name: 'Grok 4', group: 'api-key', icon: <GrokIcon /> },
-
-  // ── Open Models ──
-  { id: 'llama-4', name: 'Llama 4', group: 'open', icon: <LlamaIcon /> },
-  { id: 'mistral-large', name: 'Mistral Large', group: 'open', icon: <MistralIcon /> },
+  // ── BYOK Models (per-provider keys, OpenRouter fallback) ──
+  // Anthropic
+  { id: 'claude-fable-5', name: 'Claude Fable 5', tier: 'byok', provider: 'anthropic', backendModel: 'anthropic/claude-fable-5', latency: '1.5s', context: '200K' },
+  { id: 'claude-opus-4-8', name: 'Claude Opus 4.8', tier: 'byok', provider: 'anthropic', backendModel: 'anthropic/claude-opus-4-8', latency: '2.0s', context: '200K' },
+  { id: 'claude-opus-4-7', name: 'Claude Opus 4.7', tier: 'byok', provider: 'anthropic', backendModel: 'anthropic/claude-opus-4-7', latency: '2.2s', context: '200K' },
+  { id: 'claude-sonnet-5', name: 'Claude Sonnet 5', tier: 'byok', provider: 'anthropic', backendModel: 'anthropic/claude-sonnet-5', latency: '1.2s', context: '200K' },
+  { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', tier: 'byok', provider: 'anthropic', backendModel: 'anthropic/claude-sonnet-4-6', latency: '1.0s', context: '200K' },
+  // OpenAI
+  { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', tier: 'byok', provider: 'openai', backendModel: 'openai/gpt-5.6-sol', latency: '1.0s', context: '128K' },
+  { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra', tier: 'byok', provider: 'openai', backendModel: 'openai/gpt-5.6-terra', latency: '1.2s', context: '128K' },
+  { id: 'gpt-5.5', name: 'GPT-5.5', tier: 'byok', provider: 'openai', backendModel: 'openai/gpt-5.5', latency: '0.9s', context: '128K' },
+  { id: 'gpt-5.4', name: 'GPT-5.4', tier: 'byok', provider: 'openai', backendModel: 'openai/gpt-5.4', latency: '0.8s', context: '128K' },
+  // Google
+  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', tier: 'byok', provider: 'google', backendModel: 'google/gemini-3.5-flash', latency: '0.5s', context: '1M' },
+  { id: 'gemini-3.1-pro', name: 'Gemini 3.1 Pro', tier: 'byok', provider: 'google', backendModel: 'google/gemini-3.1-pro', latency: '1.5s', context: '1M' },
+  // DeepSeek
+  { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', tier: 'byok', provider: 'deepseek', backendModel: 'deepseek/deepseek-v4-pro', latency: '1.0s', context: '128K' },
+  // xAI
+  { id: 'grok-4.3', name: 'Grok 4.3', tier: 'byok', provider: 'xai', backendModel: 'xai/grok-4.3', latency: '1.5s', context: '128K' },
 ];
 
-/* ─── Helpers ──────────────────────────────────────────── */
+/* ─── Group config ──────────────────────────────────────── */
 
-export function getModelIcon(id: string) {
-  return MODELS.find(m => m.id === id)?.icon ?? <KraitIcon />;
-}
+const GROUP_ORDER: { tier: ModelTier; label: string; icon: ReactNode }[] = [
+  { tier: 'kraivor', label: 'Kraivor AI', icon: <KraitIcon /> },
+  { tier: 'free', label: 'Free Models', icon: null },
+  { tier: 'byok', label: 'BYOK Models', icon: null },
+];
 
-export function getModelName(id: string) {
-  return MODELS.find(m => m.id === id)?.name ?? id;
-}
+/* ─── Component props ───────────────────────────────────── */
 
-export function getModelGroup(id: string) {
-  return MODELS.find(m => m.id === id)?.group ?? 'free';
+export interface ModelSelectorProps {
+  selected: string;
+  onSelect: (id: string) => void;
+  models?: ModelItem[];
 }
 
 /* ─── Component ────────────────────────────────────────── */
 
-export function ModelSelector({
-  selected,
-  onSelect,
-}: {
-  selected: string;
-  onSelect: (id: string) => void;
-}) {
+export function ModelSelector({ selected, onSelect, models: modelsProp }: ModelSelectorProps) {
+  const [fetchedModels, setFetchedModels] = useState<ModelItem[] | null>(null);
+  const [loading, setLoading] = useState(!modelsProp);
+
+  useEffect(() => {
+    if (modelsProp) return;
+    let cancelled = false;
+    setLoading(true);
+    aiApi
+      .listModels()
+      .then(data => {
+        if (!cancelled) setFetchedModels(data);
+      })
+      .catch(() => {
+        if (!cancelled) setFetchedModels(FALLBACK_MODELS);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [modelsProp]);
+
+  const allModels = (Array.isArray(modelsProp) && modelsProp.length > 0)
+    ? modelsProp
+    : Array.isArray(fetchedModels) && fetchedModels.length > 0
+      ? fetchedModels
+      : FALLBACK_MODELS;
+
+  const grouped = useMemo(() => {
+    const map = new Map<ModelTier, ModelItem[]>();
+    for (const m of allModels) {
+      const arr = map.get(m.tier) ?? [];
+      arr.push(m);
+      map.set(m.tier, arr);
+    }
+    return map;
+  }, [allModels]);
+
+  if (loading) {
+    return (
+      <div className="w-64 bg-[#18181C] border border-[#27272A] rounded-xl shadow-2xl p-4 flex items-center justify-center">
+        <span className="text-[12px] text-[#5e5e72] animate-pulse">Loading models...</span>
+      </div>
+    );
+  }
+
+  let hasPrev = false;
+
   return (
-    <div className="w-56 bg-[#18181C] border border-[#27272A] rounded-lg shadow-xl z-50">
-      {/* ── Kraivor Free ─────────────────────────── */}
-      <div className="px-3 pt-3 pb-1">
-        <span className="text-[10px] uppercase tracking-[0.12em] font-medium text-[#5e5e72]">
-          Kraivor Free
-        </span>
-      </div>
-      <div className="pb-1">
-        {MODELS.filter(m => m.group === 'free').map(model => (
-          <ModelRow key={model.id} model={model} selected={selected} onSelect={onSelect} />
-        ))}
-      </div>
+    <div
+      className="w-64 bg-[#18181C] border border-[#27272A] rounded-xl shadow-2xl pointer-events-auto"
+      onPointerDown={e => e.stopPropagation()}
+    >
+      <div className="max-h-[400px] overflow-y-auto overflow-x-hidden">
+        {GROUP_ORDER.map(({ tier, label, icon: groupIcon }) => {
+          const models = grouped.get(tier);
+          if (!models || models.length === 0) return null;
 
-      {/* ── Divider ──────────────────────────────── */}
-      <div className="border-t border-neutral-800 mx-3" />
+          if (hasPrev) {
+            return (
+              <div key={tier}>
+                <div className="border-t border-[#27272A] mx-3" />
+                <GroupHeader label={label} icon={groupIcon} tier={tier} />
+                <div className="pb-1.5">
+                  {models.map(m => (
+                    <ModelRow key={m.id} model={m} selected={selected} onSelect={onSelect} />
+                  ))}
+                </div>
+              </div>
+            );
+          }
 
-      {/* ── API Key ──────────────────────────────── */}
-      <div className="px-3 pt-3 pb-1">
-        <span className="text-[10px] uppercase tracking-[0.12em] font-medium text-[#5e5e72]">
-          API Key
-        </span>
-      </div>
-      <div className="pb-1">
-        {MODELS.filter(m => m.group === 'api-key').map(model => (
-          <ModelRow key={model.id} model={model} selected={selected} onSelect={onSelect} />
-        ))}
-      </div>
-
-      {/* ── Divider ──────────────────────────────── */}
-      <div className="border-t border-neutral-800 mx-3" />
-
-      {/* ── Open Models ──────────────────────────── */}
-      <div className="flex items-center gap-1.5 px-3 pt-3 pb-1">
-        <span className="text-[10px] uppercase tracking-[0.12em] font-medium text-[#5e5e72]">
-          Open Models
-        </span>
-        <span className="text-[9px] uppercase tracking-wider text-[#5e5e72]/60 font-medium border border-[#27272A] rounded px-1 leading-none py-0.5">
-          Beta
-        </span>
-      </div>
-      <div className="pb-1.5">
-        {MODELS.filter(m => m.group === 'open').map(model => (
-          <ModelRow key={model.id} model={model} selected={selected} onSelect={onSelect} />
-        ))}
+          hasPrev = true;
+          return (
+            <div key={tier}>
+              <GroupHeader label={label} icon={groupIcon} tier={tier} />
+              <div className="pb-1.5">
+                {models.map(m => (
+                  <ModelRow key={m.id} model={m} selected={selected} onSelect={onSelect} />
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
+
+/* ─── Group header ──────────────────────────────────────── */
+
+function GroupHeader({ label, icon }: { label: string; icon: ReactNode; tier: ModelTier }) {
+  return (
+    <div className="flex items-center gap-1.5 px-3 pt-3 pb-1">
+      {icon && <span className="w-4 h-4 flex items-center justify-center">{icon}</span>}
+      <span className="text-[10px] uppercase tracking-[0.12em] font-medium text-[#5e5e72]">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+/* ─── Model row ────────────────────────────────────────── */
 
 function ModelRow({
   model,
@@ -222,17 +177,41 @@ function ModelRow({
   onSelect: (id: string) => void;
 }) {
   const active = selected === model.id;
+  const iconFn = MODEL_ICONS[model.id];
+  const IconComponent = iconFn ? iconFn() : null;
+
   return (
     <button
+      onPointerDown={e => e.stopPropagation()}
       onClick={() => onSelect(model.id)}
-      className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
+      className={`w-full flex items-center gap-2.5 px-3 py-[7px] text-left transition-all duration-150 ${
         active
           ? 'bg-[#1f1f24] text-venom-yellow'
           : 'text-[#9898a6] hover:bg-[#1f1f24] hover:text-[#f2f2f3]'
       }`}
     >
-      {model.icon}
+      <span className="w-4 h-4 flex items-center justify-center shrink-0">
+        {IconComponent}
+      </span>
       <span className="text-[13px] font-medium flex-1 truncate">{model.name}</span>
     </button>
   );
+}
+
+/* ─── Exports (backward compat) ─────────────────────────── */
+
+export function getModelIcon(id: string) {
+  const fn = MODEL_ICONS[id];
+  if (fn) return fn();
+  return <KraitIcon />;
+}
+
+export function getModelName(id: string) {
+  const m = FALLBACK_MODELS.find(m => m.id === id);
+  return m?.name ?? id;
+}
+
+export function getModelGroup(id: string): ModelTier {
+  const m = FALLBACK_MODELS.find(m => m.id === id);
+  return m?.tier ?? 'kraivor';
 }

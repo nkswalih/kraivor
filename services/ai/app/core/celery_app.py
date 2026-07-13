@@ -33,6 +33,22 @@ celery_app.conf.update(
             "task": "app.application.tasks.maintenance.clean_expired_cache",
             "schedule": 86400.0,
         },
+        "knowledge-freshness-check-daily": {
+            "task": "app.application.tasks.knowledge.check_knowledge_freshness_daily",
+            "schedule": 86400.0,
+        },
+        "proactive-learning-every-6h": {
+            "task": "app.application.tasks.knowledge.proactive_learning_daily",
+            "schedule": 21600.0,  # 6 hours
+        },
+        "knowledge-auto-refresh-daily": {
+            "task": "app.application.tasks.knowledge.auto_refresh_stale_knowledge",
+            "schedule": 86400.0,  # daily
+        },
+        "knowledge-cache-cleanup-daily": {
+            "task": "app.application.tasks.knowledge.cleanup_knowledge_cache",
+            "schedule": 86400.0,  # daily
+        },
     },
 )
 

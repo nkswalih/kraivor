@@ -21,14 +21,16 @@ class LLMClient:
         self._init_client(api_key)
 
     def _init_client(self, api_key: str):
-        if self.provider in ("openrouter", "groq", "openai"):
-            base_urls = {
-                "openrouter": "https://openrouter.ai/api/v1",
-                "groq": "https://api.groq.com/openai/v1",
-                "openai": "https://api.openai.com/v1",
-            }
+        _OPENAI_COMPATIBLE = {
+            "openrouter": "https://openrouter.ai/api/v1",
+            "groq": "https://api.groq.com/openai/v1",
+            "openai": "https://api.openai.com/v1",
+            "deepseek": "https://api.deepseek.com/v1",
+            "xai": "https://api.x.ai/v1",
+        }
+        if self.provider in _OPENAI_COMPATIBLE:
             self.client = AsyncOpenAI(
-                api_key=api_key, base_url=base_urls[self.provider]
+                api_key=api_key, base_url=_OPENAI_COMPATIBLE[self.provider]
             )
         elif self.provider == "anthropic":
             self.client = AsyncAnthropic(api_key=api_key)
@@ -48,7 +50,7 @@ class LLMClient:
         start = time.monotonic()
         result = ""
 
-        if self.provider in ("openrouter", "groq", "openai"):
+        if self.provider in ("openrouter", "groq", "openai", "deepseek", "xai"):
             response = await self.client.chat.completions.create(
                 model=self.model, messages=messages, **kwargs
             )
@@ -68,10 +70,14 @@ class LLMClient:
                         }
                     )
             if result is None and not tool_calls:
-                raise ValueError(
-                    f"LLM returned null content for model={self.model} "
-                    f"provider={self.provider} finish_reason={response.choices[0].finish_reason}"
+                # Some providers return finish_reason=tool_calls even without tools.
+                # Fall back to empty content rather than crashing the pipeline.
+                logger.warning(
+                    "LLM returned null content (finish_reason=%s, model=%s, provider=%s) — "
+                    "falling back to empty response",
+                    response.choices[0].finish_reason, self.model, self.provider,
                 )
+                result = ""
             metrics["input_tokens"] = response.usage.prompt_tokens
             metrics["output_tokens"] = response.usage.completion_tokens
 
@@ -120,7 +126,7 @@ class LLMClient:
         return {"content": result, "tool_calls": tool_calls or [], **metrics}
 
     async def stream(self, messages: list, **kwargs) -> AsyncGenerator[str, None]:
-        if self.provider in ("openrouter", "groq", "openai"):
+        if self.provider in ("openrouter", "groq", "openai", "deepseek", "xai"):
             stream = await self.client.chat.completions.create(
                 model=self.model, messages=messages, stream=True, **kwargs
             )

@@ -48,7 +48,7 @@ const FALLBACK_MODELS: ModelItem[] = [
 /* ─── Group config ──────────────────────────────────────── */
 
 const GROUP_ORDER: { tier: ModelTier; label: string; icon: ReactNode }[] = [
-  { tier: 'kraivor', label: 'Kraivor AI', icon: <KraitIcon /> },
+  { tier: 'kraivor', label: 'Kraivor AI', icon: null },
   { tier: 'free', label: 'Free Models', icon: null },
   { tier: 'byok', label: 'BYOK Models', icon: null },
 ];

@@ -41,9 +41,11 @@ export function KnowledgeDashboardPage({
   const [tab, setTab] = useState<Tab>('overview');
   const [showUpload, setShowUpload] = useState(false);
 
-  const health = useKnowledgeHealth(workspaceId);
+  const isOverview = tab === 'overview';
+
+  const health = useKnowledgeHealth(workspaceId, isOverview);
   const stats = useKnowledgeStats(workspaceId);
-  const graph = useKnowledgeGraph(workspaceId);
+  const graph = useKnowledgeGraph(workspaceId, isOverview);
 
   return (
     <div className="flex flex-col h-full animate-fade-up">

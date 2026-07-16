@@ -21,6 +21,7 @@ interface AiWelcomeProps {
   onModelSelect: (id: string) => void;
   showBanner: boolean;
   models?: ModelItem[];
+  onStop?: () => void;
 }
 
 const SUGGESTIONS = [
@@ -45,6 +46,7 @@ export function AiWelcome({
   onModelSelect,
   showBanner,
   models,
+  onStop,
 }: AiWelcomeProps) {
   const [editingConv, setEditingConv] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -102,6 +104,7 @@ export function AiWelcome({
             onModelSelect={onModelSelect}
             showBanner={showBanner}
             models={models}
+            onStop={onStop}
           />
         </div>
 

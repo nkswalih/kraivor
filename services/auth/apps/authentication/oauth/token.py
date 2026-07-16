@@ -6,7 +6,7 @@ GitHub OAuth access token. This avoids the Core Service needing direct
 database access to the auth service's OAuthIdentity table.
 
 Security:
-  - Requires X-Internal-Request: 1 header (bypasses JWT verification)
+  - Requires X-Internal-Request header with shared secret (bypasses JWT verification)
   - Requires X-User-ID header (identifies the target user)
   - Not exposed to external clients — only reachable within Docker network
 """
@@ -18,6 +18,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from authentication.internal_auth import require_internal_request
 from ..models import OAuthIdentity
 from .encryption import get_encryption_service
 
@@ -45,12 +46,10 @@ class GitHubOAuthTokenView(APIView):
 
     def get(self, request: Request) -> Response:
         # ── Verify internal request header ──────────────────────────────────
-        internal_header = getattr(
-            settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"
-        )
-        if request.headers.get(internal_header) != "1":
+        forbidden = require_internal_request(request)
+        if forbidden:
             logger.warning("github.token.missing_internal_header")
-            return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+            return forbidden
 
         # ── Extract user ID ─────────────────────────────────────────────────
         user_id = request.headers.get("X-User-ID")

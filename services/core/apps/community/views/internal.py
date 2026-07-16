@@ -31,7 +31,12 @@ class SyncAuthorDenormalizationView(APIView):
         internal_header = getattr(
             settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"
         )
-        if request.headers.get(internal_header) != "1":
+        internal_secret = getattr(settings, "INTERNAL_REQUEST_SECRET", "")
+        header_value = request.headers.get(internal_header)
+        if not header_value or not internal_secret:
+            return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+        import hmac
+        if not hmac.compare_digest(header_value.encode(), internal_secret.encode()):
             return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
         author_id = request.data.get("author_id")

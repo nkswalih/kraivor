@@ -41,7 +41,7 @@ def _resolve_profile(user_id: str) -> dict:
             endpoint,
             json={"user_ids": [user_id]},
             headers={
-                getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"): "1"
+                getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"): settings.INTERNAL_REQUEST_SECRET
             },
             timeout=5,
         )
@@ -60,7 +60,7 @@ def _sync_profile_counters(event_type: str, author_id: str) -> None:
             endpoint,
             json={"event_type": event_type, "author_id": author_id},
             headers={
-                getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"): "1"
+                getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"): settings.INTERNAL_REQUEST_SECRET
             },
             timeout=5,
         )

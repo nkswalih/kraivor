@@ -10,6 +10,7 @@ import { useChatStore } from '@/lib/stores/chat-store';
 import { useUIStore } from '@/lib/stores/ui-store';
 import { profileEndpoints, chatEndpoints, notificationEndpoints } from '@/lib/api/endpoints';
 import { getInitials, cn } from '@/lib/utils';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/shadcn/popover';
 import {
   Home,
   GitBranch,
@@ -119,28 +120,23 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
       {/* Main Navigation */}
       <div className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
 
-        {/* AI Workspace Dropdown */}
-        <div>
-          <button
-            onClick={() => setAiDropdownOpen(!aiDropdownOpen)}
-            className={cn(
-              'flex items-center rounded-[6px] transition-colors text-[13px] font-medium w-full',
-              collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-2.5 py-1.5',
-              aiSubItems.some(sub => pathname.startsWith(sub.href))
-                ? 'bg-krait-surface1 text-text-primary'
-                : 'text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary'
-            )}
-          >
-            {aiDropdownOpen ? (
-              <ChevronDown className="w-4 h-4 shrink-0" />
-            ) : (
-              <ChevronRight className="w-4 h-4 shrink-0" />
-            )}
-            <span className={collapsed ? 'hidden' : ''}>AI Workspace</span>
-          </button>
-
-          {!collapsed && aiDropdownOpen && (
-            <div className="ml-2 mt-0.5 space-y-0.5">
+        {/* AI Workspace */}
+        {collapsed ? (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  'flex items-center justify-center rounded-[6px] transition-colors text-[13px] font-medium w-full px-0 py-2',
+                  aiSubItems.some(sub => pathname.startsWith(sub.href))
+                    ? 'bg-krait-surface1 text-text-primary'
+                    : 'text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary'
+                )}
+              >
+                <Sparkles className="w-4 h-4 shrink-0" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="right" sideOffset={8} align="start" className="ml-1">
+              <p className="text-[11px] font-semibold text-text-secondary mb-1 px-2 pt-1">AI Workspace</p>
               {aiSubItems.map(sub => {
                 const isActive = pathname.startsWith(sub.href);
                 return (
@@ -148,7 +144,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
                     key={sub.name}
                     href={sub.href}
                     className={cn(
-                      'flex items-center rounded-[6px] transition-colors text-[13px] font-medium gap-2.5 pl-4 pr-2.5 py-1.5',
+                      'flex items-center rounded-[6px] transition-colors text-[13px] font-medium gap-2.5 px-2 py-1.5',
                       isActive
                         ? 'bg-krait-surface1 text-text-primary'
                         : 'text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary'
@@ -159,16 +155,60 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
                   </Link>
                 );
               })}
-            </div>
-          )}
-        </div>
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <div>
+            <button
+              onClick={() => setAiDropdownOpen(!aiDropdownOpen)}
+              className={cn(
+                'flex items-center gap-2.5 px-2.5 py-1.5 rounded-[6px] transition-colors text-[13px] font-medium w-full',
+                aiSubItems.some(sub => pathname.startsWith(sub.href))
+                  ? 'bg-krait-surface1 text-text-primary'
+                  : 'text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary'
+              )}
+            >
+              {aiDropdownOpen ? (
+                <ChevronDown className="w-4 h-4 shrink-0" />
+              ) : (
+                <ChevronRight className="w-4 h-4 shrink-0" />
+              )}
+              <span>AI Workspace</span>
+            </button>
+
+            {aiDropdownOpen && (
+              <div className="ml-2 mt-0.5 space-y-0.5">
+                {aiSubItems.map(sub => {
+                  const isActive = pathname.startsWith(sub.href);
+                  return (
+                    <Link
+                      key={sub.name}
+                      href={sub.href}
+                      className={cn(
+                        'flex items-center rounded-[6px] transition-colors text-[13px] font-medium gap-2.5 pl-4 pr-2.5 py-1.5',
+                        isActive
+                          ? 'bg-krait-surface1 text-text-primary'
+                          : 'text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary'
+                      )}
+                    >
+                      <sub.icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-text-primary' : 'text-text-secondary')} />
+                      <span>{sub.name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Regular Nav Items */}
         {navItems.map(item => {
           const isActive =
             item.href === `/${workspaceSlug}`
               ? pathname === item.href
-              : pathname.startsWith(item.href);
+              : pathname.startsWith(item.href) &&
+                // Exclude AI Knowledge dashboard path from Knowledge highlight
+                !(item.name === 'Knowledge' && pathname.startsWith(`/${workspaceSlug}/knowledge/dashboard`));
 
           return (
             <Link

@@ -180,7 +180,8 @@ export const aiApi = {
   /* ─── Dynamic model listing ─────────────────────────────── */
 
   async listModels(): Promise<ModelItem[]> {
-    return aiFetch<ModelItem[]>('/v1/models');
+    const res = await aiFetch<{ models: ModelItem[]; default: string }>('/v1/models');
+    return res.models || [];
   },
 
   /* ─── BYOK key management ──────────────────────────────── */
@@ -217,7 +218,7 @@ export const aiApi = {
     return aiPatch<ConversationSummary>(`/v1/conversations/${conversationId}`, data);
   },
 
-  async *streamMessage(payload: SendMessagePayload) {
+  async *streamMessage(payload: SendMessagePayload, signal?: AbortSignal) {
     const model = payload.model ? resolveModelId(payload.model) : undefined;
     const workspaceId = useAuthStore.getState().workspaceId;
 
@@ -235,6 +236,7 @@ export const aiApi = {
         stream: true,
         model,
       }),
+      signal,
     });
 
     if (response.status === 429) {

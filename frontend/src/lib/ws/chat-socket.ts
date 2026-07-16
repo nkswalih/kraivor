@@ -23,7 +23,8 @@ export class ChatSocket {
     this.token = this.getJwt();
     if (!this.token) return;
     this.closing = false;
-    this.ws = new WebSocket(`${WS_BASE}/ws/chat/${roomId}/?token=${this.token}`);
+    // Use WebSocket subprotocol to pass token (avoids URL exposure in logs/proxies)
+    this.ws = new WebSocket(`${WS_BASE}/ws/chat/${roomId}/`, ['auth', this.token]);
     this.attachListeners();
   }
 

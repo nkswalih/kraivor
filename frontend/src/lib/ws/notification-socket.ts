@@ -34,7 +34,8 @@ export class NotificationSocket {
     if (!token) return;
     this.closing = false;
     this.active = true;
-    this.ws = new WebSocket(`${getWsBase()}/ws/notifications/?token=${token}`);
+    // Use WebSocket subprotocol to pass token (avoids URL exposure in logs/proxies)
+    this.ws = new WebSocket(`${getWsBase()}/ws/notifications/`, ['auth', token]);
     this.attachListeners();
   }
 

@@ -17,11 +17,11 @@ const kKeys = {
 
 /* ─── Health ──────────────────────────────────────────────── */
 
-export function useKnowledgeHealth(workspaceId: string | undefined) {
+export function useKnowledgeHealth(workspaceId: string | undefined, enabled = true) {
   return useQuery({
     queryKey: kKeys.health(workspaceId ?? ''),
     queryFn: () => knowledgeAiApi.getHealth(workspaceId!),
-    enabled: !!workspaceId,
+    enabled: !!workspaceId && enabled,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
@@ -67,11 +67,11 @@ export function useKnowledgeSearch(workspaceId: string | undefined, query: strin
 
 /* ─── Graph ───────────────────────────────────────────────── */
 
-export function useKnowledgeGraph(workspaceId: string | undefined) {
+export function useKnowledgeGraph(workspaceId: string | undefined, enabled = true) {
   return useQuery({
     queryKey: kKeys.graph(workspaceId ?? ''),
     queryFn: () => knowledgeAiApi.getGraphStats(workspaceId!),
-    enabled: !!workspaceId,
+    enabled: !!workspaceId && enabled,
     staleTime: 60_000,
   });
 }

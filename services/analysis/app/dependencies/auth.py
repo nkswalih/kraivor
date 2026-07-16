@@ -1,3 +1,4 @@
+import hmac
 import time
 from threading import Lock
 
@@ -92,7 +93,11 @@ def get_current_user(request: Request) -> JWTPayload:
     FastAPI dependency that verifies JWT token and returns the payload.
     """
     # Skip JWT verification for internal requests (from gateway)
-    if request.headers.get(settings.jwt.internal_request_header):
+    header_value = request.headers.get(settings.jwt.internal_request_header)
+    internal_secret = settings.jwt.internal_request_secret
+    if header_value and internal_secret and hmac.compare_digest(
+        header_value.encode(), internal_secret.encode()
+    ):
         return JWTPayload(
             sub=request.headers.get("X-User-ID", ""),
             email=request.headers.get("X-Email", ""),

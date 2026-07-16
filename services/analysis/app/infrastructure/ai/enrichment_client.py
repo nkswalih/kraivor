@@ -13,6 +13,7 @@ class AiEnrichmentClient:
         self.endpoint = settings.ai.enrich_endpoint
         self.timeout = settings.ai.timeout
         self.internal_header_name = settings.ai.internal_request_header
+        self.internal_secret = settings.jwt.internal_request_secret
 
     async def enrich_findings(
         self,
@@ -35,7 +36,7 @@ class AiEnrichmentClient:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
-                    url, json=payload, headers={self.internal_header_name: "true"}
+                    url, json=payload, headers={self.internal_header_name: self.internal_secret}
                 )
                 response.raise_for_status()
                 data = response.json()

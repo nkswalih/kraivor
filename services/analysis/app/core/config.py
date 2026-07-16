@@ -43,6 +43,7 @@ class JWTSettings(BaseModel):
     verify_expiration: bool = True
     jwks_cache_ttl: int = Field(default=3600, ge=0)
     internal_request_header: str = "X-Internal-Request"
+    internal_request_secret: str = ""
 
 
 class GitSettings(BaseModel):

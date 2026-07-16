@@ -386,3 +386,4 @@ FIREBASE_CREDENTIALS_PATH = env("FIREBASE_CREDENTIALS_PATH", default=None)
 
 # Internal request header check
 INTERNAL_REQUEST_HEADER = "X-Internal-Request"
+INTERNAL_REQUEST_SECRET = env("INTERNAL_REQUEST_SECRET", default="")

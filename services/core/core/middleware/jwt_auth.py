@@ -1,3 +1,4 @@
+import hmac
 import jwt
 import logging
 from django.conf import settings
@@ -74,7 +75,11 @@ class JWTAuthenticationMiddleware:
             return self.get_response(request)
 
         # ── Internal gateway request: trust headers, skip JWT ─────────────────
-        if request.headers.get(settings.INTERNAL_REQUEST_HEADER):
+        header_value = request.headers.get(settings.INTERNAL_REQUEST_HEADER)
+        internal_secret = getattr(settings, "INTERNAL_REQUEST_SECRET", "")
+        if header_value and internal_secret and hmac.compare_digest(
+            header_value.encode(), internal_secret.encode()
+        ):
             request.jwt_payload = {}
             request.user_id = request.headers.get("X-User-ID", "")
             request.user_name = request.headers.get("X-User-Name", "")

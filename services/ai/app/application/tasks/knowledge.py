@@ -299,7 +299,7 @@ def batch_index_workspace_knowledge(self, workspace_id: str):
             resp = await client.get(
                 f"{core_url}/workspaces/{workspace_id}/knowledge/",
                 headers={
-                    "X-Internal-Request": "true",
+                    "X-Internal-Request": settings.internal_request_secret,
                     "X-Workspace-IDs": workspace_id,
                 },
             )

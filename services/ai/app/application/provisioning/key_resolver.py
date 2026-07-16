@@ -1,12 +1,17 @@
 import base64
 import logging
-import os
 from cryptography.fernet import Fernet
 
 from app.core.config import settings
 from app.core.exceptions import InsufficientQuotaError
 
 logger = logging.getLogger(__name__)
+
+if not settings.key_encryption_key:
+    logger.critical(
+        "AI_KEY_ENCRYPTION_KEY is not set. "
+        "All BYOK encryption will fail. Set this in your .env file."
+    )
 
 # ── Maps provider name → column on ai.api_keys ──────────────
 PROVIDER_FIELD_MAP = {
@@ -110,7 +115,12 @@ async def resolve_provider_key(
     raise InsufficientQuotaError("No usable provider keys available")
 
 
-_key = settings.key_encryption_key or base64.urlsafe_b64encode(os.urandom(32)).decode()
+_key = settings.key_encryption_key
+if not _key:
+    raise RuntimeError(
+        "AI_KEY_ENCRYPTION_KEY must be set. "
+        "Generate with: python -c \"import secrets; print(secrets.token_hex(32))\""
+    )
 _default_encrypter = Fernet(_key.encode() if isinstance(_key, str) else _key)
 
 

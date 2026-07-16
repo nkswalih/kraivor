@@ -83,6 +83,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Found {len(all_author_ids)} author(s) to backfill...")
 
         header_key = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
+        secret = getattr(settings, "INTERNAL_REQUEST_SECRET", "")
         endpoint = _identity_endpoint("/profiles/internal/community-event/")
 
         success = 0
@@ -116,7 +117,7 @@ class Command(BaseCommand):
                             "reputation_score": rep,
                         },
                     },
-                    headers={header_key: "1"},
+                    headers={header_key: secret},
                     timeout=5,
                 )
                 if resp.status_code == 200:

@@ -40,13 +40,14 @@ class Command(BaseCommand):
             base = base[:-4]
         endpoint = f"{base}/api/profiles/internal/resolve-by-id/"
         header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
+        secret = getattr(settings, "INTERNAL_REQUEST_SECRET", "")
 
         for author_id in all_author_ids:
             try:
                 resp = requests.post(
                     endpoint,
                     json={"user_ids": [str(author_id)]},
-                    headers={header: "1"},
+                    headers={header: secret},
                     timeout=5,
                 )
                 if resp.status_code == 200:

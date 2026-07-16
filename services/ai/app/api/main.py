@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.dependencies.auth import invalidate_jwks_cache
 from app.api.middleware.prometheus import PrometheusMiddleware
 from app.api.middleware.request_id import RequestIDMiddleware
+from app.core.config import settings
 from app.core.logging import setup_logging
 from app.infrastructure.cache.redis_client import close_redis
 from app.infrastructure.db.database import close_db, init_db
@@ -37,10 +38,10 @@ def create_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.cors_origins_list,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     )
     app.add_middleware(PrometheusMiddleware)
     app.add_middleware(RequestIDMiddleware)

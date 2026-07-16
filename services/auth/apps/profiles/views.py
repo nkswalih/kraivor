@@ -6,6 +6,7 @@ from django.core.files.storage import default_storage
 from django.db.models import F
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from authentication.internal_auth import require_internal_request
 from profiles.constants import (
     ALLOWED_IMAGE_TYPES,
     AVATAR_MAX_BYTES,
@@ -53,6 +54,7 @@ def _sync_community_author(
     base = getattr(settings, "CORE_SERVICE_URL", "http://core:8002")
     endpoint = f"{base}/api/community/internal/sync-author/"
     header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
+    secret = getattr(settings, "INTERNAL_REQUEST_TOKEN", "")
     try:
         resp = requests.post(
             endpoint,
@@ -62,7 +64,7 @@ def _sync_community_author(
                 "display_name": display_name,
                 "avatar_url": avatar_url,
             },
-            headers={header: "1"},
+            headers={header: secret},
             timeout=5,
         )
         if resp.status_code != 200:
@@ -435,11 +437,9 @@ class ResolveProfilesByIdView(APIView):
         responses={200: OpenApiResponse(description="Profile resolution result")},
     )
     def post(self, request):  # pragma: no cover
-        internal_header = getattr(
-            settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"
-        )
-        if request.headers.get(internal_header) != "1":
-            return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+        forbidden = require_internal_request(request)
+        if forbidden:
+            return forbidden
 
         user_ids = request.data.get("user_ids", [])
         if not isinstance(user_ids, list) or not user_ids:
@@ -583,11 +583,9 @@ class CommunityEventWebhookView(APIView):
         responses={200: OpenApiResponse(description="Event processed")},
     )
     def post(self, request):  # pragma: no cover
-        internal_header = getattr(
-            settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"
-        )
-        if request.headers.get(internal_header) != "1":
-            return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+        forbidden = require_internal_request(request)
+        if forbidden:
+            return forbidden
 
         event_type = request.data.get("event_type")
         author_id = request.data.get("author_id")

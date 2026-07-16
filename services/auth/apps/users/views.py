@@ -7,6 +7,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from authentication.internal_auth import require_internal_request
 from .email_service import email_service
 from .models import User
 from .rate_limiter import RateLimitExceededError, rate_limiter
@@ -290,11 +291,9 @@ class ResolveUsersView(APIView):
         responses={200: OpenApiResponse(description="User resolution result")},
     )
     def post(self, request):
-        internal_header = getattr(
-            settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"
-        )
-        if request.headers.get(internal_header) != "1":
-            return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+        forbidden = require_internal_request(request)
+        if forbidden:
+            return forbidden
 
         emails = request.data.get("emails", [])
         if not isinstance(emails, list) or not emails:
@@ -339,11 +338,9 @@ class ResolveUsersByIdView(APIView):
         responses={200: OpenApiResponse(description="User resolution result")},
     )
     def post(self, request):
-        internal_header = getattr(
-            settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request"
-        )
-        if request.headers.get(internal_header) != "1":
-            return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+        forbidden = require_internal_request(request)
+        if forbidden:
+            return forbidden
 
         user_ids = request.data.get("user_ids", [])
         if not isinstance(user_ids, list) or not user_ids:

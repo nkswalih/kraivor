@@ -43,10 +43,11 @@ services:
   redis:
     image: redis:7-alpine
     container_name: kraivor-redis-dev
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-kraivor_redis_2024}
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-kraivor_redis_2024}", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -136,6 +137,7 @@ services:
       EMAIL_HOST: mailhog
       EMAIL_PORT: 1025
       UV_LINK_MODE: copy
+      INTERNAL_REQUEST_TOKEN: ${INTERNAL_REQUEST_TOKEN:-dev-internal-secret}
       # Explicitly set to prevent host environment variable leakage.
       # Docker Compose inherits host env vars, which can override .env values.
       # This ensures the correct frontend URL regardless of host environment state.
@@ -187,15 +189,16 @@ services:
       DB_PORT: 5432
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/1
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      REDIS_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
       EMAIL_HOST: mailhog
       EMAIL_PORT: 1025
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
       DYNAMODB_LOCAL: "true"
       DYNAMODB_ENDPOINT: http://dynamodb-local:8000
       UV_LINK_MODE: copy
+      INTERNAL_REQUEST_SECRET: ${INTERNAL_REQUEST_TOKEN:-dev-internal-secret}
       FRONTEND_URL: http://localhost
       # ── NOTE ──
       # Core uses FRONTEND_URL to redirect AFTER GitHub App install.
@@ -236,15 +239,17 @@ services:
       dockerfile: Dockerfile.dev
     container_name: kraivor-core-worker-dev
     command: celery -A core.celery_app worker -Q notifications,default --loglevel=info
+    healthcheck:
+      disable: true
     env_file:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: core.settings.development
       DB_HOST: postgres
       DB_PORT: 5432
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/1
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      REDIS_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
       DYNAMODB_LOCAL: "true"
       DYNAMODB_ENDPOINT: http://dynamodb-local:8000
@@ -268,15 +273,17 @@ services:
       dockerfile: Dockerfile.dev
     container_name: kraivor-core-beat-dev
     command: celery -A core.celery_app beat --loglevel=info
+    healthcheck:
+      disable: true
     env_file:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: core.settings.development
       DB_HOST: postgres
       DB_PORT: 5432
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/1
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      REDIS_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
       DYNAMODB_LOCAL: "true"
       DYNAMODB_ENDPOINT: http://dynamodb-local:8000
@@ -300,15 +307,17 @@ services:
       dockerfile: Dockerfile.dev
     container_name: kraivor-core-consumer-dev
     command: python manage.py consume_events
+    healthcheck:
+      disable: true
     env_file:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: core.settings.development
       DB_HOST: postgres
       DB_PORT: 5432
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/1
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      REDIS_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
       DYNAMODB_LOCAL: "true"
       DYNAMODB_ENDPOINT: http://dynamodb-local:8000
@@ -337,12 +346,13 @@ services:
       - .env
     environment:
       ANALYSIS_DATABASE__URL: postgresql+asyncpg://${POSTGRES_USER:-kraivor}:${POSTGRES_PASSWORD:-kraivor}@postgres:5432/${POSTGRES_DB:-kraivor}
-      ANALYSIS_REDIS__URL: redis://redis:6379/0
-      ANALYSIS_CELERY__BROKER__URL: redis://redis:6379/1
-      ANALYSIS_CELERY__RESULT__BACKEND: redis://redis:6379/1
+      ANALYSIS_REDIS__URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      ANALYSIS_CELERY__BROKER__URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      ANALYSIS_CELERY__RESULT__BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
       ANALYSIS_KAFKA__BOOTSTRAP__SERVERS: kafka:9094
       ANALYSIS_IDENTITY__JWKS__URL: http://identity:8001/.well-known/jwks.json
       ANALYSIS_S3__ENDPOINT__URL: http://minio:9000
+      ANALYSIS_JWT__INTERNAL_REQUEST_SECRET: ${INTERNAL_REQUEST_TOKEN:-dev-internal-secret}
       UV_LINK_MODE: copy
     depends_on:
       postgres:
@@ -376,13 +386,15 @@ services:
       - .env
     environment:
       AI_DATABASE__URL: postgresql+asyncpg://${POSTGRES_USER:-kraivor}:${POSTGRES_PASSWORD:-kraivor}@postgres:5432/${POSTGRES_DB:-kraivor}
-      AI_REDIS__URL: redis://redis:6379/0
-      AI_CELERY__BROKER__URL: redis://redis:6379/1
-      AI_CELERY__RESULT__BACKEND: redis://redis:6379/1
+      AI_REDIS__URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      AI_CELERY__BROKER__URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      AI_CELERY__RESULT__BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
       AI_KAFKA__BOOTSTRAP__SERVERS: kafka:9094
       AI_IDENTITY__JWKS__URL: http://identity:8001/.well-known/jwks.json
       AI_OPENROUTER__MASTER__KEY: ${OPENROUTER_API_KEY}
       AI_KEY_ENCRYPTION_KEY: ${AI_KEY_ENCRYPTION_KEY:-dev-encryption-key-32chars!}
+      AI_INTERNAL_REQUEST_SECRET: ${INTERNAL_REQUEST_TOKEN:-dev-internal-secret}
+      AI_CORS_ALLOWED_ORIGINS: ${AI_CORS_ALLOWED_ORIGINS:-http://localhost:3000}
       UV_LINK_MODE: copy
     depends_on:
       postgres:
@@ -420,9 +432,9 @@ services:
       - .env
     environment:
       AI_DATABASE__URL: postgresql+asyncpg://${POSTGRES_USER:-kraivor}:${POSTGRES_PASSWORD:-kraivor}@postgres:5432/${POSTGRES_DB:-kraivor}
-      AI_REDIS__URL: redis://redis:6379/0
-      AI_CELERY__BROKER__URL: redis://redis:6379/1
-      AI_CELERY__RESULT__BACKEND: redis://redis:6379/1
+      AI_REDIS__URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      AI_CELERY__BROKER__URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      AI_CELERY__RESULT__BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
       AI_KAFKA__BOOTSTRAP__SERVERS: kafka:9094
       AI_OPENROUTER__MASTER__KEY: ${OPENROUTER_API_KEY}
       AI_KEY_ENCRYPTION_KEY: ${AI_KEY_ENCRYPTION_KEY:-dev-encryption-key-32chars!}
@@ -446,9 +458,9 @@ services:
       - .env
     environment:
       AI_DATABASE__URL: postgresql+asyncpg://${POSTGRES_USER:-kraivor}:${POSTGRES_PASSWORD:-kraivor}@postgres:5432/${POSTGRES_DB:-kraivor}
-      AI_REDIS__URL: redis://redis:6379/0
-      AI_CELERY__BROKER__URL: redis://redis:6379/1
-      AI_CELERY__RESULT__BACKEND: redis://redis:6379/1
+      AI_REDIS__URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      AI_CELERY__BROKER__URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      AI_CELERY__RESULT__BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
       AI_KAFKA__BOOTSTRAP__SERVERS: kafka:9094
       AI_OPENROUTER__MASTER__KEY: ${OPENROUTER_API_KEY}
       UV_LINK_MODE: copy

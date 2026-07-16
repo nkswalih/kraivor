@@ -37,7 +37,33 @@ BYOK_MODELS = {
 KRAIVOR_MODEL = "krait-2.0"
 
 # ── All known model IDs (for /models endpoint) ──────────────
-ALL_MODEL_IDS = [KRAIVOR_MODEL] + list(BYOK_MODELS.keys())
+ALL_MODEL_IDS = [KRAIVOR_MODEL] + [
+    # Free (OpenRouter) — frontend IDs
+    "cohere-north-mini-code",
+    "nvidia-nemotron-ultra",
+    "tencent-hy3",
+    "poolside-laguna-xs",
+    "poolside-laguna-m",
+    "nvidia-nemotron-super",
+    "google-gemma-4",
+    "nvidia-nemotron-nano",
+    "openai-gpt-oss",
+] + list(BYOK_MODELS.keys())
+
+# ── Frontend ID → backend model string ───────────────────────
+MODEL_BACKEND_MAP = {
+    KRAIVOR_MODEL: "openrouter/auto",
+    "cohere-north-mini-code": "cohere/north-mini-code:free",
+    "nvidia-nemotron-ultra": "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "tencent-hy3": "tencent/hy3:free",
+    "poolside-laguna-xs": "poolside/laguna-xs-2.1:free",
+    "poolside-laguna-m": "poolside/laguna-m.1:free",
+    "nvidia-nemotron-super": "nvidia/nemotron-3-super-120b-a12b:free",
+    "google-gemma-4": "google/gemma-4-31b-it:free",
+    "nvidia-nemotron-nano": "nvidia/nemotron-3-nano-30b-a3b:free",
+    "openai-gpt-oss": "openai/gpt-oss-120b:free",
+    **BYOK_MODELS,
+}
 
 # ── Intent → default route task name mapping ─────────────────
 _INTENT_ROUTE_MAP = {

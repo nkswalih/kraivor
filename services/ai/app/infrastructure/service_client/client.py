@@ -1,6 +1,8 @@
 import httpx
 import logging
 
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -15,7 +17,7 @@ class ServiceClient:
             resp = await self.client.get(
                 url,
                 headers={
-                    "X-Internal-Request": "true",
+                    "X-Internal-Request": settings.internal_request_secret,
                     "X-User-ID": user_id,
                     "X-Workspace-IDs": workspace_id,
                 },

@@ -48,11 +48,19 @@ class Settings(BaseSettings):
     # Inter-service communication
     core_api_url: str = "http://core:8002/api"
     analysis_api_url: str = "http://analysis:8003/api/v1"
+    internal_request_secret: str = ""
+
+    # CORS
+    cors_allowed_origins: str = "http://localhost:3000"
 
     # Server
     host: str = "0.0.0.0"  # nosec - required for Docker container binding
     port: int = 8004
     debug: bool = False
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_allowed_origins.split(",") if o.strip()]
 
 
 settings = Settings()

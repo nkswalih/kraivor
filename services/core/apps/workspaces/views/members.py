@@ -41,7 +41,7 @@ def _resolve_member_users(member_data: list[dict]) -> dict[str, dict]:
         resp = requests.post(
             endpoint,
             json={"user_ids": user_ids},
-            headers={settings.INTERNAL_REQUEST_HEADER: "1"},
+            headers={settings.INTERNAL_REQUEST_HEADER: settings.INTERNAL_REQUEST_SECRET},
             timeout=5,
         )
         if resp.status_code == 200:

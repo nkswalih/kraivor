@@ -112,7 +112,7 @@ def index_knowledge_space_on_save(sender, instance, created, **kwargs):
                     "knowledge_space_name": instance.name,
                 },
                 headers={
-                    "X-Internal-Request": "true",
+                    "X-Internal-Request": settings.INTERNAL_REQUEST_SECRET,
                     "X-User-ID": str(instance.created_by_id or ""),
                     "X-Workspace-IDs": str(instance.workspace_id),
                 },

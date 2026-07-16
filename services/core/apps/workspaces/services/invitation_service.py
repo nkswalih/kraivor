@@ -290,7 +290,7 @@ def _dispatch_invitation_notification(
         response = requests.post(
             endpoint,
             json={"emails": [email]},
-            headers={settings.INTERNAL_REQUEST_HEADER: "1"},
+            headers={settings.INTERNAL_REQUEST_HEADER: settings.INTERNAL_REQUEST_SECRET},
             timeout=5,
         )
     except requests.exceptions.RequestException as exc:

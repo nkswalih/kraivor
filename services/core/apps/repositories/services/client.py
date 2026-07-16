@@ -18,7 +18,7 @@ class GitHubTokenClient:
             response = requests.get(
                 endpoint,
                 headers={
-                    settings.INTERNAL_REQUEST_HEADER: "1",
+                    settings.INTERNAL_REQUEST_HEADER: settings.INTERNAL_REQUEST_SECRET,
                     "X-User-ID": str(user_id),
                 },
                 timeout=5,

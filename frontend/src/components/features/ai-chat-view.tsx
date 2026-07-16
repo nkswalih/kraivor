@@ -48,6 +48,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
   const [isPinned, setIsPinned] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [initialLoading, setInitialLoading] = useState(!!initialConversationId);
+  const abortRef = useRef<AbortController | null>(null);
   useDetailBreadcrumb(conversationId ? conversationTitle || 'Untitled' : null);
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -198,13 +199,15 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
       try {
         let accumulated = '';
         let newConvId = conversationId;
+        const controller = new AbortController();
+        abortRef.current = controller;
         const stream = aiApi.streamMessage({
           content: trimmed,
           context: {},
           model: selectedModel,
           sessionId: newConvId ?? undefined,
           repo_ids: repoIds,
-        });
+        }, controller.signal);
 
         for await (const chunk of stream) {
           const c = chunk as StreamChunk;
@@ -241,28 +244,39 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
           return next;
         });
       } catch (err) {
+        const isAbort = err instanceof DOMException && err.name === 'AbortError';
         const isRateLimit = err instanceof AiApiError && err.status === 429;
         if (isRateLimit) setRateLimited(true);
-        setMessages(prev => {
-          const next = [...prev];
-          const last = next[next.length - 1];
-          if (last && last.id === assistantMsg.id) {
-            next[next.length - 1] = {
-              ...last,
-              content: isRateLimit
-                ? "You've hit the rate limit. Upgrade to Kraivor Pro for higher limits."
-                : last.content || 'Sorry, something went wrong.',
-              status: MessageStatus.ERROR,
-            };
-          }
-          return next;
-        });
+        if (!isAbort) {
+          setMessages(prev => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            if (last && last.id === assistantMsg.id) {
+              next[next.length - 1] = {
+                ...last,
+                content: isRateLimit
+                  ? "You've hit the rate limit. Upgrade to Kraivor Pro for higher limits."
+                  : last.content || 'Sorry, something went wrong.',
+                status: MessageStatus.ERROR,
+              };
+            }
+            return next;
+          });
+        }
       } finally {
         setIsStreaming(false);
       }
     },
     [input, isStreaming, conversationId, selectedModel, storeSetConversationTitle]
   );
+
+  /* ─── Stop streaming ────────────────────────────────── */
+
+  const handleStop = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsStreaming(false);
+  }, []);
 
   /* ─── Edit user message ──────────────────────────────── */
 
@@ -318,6 +332,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
           onModelSelect={setSelectedModel}
           showBanner={false}
           models={modelsQuery.data}
+          onStop={handleStop}
         />
       ) : (
         <>
@@ -439,6 +454,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
                 onModelSelect={setSelectedModel}
                 showBanner={rateLimited}
                 models={modelsQuery.data}
+                onStop={handleStop}
               />
             </div>
             <p className="text-center text-[11px] text-text-tertiary mt-2.5 px-4">

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, SlidersHorizontal, ArrowUp, ArrowUpCircle } from 'lucide-react';
+import { Plus, SlidersHorizontal, ArrowUp, ArrowUpCircle, Square } from 'lucide-react';
 import { ModelSelector, getModelIcon, getModelName } from '@/components/features/model-selector';
 import { ByokKeyDialog, ApiKeysPanel } from '@/components/features/byok-key-dialog';
 import type { ModelItem } from '@/lib/api/ai-api';
@@ -18,6 +18,7 @@ interface AiInputProps {
   onModelSelect: (id: string) => void;
   showBanner: boolean;
   models?: ModelItem[];
+  onStop?: () => void;
 }
 
 const MAX_HEIGHT = 240;
@@ -32,6 +33,7 @@ export function AiInput({
   onModelSelect,
   showBanner,
   models,
+  onStop,
 }: AiInputProps) {
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [popupPos, setPopupPos] = useState<{ top: number; left: number; above: boolean } | null>(null);
@@ -205,14 +207,25 @@ export function AiInput({
                   <ArrowUp className="w-2.5 h-2.5 text-text-tertiary" strokeWidth={2.5} />
                 </div>
               </button>
-              <button
-                type="button"
-                onClick={onSend}
-                disabled={!value.trim() || isStreaming}
-                className="w-6 h-6 rounded-full bg-venom-yellow text-black flex items-center justify-center shrink-0 hover:brightness-110 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <ArrowUp className="w-3 h-3" strokeWidth={2.5} />
-              </button>
+              {isStreaming ? (
+                <button
+                  type="button"
+                  onClick={onStop}
+                  className="w-6 h-6 rounded-full bg-venom-yellow text-black flex items-center justify-center shrink-0 hover:brightness-110 transition-all"
+                  title="Stop generating"
+                >
+                  <Square className="w-2.5 h-2.5" fill="currentColor" strokeWidth={0} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onSend}
+                  disabled={!value.trim()}
+                  className="w-6 h-6 rounded-full bg-venom-yellow text-black flex items-center justify-center shrink-0 hover:brightness-110 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ArrowUp className="w-3 h-3" strokeWidth={2.5} />
+                </button>
+              )}
             </div>
           </div>
         </div>

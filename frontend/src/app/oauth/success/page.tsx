@@ -32,6 +32,12 @@ export default function OAuthSuccessPage() {
     const isRepoConnect = searchParams.get('github_connect') === '1';
     const workspaceSlug = searchParams.get('workspace_slug');
 
+    // ── Remove token from URL immediately to prevent exposure ──────────────
+    if (accessToken && window.history.replaceState) {
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
+    }
+
     // ── GitHub App installation (popup / redirect) ──────────────────────
     if (isGitHubAppInstalled || isGitHubAppError) {
       const isPopup = Boolean(window.opener && window.opener !== window);

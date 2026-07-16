@@ -14,6 +14,7 @@ from app.infrastructure.llm.router import (
     BYOK_MODELS,
     FREE_MODELS,
     KRAIVOR_MODEL,
+    MODEL_BACKEND_MAP,
 )
 
 CurrentUser = Annotated[JWTPayload, Depends(get_current_user)]
@@ -130,6 +131,7 @@ async def list_models(user: CurrentUser):
             "provider": meta.get("provider", "openrouter"),
             "latency": meta.get("latency"),
             "context": meta.get("context"),
+            "backendModel": MODEL_BACKEND_MAP.get(mid),
         })
     return {"models": models, "default": KRAIVOR_MODEL}
 
@@ -142,7 +144,7 @@ async def byok_status(user: CurrentUser):
     from sqlalchemy import select
     from app.infrastructure.db.database import async_session_factory
     from app.infrastructure.db.models.api_key import ApiKey
-    from app.infrastructure.llm.key_resolver import _default_encrypter
+    from app.application.provisioning.key_resolver import _default_encrypter
 
     async with async_session_factory() as db:
         result = await db.execute(
@@ -185,7 +187,7 @@ async def byok_submit(request: dict, user: CurrentUser):
     if not provider or not api_key:
         return {"error": "provider and api_key are required"}
 
-    from app.infrastructure.llm.key_resolver import (
+    from app.application.provisioning.key_resolver import (
         PROVIDER_FIELD_MAP,
         _default_encrypter,
     )
@@ -218,7 +220,7 @@ async def byok_submit(request: dict, user: CurrentUser):
 @router.delete("/byok/{provider}")
 async def byok_remove(provider: str, user: CurrentUser):
     """Remove a BYOK key for a provider."""
-    from app.infrastructure.llm.key_resolver import PROVIDER_FIELD_MAP
+    from app.application.provisioning.key_resolver import PROVIDER_FIELD_MAP
 
     field = PROVIDER_FIELD_MAP.get(provider)
     if not field:

@@ -50,6 +50,22 @@ async def check_rate_limit(request: Request) -> None:
                     },
                 )
         except ImportError:
-            pass
+            logger.warning("rate_limiter.redis_not_installed")
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "rate_limiter_unavailable",
+                    "message": "Rate limiting service unavailable. Please try again later.",
+                },
+            )
+        except HTTPException:
+            raise
         except Exception:
             logger.warning("rate_limiter_check_failed", exc_info=True)
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "rate_limiter_unavailable",
+                    "message": "Rate limiting service unavailable. Please try again later.",
+                },
+            )

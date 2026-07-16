@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import httpx
 import jwt
 import logging
@@ -59,8 +61,23 @@ def _verify_token(token: str) -> dict:
     return payload
 
 
+def _verify_internal_header(request: Request) -> bool:
+    """Validate X-Internal-Request header against the shared secret.
+
+    Uses HMAC comparison to prevent timing attacks.
+    Returns False if the secret is not configured (secure-by-default).
+    """
+    header_value = request.headers.get(settings.internal_request_header)
+    if not header_value or not settings.internal_request_secret:
+        return False
+    return hmac.compare_digest(
+        header_value.encode(),
+        settings.internal_request_secret.encode(),
+    )
+
+
 def get_current_user(request: Request) -> JWTPayload:
-    if request.headers.get(settings.internal_request_header):
+    if _verify_internal_header(request):
         return JWTPayload(
             sub=request.headers.get("X-User-ID", ""),
             email=request.headers.get("X-Email", ""),

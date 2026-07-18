@@ -13,9 +13,12 @@ class Settings(BaseSettings):
 
     # Database
     database__url: str = "postgresql+asyncpg://kraivor:kraivor@localhost:5433/kraivor"
+    db_pool_size: int = 8
+    db_max_overflow: int = 8
 
     # Redis
     redis__url: str = "redis://localhost:6379/0"
+    redis_max_connections: int = 10
 
     # Celery
     celery__broker__url: str = "redis://localhost:6379/1"
@@ -37,6 +40,9 @@ class Settings(BaseSettings):
     openrouter__master__key: str = ""
     openrouter_site_url: str = "https://kraivor.com"
     openrouter_app_name: str = "Kraivor"
+
+    # Groq (native API — faster than OpenRouter proxy)
+    groq_api_key: str = ""
 
     # Encryption for stored provider keys
     key_encryption_key: str = ""

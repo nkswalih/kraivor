@@ -6,6 +6,8 @@ COST_TABLE = {
     ("openrouter", "anthropic/claude-3.5-sonnet"): (0.003, 0.015),
     ("openrouter", "openai/gpt-4o"): (0.005, 0.015),
     ("groq", "llama3-70b"): (0.0, 0.0),
+    ("groq", "qwen/qwen3-32b"): (0.0, 0.0),
+    ("groq", "qwen/qwen3.6-27b"): (0.0, 0.0),
     ("google", "gemini-flash-1.5"): (0.0, 0.0),
     ("local", "all-MiniLM-L6-v2"): (0, 0),
 }

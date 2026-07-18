@@ -1,10 +1,12 @@
 from collections.abc import AsyncGenerator
 
+import asyncio
 import google.generativeai as genai
+import hashlib
 import logging
 import time
 from anthropic import AsyncAnthropic
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, APITimeoutError, APIConnectionError, RateLimitError
 
 from app.infrastructure.llm.cost import estimate_cost
 from app.monitoring.metrics import llm_calls
@@ -13,32 +15,64 @@ from app.monitoring.metrics import llm_duration, llm_tokens
 
 logger = logging.getLogger(__name__)
 
+# Fix C: Default timeout for LLM calls (seconds). Prevents a single slow provider
+# from stalling the entire pipeline for 60+ seconds.
+LLM_DEFAULT_TIMEOUT = 45
+LLM_SHORT_TIMEOUT = 25
+
+# Fix E: Retry settings for transient LLM failures.
+LLM_MAX_RETRIES = 2
+LLM_RETRY_BACKOFF = [1.0, 3.0]  # seconds between retries
+
+_client_cache: dict[str, object] = {}
+
+_OPENAI_COMPATIBLE = {
+    "openrouter": "https://openrouter.ai/api/v1",
+    "groq": "https://api.groq.com/openai/v1",
+    "openai": "https://api.openai.com/v1",
+    "deepseek": "https://api.deepseek.com/v1",
+    "xai": "https://api.x.ai/v1",
+}
+
+
+def _get_cached_client(provider: str, api_key: str, model: str) -> object:
+    """Return a cached client for the given provider+key combo."""
+    cache_key = hashlib.sha256(f"{provider}:{api_key}".encode()).hexdigest()[:16]
+
+    if cache_key in _client_cache:
+        return _client_cache[cache_key]
+
+    if provider in _OPENAI_COMPATIBLE:
+        # Fix C: Per-call timeout so a slow provider doesn't stall the pipeline.
+        client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=_OPENAI_COMPATIBLE[provider],
+            timeout=__import__("httpx").Timeout(LLM_DEFAULT_TIMEOUT, connect=10.0),
+            max_retries=0,  # We handle retries ourselves for observability
+        )
+    elif provider == "anthropic":
+        client = AsyncAnthropic(
+            api_key=api_key,
+            timeout=__import__("httpx").Timeout(LLM_DEFAULT_TIMEOUT, connect=10.0),
+            max_retries=0,
+        )
+    elif provider == "google":
+        genai.configure(api_key=api_key)
+        client = genai.GenerativeModel(model)
+    else:
+        raise ValueError(f"Unknown provider: {provider}")
+
+    _client_cache[cache_key] = client
+    return client
+
 
 class LLMClient:
     def __init__(self, api_key: str, provider: str, model: str):
         self.provider = provider
         self.model = model
-        self._init_client(api_key)
+        self.client = _get_cached_client(provider, api_key, model)
 
-    def _init_client(self, api_key: str):
-        _OPENAI_COMPATIBLE = {
-            "openrouter": "https://openrouter.ai/api/v1",
-            "groq": "https://api.groq.com/openai/v1",
-            "openai": "https://api.openai.com/v1",
-            "deepseek": "https://api.deepseek.com/v1",
-            "xai": "https://api.x.ai/v1",
-        }
-        if self.provider in _OPENAI_COMPATIBLE:
-            self.client = AsyncOpenAI(
-                api_key=api_key, base_url=_OPENAI_COMPATIBLE[self.provider]
-            )
-        elif self.provider == "anthropic":
-            self.client = AsyncAnthropic(api_key=api_key)
-        elif self.provider == "google":
-            genai.configure(api_key=api_key)
-            self.client = genai.GenerativeModel(self.model)
-
-    async def generate(self, messages: list, **kwargs) -> dict:
+    async def generate(self, messages: list, timeout: float | None = None, **kwargs) -> dict:
         metrics = {
             "provider": self.provider,
             "model": self.model,
@@ -49,10 +83,64 @@ class LLMClient:
         }
         start = time.monotonic()
         result = ""
+        tool_calls = []
+
+        # Fix E: Retry with backoff for transient LLM failures (timeouts, rate limits, connection errors).
+        last_error = None
+        for attempt in range(1 + LLM_MAX_RETRIES):
+            try:
+                result, tool_calls, metrics = await self._generate_once(messages, timeout=timeout, **kwargs)
+                break
+            except (APITimeoutError, APIConnectionError, RateLimitError) as e:
+                last_error = e
+                if attempt < LLM_MAX_RETRIES:
+                    wait = LLM_RETRY_BACKOFF[min(attempt, len(LLM_RETRY_BACKOFF) - 1)]
+                    logger.warning(
+                        "LLM call failed (attempt %d/%d): %s — retrying in %.1fs",
+                        attempt + 1, 1 + LLM_MAX_RETRIES, e, wait,
+                    )
+                    await asyncio.sleep(wait)
+                else:
+                    logger.error(
+                        "LLM call failed after %d attempts: %s",
+                        1 + LLM_MAX_RETRIES, e,
+                    )
+                    raise
+            except Exception as e:
+                # Non-transient errors: raise immediately
+                raise
+
+        metrics["latency_ms"] = int((time.monotonic() - start) * 1000)
+        metrics["cost"] = estimate_cost(
+            self.provider, self.model, metrics["input_tokens"], metrics["output_tokens"]
+        )
+
+        try:
+            llm_calls.labels(self.provider, self.model, "ok").inc()
+            llm_duration.labels(self.model).observe(metrics["latency_ms"] / 1000)
+            if metrics["cost"] > 0:
+                llm_cost_counter.labels(self.model, "unknown").inc(metrics["cost"])
+            llm_tokens.labels(self.model, "input").inc(metrics["input_tokens"])
+            llm_tokens.labels(self.model, "output").inc(metrics["output_tokens"])
+        except Exception as e:
+            logger.warning("Failed to record LLM metrics", exc_info=e)
+
+        return {"content": result, "tool_calls": tool_calls or [], **metrics}
+
+    async def _generate_once(self, messages: list, timeout: float | None = None, **kwargs) -> tuple:
+        """Single LLM call without retry. Returns (content, tool_calls, metrics)."""
+        result = ""
+        tool_calls = []
+        metrics = {"input_tokens": 0, "output_tokens": 0}
+
+        # Fix 2: Per-call timeout override (e.g., 25s for intent classification vs 45s default)
+        effective_timeout = timeout or LLM_DEFAULT_TIMEOUT
 
         if self.provider in ("openrouter", "groq", "openai", "deepseek", "xai"):
+            # Override the client timeout for this call if a specific timeout was requested
+            httpx_timeout = __import__("httpx").Timeout(effective_timeout, connect=10.0)
             response = await self.client.chat.completions.create(
-                model=self.model, messages=messages, **kwargs
+                model=self.model, messages=messages, timeout=httpx_timeout, **kwargs
             )
             message = response.choices[0].message
             result = message.content
@@ -108,22 +196,7 @@ class LLMClient:
                     response.usage_metadata, "candidates_token_count", 0
                 )
 
-        metrics["latency_ms"] = int((time.monotonic() - start) * 1000)
-        metrics["cost"] = estimate_cost(
-            self.provider, self.model, metrics["input_tokens"], metrics["output_tokens"]
-        )
-
-        try:
-            llm_calls.labels(self.provider, self.model, "ok").inc()
-            llm_duration.labels(self.model).observe(metrics["latency_ms"] / 1000)
-            if metrics["cost"] > 0:
-                llm_cost_counter.labels(self.model, "unknown").inc(metrics["cost"])
-            llm_tokens.labels(self.model, "input").inc(metrics["input_tokens"])
-            llm_tokens.labels(self.model, "output").inc(metrics["output_tokens"])
-        except Exception as e:
-            logger.warning("Failed to record LLM metrics", exc_info=e)
-
-        return {"content": result, "tool_calls": tool_calls or [], **metrics}
+        return result, tool_calls, metrics
 
     async def stream(self, messages: list, **kwargs) -> AsyncGenerator[str, None]:
         if self.provider in ("openrouter", "groq", "openai", "deepseek", "xai"):

@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 FREE_MODELS = [
     "cohere/north-mini-code:free",
     "poolside/laguna-xs-2.1:free",
@@ -38,6 +40,10 @@ KRAIVOR_MODEL = "krait-2.0"
 
 # ── All known model IDs (for /models endpoint) ──────────────
 ALL_MODEL_IDS = [KRAIVOR_MODEL] + [
+    # Groq (native API — fast inference)
+    "groq-qwen3-32b",
+    "groq-qwen3.6-27b",
+] + [
     # Free (OpenRouter) — frontend IDs
     "cohere-north-mini-code",
     "nvidia-nemotron-ultra",
@@ -53,6 +59,10 @@ ALL_MODEL_IDS = [KRAIVOR_MODEL] + [
 # ── Frontend ID → backend model string ───────────────────────
 MODEL_BACKEND_MAP = {
     KRAIVOR_MODEL: "openrouter/auto",
+    # Groq (native API)
+    "groq-qwen3-32b": "qwen/qwen3-32b",
+    "groq-qwen3.6-27b": "qwen/qwen3.6-27b",
+    # Free (OpenRouter)
     "cohere-north-mini-code": "cohere/north-mini-code:free",
     "nvidia-nemotron-ultra": "nvidia/nemotron-3-ultra-550b-a55b:free",
     "tencent-hy3": "tencent/hy3:free",
@@ -76,8 +86,8 @@ _INTENT_ROUTE_MAP = {
 class ModelRouter:
     TASK_ROUTES = {
         "intent_classify": {
-            "model": "cohere/north-mini-code:free",
-            "fallback": "nvidia/nemotron-3-nano-30b-a3b:free",
+            "model": "qwen/qwen3.6-27b",
+            "fallback": "cohere/north-mini-code:free",
             "max_tokens": 256,
         },
         "simple_qa": {
@@ -111,8 +121,8 @@ class ModelRouter:
             "max_tokens": 4096,
         },
         "tool_calling": {
-            "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-            "fallback": "cohere/north-mini-code:free",
+            "model": "qwen/qwen3-32b",
+            "fallback": "nvidia/nemotron-3-ultra-550b-a55b:free",
             "max_tokens": 4096,
         },
         "embeddings": {
@@ -133,6 +143,10 @@ class ModelRouter:
     }
 
     def get_route(self, task: str) -> dict:
+        return self._get_route_cached(task)
+
+    @lru_cache(maxsize=128)
+    def _get_route_cached(self, task: str) -> dict:
         route = self.TASK_ROUTES.get(task, self.TASK_ROUTES["simple_qa"])
         return {**route, "fallback_models": FREE_MODELS}
 
@@ -144,21 +158,22 @@ class ModelRouter:
           2. If user_model is KRAIVOR_MODEL → use default Kraivor route
           3. Otherwise → use default free route for the task
         """
+        return self._get_route_for_user_cached(task, user_model)
+
+    @lru_cache(maxsize=128)
+    def _get_route_for_user_cached(self, task: str, user_model: str | None = None) -> dict:
         route = self.get_route(task)
 
         if not user_model:
             return route
 
-        # Kraivor built-in — use default free route (Krait routes through OpenRouter auto)
         if user_model == KRAIVOR_MODEL:
             return route
 
-        # BYOK model — override the route model
         backend_model = BYOK_MODELS.get(user_model)
         if backend_model:
             return {**route, "model": backend_model}
 
-        # Unknown model — fall through to default free route
         return route
 
     def get_model(self, task: str, tier: str = "free") -> str:

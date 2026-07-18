@@ -8,7 +8,14 @@ logger = logging.getLogger(__name__)
 
 class ServiceClient:
     def __init__(self, core_url: str, analysis_url: str):
-        self.client = httpx.AsyncClient(timeout=15.0)
+        self.client = httpx.AsyncClient(
+            timeout=15.0,
+            limits=httpx.Limits(
+                max_connections=10,
+                max_keepalive_connections=5,
+                keepalive_expiry=30,
+            ),
+        )
         self.core_url = core_url
         self.analysis_url = analysis_url
 

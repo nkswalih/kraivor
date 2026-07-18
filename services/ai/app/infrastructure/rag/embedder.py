@@ -1,9 +1,12 @@
+import hashlib
 import logging
 from openai import AsyncOpenAI
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+EMBED_CACHE_TTL = 3600  # 1 hour
 
 
 class Embedder:
@@ -27,16 +30,38 @@ class Embedder:
             self.dimension = 1536
 
     async def embed(self, text: str) -> list[float]:
+        cache_key = f"emb:{hashlib.sha256(text.encode()).hexdigest()}"
+        try:
+            from app.infrastructure.cache.redis_client import get_redis
+            import json
+            r = await get_redis()
+            cached = await r.get(cache_key)
+            if cached:
+                return json.loads(cached)
+        except Exception:
+            pass
+
         if self.provider == "local":
             if self._model is None:
                 from sentence_transformers import SentenceTransformer
 
                 self._model = SentenceTransformer(settings.embedding_model)
-            return self._model.encode(text).tolist()
-        response = await self._client.embeddings.create(
-            model="text-embedding-3-small", input=text
-        )
-        return response.data[0].embedding
+            result = self._model.encode(text).tolist()
+        else:
+            response = await self._client.embeddings.create(
+                model="text-embedding-3-small", input=text
+            )
+            result = response.data[0].embedding
+
+        try:
+            from app.infrastructure.cache.redis_client import get_redis
+            import json
+            r = await get_redis()
+            await r.setex(cache_key, EMBED_CACHE_TTL, json.dumps(result))
+        except Exception:
+            pass
+
+        return result
 
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
         if self.provider == "local":

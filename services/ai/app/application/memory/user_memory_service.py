@@ -11,6 +11,8 @@ from app.infrastructure.db.database import async_session_factory
 
 logger = logging.getLogger(__name__)
 
+USER_CONTEXT_CACHE_TTL = 300  # 5 minutes
+
 # Patterns to extract user facts from messages
 _NAME_PATTERNS = [
     re.compile(
@@ -119,10 +121,27 @@ async def extract_and_store_facts(
 
     if saved:
         await db.flush()
+
+    try:
+        from app.infrastructure.cache.redis_client import get_redis
+        r = await get_redis()
+        await r.delete(f"userctx:{user_id}")
+    except Exception:
+        pass
+
     return saved
 
 
 async def get_user_context(db: AsyncSession, user_id: str, limit: int = 20) -> str:
+    try:
+        from app.infrastructure.cache.redis_client import get_redis
+        r = await get_redis()
+        cached = await r.get(f"userctx:{user_id}")
+        if cached is not None:
+            return cached
+    except Exception:
+        pass
+
     result = await db.execute(
         select(UserFact)
         .where(UserFact.user_id == user_id, UserFact.deleted_at.is_(None))
@@ -137,7 +156,16 @@ async def get_user_context(db: AsyncSession, user_id: str, limit: int = 20) -> s
     for row in rows:
         parts.append(f"- {row.fact_type}: {row.fact_value}")
 
-    return "\n".join(parts)
+    context_str = "\n".join(parts)
+
+    try:
+        from app.infrastructure.cache.redis_client import get_redis
+        r = await get_redis()
+        await r.setex(f"userctx:{user_id}", USER_CONTEXT_CACHE_TTL, context_str)
+    except Exception:
+        pass
+
+    return context_str
 
 
 async def clear_user_facts(
@@ -183,6 +211,12 @@ async def store_fact_explicit(
                 )
                 db.add(fact)
             await db.commit()
+            try:
+                from app.infrastructure.cache.redis_client import get_redis
+                r = await get_redis()
+                await r.delete(f"userctx:{user_id}")
+            except Exception:
+                pass
             return f"Remembered: {fact_type} → {fact_key} = {fact_value}"
         except Exception as e:
             await db.rollback()

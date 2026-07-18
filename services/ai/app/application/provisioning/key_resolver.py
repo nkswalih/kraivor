@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import logging
 from cryptography.fernet import Fernet
 
@@ -6,6 +7,12 @@ from app.core.config import settings
 from app.core.exceptions import InsufficientQuotaError
 
 logger = logging.getLogger(__name__)
+
+KEY_CACHE_TTL = 600  # 10 minutes
+
+
+def _key_cache_key(user_id: str, preferred_model: str | None) -> str:
+    return f"apikey:{user_id}:{preferred_model or 'default'}"
 
 if not settings.key_encryption_key:
     logger.critical(
@@ -80,6 +87,13 @@ async def resolve_provider_key(
 
     from app.infrastructure.db.models.api_key import ApiKey
 
+    provider = _model_to_provider(preferred_model or "openrouter")
+
+    # System Groq key for Kraivor AI models — no BYOK needed, check first
+    if provider == "groq" and settings.groq_api_key:
+        logger.info("using_system_groq_key", user_id=user_id)
+        return settings.groq_api_key, "groq"
+
     result = await db_session.execute(
         select(ApiKey).where(ApiKey.user_id == user_id, not ApiKey.revoked)
     )
@@ -90,7 +104,6 @@ async def resolve_provider_key(
         )
         return settings.openrouter__master__key, "openrouter"
 
-    provider = _model_to_provider(preferred_model or "openrouter")
     field_name = PROVIDER_FIELD_MAP.get(provider)
     encrypted_key = getattr(key_record, field_name, None) if field_name else None
 
@@ -131,12 +144,42 @@ class KeyResolver:
     async def resolve(
         self, user_id: str, preferred_model: str | None = None
     ) -> tuple[str, str]:
+        cache_key = _key_cache_key(user_id, preferred_model)
+
+        try:
+            from app.infrastructure.cache.redis_client import get_redis
+            r = await get_redis()
+            cached = await r.get(cache_key)
+            if cached:
+                parts = cached.split(":", 1)
+                if len(parts) == 2:
+                    return parts[1], parts[0]
+        except Exception:
+            pass
+
         from app.infrastructure.db.database import async_session_factory
 
         async with async_session_factory() as session:
-            return await resolve_provider_key(
+            api_key, provider = await resolve_provider_key(
                 db_session=session,
                 encrypter=self.encrypter,
                 user_id=user_id,
                 preferred_model=preferred_model,
             )
+
+        try:
+            from app.infrastructure.cache.redis_client import get_redis
+            r = await get_redis()
+            await r.setex(cache_key, KEY_CACHE_TTL, f"{provider}:{api_key}")
+        except Exception:
+            pass
+
+        return api_key, provider
+
+    async def invalidate(self, user_id: str, preferred_model: str | None = None) -> None:
+        try:
+            from app.infrastructure.cache.redis_client import get_redis
+            r = await get_redis()
+            await r.delete(_key_cache_key(user_id, preferred_model))
+        except Exception:
+            pass

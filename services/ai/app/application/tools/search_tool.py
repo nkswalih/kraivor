@@ -1,5 +1,6 @@
 """Web search tool using DDGS (DuckDuckGo) with news support."""
 
+import asyncio
 import logging
 from datetime import UTC, datetime
 
@@ -22,7 +23,10 @@ class DuckDuckGoSearchTool(BaseTool):
         try:
             from ddgs import DDGS
 
-            results = DDGS().text(query, max_results=max_results, region=region)
+            # Fix B: Run synchronous DDGS call in a thread to avoid blocking the event loop.
+            # DDGS().text() does blocking HTTP requests; without this, all concurrent
+            # requests stall while waiting for DuckDuckGo responses.
+            results = await asyncio.to_thread(DDGS().text, query, max_results=max_results, region=region)
             if not results:
                 return "No results found for your query."
 
@@ -57,7 +61,8 @@ class DuckDuckGoNewsTool(BaseTool):
         try:
             from ddgs import DDGS
 
-            results = DDGS().news(query, max_results=max_results, timelimit=timelimit)
+            # Fix B: Run synchronous DDGS call in a thread to avoid blocking the event loop.
+            results = await asyncio.to_thread(DDGS().news, query, max_results=max_results, timelimit=timelimit)
             if not results:
                 return "No recent news found for your query."
 
@@ -103,7 +108,8 @@ class DuckDuckGoInstantTool(BaseTool):
         try:
             from ddgs import DDGS
 
-            results = DDGS().answers(query)
+            # Fix B: Run synchronous DDGS call in a thread to avoid blocking the event loop.
+            results = await asyncio.to_thread(DDGS().answers, query)
             if not results:
                 return "No instant answer found for your query."
 

@@ -24,6 +24,7 @@ from app.infrastructure.service_client import ServiceClient
 
 logger = logging.getLogger(__name__)
 _HISTORY_LIMIT = 30
+_HISTORY_CACHE_TTL = 300  # 5 minutes (was 60s — almost always a cache miss at 60s)
 
 
 class ChatService:
@@ -37,13 +38,41 @@ class ChatService:
 
     async def _load_history(self, conversation_id: str) -> list[dict]:
         """Load the last N messages from the database for context."""
+        try:
+            from app.infrastructure.cache.redis_client import get_redis
+            import json
+            r = await get_redis()
+            cached = await r.get(f"history:{conversation_id}")
+            if cached:
+                return json.loads(cached)
+        except Exception:
+            pass
+
         async with async_session_factory() as db:
             messages = await get_messages(db, conversation_id, limit=_HISTORY_LIMIT)
-        return [
+        history = [
             {"role": m.role.value, "content": m.content}
             for m in messages
             if m.role in (MessageRole.USER, MessageRole.ASSISTANT)
         ]
+
+        try:
+            from app.infrastructure.cache.redis_client import get_redis
+            import json
+            r = await get_redis()
+            await r.setex(f"history:{conversation_id}", _HISTORY_CACHE_TTL, json.dumps(history))
+        except Exception:
+            pass
+
+        return history
+
+    async def _invalidate_history_cache(self, conversation_id: str) -> None:
+        try:
+            from app.infrastructure.cache.redis_client import get_redis
+            r = await get_redis()
+            await r.delete(f"history:{conversation_id}")
+        except Exception:
+            pass
 
     async def chat(
         self,
@@ -156,13 +185,15 @@ class ChatService:
                 except Exception as e:
                     logger.warning("Failed to extract user facts: %s", e)
 
+                # Invalidate history cache after new messages are saved
+                await self._invalidate_history_cache(conversation_id)
+
                 # Extract and store conversation knowledge (background)
                 try:
                     from app.application.tasks.knowledge import extract_conversation_knowledge
-                    history = await self._load_history(conversation_id)
                     messages_for_extraction = [
                         {"role": m.get("role", "user"), "content": m.get("content", "")}
-                        for m in history[-10:]
+                        for m in db_history[-10:]
                     ]
                     if messages_for_extraction:
                         extract_conversation_knowledge.delay(
@@ -242,16 +273,19 @@ class ChatService:
         }
 
         # Run graph to get context/tool results
+        yield {"status": "Planning solution"}
         result = await self.graph.ainvoke(state)
 
-        # If orchestrator already generated a direct response, stream it
-        if result.get("response") and not result.get("assembled_context") and not result.get("tool_results") and not result.get("evidence"):
+        # If orchestrator or tool_executor already generated a direct response, stream it
+        # Fix D: Include tool_executor responses (has tool_results + response) — skip explainer
+        if result.get("response") and not result.get("assembled_context") and not result.get("evidence"):
             full_response = result["response"]
             usage = result.get("usage") or {}
-            # Yield in chunks for perceived streaming
+            import asyncio
             chunk_size = 20
             for i in range(0, len(full_response), chunk_size):
                 yield {"content": full_response[i : i + chunk_size]}
+                await asyncio.sleep(0.03)
             yield {"done": True, "conversation_id": conversation_id, "title": None}
             await self._persist_streaming_response(
                 user_id, message, full_response, conversation_id, workspace_id, model, usage
@@ -270,6 +304,12 @@ class ChatService:
         intent = result.get("intent")
         evidence = result.get("evidence")
         evidence_sources = result.get("evidence_sources") or []
+
+        # Emit status based on what the graph decided to do
+        if result.get("needs_tools"):
+            yield {"status": "Inspecting project"}
+        elif result.get("needs_evidence"):
+            yield {"status": "Searching knowledge base"}
 
         findings = []
         sections = {
@@ -290,6 +330,14 @@ class ChatService:
         has_findings = bool(findings)
         has_evidence = bool(evidence)
         has_user_context = bool(user_context_str)
+
+        # Emit status based on what data we gathered
+        if has_findings:
+            yield {"status": "Analyzing code"}
+        elif has_evidence:
+            yield {"status": "Reviewing documentation"}
+        else:
+            yield {"status": "Finalizing response"}
 
         # Select prompt based on intent + available data
         _AUDIT_INTENTS = {"repository_analysis", "security_analysis", "architecture_review", "performance_analysis"}
@@ -344,6 +392,8 @@ class ChatService:
         api_key, provider = await self.key_resolver.resolve(user_id, route["model"])
         from app.infrastructure.llm.client import LLMClient
         client = LLMClient(api_key=api_key, provider=provider, model=route["model"])
+
+        yield {"status": "Writing response"}
 
         # Stream token-by-token
         full_response = ""
@@ -419,5 +469,8 @@ class ChatService:
                     logger.warning("Failed to extract user facts: %s", e)
 
                 await db.commit()
+
+                # Invalidate history cache after new messages are saved
+                await self._invalidate_history_cache(conversation_id)
         except Exception as e:
             logger.error("Failed to persist streaming response: %s", e)

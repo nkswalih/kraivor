@@ -8,7 +8,7 @@ from app.application.tools.workspace_tools import (
     WORKSPACE_TOOL_DEFINITIONS,
     WorkspaceTools,
 )
-from app.infrastructure.llm.client import LLMClient
+from app.infrastructure.llm.client import LLMClient, LLM_SHORT_TIMEOUT
 from app.infrastructure.llm.router import ModelRouter
 
 logger = logging.getLogger(__name__)
@@ -95,6 +95,7 @@ class ToolExecutorNode:
                 tools=WORKSPACE_TOOL_DEFINITIONS,
                 max_tokens=route["max_tokens"],
                 tool_choice="auto",
+                timeout=LLM_SHORT_TIMEOUT,
             )
 
             tool_calls = response.get("tool_calls", [])

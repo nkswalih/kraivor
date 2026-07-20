@@ -42,6 +42,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
+  const [thinkingStatus, setThinkingStatus] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState('krait-2.0');
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationTitle, setConversationTitle] = useState('');
@@ -189,6 +190,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
       setMessages(prev => [...prev, userMsg, assistantMsg]);
       setInput('');
       setIsStreaming(true);
+      setThinkingStatus('Thinking');
       setShouldAutoScroll(true);
       if (!conversationId) {
         const tempTitle = trimmed.length > 60 ? trimmed.slice(0, 60) + '...' : trimmed;
@@ -209,6 +211,19 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
           repo_ids: repoIds,
         }, controller.signal);
 
+        let rafPending = false;
+        const flushUpdate = () => {
+          rafPending = false;
+          setMessages(prev => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            if (last && last.id === assistantMsg.id) {
+              next[next.length - 1] = { ...last, content: accumulated };
+            }
+            return next;
+          });
+        };
+
         for await (const chunk of stream) {
           const c = chunk as StreamChunk;
           if (c.done) {
@@ -222,17 +237,17 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
             }
             break;
           }
+          if ('status' in c && typeof (c as { status?: string }).status === 'string') {
+            setThinkingStatus((c as { status: string }).status);
+            continue;
+          }
           const text = typeof c.content === 'string' ? c.content : typeof c === 'string' ? c : '';
           if (text) accumulated += text;
 
-          setMessages(prev => {
-            const next = [...prev];
-            const last = next[next.length - 1];
-            if (last && last.id === assistantMsg.id) {
-              next[next.length - 1] = { ...last, content: accumulated };
-            }
-            return next;
-          });
+          if (!rafPending) {
+            rafPending = true;
+            requestAnimationFrame(flushUpdate);
+          }
         }
 
         setMessages(prev => {
@@ -265,6 +280,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
         }
       } finally {
         setIsStreaming(false);
+        setThinkingStatus('');
       }
     },
     [input, isStreaming, conversationId, selectedModel, storeSetConversationTitle]
@@ -413,6 +429,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
                     key={msg.id}
                     message={msg}
                     isStreaming={isStreamingMsg}
+                    thinkingStatus={isStreamingMsg ? thinkingStatus : undefined}
                     onRegenerate={isAssistant && msg.status === MessageStatus.ERROR ? handleRegenerate : undefined}
                     onEdit={msg.role === MessageRole.USER ? handleEditMessage : undefined}
                   />

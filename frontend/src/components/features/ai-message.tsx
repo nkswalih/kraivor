@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, memo, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Copy,
@@ -22,134 +22,9 @@ import { MessageRole, MessageStatus } from '@/types/domain/ai';
 interface AiMessageProps {
   message: ChatMessage;
   isStreaming?: boolean;
+  thinkingStatus?: string;
   onRegenerate?: () => void;
   onEdit?: (content: string) => void;
-}
-
-/* ─── Block-based streaming ──────────────────────────── */
-
-/**
- * Parse content into atomic blocks for progressive reveal.
- *
- * - Code blocks (```…```) are atomic — they appear in full.
- * - Consecutive list items are grouped so item-by-item reveal works.
- * - Tables render as one block.
- * - Everything else splits by double newline (paragraphs).
- */
-type Block = { type: 'code' | 'list' | 'table' | 'paragraph'; content: string };
-
-function parseBlocks(content: string): Block[] {
-  const blocks: Block[] = [];
-  const lines = content.split('\n');
-  let i = 0;
-
-  while (i < lines.length) {
-    // Code block
-    if (lines[i].trimStart().startsWith('```')) {
-      const start = i;
-      i++;
-      while (i < lines.length && !lines[i].trimStart().startsWith('```')) i++;
-      if (i < lines.length) i++; // skip closing ```
-      blocks.push({ type: 'code', content: lines.slice(start, i).join('\n') });
-      continue;
-    }
-
-    // Table row
-    if (lines[i].includes('|') && lines[i].trim().startsWith('|')) {
-      const start = i;
-      i++;
-      while (i < lines.length && lines[i].includes('|') && lines[i].trim().startsWith('|')) i++;
-      blocks.push({ type: 'table', content: lines.slice(start, i).join('\n') });
-      continue;
-    }
-
-    // List item
-    if (/^\s*[-*+]\s/.test(lines[i]) || /^\s*\d+[.)]\s/.test(lines[i])) {
-      const start = i;
-      i++;
-      while (i < lines.length && (/^\s*[-*+]\s/.test(lines[i]) || /^\s*\d+[.)]\s/.test(lines[i]))) i++;
-      blocks.push({ type: 'list', content: lines.slice(start, i).join('\n') });
-      continue;
-    }
-
-    // Paragraph (collect non-empty lines until next empty line or block boundary)
-    const start = i;
-    while (
-      i < lines.length &&
-      lines[i].trim() !== '' &&
-      !lines[i].trimStart().startsWith('```') &&
-      !(/^\s*[-*+]\s/.test(lines[i]) || /^\s*\d+[.)]\s/.test(lines[i]))
-    ) {
-      i++;
-    }
-    const para = lines.slice(start, i).join('\n');
-    if (para.trim()) blocks.push({ type: 'paragraph', content: para });
-    // skip empty lines between blocks
-    while (i < lines.length && lines[i].trim() === '') i++;
-  }
-
-  return blocks;
-}
-
-function StreamingContent({ content, isStreaming }: { content: string; isStreaming?: boolean }) {
-  const [revealedCount, setRevealedCount] = useState(0);
-  const prevCount = useRef(0);
-
-  const blocks = useMemo(() => parseBlocks(content), [content]);
-
-  useEffect(() => {
-    const cur = blocks.length;
-    if (cur > prevCount.current && prevCount.current > 0) {
-      // new blocks appeared — reveal one by one
-      const start = prevCount.current - 1;
-      let idx = start;
-      const interval = setInterval(() => {
-        if (idx < cur) {
-          setRevealedCount(prev => Math.max(prev, idx + 1));
-          idx++;
-        } else {
-          clearInterval(interval);
-        }
-      }, 40);
-      return () => clearInterval(interval);
-    } else if (cur > revealedCount) {
-      // first render or reset
-      setRevealedCount(isStreaming && cur > 0 ? cur - 1 : cur);
-    }
-    prevCount.current = cur;
-  }, [content, isStreaming]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  return (
-    <>
-      {blocks.map((block, idx) => {
-        const isRevealed = idx < revealedCount;
-        const isLast = idx === blocks.length - 1;
-
-        // Last block while streaming — show content as it forms
-        if (isLast && isStreaming && !isRevealed) {
-          return (
-            <div key={idx} className="min-h-[1.25em]">
-              <AiMarkdown content={block.content} />
-            </div>
-          );
-        }
-
-        if (isRevealed || !isStreaming) {
-          return (
-            <div
-              key={idx}
-              className={isRevealed ? 'animate-line-reveal' : ''}
-            >
-              <AiMarkdown content={block.content} />
-              {idx < blocks.length - 1 && <div className="h-[0.4em]" />}
-            </div>
-          );
-        }
-
-        return null;
-      })}
-    </>
-  );
 }
 
 /* ─── Main component ─────────────────────────────────── */
@@ -157,6 +32,7 @@ function StreamingContent({ content, isStreaming }: { content: string; isStreami
 export const AiMessage = memo(function AiMessage({
   message,
   isStreaming,
+  thinkingStatus,
   onRegenerate,
   onEdit,
 }: AiMessageProps) {
@@ -248,7 +124,7 @@ export const AiMessage = memo(function AiMessage({
               <div className="py-3">
                 {/* Thinking state — no header, minimal layout */}
                 {isThinking ? (
-                  <ThinkingIndicator />
+                  <ThinkingIndicator status={thinkingStatus} />
                 ) : (
                   <>
                     {/* Header — visible when content is streaming or complete */}
@@ -271,7 +147,10 @@ export const AiMessage = memo(function AiMessage({
                     {/* Content */}
                     <div className="ml-8">
                       {isStreaming ? (
-                        <StreamingContent content={message.content} isStreaming />
+                        <div className="text-[14px] text-text-primary leading-relaxed whitespace-pre-wrap">
+                          {message.content}
+                          <span className="inline-block w-[2px] h-[1em] bg-yellow-300/70 ml-[1px] align-text-bottom animate-pulse" />
+                        </div>
                       ) : (
                         <AiMarkdown content={message.content} />
                       )}

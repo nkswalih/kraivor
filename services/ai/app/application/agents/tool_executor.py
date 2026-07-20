@@ -13,6 +13,43 @@ from app.infrastructure.llm.router import ModelRouter
 
 logger = logging.getLogger(__name__)
 
+# Fix 7: Tools that write to persistent memory — guard against prompt injection.
+_MEMORY_WRITE_TOOLS = frozenset({
+    "remember_user_fact",
+    "store_knowledge",
+    "submit_feedback",
+    "deduplicate_knowledge",
+})
+
+_INJECTION_PHRASES = (
+    "ignore previous instructions",
+    "ignore all previous",
+    "disregard prior",
+    "disregard previous",
+    "new instructions:",
+    "system prompt:",
+    "you are now",
+    "act as if",
+    "pretend you are",
+    "forget everything",
+    "override instructions",
+)
+
+
+def _is_safe_for_memory_write(tool_name: str, args: dict) -> bool:
+    """Reject memory-write tool calls that contain prompt injection phrases."""
+    if tool_name not in _MEMORY_WRITE_TOOLS:
+        return True
+    text = " ".join(str(v) for v in args.values()).lower()
+    for phrase in _INJECTION_PHRASES:
+        if phrase in text:
+            logger.warning(
+                "Blocked memory-write tool '%s' — injection phrase detected: '%s'",
+                tool_name, phrase,
+            )
+            return False
+    return True
+
 
 def _format_prompt(
     template: str, user_name: str | None, user_context: str | None
@@ -155,6 +192,16 @@ class ToolExecutorNode:
             tool_results = []
             for pc in parsed_calls:
                 recorded_calls.append({"name": pc["name"], "arguments": pc["args"]})
+
+                # Fix 7: Guard memory-write tools against prompt injection
+                if not _is_safe_for_memory_write(pc["name"], pc["args"]):
+                    tool_results.append({
+                        "id": pc["id"],
+                        "name": pc["name"],
+                        "result": "Tool call rejected: content contains suspicious instructions.",
+                    })
+                    continue
+
                 executor = self._tool_map.get(pc["name"])
                 if executor:
                     try:

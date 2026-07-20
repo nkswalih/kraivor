@@ -40,5 +40,8 @@ class AgentState(TypedDict):
     evidence_sources: list[dict] | None
     needs_evidence: bool
 
+    low_confidence: bool
+    parallel: bool
+
     response: str | None
     usage: dict | None

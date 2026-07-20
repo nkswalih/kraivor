@@ -1,8 +1,10 @@
 import logging
 import time
+
 from fastapi import HTTPException, Request
 
 from app.core.config import settings
+from app.infrastructure.cache.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +36,7 @@ async def check_rate_limit(request: Request) -> None:
 
     if settings.redis__url:
         try:
-            import redis.asyncio as aioredis
-
-            r = aioredis.from_url(settings.redis__url, decode_responses=True)
+            r = await get_redis()
             allowed, count, max_limit = await r.eval(
                 LUA_SLIDING_WINDOW, 1, key, now, window, limit
             )
@@ -49,15 +49,6 @@ async def check_rate_limit(request: Request) -> None:
                         "retry_after": window,
                     },
                 )
-        except ImportError:
-            logger.warning("rate_limiter.redis_not_installed")
-            raise HTTPException(
-                status_code=503,
-                detail={
-                    "error": "rate_limiter_unavailable",
-                    "message": "Rate limiting service unavailable. Please try again later.",
-                },
-            )
         except HTTPException:
             raise
         except Exception:

@@ -35,4 +35,4 @@ EXPOSE 8004
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8004/v1/health || exit 1
 
-CMD ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8004", "--workers", "4", "--loop", "uvloop", "--http", "httptools"]
+CMD ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8004", "--workers", "2", "--loop", "uvloop", "--http", "httptools"]

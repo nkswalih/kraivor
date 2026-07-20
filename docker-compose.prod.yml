@@ -1,0 +1,86 @@
+# =============================================================================
+# docker-compose.prod.yml — Production Overrides
+# =============================================================================
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Removes local infrastructure (RDS/ElastiCache replace them) and frontend
+# (Vercel replaces it). Uses production nginx config.
+# =============================================================================
+
+services:
+  # ── Remove local infra (replaced by RDS, ElastiCache, DynamoDB) ──
+  postgres:
+    profiles: ["removed"]
+
+  redis:
+    profiles: ["removed"]
+
+  kafka:
+    profiles: ["removed"]
+
+  dynamodb-local:
+    profiles: ["removed"]
+
+  # ── Remove frontend (Vercel hosts it) ──────────────────────
+  frontend:
+    profiles: ["removed"]
+
+  # ── Application Services — override env vars for managed infra ──
+  identity:
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      SECURE_SSL_REDIRECT: "false"
+      SECURE_PROXY_SSL_HEADER: "HTTP_X_FORWARDED_PROTO,https"
+
+  core:
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      REDIS_HOST: ${REDIS_HOST}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      DYNAMODB_LOCAL: "false"
+      DYNAMODB_ENDPOINT: ""
+
+  analysis:
+    environment:
+      DB_HOST: ${DB_HOST}
+      REDIS_HOST: ${REDIS_HOST}
+
+  ai:
+    environment:
+      DB_HOST: ${DB_HOST}
+      REDIS_HOST: ${REDIS_HOST}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+
+  core-worker:
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      REDIS_HOST: ${REDIS_HOST}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+
+  core-beat:
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      REDIS_HOST: ${REDIS_HOST}
+
+  core-consumer:
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      REDIS_HOST: ${REDIS_HOST}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+
+  # ── Nginx — use production config ──────────────────────────
+  nginx:
+    volumes:
+      - ./infra/docker/nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    ports:
+      - "80:80"
+      - "443:443"

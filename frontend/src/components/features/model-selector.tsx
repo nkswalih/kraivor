@@ -5,13 +5,17 @@ import { Lightning } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import type { ModelItem, ModelTier } from '@/lib/api/ai-api';
 import { aiApi } from '@/lib/api/ai-api';
-import { MODEL_ICONS, KraitIcon } from './model-icons';
+import { MODEL_ICONS, KraitIcon, GroqIcon } from './model-icons';
 
 /* ─── Fallback models (static, if API fails) ────────────── */
 
 const FALLBACK_MODELS: ModelItem[] = [
   // ── Kraivor AI (free, built-in) ──
   { id: 'krait-2.0', name: 'Krait 2.0', tier: 'kraivor', provider: 'kraivor', backendModel: 'openrouter/auto', latency: '0.4s', context: '128K' },
+
+  // ── Groq (native API — fast inference) ──
+  { id: 'groq-qwen3-32b', name: 'Qwen 3 32B', tier: 'groq', provider: 'groq', backendModel: 'qwen/qwen3-32b', latency: '0.3s', context: '128K' },
+  { id: 'groq-qwen3.6-27b', name: 'Qwen 3.6 27B', tier: 'groq', provider: 'groq', backendModel: 'qwen/qwen3.6-27b', latency: '0.3s', context: '128K' },
 
   // ── Free Models (OpenRouter) ──
   { id: 'cohere-north-mini-code', name: 'Cohere North Mini', tier: 'free', provider: 'cohere', backendModel: 'cohere/north-mini-code:free', latency: '0.6s', context: '128K' },
@@ -49,6 +53,7 @@ const FALLBACK_MODELS: ModelItem[] = [
 
 const GROUP_ORDER: { tier: ModelTier; label: string; icon: ReactNode }[] = [
   { tier: 'kraivor', label: 'Kraivor AI', icon: null },
+  { tier: 'groq', label: 'Groq', icon: <GroqIcon size={14} /> },
   { tier: 'free', label: 'Free Models', icon: null },
   { tier: 'byok', label: 'BYOK Models', icon: null },
 ];

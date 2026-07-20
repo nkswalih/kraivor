@@ -10,6 +10,9 @@ const AI_BASE = '/api/ai';
 const MODEL_MAP: Record<string, string> = {
   // Kraivor
   'krait-2.0': 'openrouter/auto',
+  // Groq (native API)
+  'groq-qwen3-32b': 'qwen/qwen3-32b',
+  'groq-qwen3.6-27b': 'qwen/qwen3.6-27b',
   // Free (OpenRouter)
   'cohere-north-mini-code': 'cohere/north-mini-code:free',
   'nvidia-nemotron-ultra': 'nvidia/nemotron-3-ultra-550b-a55b:free',
@@ -46,7 +49,7 @@ export function resolveModelId(frontendId: string): string {
 
 /* ─── Model listing types ────────────────────────────────── */
 
-export type ModelTier = 'kraivor' | 'free' | 'byok';
+export type ModelTier = 'kraivor' | 'groq' | 'free' | 'byok';
 
 export interface ModelItem {
   id: string;

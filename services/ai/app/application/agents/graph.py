@@ -6,6 +6,7 @@ from app.application.agents.architecture import ArchitectureAnalystNode
 from app.application.agents.code_analyst import CodeAnalystNode
 from app.application.agents.context_assembler import ContextAssemblerNode
 from app.application.agents.evidence_gatherer import EvidenceGathererNode
+from app.application.agents.explainer import ExplainerNode
 from app.application.agents.orchestrator import OrchestratorNode
 from app.application.agents.performance import PerformanceAnalystNode
 from app.application.agents.security import SecurityAnalystNode
@@ -38,6 +39,7 @@ def build_agent_graph(client=None) -> StateGraph:
     builder.add_node("security_analyst", SecurityAnalystNode())
     builder.add_node("architecture_analyst", ArchitectureAnalystNode())
     builder.add_node("performance_analyst", PerformanceAnalystNode())
+    builder.add_node("explainer", ExplainerNode())
 
     builder.set_entry_point("orchestrator")
 
@@ -77,7 +79,7 @@ def build_agent_graph(client=None) -> StateGraph:
 
         if needs_rag or required:
             return "context_assembler"
-        return "end"
+        return "explainer"
 
     # Fix 1: context_assembler fans out to ALL analysts. Each analyst checks
     # if it's in required_agents and skips (returns empty findings) if not.
@@ -93,7 +95,7 @@ def build_agent_graph(client=None) -> StateGraph:
             return "architecture_analyst"
         if "performance_analysis" in agents:
             return "performance_analyst"
-        return "end"
+        return "explainer"
 
     def route_after_code(state: AgentState) -> str:
         agents = state.get("required_agents") or []
@@ -103,7 +105,7 @@ def build_agent_graph(client=None) -> StateGraph:
             return "architecture_analyst"
         if "performance_analysis" in agents:
             return "performance_analyst"
-        return "end"
+        return "explainer"
 
     def route_after_security(state: AgentState) -> str:
         agents = state.get("required_agents") or []
@@ -111,16 +113,16 @@ def build_agent_graph(client=None) -> StateGraph:
             return "architecture_analyst"
         if "performance_analysis" in agents:
             return "performance_analyst"
-        return "end"
+        return "explainer"
 
     def route_after_architecture(state: AgentState) -> str:
         agents = state.get("required_agents") or []
         if "performance_analysis" in agents:
             return "performance_analyst"
-        return "end"
+        return "explainer"
 
     def route_after_performance(state: AgentState) -> str:
-        return "end"
+        return "explainer"
 
     # ── Edges ──────────────────────────────────────────────────
 
@@ -147,7 +149,7 @@ def build_agent_graph(client=None) -> StateGraph:
         route_after_evidence,
         {
             "context_assembler": "context_assembler",
-            "end": END,
+            "explainer": "explainer",
         },
     )
 
@@ -160,11 +162,11 @@ def build_agent_graph(client=None) -> StateGraph:
             "security_analyst": "security_analyst",
             "architecture_analyst": "architecture_analyst",
             "performance_analyst": "performance_analyst",
-            "end": END,
+            "explainer": "explainer",
         },
     )
 
-    # Each analyst routes to the next required analyst or END
+    # Each analyst routes to the next required analyst or explainer
     builder.add_conditional_edges(
         "code_analyst",
         route_after_code,
@@ -172,7 +174,7 @@ def build_agent_graph(client=None) -> StateGraph:
             "security_analyst": "security_analyst",
             "architecture_analyst": "architecture_analyst",
             "performance_analyst": "performance_analyst",
-            "end": END,
+            "explainer": "explainer",
         },
     )
     builder.add_conditional_edges(
@@ -181,7 +183,7 @@ def build_agent_graph(client=None) -> StateGraph:
         {
             "architecture_analyst": "architecture_analyst",
             "performance_analyst": "performance_analyst",
-            "end": END,
+            "explainer": "explainer",
         },
     )
     builder.add_conditional_edges(
@@ -189,13 +191,15 @@ def build_agent_graph(client=None) -> StateGraph:
         route_after_architecture,
         {
             "performance_analyst": "performance_analyst",
-            "end": END,
+            "explainer": "explainer",
         },
     )
     builder.add_conditional_edges(
         "performance_analyst",
         route_after_performance,
-        {"end": END},
+        {"explainer": "explainer"},
     )
+
+    builder.add_edge("explainer", END)
 
     return builder.compile()

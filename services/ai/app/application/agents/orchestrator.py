@@ -34,6 +34,30 @@ _GREETING_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Fix: Workspace keyword pre-check — detects workspace-related queries and routes
+# directly to tool_executor, bypassing the unreliable LLM intent classifier.
+_WORKSPACE_RE = re.compile(
+    r"(?:my|the|our|show|list|get|see|what|where|display|check|view)"
+    r".*"
+    r"(?:repo|repository|repos|repositories|"
+    r"project|projects|task|tasks|todo|todos|"
+    r"knowledge|knowledge\s*space|"
+    r"notification|notifications|"
+    r"discussion|discussions|community|"
+    r"analysis|analy[sz]ed|report|reports|"
+    r"profile|member|team)",
+    re.IGNORECASE,
+)
+
+# Fix: Date/time keyword pre-check — detects date/time questions and routes
+# to tool_executor where get_current_date tool is available.
+_DATE_TIME_RE = re.compile(
+    r"(?:what|tell|show|give|what'?s|whats|current|today|right now|exact)"
+    r".*"
+    r"(?:date|time|day|year|month|hour|minute|clock|timestamp|today|now)",
+    re.IGNORECASE,
+)
+
 _DIRECT_INTENTS = {
     "greeting",
     "conversation",
@@ -120,6 +144,37 @@ class OrchestratorNode:
                 "required_agents": [],
                 "context_hints": [],
                 "needs_evidence": False,
+            }
+
+        # Fix: Workspace keyword pre-check — force tool_executor for workspace queries.
+        # The LLM classifier often misclassifies "show my repos" as intent="question",
+        # which overrides needs_tools=True and routes to evidence_gatherer instead.
+        if _WORKSPACE_RE.search(message):
+            logger.info("Workspace query detected via keyword, forcing tool_executor route")
+            return {
+                "intent": "workspace_query",
+                "complexity": "simple",
+                "required_agents": [],
+                "context_hints": [],
+                "needs_rag": False,
+                "needs_tools": True,
+                "needs_evidence": False,
+                "response": None,
+            }
+
+        # Fix: Date/time keyword pre-check — route to tool_executor for date questions
+        # so the get_current_date tool is called instead of answering from training data.
+        if _DATE_TIME_RE.search(message):
+            logger.info("Date/time query detected via keyword, forcing tool_executor route")
+            return {
+                "intent": "workspace_query",
+                "complexity": "simple",
+                "required_agents": [],
+                "context_hints": [],
+                "needs_rag": False,
+                "needs_tools": True,
+                "needs_evidence": False,
+                "response": None,
             }
 
         history_hash = hashlib.sha256(
@@ -269,16 +324,32 @@ class OrchestratorNode:
 
         # For evidence-gathering intents, route through the knowledge pipeline
         if intent in _EVIDENCE_INTENTS:
-            result = {
-                "intent": intent,
-                "complexity": analysis.get("complexity", "simple"),
-                "required_agents": analysis.get("required_agents", []),
-                "context_hints": analysis.get("context_hints", []),
-                "needs_rag": needs_rag,
-                "needs_tools": False,
-                "needs_evidence": True,
-                "response": None,
-            }
+            # Fix: When the LLM classifier says needs_tools=True AND the user message
+            # contains workspace-like content, respect needs_tools and route to tool_executor.
+            # Previously, this block always overrode needs_tools to False, silently killing
+            # workspace queries misclassified as "question" or "programming".
+            if needs_tools:
+                result = {
+                    "intent": intent,
+                    "complexity": analysis.get("complexity", "simple"),
+                    "required_agents": analysis.get("required_agents", []),
+                    "context_hints": analysis.get("context_hints", []),
+                    "needs_rag": False,
+                    "needs_tools": True,
+                    "needs_evidence": False,
+                    "response": None,
+                }
+            else:
+                result = {
+                    "intent": intent,
+                    "complexity": analysis.get("complexity", "simple"),
+                    "required_agents": analysis.get("required_agents", []),
+                    "context_hints": analysis.get("context_hints", []),
+                    "needs_rag": needs_rag,
+                    "needs_tools": False,
+                    "needs_evidence": True,
+                    "response": None,
+                }
             try:
                 from app.infrastructure.cache.redis_client import get_redis
                 r = await get_redis()

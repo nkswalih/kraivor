@@ -71,7 +71,17 @@ Respond with raw JSON only. No markdown code fences, no ```json wrapper, no pros
   "reasoning": "one-sentence explanation of why this classification"
 }
 
-Only include agents in required_agents if the user explicitly asks for that type of analysis."""
+Only include agents in required_agents if the user explicitly asks for that type of analysis.
+
+Examples:
+- "show my repos" → {"intent": "workspace_query", "needs_tools": true}
+- "what tasks are pending" → {"intent": "workspace_query", "needs_tools": true}
+- "any new notifications?" → {"intent": "workspace_query", "needs_tools": true}
+- "show discussions" → {"intent": "workspace_query", "needs_tools": true}
+- "what is Python?" → {"intent": "question", "needs_tools": false}
+- "help me write a React component" → {"intent": "code_generation", "needs_tools": false}
+- "what's today's date?" → {"intent": "question", "needs_tools": true}
+- "latest news about AI" → {"intent": "question", "needs_tools": true}"""
 
 RESPOND_DIRECT_PROMPT = """You are Kraivor AI — a senior staff engineer with 25+ years of experience across the entire software engineering landscape. Your expertise spans every domain the user might ask about, and you respond with the depth, precision, and authority of a seasoned professional.
 

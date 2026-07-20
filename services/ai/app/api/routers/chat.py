@@ -1,3 +1,4 @@
+import asyncio
 import json
 from typing import Annotated
 
@@ -6,6 +7,11 @@ from fastapi import APIRouter, Depends
 from sse_starlette.sse import EventSourceResponse
 
 from app.api.dependencies.auth import JWTPayload, get_current_user
+from app.api.dependencies.backpressure import (
+    acquire_llm_slot,
+    release_llm_slot,
+    get_backpressure_stats,
+)
 from app.api.dependencies.rate_limiter import check_rate_limit
 from app.api.schemas.chat import ChatRequest, ChatResponse
 from app.application.chat.chat_service import ChatService
@@ -24,10 +30,14 @@ router = APIRouter(tags=["chat"])
 
 chat_service = ChatService()
 
+LLM_CHAIN_TIMEOUT = 90
+
 
 # ── Model tier metadata (mirrors frontend TIER_CONFIG) ──────
 _MODEL_META = {
     KRAIVOR_MODEL: {"tier": "kraivor", "provider": "kraivor", "name": "Krait 2.0", "latency": "0.4s", "context": "128K"},
+    "groq-qwen3-32b": {"tier": "groq", "provider": "groq", "name": "Qwen 3 32B", "latency": "0.3s", "context": "128K"},
+    "groq-qwen3.6-27b": {"tier": "groq", "provider": "groq", "name": "Qwen 3.6 27B", "latency": "0.3s", "context": "128K"},
     "cohere-north-mini-code": {"tier": "free", "provider": "cohere", "name": "Cohere North Mini", "latency": "0.6s", "context": "128K"},
     "nvidia-nemotron-ultra": {"tier": "free", "provider": "nvidia", "name": "Nvidia Nemotron Ultra", "latency": "2.0s", "context": "1M"},
     "tencent-hy3": {"tier": "free", "provider": "tencent", "name": "Tencent HY3", "latency": "3.4s", "context": "262K"},
@@ -57,66 +67,105 @@ _MODEL_META = {
 async def chat(request: ChatRequest, user: CurrentUser, _: RateLimit = None):
     conv_id = request.conversation_id or str(uuid.uuid4())
 
-    if request.stream:
+    await acquire_llm_slot()
+    try:
+        if request.stream:
 
-        async def event_generator():
-            async for chunk in chat_service.stream_chat(
+            async def event_generator():
+                try:
+                    async for chunk in chat_service.stream_chat(
+                        user_id=user.sub,
+                        message=request.message,
+                        conversation_id=conv_id,
+                        workspace_id=request.workspace_id,
+                        repo_ids=request.repo_ids,
+                        history=None,
+                        user_name=user.name,
+                        model=request.model,
+                    ):
+                        if chunk.get("done"):
+                            yield {"event": "done", "data": json.dumps(chunk)}
+                        elif chunk.get("status"):
+                            yield {"event": "status", "data": json.dumps(chunk)}
+                        else:
+                            yield {"event": "chunk", "data": json.dumps(chunk)}
+                finally:
+                    await release_llm_slot()
+
+            return EventSourceResponse(event_generator())
+
+        result = await asyncio.wait_for(
+            chat_service.chat(
                 user_id=user.sub,
                 message=request.message,
                 conversation_id=conv_id,
                 workspace_id=request.workspace_id,
                 repo_ids=request.repo_ids,
-                history=None,
                 user_name=user.name,
                 model=request.model,
-            ):
-                if chunk.get("done"):
-                    yield {"event": "done", "data": json.dumps(chunk)}
-                else:
-                    yield {"event": "chunk", "data": json.dumps(chunk)}
+            ),
+            timeout=LLM_CHAIN_TIMEOUT,
+        )
 
-        return EventSourceResponse(event_generator())
-
-    result = await chat_service.chat(
-        user_id=user.sub,
-        message=request.message,
-        conversation_id=conv_id,
-        workspace_id=request.workspace_id,
-        repo_ids=request.repo_ids,
-        user_name=user.name,
-        model=request.model,
-    )
-
-    usage_info = result.get("usage") or {}
-    return ChatResponse(
-        conversation_id=conv_id,
-        message_id=str(uuid.uuid4()),
-        content=result.get("response", ""),
-        model=usage_info.get("model", "unknown"),
-        usage=usage_info,
-        sources=result.get("sources"),
-    )
+        usage_info = result.get("usage") or {}
+        return ChatResponse(
+            conversation_id=conv_id,
+            message_id=str(uuid.uuid4()),
+            content=result.get("response", ""),
+            model=usage_info.get("model", "unknown"),
+            usage=usage_info,
+            sources=result.get("sources"),
+        )
+    except asyncio.TimeoutError:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=504,
+            detail={
+                "error": "llm_timeout",
+                "message": "The AI model took too long to respond. Please try a simpler question.",
+                "retry_after": 10,
+            },
+        )
+    finally:
+        await release_llm_slot()
 
 
 @router.post("/completions")
 async def completions(request: dict, user: CurrentUser, _: RateLimit = None):
     conv_id = str(uuid.uuid4())
-    result = await chat_service.chat(
-        user_id=user.sub,
-        message=request.get("messages", [{}])[-1].get("content", ""),
-        workspace_id=request.get("workspace_id", ""),
-        user_name=user.name,
-        model=request.get("model"),
-    )
-    usage_info = result.get("usage") or {}
-    return ChatResponse(
-        conversation_id=conv_id,
-        message_id=str(uuid.uuid4()),
-        content=result.get("response", ""),
-        model=usage_info.get("model", "unknown"),
-        usage=usage_info,
-        sources=result.get("sources"),
-    )
+    await acquire_llm_slot()
+    try:
+        result = await asyncio.wait_for(
+            chat_service.chat(
+                user_id=user.sub,
+                message=request.get("messages", [{}])[-1].get("content", ""),
+                workspace_id=request.get("workspace_id", ""),
+                user_name=user.name,
+                model=request.get("model"),
+            ),
+            timeout=LLM_CHAIN_TIMEOUT,
+        )
+        usage_info = result.get("usage") or {}
+        return ChatResponse(
+            conversation_id=conv_id,
+            message_id=str(uuid.uuid4()),
+            content=result.get("response", ""),
+            model=usage_info.get("model", "unknown"),
+            usage=usage_info,
+            sources=result.get("sources"),
+        )
+    except asyncio.TimeoutError:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=504,
+            detail={
+                "error": "llm_timeout",
+                "message": "The AI model took too long to respond.",
+                "retry_after": 10,
+            },
+        )
+    finally:
+        await release_llm_slot()
 
 
 @router.get("/models")

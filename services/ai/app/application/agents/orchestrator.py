@@ -125,7 +125,7 @@ class OrchestratorNode:
         history_hash = hashlib.sha256(
             "|".join(h.get("content", "")[:100] for h in history[-3:]).encode()
         ).hexdigest()[:16]
-        intent_cache_key = f"intent:{hashlib.sha256(f'{message}:{history_hash}'.encode()).hexdigest()[:24]}"
+        intent_cache_key = f"intent:{user_id}:{hashlib.sha256(f'{message}:{history_hash}'.encode()).hexdigest()[:24]}"
 
         try:
             from app.infrastructure.cache.redis_client import get_redis
@@ -144,8 +144,8 @@ class OrchestratorNode:
         gen_kwargs = {
             "max_tokens": route["max_tokens"],
         }
-        # Only use json_object format for native OpenAI (not OpenRouter)
-        if provider == "openai":
+        # Use json_object format for providers that support it
+        if provider in ("openai", "groq"):
             gen_kwargs["response_format"] = {"type": "json_object"}
 
         # Build intent classification messages — include recent history so the

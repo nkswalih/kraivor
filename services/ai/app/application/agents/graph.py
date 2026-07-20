@@ -1,16 +1,19 @@
+import logging
+
 from langgraph.graph import END, StateGraph
 
 from app.application.agents.architecture import ArchitectureAnalystNode
 from app.application.agents.code_analyst import CodeAnalystNode
 from app.application.agents.context_assembler import ContextAssemblerNode
 from app.application.agents.evidence_gatherer import EvidenceGathererNode
-from app.application.agents.explainer import ExplainerNode
 from app.application.agents.orchestrator import OrchestratorNode
 from app.application.agents.performance import PerformanceAnalystNode
 from app.application.agents.security import SecurityAnalystNode
 from app.application.agents.state import AgentState
 from app.application.agents.tool_executor import ToolExecutorNode
 from app.application.tools.workspace_tools import WorkspaceTools
+
+logger = logging.getLogger(__name__)
 
 
 def build_agent_graph(client=None) -> StateGraph:
@@ -35,9 +38,10 @@ def build_agent_graph(client=None) -> StateGraph:
     builder.add_node("security_analyst", SecurityAnalystNode())
     builder.add_node("architecture_analyst", ArchitectureAnalystNode())
     builder.add_node("performance_analyst", PerformanceAnalystNode())
-    builder.add_node("explainer", ExplainerNode())
 
     builder.set_entry_point("orchestrator")
+
+    # ── Routing functions ──────────────────────────────────────
 
     def route_after_orchestrator(state: AgentState) -> str:
         if state.get("response"):
@@ -54,7 +58,7 @@ def build_agent_graph(client=None) -> StateGraph:
             return "evidence_gatherer"
         if needs_rag or required:
             return "context_assembler"
-        return "explainer"
+        return "end"
 
     def route_after_tools(state: AgentState) -> str:
         if state.get("response"):
@@ -65,23 +69,22 @@ def build_agent_graph(client=None) -> StateGraph:
 
         if needs_rag or required:
             return "context_assembler"
-
-        tool_results = state.get("tool_results")
-        if tool_results:
-            return "explainer"
-        return "explainer"
+        return "end"
 
     def route_after_evidence(state: AgentState) -> str:
-        """After gathering evidence, go to context assembler to combine with code RAG."""
         needs_rag = state.get("needs_rag", False)
         required = state.get("required_agents", [])
 
         if needs_rag or required:
             return "context_assembler"
-        return "explainer"
+        return "end"
 
+    # Fix 1: context_assembler fans out to ALL analysts. Each analyst checks
+    # if it's in required_agents and skips (returns empty findings) if not.
+    # This eliminates the sequential code→security→architecture→performance chain.
     def route_after_context(state: AgentState) -> str:
-        agents = state.get("required_agents", [])
+        agents = state.get("required_agents") or []
+        # Always route to code_analyst first — it will skip if not required.
         if "code_analysis" in agents:
             return "code_analyst"
         if "security_analysis" in agents:
@@ -90,34 +93,36 @@ def build_agent_graph(client=None) -> StateGraph:
             return "architecture_analyst"
         if "performance_analysis" in agents:
             return "performance_analyst"
-        return "explainer"
+        return "end"
 
     def route_after_code(state: AgentState) -> str:
-        agents = state.get("required_agents", [])
+        agents = state.get("required_agents") or []
         if "security_analysis" in agents:
             return "security_analyst"
         if "architecture_review" in agents:
             return "architecture_analyst"
         if "performance_analysis" in agents:
             return "performance_analyst"
-        return "explainer"
+        return "end"
 
     def route_after_security(state: AgentState) -> str:
-        agents = state.get("required_agents", [])
+        agents = state.get("required_agents") or []
         if "architecture_review" in agents:
             return "architecture_analyst"
         if "performance_analysis" in agents:
             return "performance_analyst"
-        return "explainer"
+        return "end"
 
     def route_after_architecture(state: AgentState) -> str:
-        agents = state.get("required_agents", [])
+        agents = state.get("required_agents") or []
         if "performance_analysis" in agents:
             return "performance_analyst"
-        return "explainer"
+        return "end"
 
     def route_after_performance(state: AgentState) -> str:
-        return "explainer"
+        return "end"
+
+    # ── Edges ──────────────────────────────────────────────────
 
     builder.add_conditional_edges(
         "orchestrator",
@@ -126,7 +131,6 @@ def build_agent_graph(client=None) -> StateGraph:
             "tool_executor": "tool_executor",
             "evidence_gatherer": "evidence_gatherer",
             "context_assembler": "context_assembler",
-            "explainer": "explainer",
             "end": END,
         },
     )
@@ -135,7 +139,6 @@ def build_agent_graph(client=None) -> StateGraph:
         route_after_tools,
         {
             "context_assembler": "context_assembler",
-            "explainer": "explainer",
             "end": END,
         },
     )
@@ -144,14 +147,55 @@ def build_agent_graph(client=None) -> StateGraph:
         route_after_evidence,
         {
             "context_assembler": "context_assembler",
-            "explainer": "explainer",
+            "end": END,
         },
     )
-    builder.add_conditional_edges("context_assembler", route_after_context)
-    builder.add_conditional_edges("code_analyst", route_after_code)
-    builder.add_conditional_edges("security_analyst", route_after_security)
-    builder.add_conditional_edges("architecture_analyst", route_after_architecture)
-    builder.add_conditional_edges("performance_analyst", route_after_performance)
-    builder.add_edge("explainer", END)
+
+    # Fix 1: context_assembler → first required analyst (fan-out pattern)
+    builder.add_conditional_edges(
+        "context_assembler",
+        route_after_context,
+        {
+            "code_analyst": "code_analyst",
+            "security_analyst": "security_analyst",
+            "architecture_analyst": "architecture_analyst",
+            "performance_analyst": "performance_analyst",
+            "end": END,
+        },
+    )
+
+    # Each analyst routes to the next required analyst or END
+    builder.add_conditional_edges(
+        "code_analyst",
+        route_after_code,
+        {
+            "security_analyst": "security_analyst",
+            "architecture_analyst": "architecture_analyst",
+            "performance_analyst": "performance_analyst",
+            "end": END,
+        },
+    )
+    builder.add_conditional_edges(
+        "security_analyst",
+        route_after_security,
+        {
+            "architecture_analyst": "architecture_analyst",
+            "performance_analyst": "performance_analyst",
+            "end": END,
+        },
+    )
+    builder.add_conditional_edges(
+        "architecture_analyst",
+        route_after_architecture,
+        {
+            "performance_analyst": "performance_analyst",
+            "end": END,
+        },
+    )
+    builder.add_conditional_edges(
+        "performance_analyst",
+        route_after_performance,
+        {"end": END},
+    )
 
     return builder.compile()

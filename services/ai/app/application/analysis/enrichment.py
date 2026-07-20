@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from app.core.config import settings
@@ -74,16 +75,31 @@ class EnrichmentService:
             cat = f.get("category", "unknown")
             grouped.setdefault(cat, []).append(f)
 
+        # Parallelize category enrichment with concurrency limit
+        semaphore = asyncio.Semaphore(4)
+
+        async def _enrich_with_semaphore(category, cat_findings):
+            async with semaphore:
+                return category, await self._enrich_category(category, cat_findings)
+
+        tasks = [
+            _enrich_with_semaphore(cat, cat_findings)
+            for cat, cat_findings in grouped.items()
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
         enriched_map: dict[str, list[dict]] = {}
-        for category, cat_findings in grouped.items():
-            try:
-                result = await self._enrich_category(category, cat_findings)
-                enriched_map[category] = result
-            except Exception as e:
-                logger.warning(
-                    "category_enrichment_failed category=%s error=%s", category, str(e)
-                )
-                enriched_map[category] = [
+        for result in results:
+            if isinstance(result, Exception):
+                logger.warning("category_enrichment_gather_failed error=%s", str(result))
+                continue
+            category, cat_results = result
+            enriched_map[category] = cat_results
+
+        # Fallback for categories that failed
+        for cat, cat_findings in grouped.items():
+            if cat not in enriched_map:
+                enriched_map[cat] = [
                     {**f, "ai_explanation": ""} for f in cat_findings
                 ]
 

@@ -2,6 +2,7 @@ from collections.abc import AsyncGenerator
 
 import json
 import logging
+from datetime import datetime, timezone
 
 from app.application.agents.graph import build_agent_graph
 from app.application.chat.conversation_repository import (
@@ -25,6 +26,16 @@ from app.infrastructure.service_client import ServiceClient
 logger = logging.getLogger(__name__)
 _HISTORY_LIMIT = 30
 _HISTORY_CACHE_TTL = 300  # 5 minutes (was 60s — almost always a cache miss at 60s)
+
+
+def _current_date_block() -> str:
+    """Return a date context block prepended to every system prompt."""
+    now = datetime.now(timezone.utc)
+    return (
+        f"CURRENT DATE & TIME: {now.strftime('%A, %B %d, %Y — %H:%M UTC')}\n"
+        "This is the real current date from the server. Use this as your time reference. "
+        "NEVER state a different date or year unless explicitly told otherwise."
+    )
 
 
 class ChatService:
@@ -280,9 +291,8 @@ class ChatService:
         yield {"status": "Planning solution"}
         result = await self.graph.ainvoke(state)
 
-        # If orchestrator or tool_executor already generated a direct response, stream it
-        # Fix D: Include tool_executor responses (has tool_results + response) — skip explainer
-        if result.get("response") and not result.get("assembled_context") and not result.get("evidence"):
+        # If graph already produced a response (via tool_executor or explainer), stream it
+        if result.get("response"):
             full_response = result["response"]
             usage = result.get("usage") or {}
             import asyncio
@@ -381,10 +391,12 @@ class ChatService:
             )
             parts.append(f"## Recent conversation\n{brief}")
 
-        # Format system prompt with user context
+        # Format system prompt with user context + current date
         name = user_name or "the user"
         ctx = f"Known context about the user:\n{user_context_str}" if user_context_str else ""
+        date_block = _current_date_block()
         system_prompt = prompt_template.format(user_name=name, user_context=ctx)
+        system_prompt = f"{date_block}\n\n{system_prompt}"
 
         messages = [
             {"role": "system", "content": system_prompt},

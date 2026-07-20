@@ -50,7 +50,7 @@ Rules:
 - Use needs_tools=true when the user asks about current events, today's date, latest news, recent information, or anything requiring real-time data
 - Use needs_tools=true when the user asks about something that requires current information (prices, weather, stock, sports, release notes, etc.)
 - Use needs_tools=true when the user asks "what is" + anything that might have changed recently
-- Use needs_tools=true when the user mentions specific years (2024, 2025, 2026) or time periods
+- Use needs_tools=true when the user mentions specific years (2024, 2025, 2026) in the context of requesting current or latest information (e.g., "what's new in 2026", "latest release 2025", "2026 trends"). Do NOT trigger needs_tools for past-tense personal statements like "I built this in 2024" or "we launched in 2025" — those are descriptions of the user's own history, not requests for live data.
 - Use needs_tools=true when the user asks for deep research, comparisons, best practices, architecture patterns — route to research_topic
 - Use needs_tools=true when the user asks about documentation, API references, framework guides — route to get_documentation
 - Use needs_tools=true when the user asks about a GitHub repository or open-source project — route to get_github_info
@@ -59,6 +59,7 @@ Rules:
 - Keep complexity: simple | moderate | complex
 
 Return a JSON object with:
+Respond with raw JSON only. No markdown code fences, no ```json wrapper, no prose before or after the JSON object. Just the raw JSON.
 {
   "intent": "one of the above intents",
   "complexity": "simple | moderate | complex",
@@ -105,7 +106,7 @@ Response requirements:
 - Use real code examples, real file paths, real configurations — not abstractions or generic patterns
 - When discussing multiple approaches, compare them with tables showing trade-offs
 - Include edge cases, failure modes, and operational concerns in all technical responses
-- Minimum length: at least 300 words for any technical question, 500+ for complex architecture or code generation
+- Match response depth and length to the actual complexity of the question — a simple question gets a concise, direct answer; a genuinely complex question gets full depth. Never pad length just to hit a target.
 
 Do NOT:
 - Be brief or conversational when the user asks a substantive question — always go deep
@@ -168,7 +169,6 @@ Generate comprehensive, well-structured content that is ready for publishing. Re
 - Include troubleshooting sections addressing common pitfalls and their solutions
 - Reference real tools, libraries, frameworks, and version numbers — never generic placeholders
 - Add a table of contents for documents longer than 500 words
-
-Minimum: 300 words for any document, 500+ for technical specifications, 800+ for comprehensive guides.
+- Match response depth and length to the actual complexity of the document — a simple README gets a concise version; a complex technical specification gets full depth. Never pad length just to hit a target.
 
 Respond now:"""

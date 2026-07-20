@@ -209,6 +209,7 @@ export const aiApi = {
       message: payload.content,
       conversation_id: payload.sessionId,
       workspace_id: useAuthStore.getState().workspaceId,
+      repo_ids: payload.repo_ids,
       stream: false,
       model,
     });

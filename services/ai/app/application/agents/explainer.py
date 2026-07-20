@@ -1,6 +1,7 @@
 """ExplainerNode — synthesizes multi-agent results into a grounded, intent-aware response."""
 
 import re
+from datetime import datetime, timezone
 
 from app.application.agents.prompts.specialist import (
     EXPLAINER_SYSTEM_PROMPT,
@@ -24,6 +25,17 @@ def _format_prompt(
 
 _AUDIT_INTENTS = {"repository_analysis", "security_analysis", "architecture_review", "performance_analysis"}
 _CASUAL_INTENTS = {"greeting", "conversation"}
+
+
+def _inject_date(prompt: str) -> str:
+    """Prepend current date to any system prompt so the LLM knows today's date."""
+    now = datetime.now(timezone.utc)
+    date_line = (
+        f"CURRENT DATE & TIME: {now.strftime('%A, %B %d, %Y — %H:%M UTC')}. "
+        "Use this as your time reference. "
+        "NEVER state a different date or year unless explicitly told otherwise.\n\n"
+    )
+    return date_line + prompt
 
 
 def _select_prompt(intent: str | None, has_findings: bool, has_evidence: bool, has_user_context: bool) -> str:
@@ -141,7 +153,7 @@ class ExplainerNode:
         messages = [
             {
                 "role": "system",
-                "content": _format_prompt(prompt_template, user_name, user_context),
+                "content": _inject_date(_format_prompt(prompt_template, user_name, user_context)),
             },
             {"role": "user", "content": "\n\n".join(parts)},
         ]

@@ -96,5 +96,6 @@ firebase-service-account.json
 
 services/core/celerybeat-schedule
 
-# Presentation (CEO pitch deck)
-presentation/
+
+docs/handbook
+docs/documents

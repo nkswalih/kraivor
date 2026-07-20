@@ -39,9 +39,10 @@ async def ensure_conversation(
 async def save_message(db: AsyncSession, msg: MessageEntity) -> Message:
     now = datetime.now(UTC)
 
-    # Enforce strictly increasing timestamps within a conversation so that
-    # ORDER BY created_at ASC never encounters ties. Query the most recent
-    # message's created_at and bump forward by 1µs if needed.
+    # Known latency cost: SELECT before INSERT to enforce strictly increasing timestamps
+    # within a conversation. Without this, ORDER BY created_at ASC can encounter ties when
+    # multiple messages are saved in rapid succession (e.g., user + assistant in same request).
+    # The 1µs bump ensures chronological ordering without a unique constraint race.
     last_ts = await db.scalar(
         select(Message.created_at)
         .where(Message.conversation_id == msg.conversation_id)

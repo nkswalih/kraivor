@@ -16,13 +16,25 @@ USER_CONTEXT_CACHE_TTL = 300  # 5 minutes
 # Patterns to extract user facts from messages
 _NAME_PATTERNS = [
     re.compile(
-        r"(?:my name is|I'm |i am |call me )([A-Za-z\s\-']+?)(?:[,\.!]|\s+and|\s*$)",
+        r"(?:my name is|call me )([A-Za-z][A-Za-z\s\-']{1,30}?)(?:[,\.!]|\s+and|\s*$)",
         re.IGNORECASE,
     ),
     re.compile(
-        r"(?:you can call me |name's )([A-Za-z\s\-']+?)(?:[,\.!]|\s*$)", re.IGNORECASE
+        r"(?:you can call me |name's )([A-Za-z][A-Za-z\s\-']{1,30}?)(?:[,\.!]|\s*$)",
+        re.IGNORECASE,
     ),
 ]
+
+# Words that indicate the capture is NOT a name (conversational filler / verbs)
+_NAME_REJECTION = frozenset({
+    "currently", "working", "trying", "using", "learning", "building",
+    "developing", "testing", "setting", "installing", "configuring",
+    "running", "debugging", "fixing", "starting", "beginning", "looking",
+    "want", "need", "like", "prefer", "think", "know", "believe",
+    "going", "doing", "making", "creating", "writing", "reading",
+    "the", "a", "an", "some", "more", "new", "old", "good", "bad",
+    "this", "that", "it", "all", "my", "your", "our", "their",
+})
 
 _PREFERENCE_PATTERNS = [
     re.compile(
@@ -48,19 +60,26 @@ async def extract_and_store_facts(
         match = pattern.search(message)
         if match:
             name = match.group(1).strip().title()
-            if 1 < len(name) < 100:
-                facts.append(
-                    UserFact(
-                        id=str(uuid.uuid4()),
-                        user_id=user_id,
-                        fact_type="identity",
-                        fact_key="name",
-                        fact_value=name,
-                        confidence=0.9,
-                        source_conversation_id=conversation_id,
-                    )
+            # Reject if too short, too long, or contains filler words
+            words = name.lower().split()
+            if (
+                len(name) < 3
+                or len(name) > 30
+                or any(w in _NAME_REJECTION for w in words)
+            ):
+                continue
+            facts.append(
+                UserFact(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    fact_type="identity",
+                    fact_key="name",
+                    fact_value=name,
+                    confidence=0.6,
+                    source_conversation_id=conversation_id,
                 )
-                break
+            )
+            break
 
     for pattern in _PREFERENCE_PATTERNS:
         for match in pattern.finditer(message):

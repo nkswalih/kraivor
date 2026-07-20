@@ -95,7 +95,7 @@ async def resolve_provider_key(
         return settings.groq_api_key, "groq"
 
     result = await db_session.execute(
-        select(ApiKey).where(ApiKey.user_id == user_id, not ApiKey.revoked)
+        select(ApiKey).where(ApiKey.user_id == user_id, ApiKey.revoked.is_(False))
     )
     key_record = result.scalar_one_or_none()
     if not key_record:
@@ -151,9 +151,12 @@ class KeyResolver:
             r = await get_redis()
             cached = await r.get(cache_key)
             if cached:
-                parts = cached.split(":", 1)
-                if len(parts) == 2:
-                    return parts[1], parts[0]
+                import json
+                data = json.loads(cached)
+                encrypted_key = data.get("encrypted_key", "")
+                provider = data.get("provider", "openrouter")
+                decrypted = self.encrypter.decrypt(encrypted_key.encode()).decode()
+                return decrypted, provider
         except Exception:
             pass
 
@@ -169,8 +172,13 @@ class KeyResolver:
 
         try:
             from app.infrastructure.cache.redis_client import get_redis
+            import json
             r = await get_redis()
-            await r.setex(cache_key, KEY_CACHE_TTL, f"{provider}:{api_key}")
+            encrypted = self.encrypter.encrypt(api_key.encode()).decode()
+            await r.setex(cache_key, KEY_CACHE_TTL, json.dumps({
+                "encrypted_key": encrypted,
+                "provider": provider,
+            }))
         except Exception:
             pass
 

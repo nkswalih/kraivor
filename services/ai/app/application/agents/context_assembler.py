@@ -1,4 +1,5 @@
 import logging
+import time
 
 from app.infrastructure.rag.embedder import Embedder
 from app.infrastructure.rag.retriever import Retriever
@@ -38,6 +39,7 @@ class ContextAssemblerNode:
             return ""
 
     async def __call__(self, state: dict) -> dict:
+        start = time.monotonic()
         needs_rag = state.get("needs_rag", False)
         repo_ids = state.get("repo_ids")
         workspace_id = state.get("workspace_id")
@@ -75,4 +77,9 @@ class ContextAssemblerNode:
             sections.append(f"# Conversation History\n\n{formatted}")
 
         assembled = "\n\n".join(sections) if sections else ""
+        elapsed = time.monotonic() - start
+        logger.info(
+            "node=context_assembler elapsed=%.2fs sections=%d rag=%s",
+            elapsed, len(sections), needs_rag,
+        )
         return {"assembled_context": assembled, "context_code": results}

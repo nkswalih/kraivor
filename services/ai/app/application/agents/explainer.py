@@ -40,8 +40,15 @@ def _select_prompt(intent: str | None, has_findings: bool, has_evidence: bool, h
 
 
 def _validate_sources(response: str, sources: list[dict]) -> str:
-    """Anti-hallucination gate: strip fabricated file paths and flag unsupported claims."""
+    """Anti-hallucination gate: strip fabricated file paths and flag unsupported claims.
+
+    Fix 5: Now matches relative paths too (e.g. services/ai/app/main.py) — the old
+    regex only matched absolute paths (/foo/bar). We also strip hallucinated paths
+    when there are no code sources AND no assembled context.
+    """
+    # Match absolute paths AND relative paths with 2+ segments
     file_patterns = re.findall(r'(?:^|\s)(?:/[\w.-]+){2,}[\w.-]*', response)
+    file_patterns += re.findall(r'(?:^|\s)(?:[\w-]+/){2,}[\w.-]+', response)
     code_block_files = re.findall(r'###\s+([\w/._-]+\.\w+)', response)
 
     if file_patterns or code_block_files:
@@ -72,6 +79,7 @@ class ExplainerNode:
         user_context = state.get("user_context")
         intent = state.get("intent")
         user_model = state.get("model")
+        low_confidence = state.get("low_confidence", False)
         route = self.router.get_route_for_user("code_review", user_model)
         api_key, provider = await self.key_resolver.resolve(user_id, route["model"])
         client = LLMClient(api_key=api_key, provider=provider, model=route["model"])
@@ -143,5 +151,12 @@ class ExplainerNode:
 
         if evidence_sources:
             response_text = _validate_sources(response_text, evidence_sources)
+
+        # Fix 14: Surface grounding confidence — append caveat if evidence was low-quality
+        if low_confidence and "Low-confidence" not in (evidence or ""):
+            response_text += (
+                "\n\n> **Note:** This response is based on limited sources and may not "
+                "be fully verified. Please cross-check critical information."
+            )
 
         return {"response": response_text, "usage": response}

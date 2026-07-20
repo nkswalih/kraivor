@@ -128,6 +128,8 @@ class ChatService:
             "security_findings": None,
             "architecture_findings": None,
             "performance_findings": None,
+            "low_confidence": False,
+            "parallel": False,
             "response": None,
             "usage": None,
         }
@@ -268,6 +270,8 @@ class ChatService:
             "security_findings": None,
             "architecture_findings": None,
             "performance_findings": None,
+            "low_confidence": False,
+            "parallel": False,
             "response": None,
             "usage": None,
         }

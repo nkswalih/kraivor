@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     analysis_api_url: str = "http://analysis:8003/api/v1"
     internal_request_secret: str = ""
 
+    # Feature flags
+    enable_parallel_analysts: bool = False
+
     # CORS
     cors_allowed_origins: str = "http://localhost:3000"
 

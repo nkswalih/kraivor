@@ -33,7 +33,6 @@ class WebFetchTool(BaseTool):
                     url,
                     timeout=aiohttp.ClientTimeout(total=20),
                     allow_redirects=True,
-                    ssl=False,
                 ) as resp:
                     if resp.status != 200:
                         return f"HTTP {resp.status} fetching {url}"
@@ -82,7 +81,6 @@ class NewsFetchTool(BaseTool):
                     url,
                     timeout=aiohttp.ClientTimeout(total=20),
                     allow_redirects=True,
-                    ssl=False,
                 ) as resp:
                     if resp.status != 200:
                         return f"HTTP {resp.status} fetching {url}"

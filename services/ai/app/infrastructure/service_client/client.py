@@ -33,11 +33,15 @@ class ServiceClient:
             return resp.json()
         except httpx.HTTPStatusError as e:
             logger.warning(
-                "HTTP %s from %s: %s", e.response.status_code, url, e.response.text
+                "HTTP %s from %s (user=%s workspace=%s): %s",
+                e.response.status_code, url, user_id, workspace_id,
+                e.response.text[:200],
             )
             return []
         except httpx.RequestError as e:
-            logger.warning("Request failed for %s: %s", url, e)
+            logger.warning(
+                "Request failed for %s (user=%s): %s", url, user_id, e,
+            )
             return []
 
     async def get_repos(self, user_id: str, workspace_id: str) -> list[dict]:

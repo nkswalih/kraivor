@@ -5,6 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.dependencies.auth import invalidate_jwks_cache
+from app.api.dependencies.backpressure import init_backpressure
+from app.api.middleware.backpressure import BackpressureMiddleware
 from app.api.middleware.prometheus import PrometheusMiddleware
 from app.api.middleware.request_id import RequestIDMiddleware
 from app.core.config import settings
@@ -19,6 +21,7 @@ from app.monitoring.metrics import setup_metrics
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     setup_logging()
     setup_metrics(app)
+    init_backpressure()
     await init_db()
     await get_event_producer().start()
     invalidate_jwks_cache()
@@ -43,6 +46,7 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     )
+    app.add_middleware(BackpressureMiddleware)
     app.add_middleware(PrometheusMiddleware)
     app.add_middleware(RequestIDMiddleware)
 

@@ -1,12 +1,20 @@
 from collections.abc import AsyncGenerator
 
 import asyncio
-import google.generativeai as genai
 import hashlib
 import logging
 import time
 from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI, APITimeoutError, APIConnectionError, RateLimitError, APIStatusError
+
+try:
+    from google import genai as google_genai
+    from google.genai import types as google_types
+    _HAS_GOOGLE_GENAI = True
+except ImportError:
+    google_genai = None  # type: ignore[assignment]
+    google_types = None  # type: ignore[assignment]
+    _HAS_GOOGLE_GENAI = False
 
 from app.infrastructure.llm.cost import estimate_cost
 from app.infrastructure.llm.error_classifier import classify_error, ClassifiedError
@@ -58,8 +66,9 @@ def _get_cached_client(provider: str, api_key: str, model: str) -> object:
             max_retries=0,
         )
     elif provider == "google":
-        genai.configure(api_key=api_key)
-        client = genai.GenerativeModel(model)
+        if not _HAS_GOOGLE_GENAI:
+            raise ValueError("google-genai package not installed. Install with: pip install google-genai")
+        client = google_genai.Client(api_key=api_key)
     else:
         raise ValueError(f"Unknown provider: {provider}")
 
@@ -195,10 +204,11 @@ class LLMClient:
             metrics["output_tokens"] = msg.usage.output_tokens
 
         elif self.provider == "google":
-            response = await self.client.generate_content_async(
-                messages[-1]["content"] if messages else "", **kwargs
+            response = await self.client.aio.models.generate_content(
+                model=self.model,
+                contents=messages[-1]["content"] if messages else "",
             )
-            result = response.text
+            result = response.text or ""
             if hasattr(response, "usage_metadata"):
                 metrics["input_tokens"] = getattr(
                     response.usage_metadata, "prompt_token_count", 0
@@ -232,10 +242,10 @@ class LLMClient:
                     async for text in stream.text_stream:
                         yield text
             elif self.provider == "google":
-                response = await self.client.generate_content_async(
-                    messages[-1]["content"] if messages else "", stream=True, **kwargs
-                )
-                async for chunk in response:
+                async for chunk in await self.client.aio.models.generate_content_stream(
+                    model=self.model,
+                    contents=messages[-1]["content"] if messages else "",
+                ):
                     if chunk.text:
                         yield chunk.text
         except APIStatusError as e:

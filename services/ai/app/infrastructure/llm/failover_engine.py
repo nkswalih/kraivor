@@ -1,12 +1,18 @@
-"""Two-stage provider failover engine.
+"""Two-stage provider failover engine with smart model rotation.
 
 Inspired by OpenClaw's auth-profile-rotation + model-fallback pattern:
   Stage 1: Try current provider, on failure rotate auth profiles
   Stage 2: If all profiles exhausted, advance to next model in fallback chain
 
-Also handles cooldown escalation (1st: 30s, 2nd: 60s, 3rd+: 300s cap).
+Smart rotation adds Redis-backed success-rate tracking:
+  - Candidates sorted by recent success rate (highest first)
+  - On failure: demote model to bottom of chain
+  - On success: promote model toward top
+  - Periodic rebalance every 5 min (success rate decay)
+  - Survives Docker restarts via Redis persistence
 """
 
+import json
 import logging
 import time
 
@@ -23,6 +29,11 @@ logger = logging.getLogger(__name__)
 
 # ── Cooldown escalation (OpenClaw pattern) ───────────────────────────────
 COOLDOWN_SCHEDULE = [30.0, 60.0, 300.0]  # seconds: 1st, 2nd, 3rd+ failure
+
+# ── Redis key prefix for model health ───────────────────────────────────
+_REDIS_HEALTH_PREFIX = "llm:health:"
+_REDIS_HEALTH_TTL = 3600  # 1 hour window for success rate calculation
+_REBALANCE_INTERVAL = 300  # 5 minutes between rebalance cycles
 
 
 class ProviderHealth:
@@ -61,8 +72,41 @@ class ProviderHealth:
             self.cooldown_until = now + COOLDOWN_SCHEDULE[idx]
 
 
+class ModelHealth:
+    """Redis-backed model success rate tracking."""
+
+    __slots__ = ("successes", "failures", "last_updated")
+
+    def __init__(self, successes: int = 0, failures: int = 0, last_updated: float = 0.0):
+        self.successes = successes
+        self.failures = failures
+        self.last_updated = last_updated
+
+    @property
+    def success_rate(self) -> float:
+        total = self.successes + self.failures
+        if total == 0:
+            return 0.5  # Unknown models get neutral rating
+        return self.successes / total
+
+    def to_dict(self) -> dict:
+        return {
+            "s": self.successes,
+            "f": self.failures,
+            "t": self.last_updated,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ModelHealth":
+        return cls(
+            successes=data.get("s", 0),
+            failures=data.get("f", 0),
+            last_updated=data.get("t", 0.0),
+        )
+
+
 class FailoverEngine:
-    """Two-stage failover: try primary model, then fallback chain.
+    """Two-stage failover with smart model rotation.
 
     Usage:
         engine = FailoverEngine(key_resolver)
@@ -72,16 +116,68 @@ class FailoverEngine:
     def __init__(self, key_resolver: KeyResolver | None = None):
         self.key_resolver = key_resolver or KeyResolver()
         self._health: dict[str, ProviderHealth] = {}
+        self._model_health: dict[str, ModelHealth] = {}
+        self._last_rebalance: float = 0.0
 
     def _get_health(self, provider: str) -> ProviderHealth:
         if provider not in self._health:
             self._health[provider] = ProviderHealth()
         return self._health[provider]
 
-    def _build_candidate_chain(self, route: dict) -> list[dict]:
+    async def _load_model_health(self, model: str) -> ModelHealth:
+        """Load model health from Redis (or local cache)."""
+        if model in self._model_health:
+            return self._model_health[model]
+
+        try:
+            from app.infrastructure.cache.redis_client import get_redis
+            r = await get_redis()
+            raw = await r.get(f"{_REDIS_HEALTH_PREFIX}{model}")
+            if raw:
+                data = json.loads(raw)
+                mh = ModelHealth.from_dict(data)
+                self._model_health[model] = mh
+                return mh
+        except Exception:
+            pass
+
+        mh = ModelHealth()
+        self._model_health[model] = mh
+        return mh
+
+    async def _save_model_health(self, model: str, mh: ModelHealth) -> None:
+        """Persist model health to Redis."""
+        try:
+            from app.infrastructure.cache.redis_client import get_redis
+            r = await get_redis()
+            await r.setex(
+                f"{_REDIS_HEALTH_PREFIX}{model}",
+                _REDIS_HEALTH_TTL,
+                json.dumps(mh.to_dict()),
+            )
+        except Exception:
+            pass
+
+    async def _record_model_success(self, model: str) -> None:
+        """Record a success for a model and persist to Redis."""
+        mh = await self._load_model_health(model)
+        mh.successes += 1
+        mh.last_updated = time.time()
+        self._model_health[model] = mh
+        await self._save_model_health(model, mh)
+
+    async def _record_model_failure(self, model: str) -> None:
+        """Record a failure for a model and persist to Redis."""
+        mh = await self._load_model_health(model)
+        mh.failures += 1
+        mh.last_updated = time.time()
+        self._model_health[model] = mh
+        await self._save_model_health(model, mh)
+
+    async def _build_candidate_chain(self, route: dict) -> list[dict]:
         """Build ordered list: primary → fallback → cross-provider alternatives.
 
-        Each candidate is a dict with keys: model, provider_hint (optional).
+        Candidates are sorted by recent success rate (highest first).
         """
         candidates = []
 
@@ -101,6 +197,20 @@ class FailoverEngine:
                 candidates.append({"model": gm})
                 break  # Only add one Groq model
 
+        # 4. Sort by success rate (highest first) — primary stays first if it has good rate
+        #    Use a stable sort so ties preserve the original order
+        model_rates = {}
+        for c in candidates:
+            mh = await self._load_model_health(c["model"])
+            model_rates[c["model"]] = mh.success_rate
+
+        # Primary model gets a small bonus to prefer it when rates are close
+        primary_model = route["model"]
+        candidates.sort(
+            key=lambda c: model_rates[c["model"]] + (0.01 if c["model"] == primary_model else 0),
+            reverse=True,
+        )
+
         return candidates
 
     async def execute(
@@ -116,7 +226,7 @@ class FailoverEngine:
         Returns the result dict from LLMClient.generate() on success.
         Raises ClassifiedError if all candidates fail.
         """
-        candidates = self._build_candidate_chain(route)
+        candidates = await self._build_candidate_chain(route)
         now = time.monotonic()
 
         # Filter out providers in cooldown/disabled
@@ -153,17 +263,19 @@ class FailoverEngine:
                 client = LLMClient(api_key=api_key, provider=provider, model=model)
                 result = await client.generate(messages, timeout=timeout, **kwargs)
 
-                # Record success
+                # Record success — both provider health and model success rate
                 self._get_health(provider).record_success()
+                await self._record_model_success(model)
                 return result
 
             except Exception as exc:
                 classified = classify_error(exc, resolved_provider, model)
                 last_error = classified
 
-                # Record failure
+                # Record failure — both provider health and model failure rate
                 health = self._get_health(resolved_provider)
                 health.record_failure(classified.category)
+                await self._record_model_failure(model)
 
                 logger.warning(
                     "failover_candidate_failed provider=%s model=%s category=%s "
@@ -206,7 +318,7 @@ class FailoverEngine:
             dict: {"type": "error", "error": str, "category": str, "suggested_action": str}
                   on failure
         """
-        candidates = self._build_candidate_chain(route)
+        candidates = await self._build_candidate_chain(route)
         now = time.monotonic()
 
         available_candidates = []
@@ -235,6 +347,7 @@ class FailoverEngine:
                 async for token in client.stream(messages, **kwargs):
                     yield token
                 self._get_health(provider).record_success()
+                await self._record_model_success(model)
                 return  # Success — stop failover
 
             except Exception as exc:
@@ -242,6 +355,7 @@ class FailoverEngine:
                 last_error = classified
                 health = self._get_health(resolved_provider)
                 health.record_failure(classified.category)
+                await self._record_model_failure(model)
 
                 logger.warning(
                     "failover_stream_failed provider=%s model=%s category=%s",

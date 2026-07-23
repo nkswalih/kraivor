@@ -87,37 +87,37 @@ class ModelRouter:
     TASK_ROUTES = {
         "intent_classify": {
             "model": "qwen/qwen3.6-27b",
-            "fallback": "cohere/north-mini-code:free",
+            "fallback": "qwen/qwen3-32b",
             "max_tokens": 256,
         },
         "simple_qa": {
             "model": "qwen/qwen3.6-27b",
-            "fallback": "cohere/north-mini-code:free",
+            "fallback": "qwen/qwen3-32b",
             "max_tokens": 4096,
         },
         "code_generation": {
             "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-            "fallback": "cohere/north-mini-code:free",
+            "fallback": "qwen/qwen3-32b",
             "max_tokens": 16384,
         },
         "code_review": {
             "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-            "fallback": "cohere/north-mini-code:free",
+            "fallback": "qwen/qwen3-32b",
             "max_tokens": 4096,
         },
         "security_analysis": {
             "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-            "fallback": "poolside/laguna-m.1:free",
+            "fallback": "qwen/qwen3.6-27b",
             "max_tokens": 4096,
         },
         "architecture_review": {
             "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-            "fallback": "cohere/north-mini-code:free",
+            "fallback": "qwen/qwen3-32b",
             "max_tokens": 8192,
         },
         "performance_analysis": {
             "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-            "fallback": "poolside/laguna-m.1:free",
+            "fallback": "qwen/qwen3.6-27b",
             "max_tokens": 4096,
         },
         "tool_calling": {

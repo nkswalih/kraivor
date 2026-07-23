@@ -1,3 +1,7 @@
+import os
+from cryptography.fernet import Fernet as _Fernet
+os.environ.setdefault("AI_KEY_ENCRYPTION_KEY", _Fernet.generate_key().decode())
+
 import pytest
 from cryptography.fernet import Fernet
 from unittest.mock import AsyncMock

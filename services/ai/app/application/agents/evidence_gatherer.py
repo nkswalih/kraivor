@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import re
 import time
 
 log = logging.getLogger(__name__)
@@ -117,6 +118,17 @@ class EvidenceGathererNode:
         workspace_id = state.get("workspace_id", "")
 
         if not message:
+            return {"evidence": None, "evidence_sources": []}
+
+        # Skip evidence gathering for very short, random, or non-English queries.
+        # Prevents wasting 10-15s on web searches for gibberish like "bhbbkbljh".
+        stripped = message.strip()
+        if len(stripped) < 5 or not re.search(r'[a-zA-Z]{3,}', stripped):
+            log.info("evidence_gatherer: skipping — query too short or non-alphabetic: '%s'", stripped[:20])
+            return {"evidence": None, "evidence_sources": []}
+        # Also catch vowel-less strings — real words always have vowels
+        if len(stripped) >= 5 and not re.search(r'[aeiouyAEIOUY]', stripped):
+            log.info("evidence_gatherer: skipping — no vowels (likely gibberish): '%s'", stripped[:20])
             return {"evidence": None, "evidence_sources": []}
 
         evidence_parts = []

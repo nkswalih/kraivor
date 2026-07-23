@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, usePathname } from 'next/navigation';
 import { ChevronDown, Pin, PinOff, Pencil, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
@@ -17,7 +17,7 @@ import { AiWelcome } from '@/components/features/ai-welcome';
 import { UpgradeCard } from '@/components/features/upgrade-card';
 import type { ChatMessage } from '@/types/domain/ai';
 import type { ErrorDetails } from '@/types/domain/ai';
-import type { MessageUsage } from '@/types/domain/ai';
+import type { MessageUsage, DailyUsage } from '@/types/domain/ai';
 import { MessageRole, MessageStatus } from '@/types/domain/ai';
 
 interface StreamChunk {
@@ -38,6 +38,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
   const router = useRouter();
   const pathname = usePathname();
   const workspaceId = useAuthStore(s => s.workspaceId);
+  const queryClient = useQueryClient();
   const storeSetActiveConversation = useAiConversationStore(s => s.setActiveConversation);
   const storeSetConversationTitle = useAiConversationStore(s => s.setConversationTitle);
   const storeSetPinned = useAiConversationStore(s => s.setPinned);
@@ -54,6 +55,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
   const [editingTitle, setEditingTitle] = useState(false);
   const [initialLoading, setInitialLoading] = useState(!!initialConversationId);
   const abortRef = useRef<AbortController | null>(null);
+  const abortedRef = useRef(false);
   useDetailBreadcrumb(conversationId ? conversationTitle || 'Untitled' : null);
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -177,6 +179,8 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
       const trimmed = (overrideContent ?? input).trim();
       if (!trimmed || isStreaming) return;
 
+      abortedRef.current = false;
+
       const userMsg: ChatMessage = {
         id: `user-${Date.now()}`,
         role: MessageRole.USER,
@@ -295,8 +299,23 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
             }
             return next;
           });
-          // Refresh daily usage counter
-          dailyUsageQuery.refetch();
+          // Optimistically update daily usage counter immediately
+          if (accumulatedUsage) {
+            const input = accumulatedUsage.input_tokens || 0;
+            const output = accumulatedUsage.output_tokens || 0;
+            const delta = input + output;
+            queryClient.setQueryData(['ai-daily-usage'], (old: DailyUsage | undefined) => {
+              if (!old) return old;
+              const newUsed = old.used + delta;
+              return {
+                ...old,
+                used: newUsed,
+                remaining: Math.max(0, old.limit - newUsed),
+                input_tokens: old.input_tokens + input,
+                output_tokens: old.output_tokens + output,
+              };
+            });
+          }
         }
       } catch (err) {
         const isAbort = err instanceof DOMException && err.name === 'AbortError';
@@ -329,6 +348,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
         setIsStreaming(false);
         setThinkingStatus('');
         // Safety net: ensure assistant message is never left in SENDING state
+        const wasAborted = abortedRef.current;
         setMessages(prev => {
           const next = [...prev];
           const last = next[next.length - 1];
@@ -336,7 +356,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
             next[next.length - 1] = {
               ...last,
               content: last.content || 'Something went wrong. Please try again.',
-              status: MessageStatus.ERROR,
+              status: wasAborted ? MessageStatus.SENT : MessageStatus.ERROR,
             };
           }
           return next;
@@ -349,6 +369,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
   /* ─── Stop streaming ────────────────────────────────── */
 
   const handleStop = useCallback(() => {
+    abortedRef.current = true;
     abortRef.current?.abort();
     abortRef.current = null;
     setIsStreaming(false);
@@ -374,7 +395,11 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
   const handleKeyDown = (e: React.KeyboardEvent, overrideContent?: string) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend(overrideContent);
+      if (isStreaming) {
+        handleStop();
+      } else {
+        handleSend(overrideContent);
+      }
     }
   };
 

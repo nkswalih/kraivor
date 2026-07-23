@@ -5,7 +5,7 @@ import { MessagesSquare, Shield, FileText, Gauge, CheckCircle, BotMessageSquare,
 import { AiInput } from '@/components/features/ai-input';
 import { aiApi } from '@/lib/api/ai-api';
 import type { ConversationSummary, ModelItem } from '@/lib/api/ai-api';
-import type { DailyUsage } from '@/types/domain/ai';
+import type { DailyUsage, ChatMode } from '@/types/domain/ai';
 
 interface AiWelcomeProps {
   workspaceAvatar?: string | null;
@@ -24,6 +24,8 @@ interface AiWelcomeProps {
   models?: ModelItem[];
   onStop?: () => void;
   dailyUsage?: DailyUsage;
+  chatMode?: ChatMode;
+  onModeChange?: (mode: ChatMode) => void;
 }
 
 const SUGGESTIONS = [
@@ -50,6 +52,8 @@ export function AiWelcome({
   models,
   onStop,
   dailyUsage,
+  chatMode,
+  onModeChange,
 }: AiWelcomeProps) {
   const [editingConv, setEditingConv] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -109,6 +113,8 @@ export function AiWelcome({
             models={models}
             onStop={onStop}
             dailyUsage={dailyUsage}
+            chatMode={chatMode}
+            onModeChange={onModeChange}
           />
         </div>
 

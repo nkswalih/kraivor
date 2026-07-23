@@ -17,7 +17,7 @@ import { AiWelcome } from '@/components/features/ai-welcome';
 import { UpgradeCard } from '@/components/features/upgrade-card';
 import type { ChatMessage } from '@/types/domain/ai';
 import type { ErrorDetails } from '@/types/domain/ai';
-import type { MessageUsage, DailyUsage } from '@/types/domain/ai';
+import type { MessageUsage, DailyUsage, ChatMode } from '@/types/domain/ai';
 import { MessageRole, MessageStatus } from '@/types/domain/ai';
 
 interface StreamChunk {
@@ -49,6 +49,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
   const [rateLimited, setRateLimited] = useState(false);
   const [thinkingStatus, setThinkingStatus] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState('krait-2.0');
+  const [chatMode, setChatMode] = useState<ChatMode>('normal');
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationTitle, setConversationTitle] = useState('');
   const [isPinned, setIsPinned] = useState(false);
@@ -221,6 +222,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
           model: selectedModel,
           sessionId: newConvId ?? undefined,
           repo_ids: repoIds,
+          mode: chatMode,
         }, controller.signal);
 
         let rafPending = false;
@@ -316,6 +318,8 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
               };
             });
           }
+          // Force refetch to sync with backend's actual Redis counter
+          queryClient.refetchQueries({ queryKey: ['ai-daily-usage'] });
         }
       } catch (err) {
         const isAbort = err instanceof DOMException && err.name === 'AbortError';
@@ -435,6 +439,8 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
           models={modelsQuery.data}
           onStop={handleStop}
           dailyUsage={dailyUsageQuery.data}
+          chatMode={chatMode}
+          onModeChange={setChatMode}
         />
       ) : (
         <>
@@ -567,6 +573,8 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
                 models={modelsQuery.data}
                 onStop={handleStop}
                 dailyUsage={dailyUsageQuery.data}
+                chatMode={chatMode}
+                onModeChange={setChatMode}
               />
             </div>
             <p className="text-center text-[11px] text-text-tertiary mt-2.5 px-4">

@@ -39,11 +39,16 @@ class TestChatRouter:
         mock_request.conversation_id = None
         mock_request.repo_ids = None
         mock_request.stream = False
+        mock_request.mode = "normal"
+        mock_request.model = None
 
         mock_user = AsyncMock()
         mock_user.sub = "test-user"
 
-        result = await chat(request=mock_request, user=mock_user, _=None)
+        mock_req = AsyncMock()
+        mock_req.headers = {}
+
+        result = await chat(request=mock_request, user=mock_user, req=mock_req, _=None)
 
         assert result.content == "Test answer"
         assert result.conversation_id is not None

@@ -9,6 +9,7 @@ import { useAiConversationStore } from '@/lib/stores/ai-conversation-store';
 import { workspaceEndpoints, repositoryEndpoints } from '@/lib/api/endpoints';
 import { aiApi, AiApiError } from '@/lib/api/ai-api';
 import type { HistoryMessage } from '@/lib/api/ai-api';
+import { useDailyUsage } from '@/lib/hooks/use-daily-usage';
 import { AiInput } from '@/components/features/ai-input';
 import { AiMessage } from '@/components/features/ai-message';
 import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
@@ -16,6 +17,7 @@ import { AiWelcome } from '@/components/features/ai-welcome';
 import { UpgradeCard } from '@/components/features/upgrade-card';
 import type { ChatMessage } from '@/types/domain/ai';
 import type { ErrorDetails } from '@/types/domain/ai';
+import type { MessageUsage } from '@/types/domain/ai';
 import { MessageRole, MessageStatus } from '@/types/domain/ai';
 
 interface StreamChunk {
@@ -23,6 +25,7 @@ interface StreamChunk {
   done?: boolean;
   conversation_id?: string;
   title?: string;
+  usage?: MessageUsage;
   [key: string]: unknown;
 }
 
@@ -85,6 +88,8 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
     enabled: !!workspaceId,
     staleTime: 30_000,
   });
+
+  const dailyUsageQuery = useDailyUsage();
 
   const conversations = convListQuery.data?.conversations ?? [];
   const workspaceAvatar = workspace?.avatar_url;
@@ -201,6 +206,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
 
       try {
         let accumulated = '';
+        let accumulatedUsage: MessageUsage | undefined;
         let newConvId = conversationId;
         let hasError = false;
         const controller = new AbortController();
@@ -236,6 +242,9 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
             if (c.title && typeof c.title === 'string') {
               setConversationTitle(c.title);
               storeSetConversationTitle(c.title);
+            }
+            if (c.usage) {
+              accumulatedUsage = c.usage;
             }
             break;
           }
@@ -282,10 +291,12 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
             const next = [...prev];
             const last = next[next.length - 1];
             if (last && last.id === assistantMsg.id) {
-              next[next.length - 1] = { ...last, status: MessageStatus.SENT };
+              next[next.length - 1] = { ...last, status: MessageStatus.SENT, usage: accumulatedUsage };
             }
             return next;
           });
+          // Refresh daily usage counter
+          dailyUsageQuery.refetch();
         }
       } catch (err) {
         const isAbort = err instanceof DOMException && err.name === 'AbortError';
@@ -398,6 +409,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
           showBanner={false}
           models={modelsQuery.data}
           onStop={handleStop}
+          dailyUsage={dailyUsageQuery.data}
         />
       ) : (
         <>
@@ -529,6 +541,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
                 showBanner={rateLimited}
                 models={modelsQuery.data}
                 onStop={handleStop}
+                dailyUsage={dailyUsageQuery.data}
               />
             </div>
             <p className="text-center text-[11px] text-text-tertiary mt-2.5 px-4">

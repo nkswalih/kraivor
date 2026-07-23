@@ -6,7 +6,9 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Plus, SlidersHorizontal, ArrowUp, ArrowUpCircle, Square } from 'lucide-react';
 import { ModelSelector, getModelIcon, getModelName } from '@/components/features/model-selector';
 import { ByokKeyDialog, ApiKeysPanel } from '@/components/features/byok-key-dialog';
+import { TokenUsageDonut } from '@/components/features/token-usage-donut';
 import type { ModelItem } from '@/lib/api/ai-api';
+import type { DailyUsage } from '@/types/domain/ai';
 
 interface AiInputProps {
   value: string;
@@ -19,6 +21,7 @@ interface AiInputProps {
   showBanner: boolean;
   models?: ModelItem[];
   onStop?: () => void;
+  dailyUsage?: DailyUsage;
 }
 
 const MAX_HEIGHT = 240;
@@ -34,6 +37,7 @@ export function AiInput({
   showBanner,
   models,
   onStop,
+  dailyUsage,
 }: AiInputProps) {
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [popupPos, setPopupPos] = useState<{ top: number; left: number; above: boolean } | null>(null);
@@ -190,6 +194,7 @@ export function AiInput({
               >
                 <SlidersHorizontal className="w-4 h-4" strokeWidth={1.8} />
               </button>
+              <TokenUsageDonut usage={dailyUsage} size={16} />
             </div>
 
             <div className="flex items-center gap-1.5">

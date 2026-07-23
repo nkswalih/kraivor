@@ -5,6 +5,7 @@ import { MessagesSquare, Shield, FileText, Gauge, CheckCircle, BotMessageSquare,
 import { AiInput } from '@/components/features/ai-input';
 import { aiApi } from '@/lib/api/ai-api';
 import type { ConversationSummary, ModelItem } from '@/lib/api/ai-api';
+import type { DailyUsage } from '@/types/domain/ai';
 
 interface AiWelcomeProps {
   workspaceAvatar?: string | null;
@@ -22,6 +23,7 @@ interface AiWelcomeProps {
   showBanner: boolean;
   models?: ModelItem[];
   onStop?: () => void;
+  dailyUsage?: DailyUsage;
 }
 
 const SUGGESTIONS = [
@@ -47,6 +49,7 @@ export function AiWelcome({
   showBanner,
   models,
   onStop,
+  dailyUsage,
 }: AiWelcomeProps) {
   const [editingConv, setEditingConv] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -105,6 +108,7 @@ export function AiWelcome({
             showBanner={showBanner}
             models={models}
             onStop={onStop}
+            dailyUsage={dailyUsage}
           />
         </div>
 

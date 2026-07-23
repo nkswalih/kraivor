@@ -6,9 +6,10 @@ import hashlib
 import logging
 import time
 from anthropic import AsyncAnthropic
-from openai import AsyncOpenAI, APITimeoutError, APIConnectionError, RateLimitError
+from openai import AsyncOpenAI, APITimeoutError, APIConnectionError, RateLimitError, APIStatusError
 
 from app.infrastructure.llm.cost import estimate_cost
+from app.infrastructure.llm.error_classifier import classify_error, ClassifiedError
 from app.monitoring.metrics import llm_calls
 from app.monitoring.metrics import llm_cost as llm_cost_counter
 from app.monitoring.metrics import llm_duration, llm_tokens
@@ -91,6 +92,10 @@ class LLMClient:
             try:
                 result, tool_calls, metrics = await self._generate_once(messages, timeout=timeout, **kwargs)
                 break
+            except APIStatusError as e:
+                # NEW: Classify 402/403/429/5xx and raise as ClassifiedError
+                classified = classify_error(e, self.provider, self.model)
+                raise classified from e
             except (APITimeoutError, APIConnectionError, RateLimitError) as e:
                 last_error = e
                 if attempt < LLM_MAX_RETRIES:
@@ -105,10 +110,16 @@ class LLMClient:
                         "LLM call failed after %d attempts: %s",
                         1 + LLM_MAX_RETRIES, e,
                     )
-                    raise
-            except Exception as e:
-                # Non-transient errors: raise immediately
+                    # Classify the final error
+                    classified = classify_error(e, self.provider, self.model)
+                    raise classified from e
+            except ClassifiedError:
+                # Already classified (e.g., from a wrapped call) — re-raise
                 raise
+            except Exception as e:
+                # Non-transient errors: classify and raise
+                classified = classify_error(e, self.provider, self.model)
+                raise classified from e
 
         metrics["latency_ms"] = int((time.monotonic() - start) * 1000)
         metrics["cost"] = estimate_cost(
@@ -199,29 +210,45 @@ class LLMClient:
         return result, tool_calls, metrics
 
     async def stream(self, messages: list, **kwargs) -> AsyncGenerator[str, None]:
-        if self.provider in ("openrouter", "groq", "openai", "deepseek", "xai"):
-            stream = await self.client.chat.completions.create(
-                model=self.model, messages=messages, stream=True, **kwargs
-            )
-            async for chunk in stream:
-                if delta := chunk.choices[0].delta.content:
-                    yield delta
-        elif self.provider == "anthropic":
-            async with self.client.messages.stream(
-                model=self.model,
-                messages=[
-                    {"role": "user", "content": m["content"]}
-                    for m in messages
-                    if m["role"] == "user"
-                ],
-                **kwargs,
-            ) as stream:
-                async for text in stream.text_stream:
-                    yield text
-        elif self.provider == "google":
-            response = await self.client.generate_content_async(
-                messages[-1]["content"] if messages else "", stream=True, **kwargs
-            )
-            async for chunk in response:
-                if chunk.text:
-                    yield chunk.text
+        """Stream tokens from the LLM. Raises ClassifiedError on provider failures."""
+        try:
+            if self.provider in ("openrouter", "groq", "openai", "deepseek", "xai"):
+                stream = await self.client.chat.completions.create(
+                    model=self.model, messages=messages, stream=True, **kwargs
+                )
+                async for chunk in stream:
+                    if delta := chunk.choices[0].delta.content:
+                        yield delta
+            elif self.provider == "anthropic":
+                async with self.client.messages.stream(
+                    model=self.model,
+                    messages=[
+                        {"role": "user", "content": m["content"]}
+                        for m in messages
+                        if m["role"] == "user"
+                    ],
+                    **kwargs,
+                ) as stream:
+                    async for text in stream.text_stream:
+                        yield text
+            elif self.provider == "google":
+                response = await self.client.generate_content_async(
+                    messages[-1]["content"] if messages else "", stream=True, **kwargs
+                )
+                async for chunk in response:
+                    if chunk.text:
+                        yield chunk.text
+        except APIStatusError as e:
+            classified = classify_error(e, self.provider, self.model)
+            raise classified from e
+        except (APITimeoutError, APIConnectionError) as e:
+            classified = classify_error(e, self.provider, self.model)
+            raise classified from e
+        except RateLimitError as e:
+            classified = classify_error(e, self.provider, self.model)
+            raise classified from e
+        except ClassifiedError:
+            raise
+        except Exception as e:
+            classified = classify_error(e, self.provider, self.model)
+            raise classified from e

@@ -1,3 +1,11 @@
+export type ErrorSuggestedAction = 'add_key' | 'switch_model' | 'wait' | 'retry' | 'new_conversation' | 'check_key';
+
+export interface ErrorDetails {
+  category: string;
+  suggested_action?: ErrorSuggestedAction;
+  retry_after?: number | null;
+}
+
 export interface ChatMessage {
   id: string;
   role: MessageRole;
@@ -5,6 +13,7 @@ export interface ChatMessage {
   timestamp: string;
   attachments?: MessageAttachment[];
   status: MessageStatus;
+  errorDetails?: ErrorDetails;
 }
 
 export enum MessageRole {

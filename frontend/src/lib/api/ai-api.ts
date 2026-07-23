@@ -81,11 +81,15 @@ function getJwt(): string | null {
 
 /* ─── Error ──────────────────────────────────────────────── */
 
+export type ErrorSuggestedAction = 'add_key' | 'switch_model' | 'wait' | 'retry' | 'new_conversation' | 'check_key';
+
 export class AiApiError extends Error {
   constructor(
     public status: number,
     public code: string,
     message: string,
+    public suggestedAction?: ErrorSuggestedAction,
+    public retryAfter?: number | null,
   ) {
     super(message);
     this.name = 'AiApiError';
@@ -244,11 +248,23 @@ export const aiApi = {
     });
 
     if (response.status === 429) {
-      throw new AiApiError(429, 'rate_limited', 'Rate limit reached. Upgrade for more.');
+      const body = await response.json().catch(() => ({}));
+      throw new AiApiError(429, 'rate_limited', body.message || 'Rate limit reached.', 'wait', body.retry_after);
+    }
+
+    if (response.status === 402) {
+      const body = await response.json().catch(() => ({}));
+      throw new AiApiError(402, body.error || 'insufficient_quota', body.message || 'AI credits exhausted.', 'add_key');
+    }
+
+    if (response.status === 503) {
+      const body = await response.json().catch(() => ({}));
+      throw new AiApiError(503, body.error || 'provider_unavailable', body.message || 'Provider unavailable.', 'retry');
     }
 
     if (!response.ok) {
-      throw new AiApiError(response.status, 'stream_failed', 'Stream failed');
+      const body = await response.json().catch(() => ({}));
+      throw new AiApiError(response.status, body.error || 'stream_failed', body.message || 'Stream failed');
     }
 
     const reader = response.body?.getReader();
@@ -266,14 +282,30 @@ export const aiApi = {
       buffer = lines.pop() || '';
 
       for (const line of lines) {
+        if (line.startsWith('event: error')) {
+          continue;
+        }
         if (line.startsWith('data: ')) {
           const data = line.slice(6);
           if (data === '[DONE]') return;
           try {
             const parsed = JSON.parse(data);
+            // Yield structured error events so the consumer can handle them inline
+            if (parsed.type === 'error' || parsed.error) {
+              yield {
+                type: 'error',
+                error: parsed.error || 'An error occurred',
+                category: parsed.category || 'unknown',
+                suggested_action: parsed.suggested_action,
+                retry_after: parsed.retry_after,
+                status: parsed.status || 500,
+              } as Record<string, unknown>;
+              return;
+            }
             yield parsed;
           } catch {
-            yield data;
+            // JSON parse failure — yield raw data as fallback
+            yield data as unknown as Record<string, unknown>;
           }
         }
       }
@@ -305,6 +337,8 @@ async function aiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
       res.status,
       body.error ?? body.code ?? 'unknown_error',
       body.message ?? body.detail ?? 'Request failed',
+      body.suggested_action as ErrorSuggestedAction | undefined,
+      body.retry_after,
     );
   }
   return body as T;

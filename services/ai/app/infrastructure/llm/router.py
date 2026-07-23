@@ -91,8 +91,8 @@ class ModelRouter:
             "max_tokens": 256,
         },
         "simple_qa": {
-            "model": "cohere/north-mini-code:free",
-            "fallback": "nvidia/nemotron-3-nano-30b-a3b:free",
+            "model": "qwen/qwen3.6-27b",
+            "fallback": "cohere/north-mini-code:free",
             "max_tokens": 4096,
         },
         "code_generation": {

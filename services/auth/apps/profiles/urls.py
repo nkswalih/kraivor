@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    CommunityEventWebhookView,
     FollowerListView,
     FollowingListView,
     FollowStatusView,
@@ -8,6 +9,7 @@ from .views import (
     LeaderboardView,
     MyProfileView,
     ProfileDetailView,
+    ProfilesByIdsView,
     ProfileSearchView,
     ProfileUploadView,
     ResolveProfilesByIdView,
@@ -22,10 +24,32 @@ urlpatterns = [
     path("check-username/", UsernameCheckView.as_view(), name="username-check"),
     path("leaderboard/", LeaderboardView.as_view(), name="profile-leaderboard"),
     path("top-contributors/", TopContributorsView.as_view(), name="top-contributors"),
-    path("internal/resolve-by-id/", ResolveProfilesByIdView.as_view(), name="resolve-profiles-by-id"),
+    path("by-ids/", ProfilesByIdsView.as_view(), name="profiles-by-ids"),
+    path(
+        "internal/resolve-by-id/",
+        ResolveProfilesByIdView.as_view(),
+        name="resolve-profiles-by-id",
+    ),
+    path(
+        "internal/community-event/",
+        CommunityEventWebhookView.as_view(),
+        name="community-event-webhook",
+    ),
     path("<str:username>/", ProfileDetailView.as_view(), name="profile-detail"),
     path("<str:username>/follow/", FollowView.as_view(), name="profile-follow"),
-    path("<str:username>/follow/status/", FollowStatusView.as_view(), name="follow-status"),
-    path("<str:username>/followers/", FollowerListView.as_view(), name="profile-followers"),
-    path("<str:username>/following/", FollowingListView.as_view(), name="profile-following"),
+    path(
+        "<str:username>/follow/status/",
+        FollowStatusView.as_view(),
+        name="follow-status",
+    ),
+    path(
+        "<str:username>/followers/",
+        FollowerListView.as_view(),
+        name="profile-followers",
+    ),
+    path(
+        "<str:username>/following/",
+        FollowingListView.as_view(),
+        name="profile-following",
+    ),
 ]

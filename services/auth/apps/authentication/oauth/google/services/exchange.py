@@ -11,7 +11,6 @@ IMPORTANT SECURITY NOTE:
 from __future__ import annotations
 
 import logging
-
 import requests
 from authentication.oauth.base import OAuthTokenExchanger
 from django.conf import settings
@@ -65,11 +64,7 @@ class GoogleTokenExchanger(OAuthTokenExchanger):
         }
 
         try:
-            response = requests.post(
-                GOOGLE_TOKEN_ENDPOINT,
-                data=payload,
-                timeout=10,
-            )
+            response = requests.post(GOOGLE_TOKEN_ENDPOINT, data=payload, timeout=10)
         except requests.RequestException as exc:
             logger.error("google_token_exchange_network_error: %s", exc)
             raise GoogleTokenExchangeError(
@@ -79,8 +74,7 @@ class GoogleTokenExchanger(OAuthTokenExchanger):
         if not response.ok:
             # Log status but NOT the response body (may contain secrets)
             logger.error(
-                "google_token_exchange_http_error: status=%s",
-                response.status_code,
+                "google_token_exchange_http_error: status=%s", response.status_code
             )
             raise GoogleTokenExchangeError(
                 f"Google token endpoint returned HTTP {response.status_code}"
@@ -99,6 +93,8 @@ class GoogleTokenExchanger(OAuthTokenExchanger):
             )
 
         if "id_token" not in data:
-            raise GoogleTokenExchangeError("Google response missing id_token — cannot authenticate")
+            raise GoogleTokenExchangeError(
+                "Google response missing id_token — cannot authenticate"
+            )
 
         return data

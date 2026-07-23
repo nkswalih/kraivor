@@ -1,10 +1,10 @@
-import os
-import sys
-import uuid
 from pathlib import Path
 
 import django
+import os
 import pytest
+import sys
+import uuid
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(BASE_DIR))

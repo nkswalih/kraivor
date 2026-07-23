@@ -7,11 +7,11 @@ syncing installation state — it fires even when the Setup URL redirect fails.
 Endpoint: POST /api/github-app/webhook/
 """
 
+import json
+
 import hashlib
 import hmac
-import json
 import logging
-
 from django.conf import settings
 from django.http import HttpResponse
 from django.utils import timezone

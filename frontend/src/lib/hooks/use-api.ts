@@ -44,12 +44,13 @@ export function useRepositories() {
   return useQuery({
     queryKey: ['repositories'],
     queryFn: analysisApi.listRepositories,
+    staleTime: 30_000,
   });
 }
 
 export function useNotes(params?: { projectId?: string }) {
   return useQuery({
-    queryKey: ['notes', params],
+    queryKey: ['notes', JSON.stringify(params)],
     queryFn: () => notesApi.list(params),
   });
 }

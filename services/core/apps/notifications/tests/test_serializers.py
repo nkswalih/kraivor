@@ -1,6 +1,5 @@
-import uuid
-
 import pytest
+import uuid
 
 from apps.notifications.models import Notification
 from apps.notifications.serializers import (

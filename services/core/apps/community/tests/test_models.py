@@ -1,13 +1,9 @@
 import pytest
+import uuid
 from django.db import IntegrityError
 
-from ..models import Comment, Discussion, Tag, Vote
-from .factories import (
-    CommentFactory,
-    DiscussionFactory,
-    TagFactory,
-    VoteFactory,
-)
+from ..models import Discussion
+from .factories import CommentFactory, DiscussionFactory, TagFactory, VoteFactory
 
 
 @pytest.mark.django_db
@@ -19,7 +15,7 @@ class TestTagModel:
         assert tag.usage_count == 0
 
     def test_unique_name(self):
-        t = TagFactory(name="unique")
+        TagFactory(name="unique")
         with pytest.raises(IntegrityError):
             TagFactory(name="unique")
 

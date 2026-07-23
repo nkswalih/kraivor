@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { useFollow, useUnfollow } from '@/lib/hooks/use-profiles';
 
 interface FollowButtonProps {
@@ -24,11 +23,10 @@ export function FollowButton({ username, isFollowing, isOwner }: FollowButtonPro
   };
 
   return (
-    <motion.button
-      whileTap={{ scale: 0.95 }}
+    <button
       onClick={handleClick}
       disabled={followMutation.isPending || unfollowMutation.isPending}
-      className={`text-[13px] font-medium px-4 py-1.5 rounded-md border transition-colors ${
+      className={`text-[13px] font-medium px-4 py-1.5 rounded-md border transition-colors active:scale-95 ${
         isFollowing
           ? 'bg-background border-border text-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50'
           : 'btn-shimmer text-primary-foreground border-transparent'
@@ -37,8 +35,8 @@ export function FollowButton({ username, isFollowing, isOwner }: FollowButtonPro
       {followMutation.isPending || unfollowMutation.isPending
         ? '...'
         : isFollowing
-        ? 'Following'
-        : 'Follow'}
-    </motion.button>
+          ? 'Following'
+          : 'Follow'}
+    </button>
   );
 }

@@ -2,15 +2,15 @@ from django.urls import path
 
 from .views import (
     KnowledgeAssetDetailView,
-    KnowledgeAssetListCreateView,
+    KnowledgeAssetListView,
     KnowledgeSpaceDetailView,
-    KnowledgeSpaceListCreateView,
+    KnowledgeSpaceListView,
 )
 
 urlpatterns = [
     path(
-        "workspaces/<uuid:workspace_pk>/knowledge/",
-        KnowledgeSpaceListCreateView.as_view(),
+        "workspaces/<str:workspace_pk>/knowledge/",
+        KnowledgeSpaceListView.as_view(),
         name="workspace-knowledge-list",
     ),
     path(
@@ -20,7 +20,7 @@ urlpatterns = [
     ),
     path(
         "knowledge/<uuid:knowledge_pk>/assets/",
-        KnowledgeAssetListCreateView.as_view(),
+        KnowledgeAssetListView.as_view(),
         name="knowledge-asset-list",
     ),
     path(

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useKnowledgeStore } from '@/lib/stores/knowledge-store';
 
 interface Props {
@@ -10,12 +11,18 @@ interface Props {
 const MINIMAP_SIZE = 180;
 const MINIMAP_SCALE = 0.15;
 
-export function CanvasMinimap({ spaceId }: Props) {
-  const canvas = useKnowledgeStore(s => s.spaces[spaceId]);
-  const setViewport = useKnowledgeStore(s => s.setViewport);
-  const showMinimap = useKnowledgeStore(s => s.showMinimap);
+const EMPTY_EL: [] = [];
+const DEF_VIEWPORT = { x: 0, y: 0, zoom: 1 };
 
-  const { viewport, elements } = canvas ?? { viewport: { x: 0, y: 0, zoom: 1 }, elements: [] };
+export function CanvasMinimap({ spaceId }: Props) {
+  const { elements, viewport, showMinimap } = useKnowledgeStore(
+    useShallow(s => ({
+      elements: s.spaces[spaceId]?.elements ?? EMPTY_EL,
+      viewport: s.spaces[spaceId]?.viewport ?? DEF_VIEWPORT,
+      showMinimap: s.showMinimap,
+    }))
+  );
+  const setViewport = useKnowledgeStore(s => s.setViewport);
 
   const bounds = useMemo(() => {
     if (elements.length === 0) return null;

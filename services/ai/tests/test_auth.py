@@ -2,16 +2,17 @@
 Tests for KRV-012 — AI Service JWT Dependency
 """
 
-import time
-from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, patch
-
 import jwt
 import pytest
+import time
+from datetime import UTC, datetime, timedelta
 from fastapi import HTTPException
+from unittest.mock import MagicMock, patch
 
 
-def generate_test_jwt(private_key_pem: bytes, payload: dict, algorithm: str = "RS256") -> str:
+def generate_test_jwt(
+    private_key_pem: bytes, payload: dict, algorithm: str = "RS256"
+) -> str:
     return jwt.encode(payload, private_key_pem, algorithm=algorithm)
 
 
@@ -25,11 +26,11 @@ def generate_test_rsa_keypair():
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
     public_pem = public_key.public_bytes(
         encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
     return private_pem, public_pem
 
@@ -60,23 +61,26 @@ def mock_jwks(public_key):
 
     def b64url_encode(data: bytes) -> str:
         import base64
+
         return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
     return {
-        "keys": [{
-            "kty": "RSA",
-            "use": "sig",
-            "alg": "RS256",
-            "kid": "kraivor-key-1",
-            "n": b64url_encode(n_bytes),
-            "e": b64url_encode(e_bytes),
-        }]
+        "keys": [
+            {
+                "kty": "RSA",
+                "use": "sig",
+                "alg": "RS256",
+                "kid": "kraivor-key-1",
+                "n": b64url_encode(n_bytes),
+                "e": b64url_encode(e_bytes),
+            }
+        ]
     }
 
 
 @pytest.fixture
 def mock_settings():
-    with patch("app.dependencies.auth.settings") as mock:
+    with patch("app.api.dependencies.auth.settings") as mock:
         mock.identity_jwks_url = "http://localhost/.well-known/jwks.json"
         mock.jwt_algorithm = "RS256"
         mock.jwt_audience = "kraivor"
@@ -89,8 +93,9 @@ def mock_settings():
 
 class TestGetCurrentUser:
     def test_valid_token_returns_payload(self, private_key, mock_settings, mock_jwks):
-        import app.dependencies.auth as auth_module
-        from app.dependencies.auth import get_current_user
+        import app.api.dependencies.auth as auth_module
+        from app.api.dependencies.auth import get_current_user
+
         auth_module._jwks_cache = mock_jwks
         auth_module._jwks_cache_time = time.time()
 
@@ -118,7 +123,7 @@ class TestGetCurrentUser:
         assert user.workspace_ids == ["ws-1", "ws-2"]
 
     def test_missing_token_raises_401(self, mock_settings):
-        from app.dependencies.auth import get_current_user
+        from app.api.dependencies.auth import get_current_user
 
         mock_request = MagicMock()
         mock_request.headers = {}
@@ -129,7 +134,7 @@ class TestGetCurrentUser:
         assert exc_info.value.status_code == 401
 
     def test_invalid_token_raises_401(self, mock_settings):
-        from app.dependencies.auth import get_current_user
+        from app.api.dependencies.auth import get_current_user
 
         mock_request = MagicMock()
         mock_request.headers = {"Authorization": "Bearer invalid.token.here"}
@@ -140,8 +145,9 @@ class TestGetCurrentUser:
         assert exc_info.value.status_code == 401
 
     def test_expired_token_raises_401(self, private_key, mock_settings, mock_jwks):
-        import app.dependencies.auth as auth_module
-        from app.dependencies.auth import get_current_user
+        import app.api.dependencies.auth as auth_module
+        from app.api.dependencies.auth import get_current_user
+
         auth_module._jwks_cache = mock_jwks
         auth_module._jwks_cache_time = time.time()
 
@@ -167,13 +173,13 @@ class TestGetCurrentUser:
         assert "token_expired" in exc_info.value.detail["error"]
 
     def test_internal_request_bypasses_verification(self, mock_settings):
-        from app.dependencies.auth import get_current_user
+        from app.api.dependencies.auth import get_current_user
 
         mock_request = MagicMock()
         mock_request.headers = {
             "X-Internal-Request": "true",
             "X-User-ID": "user-456",
-            "X-Email": "internal@example.com"
+            "X-Email": "internal@example.com",
         }
 
         user = get_current_user(mock_request)
@@ -184,8 +190,9 @@ class TestGetCurrentUser:
 
 class TestCacheInvalidation:
     def test_cache_can_be_invalidated(self, mock_settings):
-        import app.dependencies.auth as auth_module
-        from app.dependencies.auth import invalidate_jwks_cache
+        import app.api.dependencies.auth as auth_module
+        from app.api.dependencies.auth import invalidate_jwks_cache
+
         auth_module._jwks_cache = {"test": "data"}
         auth_module._jwks_cache_time = time.time()
 

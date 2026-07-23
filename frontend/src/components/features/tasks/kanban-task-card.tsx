@@ -10,9 +10,9 @@ import { cn } from '@/lib/utils';
 
 const PRIORITY_BORDER: Record<string, string> = {
   critical: 'border-l-[var(--venom-orange)]',
-  high:     'border-l-[var(--venom-yellow)]',
-  medium:   'border-l-[var(--krait-border)]',
-  low:      'border-l-transparent',
+  high: 'border-l-[var(--venom-yellow)]',
+  medium: 'border-l-[var(--krait-border)]',
+  low: 'border-l-transparent',
 };
 
 interface KanbanTaskCardProps {
@@ -21,10 +21,9 @@ interface KanbanTaskCardProps {
 }
 
 export function KanbanTaskCard({ task, isDragging = false }: KanbanTaskCardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: task.id });
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
 
-  const openTaskDrawer = useProjectsStore((s) => s.openTaskDrawer);
+  const openTaskDrawer = useProjectsStore(s => s.openTaskDrawer);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -44,9 +43,9 @@ export function KanbanTaskCard({ task, isDragging = false }: KanbanTaskCardProps
         PRIORITY_BORDER[task.priority],
         'cursor-grab active:cursor-grabbing',
         'hover:border-[var(--krait-border-hi)] transition-colors duration-100',
-        isDragging && 'opacity-50 shadow-xl shadow-black/40',
+        isDragging && 'opacity-50 shadow-xl shadow-black/40'
       )}
-      onClick={(e) => {
+      onClick={e => {
         if (!isDragging) {
           e.stopPropagation();
           openTaskDrawer(task.id);

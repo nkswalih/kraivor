@@ -9,11 +9,11 @@ Handles:
 """
 
 import json
+from typing import Any
+
 import logging
 import secrets
 import uuid
-from typing import Any
-
 from django.db import transaction
 from django.utils import timezone
 
@@ -45,7 +45,6 @@ class InstallationStateManager:
 
     def _get_redis(self):
         try:
-
             return get_redis()
         except ImportError:
             logger.warning(
@@ -73,7 +72,7 @@ class InstallationStateManager:
         else:
             logger.warning(
                 "install_state.no_redis",
-                extra={"message": "Redis unavailable; state management disabled."},
+                extra={"detail": "Redis unavailable; state management disabled."},
             )
 
         return state
@@ -224,7 +223,7 @@ class GitHubAppInstallationService:
                 "installation_id": installation_id,
                 "workspace_id": str(workspace_id),
                 "account_login": account.get("login"),
-                "created": created,
+                "was_created": created,
             },
         )
 

@@ -1,310 +1,257 @@
-'use client';
-
-import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { useAuthStore } from '@/lib/stores/auth-store';
 import { ROUTES } from '@/constants';
+import { MarketingHeader } from '@/components/marketing/marketing-header';
+import { MarketingFooter } from '@/components/marketing/marketing-footer';
+import { Container } from '@/components/marketing/container';
+import { MarqueeLogos } from '@/components/marketing/marquee-logos';
+import { RevealSection } from '@/components/marketing/reveal-section';
+import { ArrowRight, Code, Robot, Kanban, MagnifyingGlass } from '@phosphor-icons/react/dist/ssr';
 
-/* ─── Scroll Reveal Hook ─────────────────────────────────────── */
-function useScrollReveal() {
-  const [isVisible, setIsVisible] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+const PRODUCTS = [
+  {
+    icon: Code,
+    title: 'Repository Analyzer',
+    desc: 'Connect any Git repo and get architecture evaluation, code quality scores, security posture, and readiness metrics in seconds.',
+    stat: '500ms',
+    statLabel: 'avg scan time',
+  },
+  {
+    icon: Robot,
+    title: 'Agentic AI',
+    desc: 'Specialized agents collaborate to answer engineering questions - from code exploration to architecture reasoning.',
+    stat: '3',
+    statLabel: 'specialized agents',
+  },
+  {
+    icon: Kanban,
+    title: 'Developer Workspace',
+    desc: 'AI-enhanced notes, task management, and decision logs indexed alongside your codebase for context continuity.',
+    stat: '1',
+    statLabel: 'unified view',
+  },
+];
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.unobserve(entry.target);
-        }
-      },
-      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
+const STATS = [
+  { value: '10K+', label: 'concurrent users' },
+  { value: '500ms', label: 'avg analysis time' },
+  { value: '3', label: 'integrated products' },
+  { value: '99.9%', label: 'platform uptime' },
+];
 
-  return { ref, isVisible };
-}
-
-/* ─── Icons ─────────────────────────────────────────────────── */
-const CodeIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="16 18 22 12 16 6"></polyline>
-    <polyline points="8 6 2 12 8 18"></polyline>
-  </svg>
-);
-
-const SparklesIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-  </svg>
-);
-
-const LayersIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-    <polyline points="2 17 12 22 22 17"></polyline>
-    <polyline points="2 12 12 17 22 12"></polyline>
-  </svg>
-);
-
-/* ─── Section Component ──────────────────────────────────────── */
-function RevealSection({ children, delay = '' }: { children: React.ReactNode, delay?: string }) {
-  const { ref, isVisible } = useScrollReveal();
-  return (
-    <div
-      ref={ref}
-      className={`transition-all duration-1000 ${
-        isVisible ? `opacity-100 translate-y-0 ${delay}` : 'opacity-0 translate-y-12'
-      }`}
-    >
-      {children}
-    </div>
-  );
-}
-
-/* ─── Main Page ──────────────────────────────────────────────── */
 export default function RootPage() {
-  const { isAuthenticated, workspaceSlug } = useAuthStore();
-  const [scrolled, setScrolled] = useState(false);
-
-  // Handle header blur on scroll
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0a0a0f] text-slate-200">
-      
-      {/* ── Ambient Background Glows ─────────────────────────── */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-[10%] top-[-10%] h-[500px] w-[500px] rounded-full bg-[hsl(var(--primary))]/20 blur-[120px] animate-float-slow" />
-        <div className="absolute right-[-10%] top-[20%] h-[400px] w-[400px] rounded-full bg-[hsl(var(--primary-light))]/10 blur-[120px] animate-float-medium" />
-        <div className="absolute bottom-[-10%] left-[20%] h-[600px] w-[600px] rounded-full bg-[hsl(var(--primary-dark))]/20 blur-[150px] animate-float-fast" />
-      </div>
+    <div className="min-h-screen bg-[#121215] text-neutral-100 selection:bg-[var(--venom-yellow)]/25">
+      <MarketingHeader />
 
-      {/* ── Header ────────────────────────────────────────────── */}
-      <header
-        className={`fixed top-0 z-50 w-full transition-all duration-300 ${
-          scrolled 
-            ? 'border-b border-white/5 bg-[#0a0a0f]/60 backdrop-blur-xl' 
-            : 'border-transparent bg-transparent'
-        }`}
-      >
-        <div className="container mx-auto flex h-20 items-center justify-between px-6">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold tracking-tight bg-gradient-to-br from-[hsl(var(--primary-light))] to-[hsl(var(--primary))] bg-clip-text text-transparent">
-              ✦ Kraivor
-            </span>
-          </div>
-          <nav className="hidden items-center gap-8 md:flex">
-            <Link href={ROUTES.FEATURES} className="text-sm font-medium text-slate-300 transition-colors hover:text-white">
-              Features
-            </Link>
-            <Link href={ROUTES.PRICING} className="text-sm font-medium text-slate-300 transition-colors hover:text-white">
-              Pricing
-            </Link>
-            <Link href={ROUTES.DOCS} className="text-sm font-medium text-slate-300 transition-colors hover:text-white">
-              Docs
-            </Link>
-          </nav>
-          
-          <div className="flex items-center gap-4">
-          {isAuthenticated ? (
-            <Link href={`/${workspaceSlug || 'dashboard'}`} className="btn-glassy-krait">
-              {/* Left Area (Icon + Text) */}
-              <div className="flex items-center gap-2.5 px-4 py-2">
-                <div className="btn-glassy-icon">
-                  {/* Dashboard Grid Icon */}
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
-                    <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
-                    <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
-                    <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
-                  </svg>
+      <main className="relative">
+        {/* ── HERO ── */}
+        <section className="pt-28 pb-20">
+          <Container>
+            <div className="max-w-4xl">
+              <RevealSection>
+                <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-normal tracking-tight leading-[1.05] text-neutral-100">
+                  Your codebase.<br />
+                  <span className="text-[var(--text-accent)] font-normal">Analyzed. Augmented.</span><br />
+                  Accelerated.
+                </h1>
+              </RevealSection>
+              <RevealSection delay={0.15}>
+                <p className="text-base text-neutral-500 max-w-[50ch] mt-6 leading-relaxed font-normal">
+                  One platform connecting repository analysis, AI agents, and developer tools into a single workflow. Production-grade from your first commit.
+                </p>
+              </RevealSection>
+              <RevealSection delay={0.3}>
+                <div className="flex flex-wrap gap-3 mt-8">
+                  <Link
+                    href={ROUTES.REGISTER}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[var(--venom-yellow)] px-5 py-2.5 text-sm font-medium text-black transition-all hover:brightness-110 active:scale-[0.98]"
+                  >
+                    Start Free Trial
+                    <ArrowRight size={15} weight="bold" />
+                  </Link>
+                  <Link
+                    href={ROUTES.DOCS}
+                    className="inline-flex items-center rounded-xl border border-neutral-800 px-5 py-2.5 text-sm font-medium text-neutral-400 transition-all hover:bg-neutral-900 hover:text-neutral-200 active:scale-[0.98]"
+                  >
+                    Read the docs
+                  </Link>
                 </div>
-                <span className="text-sm tracking-wide">Dashboard</span>
-              </div>
-
-              {/* Center Faded Divider */}
-              <div className="btn-glassy-divider"></div>
-
-              {/* Right Area (Arrow) */}
-              <div className="btn-glassy-arrow">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14"></path>
-                  <path d="m12 5 7 7-7 7"></path>
-                </svg>
-              </div>
-            </Link>
-          ) : (
-            <>
-              <Link href={ROUTES.LOGIN} className="hidden text-sm font-medium text-slate-300 transition-colors hover:text-white sm:block">
-                Sign in
-              </Link>
-              
-              <Link href={ROUTES.REGISTER} className="btn-glassy-krait">
-                {/* Left Area (Icon + Text) */}
-                <div className="flex items-center gap-2.5 px-4 py-2">
-                  <div className="btn-glassy-icon">
-                    {/* Plus Icon */}
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                  </div>
-                  <span className="text-sm tracking-wide">Get Started</span>
-                </div>
-
-                {/* Center Faded Divider */}
-                <div className="btn-glassy-divider"></div>
-
-                {/* Right Area (Arrow) */}
-                <div className="btn-glassy-arrow">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14"></path>
-                    <path d="m12 5 7 7-7 7"></path>
-                  </svg>
-                </div>
-              </Link>
-            </>
-          )}
-        </div>
-        </div>
-      </header>
-
-      <main className="relative z-10 pt-32">
-        
-        {/* ── Hero Section ─────────────────────────────────────── */}
-        <section className="relative flex min-h-[80vh] flex-col items-center justify-center py-20 text-center">
-          <div className="container mx-auto px-4">
-            
-            {/* Announcement Pill */}
-            <div className="animate-fade-up mx-auto mb-8 flex max-w-fit items-center justify-center space-x-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur-md">
-              <span className="flex h-2 w-2 rounded-full bg-[hsl(var(--primary-light))]"></span>
-              <p className="text-xs font-medium text-slate-300 sm:text-sm">
-                Kraivor 2.0 is now live. <span className="text-white hover:underline cursor-pointer">Read the launch notes →</span>
-              </p>
+              </RevealSection>
             </div>
-
-            <h1 className="animate-fade-up-delay-1 mx-auto max-w-5xl text-5xl font-extrabold tracking-tight sm:text-7xl lg:text-8xl">
-              <span className="text-white">Developer Intelligence </span>
-              <br className="hidden md:block" />
-              <span className="bg-gradient-to-r from-[hsl(var(--primary-light))] via-[hsl(var(--primary))] to-[hsl(var(--primary-dark))] bg-clip-text text-transparent">
-                Platform
-              </span>
-            </h1>
-            
-            <p className="animate-fade-up-delay-2 mx-auto mt-8 max-w-2xl text-lg text-slate-400 sm:text-xl leading-relaxed">
-              One platform. Three products. Production-grade from day one. Analyze your code,
-              collaborate with AI, and ship faster than ever before.
-            </p>
-            
-            <div className="animate-fade-up mx-auto mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row" style={{ animationDelay: '0.3s' }}>
-              <Link href={ROUTES.REGISTER} className="btn-shimmer flex w-full items-center justify-center rounded-xl px-8 py-4 text-base font-semibold text-white sm:w-auto shadow-[0_0_40px_-10px_hsl(var(--primary))]">
-                Start Free Trial
-              </Link>
-              <Link href={ROUTES.FEATURES} className="btn-shimmer-secondary flex w-full items-center justify-center rounded-xl px-8 py-4 text-base font-medium text-slate-200 sm:w-auto">
-                Explore Features
-              </Link>
-            </div>
-          </div>
-
-          {/* Abstract Dashboard Mockup Graphic */}
-          <div className="animate-fade-up mx-auto mt-20 w-full max-w-5xl px-4" style={{ animationDelay: '0.4s' }}>
-            <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] shadow-2xl backdrop-blur-xl flex items-center justify-center">
-              {/* This represents a stylized dashboard frame */}
-              <div className="absolute top-0 w-full h-12 border-b border-white/5 flex items-center px-4 gap-2">
-                <div className="h-3 w-3 rounded-full bg-red-600 hover:bg-red-700 hover:cursor-pointer z-10"></div>
-                <div className="h-3 w-3 rounded-full bg-yellow-300 hover:bg-yellow-500 hover:cursor-pointer z-10"></div>
-                <div className="h-3 w-3 rounded-full bg-green-500 hover:bg-green-700 hover:cursor-pointer z-10"></div>
-              </div>
-              <img 
-                src="Screenshot 2026-05-25 212539.png" 
-                alt="Platform Preview" 
-                className="w-full h-full object-cover pt-12"
-              />
-              {/* Inner glowing effect */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-transparent"></div>
-            </div>
-          </div>
+          </Container>
         </section>
 
-        {/* ── Features Section ─────────────────────────────────── */}
-        <section className="py-32 relative">
-          <div className="container mx-auto px-4">
+        {/* ── PRODUCTS ── */}
+        <section className="border-t border-neutral-800/60">
+          <Container className="py-20">
             <RevealSection>
-              <div className="text-center mb-20">
-                <h2 className="text-3xl font-bold text-white sm:text-5xl tracking-tight">Why choose Kraivor?</h2>
-                <p className="mt-4 text-lg text-slate-400">Everything you need to scale your engineering team.</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-600 mb-3">Products</p>
+              <h2 className="font-display text-2xl font-normal text-neutral-100 mb-12">
+                Three products. <span className="text-[var(--text-accent)]">One workspace.</span>
+              </h2>
+            </RevealSection>
+            <div className="grid md:grid-cols-3 gap-px bg-neutral-800/40 rounded-xl overflow-hidden">
+              {PRODUCTS.map((product, i) => (
+                <div key={product.title} className="bg-[#121215]">
+                  <RevealSection delay={i * 0.1}>
+                    <div className="p-6 md:p-8">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-900 border border-neutral-800 text-[var(--text-accent)] mb-4">
+                        <product.icon size={16} weight="bold" />
+                      </div>
+                      <h3 className="text-base font-medium text-neutral-100 mb-2">{product.title}</h3>
+                      <p className="text-sm text-neutral-500 leading-relaxed mb-5">{product.desc}</p>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="font-mono text-2xl font-light text-[var(--text-accent)]">{product.stat}</span>
+                        <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-neutral-600">{product.statLabel}</span>
+                      </div>
+                    </div>
+                  </RevealSection>
+                </div>
+              ))}
+            </div>
+          </Container>
+        </section>
+
+        {/* ── DEEP DIVE 01: ANALYSIS ── */}
+        <section className="border-t border-neutral-800/60">
+          <Container className="py-20">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <RevealSection>
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-600 mb-3">Analysis</p>
+                  <h2 className="font-display text-3xl font-normal text-neutral-100 mb-4 leading-tight">
+                    Know your codebase<br />
+                    <span className="text-[var(--text-accent)] font-normal">before you merge</span>
+                  </h2>
+                  <p className="text-sm text-neutral-500 leading-relaxed mb-6">
+                    Kraivor analyzes every PR against your architecture rules, security policies, and best practices - not just syntax. Rule-based static analysis catches definite problems; AI contextual understanding catches architectural drift.
+                  </p>
+                  <Link
+                    href={ROUTES.FEATURES}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-[var(--text-accent)] transition-colors hover:opacity-80"
+                  >
+                    See how it works <ArrowRight size={12} weight="bold" />
+                  </Link>
+                </div>
+              </RevealSection>
+              <RevealSection>
+                <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-5 font-mono text-sm leading-7">
+                  <div className="flex items-center gap-2 mb-3 pb-3 border-b border-neutral-800">
+                    <MagnifyingGlass size={13} weight="bold" className="text-[var(--text-accent)]" />
+                    <span className="text-[10px] text-neutral-600 uppercase tracking-[0.15em]">Analysis Report - api-service</span>
+                  </div>
+                  <div className="space-y-2 text-neutral-500">
+                    <p><span className="text-emerald-500">*</span> Architecture <span className="text-neutral-300">85/100</span> - <span className="text-neutral-600">well-structured modular layout</span></p>
+                    <p><span className="text-[var(--text-accent)]">*</span> Code Quality <span className="text-neutral-300">78/100</span> - <span className="text-neutral-600">some long functions flagged</span></p>
+                    <p><span className="text-rose-500">*</span> Security <span className="text-neutral-300">92/100</span> - <span className="text-neutral-600">1 outdated dependency</span></p>
+                    <p><span className="text-sky-500">*</span> DevOps <span className="text-neutral-300">70/100</span> - <span className="text-neutral-600">missing CI/CD pipeline config</span></p>
+                  </div>
+                </div>
+              </RevealSection>
+            </div>
+          </Container>
+        </section>
+
+        {/* ── DEEP DIVE 02: AI AGENTS ── */}
+        <section className="border-t border-neutral-800/60">
+          <Container className="py-20">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <RevealSection>
+                <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-5 font-mono text-sm leading-7">
+                  <div className="flex items-center gap-2 mb-3 pb-3 border-b border-neutral-800">
+                    <Robot size={13} weight="bold" className="text-[var(--text-accent)]" />
+                    <span className="text-[10px] text-neutral-600 uppercase tracking-[0.15em]">Agent Session - orchestrator</span>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-[var(--text-accent)]">Orchestrator &rarr; Code Explorer</p>
+                    <p className="text-neutral-600 pl-4">Analyze the payment processing flow in the checkout module. Find rate-limiting patterns.</p>
+                    <p className="text-[var(--text-accent)]">Code Explorer &rarr; Explainer</p>
+                    <p className="text-neutral-600 pl-4">Found 2 rate-limit implementations using a leaky-bucket pattern. Both lack backpressure handling under peak load. Recommended fix: migrate to token-bucket with configurable burst limits.</p>
+                    <p className="text-neutral-700">-</p>
+                    <p className="text-emerald-500"><span className="text-neutral-300">Summary:</span> 2 findings - 1 critical - 1 recommendation</p>
+                  </div>
+                </div>
+              </RevealSection>
+              <RevealSection>
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-600 mb-3">Agentic AI</p>
+                  <h2 className="font-display text-3xl font-normal text-neutral-100 mb-4 leading-tight">
+                    Three specialized agents.<br />
+                    <span className="text-[var(--text-accent)] font-normal">One coherent answer.</span>
+                  </h2>
+                  <p className="text-sm text-neutral-500 leading-relaxed mb-6">
+                    Not a chatbot. A multi-agent system where the Orchestrator routes queries, Code Explorer searches your entire codebase, and Explainer synthesizes findings into actionable engineering answers.
+                  </p>
+                  <Link
+                    href={ROUTES.FEATURES}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-[var(--text-accent)] transition-colors hover:opacity-80"
+                  >
+                    Meet the agents <ArrowRight size={12} weight="bold" />
+                  </Link>
+                </div>
+              </RevealSection>
+            </div>
+          </Container>
+        </section>
+
+        {/* ── STATS ── */}
+        <section className="border-t border-neutral-800/60">
+          <Container>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {STATS.map((stat) => (
+                <RevealSection key={stat.label}>
+                  <div className="text-center">
+                    <p className="font-mono text-2xl font-normal text-[var(--text-accent)] mb-1">{stat.value}</p>
+                    <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-neutral-600">{stat.label}</p>
+                  </div>
+                </RevealSection>
+              ))}
+            </div>
+          </Container>
+        </section>
+
+        {/* ── TRUSTED BY ── */}
+        <section className="border-t border-neutral-800/60 py-16">
+          <Container>
+            <RevealSection>
+              <p className="text-center font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-600 mb-8">
+                Trusted by engineering teams
+              </p>
+            </RevealSection>
+            <RevealSection>
+              <MarqueeLogos />
+            </RevealSection>
+          </Container>
+        </section>
+
+        {/* ── CTA ── */}
+        <section className="pb-20">
+          <Container>
+            <RevealSection>
+              <div className="rounded-xl border border-neutral-800/60 bg-neutral-900/30 p-12 md:p-16 text-center max-w-2xl mx-auto">
+                <h2 className="font-display text-2xl font-normal text-neutral-100 mb-3">
+                  Production-grade engineering.
+                </h2>
+                <p className="text-sm text-neutral-500 mb-8 max-w-sm mx-auto">
+                  Start shipping with confidence. No credit card required.
+                </p>
+                <Link
+                  href={ROUTES.REGISTER}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[var(--venom-yellow)] px-6 py-2.5 text-sm font-medium text-black transition-all hover:brightness-110 active:scale-[0.98]"
+                >
+                  Start Free Trial
+                  <ArrowRight size={15} weight="bold" />
+                </Link>
               </div>
             </RevealSection>
-
-            <div className="grid gap-8 md:grid-cols-3">
-              
-              <RevealSection delay="delay-[100ms]">
-                <div className="group relative h-full rounded-3xl border border-white/10 bg-white/[0.02] p-8 backdrop-blur-xl transition-all duration-300 hover:-translate-y-2 hover:bg-white/[0.04] hover:shadow-[0_0_40px_-15px_hsl(var(--primary))] hover:border-[hsl(var(--primary))/30]">
-                  <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary-light))] ring-1 ring-white/10 group-hover:ring-[hsl(var(--primary))/50] transition-all">
-                    <CodeIcon />
-                  </div>
-                  <h3 className="mb-4 text-2xl font-bold text-white">Repository Analysis</h3>
-                  <p className="text-slate-400 leading-relaxed">
-                    Get comprehensive insights into your codebase with AI-powered analysis. Identify bottlenecks and technical debt instantly.
-                  </p>
-                </div>
-              </RevealSection>
-
-              <RevealSection delay="delay-[200ms]">
-                <div className="group relative h-full rounded-3xl border border-white/10 bg-white/[0.02] p-8 backdrop-blur-xl transition-all duration-300 hover:-translate-y-2 hover:bg-white/[0.04] hover:shadow-[0_0_40px_-15px_hsl(var(--primary))] hover:border-[hsl(var(--primary))/30]">
-                  <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary-light))] ring-1 ring-white/10 group-hover:ring-[hsl(var(--primary))/50] transition-all">
-                    <SparklesIcon />
-                  </div>
-                  <h3 className="mb-4 text-2xl font-bold text-white">AI Assistant</h3>
-                  <p className="text-slate-400 leading-relaxed">
-                    Chat with context-aware AI to understand legacy code, write boilerplate, and refactor complex logic in seconds.
-                  </p>
-                </div>
-              </RevealSection>
-
-              <RevealSection delay="delay-[300ms]">
-                <div className="group relative h-full rounded-3xl border border-white/10 bg-white/[0.02] p-8 backdrop-blur-xl transition-all duration-300 hover:-translate-y-2 hover:bg-white/[0.04] hover:shadow-[0_0_40px_-15px_hsl(var(--primary))] hover:border-[hsl(var(--primary))/30]">
-                  <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary-light))] ring-1 ring-white/10 group-hover:ring-[hsl(var(--primary))/50] transition-all">
-                    <LayersIcon />
-                  </div>
-                  <h3 className="mb-4 text-2xl font-bold text-white">Project Management</h3>
-                  <p className="text-slate-400 leading-relaxed">
-                    Track tasks, document architectures, and organize projects in one unified workspace built specifically for developers.
-                  </p>
-                </div>
-              </RevealSection>
-
-            </div>
-          </div>
+          </Container>
         </section>
 
       </main>
 
-      {/* ── Footer ────────────────────────────────────────────── */}
-      <footer className="relative z-10 border-t border-white/10 bg-white/[0.02] py-12 backdrop-blur-lg">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-bold tracking-tight text-white">✦ Kraivor</span>
-            </div>
-            <p className="text-sm text-slate-500">
-              &copy; {new Date().getFullYear()} Kraivor Technologies. All rights reserved.
-            </p>
-            <div className="flex gap-6">
-              <Link href="#" className="text-sm text-slate-500 hover:text-white transition-colors">Twitter</Link>
-              <Link href="#" className="text-sm text-slate-500 hover:text-white transition-colors">GitHub</Link>
-              <Link href="#" className="text-sm text-slate-500 hover:text-white transition-colors">Discord</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <div className="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#121215] to-transparent pointer-events-none z-50" />
+
+      <MarketingFooter />
     </div>
   );
 }

@@ -8,14 +8,25 @@ from .views import (
     DiscussionListView,
     DiscussionVoteView,
     PopularTagsView,
+    SyncAuthorDenormalizationView,
     TagSearchView,
     TrendingDiscussionsView,
+    UserCommentsView,
+    UserDiscussionsView,
 )
 
 discussion_patterns = [
     path("", DiscussionListView.as_view(), name="discussion-list"),
-    path("<uuid:discussion_id>/", DiscussionDetailView.as_view(), name="discussion-detail"),
-    path("<uuid:discussion_id>/vote/", DiscussionVoteView.as_view(), name="discussion-vote"),
+    path(
+        "<uuid:discussion_id>/",
+        DiscussionDetailView.as_view(),
+        name="discussion-detail",
+    ),
+    path(
+        "<uuid:discussion_id>/vote/",
+        DiscussionVoteView.as_view(),
+        name="discussion-vote",
+    ),
     path(
         "<uuid:discussion_id>/comments/",
         CommentListView.as_view(),
@@ -39,4 +50,27 @@ tag_patterns = [
     path("tags/search/", TagSearchView.as_view(), name="tags-search"),
 ]
 
-urlpatterns = discussion_patterns + tag_patterns
+user_content_patterns = [
+    path(
+        "user/<uuid:user_id>/discussions/",
+        UserDiscussionsView.as_view(),
+        name="user-discussions",
+    ),
+    path(
+        "user/<uuid:user_id>/comments/",
+        UserCommentsView.as_view(),
+        name="user-comments",
+    ),
+]
+
+internal_patterns = [
+    path(
+        "internal/sync-author/",
+        SyncAuthorDenormalizationView.as_view(),
+        name="sync-author",
+    )
+]
+
+urlpatterns = (
+    discussion_patterns + tag_patterns + user_content_patterns + internal_patterns
+)

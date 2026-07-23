@@ -41,9 +41,10 @@ FROM python:3.11-slim AS runtime
 
 WORKDIR /app
 
-# Runtime system deps only (libpq for psycopg2)
+# Runtime system deps (libpq for psycopg2, curl for healthcheck)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Non-root user for security
@@ -71,6 +72,9 @@ RUN chown -R appuser:appgroup /app
 USER appuser
 
 EXPOSE 8002
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8002/api/health/ || exit 1
 
 CMD ["sh", "-c", \
      "uvicorn core.asgi:application \

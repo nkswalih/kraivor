@@ -1,11 +1,14 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { workspaceEndpoints } from '@/lib/api/endpoints';
 import { chatEndpoints } from '@/lib/api/endpoints';
 import { repositoryEndpoints } from '@/lib/api/endpoints';
 import { knowledgeEndpoints } from '@/lib/api/endpoints';
+import { analysisService } from '@/lib/api/analysis-service';
+import type { AnalysisJob } from '@/types/domain/analysis';
 import type { Workspace, ChatRoom, Repository, KnowledgeSpace, WorkspaceMember } from '@/types/api';
 
 export interface DashboardData {
@@ -30,65 +33,109 @@ export function useDashboard() {
     queryKey: ['workspace', workspaceId],
     queryFn: () => workspaceEndpoints.get(workspaceId!),
     enabled: !!workspaceId,
+    staleTime: 30_000,
   });
 
   const roomsQuery = useQuery({
     queryKey: ['rooms', workspaceId],
     queryFn: () => chatEndpoints.listRooms(workspaceId!),
     enabled: !!workspaceId,
+    staleTime: 30_000,
   });
 
   const reposQuery = useQuery({
     queryKey: ['repos', workspaceId],
     queryFn: () => repositoryEndpoints.list(workspaceId!),
     enabled: !!workspaceId,
+    staleTime: 30_000,
   });
 
   const knowledgeQuery = useQuery({
     queryKey: ['knowledge', workspaceId],
     queryFn: () => knowledgeEndpoints.list(workspaceId!),
     enabled: !!workspaceId,
+    staleTime: 30_000,
   });
 
   const membersQuery = useQuery({
     queryKey: ['members', workspaceId],
     queryFn: () => workspaceEndpoints.getMembers(workspaceId!),
     enabled: !!workspaceId,
+    staleTime: 30_000,
   });
 
-  const isLoading = workspaceQuery.isLoading || roomsQuery.isLoading ||
-    reposQuery.isLoading || knowledgeQuery.isLoading || membersQuery.isLoading;
+  const recentJobsQuery = useQuery({
+    queryKey: ['dashboard-recent-jobs', workspaceId],
+    queryFn: () => analysisService.jobs.list(1, 5, workspaceId ?? undefined),
+    enabled: !!workspaceId,
+    staleTime: 30_000,
+  });
 
-  const error = workspaceQuery.error || roomsQuery.error ||
-    reposQuery.error || knowledgeQuery.error || membersQuery.error;
+  return useMemo(() => {
+    const isLoading =
+      workspaceQuery.isLoading ||
+      roomsQuery.isLoading ||
+      reposQuery.isLoading ||
+      knowledgeQuery.isLoading ||
+      membersQuery.isLoading ||
+      recentJobsQuery.isLoading;
 
-  const workspace = workspaceQuery.data ?? null;
-  const rooms = Array.isArray(roomsQuery.data) ? roomsQuery.data : (roomsQuery.data?.results ?? []);
-  const repositories = reposQuery.data ?? [];
-  const knowledgeSpaces = knowledgeQuery.data ?? [];
-  const members = workspace?.members ?? membersQuery.data ?? [];
+    const recentJobs = recentJobsQuery.data?.jobs ?? [];
 
-  const stats = {
-    memberCount: workspace?.active_member_count ?? members.length,
-    repoCount: repositories.length,
-    roomCount: rooms.length,
-    knowledgeCount: knowledgeSpaces.length,
-    analyzedRepos: repositories.filter(r => r.last_analysis_score != null).length,
-  };
+    const error =
+      workspaceQuery.error ||
+      roomsQuery.error ||
+      reposQuery.error ||
+      knowledgeQuery.error ||
+      membersQuery.error;
 
-  return {
-    workspace,
-    rooms,
-    repositories,
-    knowledgeSpaces,
-    members,
-    stats,
-    isLoading,
-    error,
-    workspaceQuery,
-    roomsQuery,
-    reposQuery,
-    knowledgeQuery,
-    membersQuery,
-  };
+    const workspace = workspaceQuery.data ?? null;
+    const rooms = Array.isArray(roomsQuery.data) ? roomsQuery.data : (roomsQuery.data?.results ?? []);
+    const repositories = reposQuery.data ?? [];
+    const knowledgeSpaces = knowledgeQuery.data ?? [];
+    const members = workspace?.members ?? membersQuery.data ?? [];
+
+    const stats = {
+      memberCount: workspace?.active_member_count ?? members.length,
+      repoCount: repositories.length,
+      roomCount: rooms.length,
+      knowledgeCount: knowledgeSpaces.length,
+      analyzedRepos: repositories.filter(r => r.last_analysis_score != null).length,
+    };
+
+    return {
+      workspace,
+      rooms,
+      repositories,
+      knowledgeSpaces,
+      members,
+      recentJobs: recentJobs as AnalysisJob[],
+      stats,
+      isLoading,
+      error,
+      workspaceQuery,
+      roomsQuery,
+      reposQuery,
+      knowledgeQuery,
+      membersQuery,
+    };
+  }, [
+    workspaceQuery.data,
+    workspaceQuery.isLoading,
+    workspaceQuery.error,
+    roomsQuery.data,
+    roomsQuery.isLoading,
+    roomsQuery.error,
+    reposQuery.data,
+    reposQuery.isLoading,
+    reposQuery.error,
+    knowledgeQuery.data,
+    knowledgeQuery.isLoading,
+    knowledgeQuery.error,
+    membersQuery.data,
+    membersQuery.isLoading,
+    membersQuery.error,
+    recentJobsQuery.data,
+    recentJobsQuery.isLoading,
+  ]);
 }

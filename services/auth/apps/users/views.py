@@ -1,12 +1,13 @@
 import logging
 import uuid
-
 from django.conf import settings
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from authentication.internal_auth import require_internal_request
 from .email_service import email_service
 from .models import User
 from .rate_limiter import RateLimitExceededError, rate_limiter
@@ -31,6 +32,17 @@ class SignUpView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Register a new user",
+        description="Registers a new user account and sends a verification email.",
+        tags=["Users"],
+        request=SignUpSerializer,
+        responses={
+            201: OpenApiResponse(
+                description="Registration successful. Verification email sent."
+            )
+        },
+    )
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         if not serializer.is_valid():
@@ -44,7 +56,9 @@ class SignUpView(APIView):
             email_service.send_verification_email(user, token)
             email_sent = True
         except Exception:
-            logger.exception("Failed to send verification email to %s after signup", user.email)
+            logger.exception(
+                "Failed to send verification email to %s after signup", user.email
+            )
             email_sent = False
 
         return Response(
@@ -75,11 +89,23 @@ class VerifyEmailView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Verify email",
+        description="Accepts a signed JWT, validates it, and marks the user's email as verified.",
+        tags=["Users"],
+        responses={
+            200: OpenApiResponse(description="Email verified successfully"),
+            400: OpenApiResponse(description="Invalid or expired token"),
+        },
+    )
     def post(self, request):
         token = request.data.get("token", "").strip()
         if not token:
             return Response(
-                {"error": "Verification token is required.", "error_code": "missing_token"},
+                {
+                    "error": "Verification token is required.",
+                    "error_code": "missing_token",
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -149,6 +175,17 @@ class ResendVerificationView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Resend verification email",
+        description="Rate limited: maximum 3 requests per hour per email (Redis-backed).",
+        tags=["Users"],
+        responses={
+            200: OpenApiResponse(
+                description="Verification email resent or rate-limited"
+            ),
+            429: OpenApiResponse(description="Rate limit exceeded"),
+        },
+    )
     def post(self, request):
         email = request.data.get("email", "").strip().lower()
         if not email:
@@ -160,7 +197,9 @@ class ResendVerificationView(APIView):
         # Redis rate limit check BEFORE DB lookup (fail fast, prevent enumeration)
         rate_key = f"resend_verification:{email}"
         try:
-            rate_limiter.is_allowed(rate_key, limit=_RESEND_LIMIT, window_seconds=_RESEND_WINDOW)
+            rate_limiter.is_allowed(
+                rate_key, limit=_RESEND_LIMIT, window_seconds=_RESEND_WINDOW
+            )
         except RateLimitExceededError as exc:
             response = Response(
                 {
@@ -179,7 +218,7 @@ class ResendVerificationView(APIView):
         except User.DoesNotExist:
             return Response(
                 {
-                    "message": "If that email exists and is unverified, a new link has been sent.",
+                    "message": "If that email exists and is unverified, a new link has been sent."
                 },
                 status=status.HTTP_200_OK,
             )
@@ -207,14 +246,18 @@ class ResendVerificationView(APIView):
             )
 
         return Response(
-            {
-                "message": "Verification email resent. Please check your inbox.",
-            },
+            {"message": "Verification email resent. Please check your inbox."},
             status=status.HTTP_200_OK,
         )
 
 
 class UserProfileView(APIView):
+    @extend_schema(
+        summary="Get current user profile",
+        description="Returns the profile of the authenticated user.",
+        tags=["Users"],
+        responses={200: UserSerializer},
+    )
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
@@ -241,10 +284,16 @@ class ResolveUsersView(APIView):
 
     permission_classes = []
 
+    @extend_schema(
+        summary="Resolve users by email (internal)",
+        description="Internal endpoint. Resolves email addresses to user IDs. Used by Core service.",
+        tags=["Users"],
+        responses={200: OpenApiResponse(description="User resolution result")},
+    )
     def post(self, request):
-        internal_header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
-        if request.headers.get(internal_header) != "1":
-            return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+        forbidden = require_internal_request(request)
+        if forbidden:
+            return forbidden
 
         emails = request.data.get("emails", [])
         if not isinstance(emails, list) or not emails:
@@ -256,10 +305,7 @@ class ResolveUsersView(APIView):
             email_verified=True,
         )
 
-        result = {
-            user.email: {"id": str(user.id), "name": user.name}
-            for user in users
-        }
+        result = {user.email: {"id": str(user.id), "name": user.name} for user in users}
 
         return Response({"users": result})
 
@@ -285,10 +331,16 @@ class ResolveUsersByIdView(APIView):
 
     permission_classes = []
 
+    @extend_schema(
+        summary="Resolve users by ID (internal)",
+        description="Internal endpoint. Resolves user IDs to user info (name, email, avatar_url). Used by Core service.",
+        tags=["Users"],
+        responses={200: OpenApiResponse(description="User resolution result")},
+    )
     def post(self, request):
-        internal_header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
-        if request.headers.get(internal_header) != "1":
-            return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+        forbidden = require_internal_request(request)
+        if forbidden:
+            return forbidden
 
         user_ids = request.data.get("user_ids", [])
         if not isinstance(user_ids, list) or not user_ids:
@@ -305,7 +357,7 @@ class ResolveUsersByIdView(APIView):
                 "id": str(user.id),
                 "name": user.name,
                 "email": user.email,
-                "avatar_url": None,
+                "avatar_url": user.avatar_url,
             }
             for user in users
         }

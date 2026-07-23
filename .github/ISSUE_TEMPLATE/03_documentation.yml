@@ -1,0 +1,49 @@
+name: "📖 Documentation"
+description: Report a documentation issue or improvement
+title: "docs: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us improve our documentation!
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Documentation Area
+      options:
+        - README
+        - API Reference
+        - Architecture Guide
+        - Development Setup
+        - Deployment Guide
+        - Contributing Guide
+        - Security Policy
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: What's wrong or missing?
+      description: Be as specific as possible — include links if applicable
+      placeholder: The API reference for /v1/analyze is missing the request body schema
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Improvement
+      description: How should this be documented?
+      placeholder: Add a table showing all request parameters...
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Verification
+      options:
+        - label: I have searched existing documentation issues for duplicates
+          required: true

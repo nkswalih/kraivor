@@ -1,7 +1,12 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { projectEndpoints, taskEndpoints, repositoryEndpoints, knowledgeEndpoints } from '@/lib/api/endpoints';
+import {
+  projectEndpoints,
+  taskEndpoints,
+  repositoryEndpoints,
+  knowledgeEndpoints,
+} from '@/lib/api/endpoints';
 import type {
   ProjectCreatePayload,
   ProjectUpdatePayload,
@@ -14,17 +19,19 @@ import type {
 } from '@/types/domain/projects';
 
 export const projectKeys = {
-  all:          (wsId: string) => ['projects', wsId] as const,
-  list:         (wsId: string, status?: ProjectStatus) => [...projectKeys.all(wsId), 'list', status] as const,
-  detail:       (wsId: string, id: string) => [...projectKeys.all(wsId), 'detail', id] as const,
-  tasks:        (wsId: string, projectId: string) => [...projectKeys.all(wsId), 'tasks', projectId] as const,
-  ai:           (wsId: string, projectId: string) => [...projectKeys.all(wsId), 'ai', projectId] as const,
+  all: (wsId: string) => ['projects', wsId] as const,
+  list: (wsId: string, status?: ProjectStatus) =>
+    [...projectKeys.all(wsId), 'list', status] as const,
+  detail: (wsId: string, id: string) => [...projectKeys.all(wsId), 'detail', id] as const,
+  tasks: (wsId: string, projectId: string) =>
+    [...projectKeys.all(wsId), 'tasks', projectId] as const,
+  ai: (wsId: string, projectId: string) => [...projectKeys.all(wsId), 'ai', projectId] as const,
 };
 
 export const taskKeys = {
-  all:          (wsId: string) => ['tasks', wsId] as const,
-  list:         (wsId: string, filters?: object) => [...taskKeys.all(wsId), 'list', filters] as const,
-  detail:       (wsId: string, id: string) => [...taskKeys.all(wsId), 'detail', id] as const,
+  all: (wsId: string) => ['tasks', wsId] as const,
+  list: (wsId: string, filters?: object) => [...taskKeys.all(wsId), 'list', filters] as const,
+  detail: (wsId: string, id: string) => [...taskKeys.all(wsId), 'detail', id] as const,
 };
 
 export function useProjects(workspaceId: string, status?: ProjectStatus) {
@@ -48,8 +55,7 @@ export function useProject(workspaceId: string, projectId: string) {
 export function useCreateProject(workspaceId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: ProjectCreatePayload) =>
-      projectEndpoints.create(workspaceId, payload),
+    mutationFn: (payload: ProjectCreatePayload) => projectEndpoints.create(workspaceId, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: projectKeys.all(workspaceId) });
     },
@@ -61,7 +67,7 @@ export function useUpdateProject(workspaceId: string, projectId: string) {
   return useMutation({
     mutationFn: (payload: ProjectUpdatePayload) =>
       projectEndpoints.update(workspaceId, projectId, payload),
-    onSuccess: (updated) => {
+    onSuccess: updated => {
       qc.setQueryData(projectKeys.detail(workspaceId, projectId), updated);
       qc.invalidateQueries({ queryKey: projectKeys.list(workspaceId) });
     },
@@ -120,9 +126,8 @@ export function useTask(workspaceId: string, taskId: string) {
 export function useCreateTask(workspaceId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: TaskCreatePayload) =>
-      taskEndpoints.create(workspaceId, payload),
-    onSuccess: (task) => {
+    mutationFn: (payload: TaskCreatePayload) => taskEndpoints.create(workspaceId, payload),
+    onSuccess: task => {
       qc.invalidateQueries({ queryKey: taskKeys.all(workspaceId) });
       qc.invalidateQueries({
         queryKey: projectKeys.tasks(workspaceId, task.project_id),
@@ -134,9 +139,8 @@ export function useCreateTask(workspaceId: string) {
 export function useUpdateTask(workspaceId: string, taskId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: TaskUpdatePayload) =>
-      taskEndpoints.update(workspaceId, taskId, payload),
-    onSuccess: (updated) => {
+    mutationFn: (payload: TaskUpdatePayload) => taskEndpoints.update(workspaceId, taskId, payload),
+    onSuccess: updated => {
       qc.setQueryData(taskKeys.detail(workspaceId, taskId), updated);
       qc.invalidateQueries({ queryKey: taskKeys.all(workspaceId) });
     },
@@ -146,14 +150,9 @@ export function useUpdateTask(workspaceId: string, taskId: string) {
 export function useUpdateTaskStatus(workspaceId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      taskId,
-      payload,
-    }: {
-      taskId: string;
-      payload: TaskStatusUpdatePayload;
-    }) => taskEndpoints.updateStatus(workspaceId, taskId, payload),
-    onSuccess: (updated) => {
+    mutationFn: ({ taskId, payload }: { taskId: string; payload: TaskStatusUpdatePayload }) =>
+      taskEndpoints.updateStatus(workspaceId, taskId, payload),
+    onSuccess: updated => {
       qc.setQueryData(taskKeys.detail(workspaceId, updated.id), updated);
       qc.invalidateQueries({ queryKey: taskKeys.all(workspaceId) });
       qc.invalidateQueries({
@@ -194,7 +193,7 @@ export function useKnowledgeSpacesList(workspaceId: string) {
 export function useTaskSearch(workspaceId: string, search: string) {
   return useQuery({
     queryKey: ['taskSearch', workspaceId, search],
-    queryFn: () => taskEndpoints.list(workspaceId, { page: 1 }),
+    queryFn: () => taskEndpoints.list(workspaceId, { page: 1, search }),
     enabled: !!workspaceId && search.length > 0,
     staleTime: 10_000,
   });
@@ -236,8 +235,7 @@ export function useLinkRepository(workspaceId: string, taskId: string) {
 export function useRemoveLinkRepository(workspaceId: string, taskId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (linkId: string) =>
-      taskEndpoints.removeLinkRepository(workspaceId, taskId, linkId),
+    mutationFn: (linkId: string) => taskEndpoints.removeLinkRepository(workspaceId, taskId, linkId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: taskKeys.detail(workspaceId, taskId) });
     },
@@ -247,8 +245,7 @@ export function useRemoveLinkRepository(workspaceId: string, taskId: string) {
 export function useRemoveLinkKnowledge(workspaceId: string, taskId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (linkId: string) =>
-      taskEndpoints.removeLinkKnowledge(workspaceId, taskId, linkId),
+    mutationFn: (linkId: string) => taskEndpoints.removeLinkKnowledge(workspaceId, taskId, linkId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: taskKeys.detail(workspaceId, taskId) });
     },

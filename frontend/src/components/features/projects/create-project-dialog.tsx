@@ -5,6 +5,7 @@ import { X, Loader2 } from 'lucide-react';
 import { useCreateProject } from '@/lib/hooks/use-projects';
 import type { ProjectStatus, ProjectVisibility } from '@/types/domain/projects';
 import { cn } from '@/lib/utils';
+import { PROJECT_COLORS } from '@/lib/constants';
 
 interface CreateProjectDialogProps {
   open: boolean;
@@ -12,11 +13,7 @@ interface CreateProjectDialogProps {
   workspaceId: string;
 }
 
-export function CreateProjectDialog({
-  open,
-  onClose,
-  workspaceId,
-}: CreateProjectDialogProps) {
+export function CreateProjectDialog({ open, onClose, workspaceId }: CreateProjectDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [icon, setIcon] = useState('');
@@ -64,8 +61,8 @@ export function CreateProjectDialog({
           <input
             autoFocus
             value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => {
               if (e.key === 'Enter') handleSubmit();
               if (e.key === 'Escape') onClose();
             }}
@@ -75,53 +72,72 @@ export function CreateProjectDialog({
 
           <textarea
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={e => setDescription(e.target.value)}
             placeholder="Description (optional)"
             rows={2}
             className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] rounded-[6px] px-3 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--krait-border-hi)] resize-none"
           />
 
+          <div>
+            <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider mb-2 block">
+              Color
+            </label>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {PROJECT_COLORS.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setColor(color === c ? '' : c)}
+                  className={cn(
+                    'w-7 h-7 rounded-full transition-all duration-150',
+                    color === c
+                      ? 'ring-2 ring-white ring-offset-2 ring-offset-[var(--krait-surface-1)] scale-110'
+                      : 'ring-1 ring-transparent hover:scale-110'
+                  )}
+                  style={{ background: c }}
+                />
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">Icon</label>
+              <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">
+                Icon
+              </label>
               <input
                 value={icon}
-                onChange={(e) => setIcon(e.target.value)}
+                onChange={e => setIcon(e.target.value)}
                 placeholder="Emoji"
                 maxLength={2}
                 className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] rounded-[6px] px-3 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--krait-border-hi)]"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">Color</label>
-              <input
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                placeholder="#RRGGBB"
-                maxLength={7}
-                className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] rounded-[6px] px-3 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--krait-border-hi)]"
-              />
+              <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">
+                Status
+              </label>
+              <select
+                value={status}
+                onChange={e => setStatus(e.target.value as ProjectStatus)}
+                className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] text-[var(--text-secondary)] rounded-[6px] px-3 py-2 text-[13px] outline-none focus:border-[var(--krait-border-hi)]"
+              >
+                {(['planning', 'active', 'completed', 'archived'] as const).map(s => (
+                  <option key={s} value={s} className="capitalize">
+                    {s}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as ProjectStatus)}
-                className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] text-[var(--text-secondary)] rounded-[6px] px-3 py-2 text-[13px] outline-none focus:border-[var(--krait-border-hi)]"
-              >
-                {(['planning', 'active', 'completed', 'archived'] as const).map((s) => (
-                  <option key={s} value={s} className="capitalize">{s}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">Visibility</label>
+              <label className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">
+                Visibility
+              </label>
               <select
                 value={visibility}
-                onChange={(e) => setVisibility(e.target.value as ProjectVisibility)}
+                onChange={e => setVisibility(e.target.value as ProjectVisibility)}
                 className="w-full bg-[var(--krait-surface-2)] border border-[var(--krait-border)] text-[var(--text-secondary)] rounded-[6px] px-3 py-2 text-[13px] outline-none focus:border-[var(--krait-border-hi)]"
               >
                 <option value="workspace">Workspace</option>
@@ -140,7 +156,7 @@ export function CreateProjectDialog({
             disabled={!name.trim() || createProject.isPending}
             className={cn(
               'flex items-center gap-2 text-[12px] font-medium px-3.5 py-1.5 rounded-[6px] text-black transition-opacity',
-              !name.trim() && 'opacity-40 cursor-not-allowed',
+              !name.trim() && 'opacity-40 cursor-not-allowed'
             )}
             style={{ background: 'var(--venom-yellow)' }}
           >

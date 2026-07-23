@@ -9,11 +9,13 @@ Defines the full taxonomy used across the app:
 ADR: Terminal statuses (DONE, CANCELLED) and active statuses are defined as
 frozensets for efficient membership checks in service queries.
 """
+
 from django.db import models
 
 
 class ProjectStatus(models.TextChoices):
     """Lifecycle stages for a project."""
+
     PLANNING = "planning", "Planning"
     ACTIVE = "active", "Active"
     COMPLETED = "completed", "Completed"
@@ -37,12 +39,9 @@ class TaskStatus(models.TextChoices):
 
 TERMINAL_TASK_STATUSES = frozenset({TaskStatus.DONE, TaskStatus.CANCELLED})
 
-ACTIVE_TASK_STATUSES = frozenset({
-    TaskStatus.TODO,
-    TaskStatus.IN_PROGRESS,
-    TaskStatus.IN_REVIEW,
-    TaskStatus.BLOCKED,
-})
+ACTIVE_TASK_STATUSES = frozenset(
+    {TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.IN_REVIEW, TaskStatus.BLOCKED}
+)
 
 
 class TaskPriority(models.TextChoices):

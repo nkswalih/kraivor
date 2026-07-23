@@ -65,7 +65,9 @@ CORS_ALLOW_CREDENTIALS = env.bool("CORS_ALLOW_CREDENTIALS", default=True)
 # HTTP Strict Transport Security (HSTS)
 # WHY: Force HTTPS for all requests
 SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=31536000)  # 1 year
-SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool(
+    "SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True
+)
 SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=True)
 
 # SSL Redirect
@@ -86,7 +88,9 @@ X_FRAME_OPTIONS = env("X_FRAME_OPTIONS", default="DENY")
 
 # Referrer Policy
 # WHY: Control referrer information sent to other sites
-SECURE_REFERRER_POLICY = env("SECURE_REFERRER_POLICY", default="strict-origin-when-cross-origin")
+SECURE_REFERRER_POLICY = env(
+    "SECURE_REFERRER_POLICY", default="strict-origin-when-cross-origin"
+)
 
 # =============================================================================
 # COOKIES - PRODUCTION

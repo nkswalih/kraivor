@@ -10,18 +10,37 @@ interface ProjectOverviewTabProps {
 }
 
 export function ProjectOverviewTab({ project, tasks }: ProjectOverviewTabProps) {
-  const done = tasks.filter((t) => t.status === 'done').length;
-  const blocked = tasks.filter((t) => t.status === 'blocked').length;
-  const active = tasks.filter((t) => !TERMINAL_TASK_STATUSES.includes(t.status) && t.status !== 'backlog').length;
+  const done = tasks.filter(t => t.status === 'done').length;
+  const blocked = tasks.filter(t => t.status === 'blocked').length;
+  const active = tasks.filter(
+    t => !TERMINAL_TASK_STATUSES.includes(t.status) && t.status !== 'backlog'
+  ).length;
   const progress = project.task_count > 0 ? Math.round((done / project.task_count) * 100) : 0;
 
   return (
     <div className="p-6 max-w-4xl space-y-8">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Total" value={project.task_count} icon={<CheckCircle size={16} className="text-[var(--venom-yellow)]" />} />
-        <StatCard label="Active" value={active} icon={<Clock size={16} className="text-[var(--color-info)]" />} />
-        <StatCard label="Done" value={done} icon={<CheckCircle size={16} className="text-[var(--color-success)]" />} />
-        <StatCard label="Blocked" value={blocked} accent={blocked > 0} icon={<AlertCircle size={16} className="text-[var(--color-error)]" />} />
+        <StatCard
+          label="Total"
+          value={project.task_count}
+          icon={<CheckCircle size={16} className="text-[var(--venom-yellow)]" />}
+        />
+        <StatCard
+          label="Active"
+          value={active}
+          icon={<Clock size={16} className="text-[var(--color-info)]" />}
+        />
+        <StatCard
+          label="Done"
+          value={done}
+          icon={<CheckCircle size={16} className="text-[var(--color-success)]" />}
+        />
+        <StatCard
+          label="Blocked"
+          value={blocked}
+          accent={blocked > 0}
+          icon={<AlertCircle size={16} className="text-[var(--color-error)]" />}
+        />
       </div>
 
       <div>
@@ -76,7 +95,7 @@ export function ProjectOverviewTab({ project, tasks }: ProjectOverviewTabProps) 
           {tasks
             .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
             .slice(0, 5)
-            .map((task) => (
+            .map(task => (
               <div key={task.id} className="flex items-center gap-3 px-4 py-2.5 text-[13px]">
                 <span className="text-[var(--text-primary)] flex-1 truncate">{task.title}</span>
                 <span className="text-[11px] text-[var(--text-tertiary)] capitalize shrink-0">
@@ -105,11 +124,15 @@ function StatCard({
     <div className="bg-[var(--krait-surface-1)] border border-[var(--krait-border)] rounded-[8px] px-4 py-3">
       <div className="flex items-center justify-between mb-1">
         {icon}
-        <span className={`text-[22px] font-semibold ${accent ? 'text-[var(--color-error)]' : 'text-[var(--text-primary)]'}`}>
+        <span
+          className={`text-[22px] font-semibold ${accent ? 'text-[var(--color-error)]' : 'text-[var(--text-primary)]'}`}
+        >
           {value}
         </span>
       </div>
-      <span className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">{label}</span>
+      <span className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider">
+        {label}
+      </span>
     </div>
   );
 }

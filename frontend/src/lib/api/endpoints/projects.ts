@@ -50,6 +50,7 @@ export const taskEndpoints = {
       assignee_id?: string;
       priority?: TaskPriority;
       page?: number;
+      search?: string;
     }
   ) => {
     const qs = new URLSearchParams();
@@ -58,6 +59,7 @@ export const taskEndpoints = {
     if (params?.assignee_id) qs.set('assignee_id', params.assignee_id);
     if (params?.priority) qs.set('priority', params.priority);
     if (params?.page) qs.set('page', String(params.page));
+    if (params?.search) qs.set('search', params.search);
     const query = qs.toString();
     return coreApi.get<PaginatedResponse<Task>>(
       `/workspaces/${workspaceId}/tasks/${query ? `?${query}` : ''}`
@@ -96,7 +98,8 @@ export const taskEndpoints = {
 
   addDependency: (workspaceId: string, taskId: string, payload: AddDependencyPayload) =>
     coreApi.post<{ id: string; relationship_type: string }>(
-      `/workspaces/${workspaceId}/tasks/${taskId}/dependencies/`, payload
+      `/workspaces/${workspaceId}/tasks/${taskId}/dependencies/`,
+      payload
     ),
 
   removeDependency: (workspaceId: string, taskId: string, dependencyId: string) =>
@@ -111,9 +114,7 @@ export const taskEndpoints = {
     ),
 
   removeLinkRepository: (workspaceId: string, taskId: string, linkId: string) =>
-    coreApi.delete<void>(
-      `/workspaces/${workspaceId}/tasks/${taskId}/repositories/${linkId}/`
-    ),
+    coreApi.delete<void>(`/workspaces/${workspaceId}/tasks/${taskId}/repositories/${linkId}/`),
 
   linkKnowledge: (workspaceId: string, taskId: string, knowledgeSpaceId: string) =>
     coreApi.post<{ id: string; knowledge_space_id: string }>(
@@ -122,7 +123,5 @@ export const taskEndpoints = {
     ),
 
   removeLinkKnowledge: (workspaceId: string, taskId: string, linkId: string) =>
-    coreApi.delete<void>(
-      `/workspaces/${workspaceId}/tasks/${taskId}/knowledge/${linkId}/`
-    ),
+    coreApi.delete<void>(`/workspaces/${workspaceId}/tasks/${taskId}/knowledge/${linkId}/`),
 };

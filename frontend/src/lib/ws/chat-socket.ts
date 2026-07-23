@@ -23,7 +23,8 @@ export class ChatSocket {
     this.token = this.getJwt();
     if (!this.token) return;
     this.closing = false;
-    this.ws = new WebSocket(`${WS_BASE}/ws/chat/${roomId}/?token=${this.token}`);
+    // Use WebSocket subprotocol to pass token (avoids URL exposure in logs/proxies)
+    this.ws = new WebSocket(`${WS_BASE}/ws/chat/${roomId}/`, ['auth', this.token]);
     this.attachListeners();
   }
 
@@ -39,7 +40,7 @@ export class ChatSocket {
       this.startHeartbeat();
       this.onConnected?.();
     };
-    this.ws.onmessage = (e) => {
+    this.ws.onmessage = e => {
       try {
         const data: WsServerEvent = JSON.parse(e.data);
         this.onEvent?.(data);
@@ -47,7 +48,7 @@ export class ChatSocket {
         // ignore malformed frames
       }
     };
-    this.ws.onclose = (e) => {
+    this.ws.onclose = e => {
       this.stopHeartbeat();
       if (this.closing) return;
       if ([4001, 4002, 4003].includes(e.code)) {
@@ -61,7 +62,8 @@ export class ChatSocket {
 
   private scheduleReconnect() {
     if (this.reconnectAttempts >= this.maxReconnects) return;
-    const delay = Math.min(1000 * 2 ** this.reconnectAttempts, 30000);
+    const base = Math.min(1000 * 2 ** this.reconnectAttempts, 30000);
+    const delay = base * (0.5 + Math.random() * 0.5);
     this.reconnectTimer = setTimeout(() => {
       this.reconnectAttempts++;
       if (this.roomId) this.connect(this.roomId);

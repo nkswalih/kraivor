@@ -1,5 +1,4 @@
-"""
-Django Base Settings - Production-Grade Configuration
+"""Django Base Settings - Production-Grade Configuration
 ========================================================
 
 This file contains the core configuration that applies to ALL environments.
@@ -30,12 +29,12 @@ project/
 │       │       └── staging.py
 """
 
-import hashlib
-import os
-from datetime import timedelta
 from pathlib import Path
 
 import environ
+import hashlib
+import os
+from datetime import timedelta
 from django.core.exceptions import ImproperlyConfigured
 
 # =============================================================================
@@ -110,16 +109,19 @@ DEBUG = env("DEBUG", default=False)
 # WHY: Prevents HTTP Host header attacks (cache poisoning, SSRF)
 # PRODUCTION: List your exact domain(s) - no wildcards unless behind CDN
 # Microservices: Each service needs its own allowed hosts
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[
-    "localhost",
-    "127.0.0.1",
-    "identity",
-    "nginx",
-    "core",
-    "analysis",
-    "ai",
-    "notifications",
-])
+ALLOWED_HOSTS = env.list(
+    "ALLOWED_HOSTS",
+    default=[
+        "localhost",
+        "127.0.0.1",
+        "identity",
+        "nginx",
+        "core",
+        "analysis",
+        "ai",
+        "notifications",
+    ],
+)
 
 # =============================================================================
 # APPLICATION CONFIGURATION
@@ -135,6 +137,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
     "corsheaders",
     "users",
     "authentication",
@@ -176,9 +180,9 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-            ],
+            ]
         },
-    },
+    }
 ]
 
 # =============================================================================
@@ -219,9 +223,7 @@ CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": env("REDIS_URL", default="redis://localhost:6379/0"),
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
         "KEY_PREFIX": "kraivor",
         "TIMEOUT": 300,  # Default 5 minutes
     }
@@ -248,18 +250,52 @@ REST_FRAMEWORK = {
         "api_keys.authentication.backend.APIKeyAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-    "DEFAULT_RENDERER_CLASSES": [
-        "rest_framework.renderers.JSONRenderer",
-    ],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": [
         "rest_framework.parsers.JSONParser",
         "rest_framework.parsers.MultiPartParser",
         "rest_framework.parsers.FormParser",
     ],
     "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# =============================================================================
+# SPECTACULAR / OPENAPI CONFIGURATION
+# =============================================================================
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Kraivor Identity API",
+    "DESCRIPTION": (
+        "Authentication, user management, profiles, and API keys for Kraivor. "
+        "This API supports JWT-based authentication, OAuth 2.0 (GitHub, Google), "
+        "API key management, user profiles, and session management."
+    ),
+    "VERSION": "0.1.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SCHEMA_PATH_PREFIX": r"/api/",
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
+    "COMPONENT_SPLIT_REQUEST": True,
+    "TAGS": [
+        {
+            "name": "Authentication",
+            "description": "Sign-in, sign-out, sessions, OTP, OAuth",
+        },
+        {
+            "name": "Users",
+            "description": "Sign-up, email verification, password management",
+        },
+        {
+            "name": "Profiles",
+            "description": "User profiles, avatars, leaderboard, following",
+        },
+        {"name": "API Keys", "description": "Manage API keys for programmatic access"},
+        {"name": "OAuth", "description": "GitHub and Google OAuth flows"},
+        {"name": "JWKS", "description": "JSON Web Key Set for JWT verification"},
+    ],
 }
 
 # Simple JWT (DJANGO REST FRAMEWORK SIMPLEJWT)
@@ -344,7 +380,9 @@ COOKIE_SAMESITE_FORCE = env.bool("COOKIE_SAMESITE_FORCE", default=None)
 FRONTEND_URL = required_env("FRONTEND_URL")
 
 # SMTP Configuration
-EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend"
+)
 EMAIL_HOST = required_env("EMAIL_HOST")  # e.g., smtp.sendgrid.net, smtp.mailgun.org
 EMAIL_PORT = env.int("EMAIL_PORT")  # 587 (TLS) or 465 (SSL)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
@@ -372,19 +410,21 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 # =============================================================================
 
 DEFAULT_FILE_STORAGE = env(
-    "DEFAULT_FILE_STORAGE",
-    default="django.core.files.storage.FileSystemStorage",
+    "DEFAULT_FILE_STORAGE", default="storages.backends.s3boto3.S3Boto3Storage"
 )
+
+STORAGES = {
+    "default": {"BACKEND": DEFAULT_FILE_STORAGE},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
 
 AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
 AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
 AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
-AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="us-east-1")
+AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="ap-southeast-2")
 AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN", default="")
-AWS_S3_OBJECT_PARAMETERS = {
-    "CacheControl": "max-age=86400",
-}
-AWS_DEFAULT_ACL = None
+AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
+AWS_DEFAULT_ACL = "public-read"
 AWS_QUERYSTRING_AUTH = False
 
 # =============================================================================
@@ -400,19 +440,13 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "verbose": {
-            "format": "{levelname} {asctime} {module} {message}",
-            "style": "{",
-        },
+        "verbose": {"format": "{levelname} {asctime} {module} {message}", "style": "{"},
         "json": {
-            "format": '{"level": "%(levelname)s", "time": "%(asctime)s", "module": "%(module)s", "message": "%(message)s"}',
+            "format": '{"level": "%(levelname)s", "time": "%(asctime)s", "module": "%(module)s", "message": "%(message)s"}'
         },
     },
     "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "verbose",
-        },
+        "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
             "filename": os.path.join(logs_dir, "django.log"),
@@ -421,10 +455,7 @@ LOGGING = {
             "formatter": "verbose",
         },
     },
-    "root": {
-        "handlers": ["console"],
-        "level": "INFO",
-    },
+    "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
         "django": {
             "handlers": ["console", "file"],
@@ -466,6 +497,9 @@ OTP_RESEND_WAIT_SECONDS = 60
 # WHY: Allows services to verify requests come from other trusted services
 INTERNAL_REQUEST_HEADER = env("INTERNAL_REQUEST_HEADER", default="X-Internal-Request")
 INTERNAL_REQUEST_TOKEN = env("INTERNAL_REQUEST_TOKEN", default="")
+
+# Core service URL for internal sync calls (e.g., denormalized author field updates)
+CORE_SERVICE_URL = env("CORE_SERVICE_URL", default="http://core:8002")
 
 # =============================================================================
 # ASYNC TASKS - Celery Configuration
@@ -518,7 +552,8 @@ GITHUB_REDIRECT_URI = os.environ.get(
 )
 
 OAUTH_TOKEN_ENCRYPTION_KEY = os.environ.get(
-    "OAUTH_TOKEN_ENCRYPTION_KEY", os.path.join(BASE_DIR, ".keys", "oauth-encryption.key")
+    "OAUTH_TOKEN_ENCRYPTION_KEY",
+    os.path.join(BASE_DIR, ".keys", "oauth-encryption.key"),
 )
 OAUTH_STATE_EXPIRE_SECONDS = int(os.environ.get("OAUTH_STATE_EXPIRE_SECONDS", "600"))
 
@@ -530,6 +565,5 @@ KAFKA_BOOTSTRAP_SERVERS = env("KAFKA_BOOTSTRAP_SERVERS", default="localhost:9092
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_REDIRECT_URI = os.environ.get(
-    "GOOGLE_REDIRECT_URI",
-    "http://localhost:8000/api/auth/oauth/google/callback/",
+    "GOOGLE_REDIRECT_URI", "http://localhost:8000/api/auth/oauth/google/callback/"
 )

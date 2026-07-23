@@ -29,6 +29,14 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kraivor}"]
       interval: 5s
@@ -48,19 +56,26 @@ services:
   redis:
     image: redis:7-alpine
     container_name: kraivor-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-kraivor_redis_2024}
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-kraivor_redis_2024}", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
       start_period: 5s
     restart: unless-stopped
-    # Persist to disk so cache survives restarts
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
 
   mailhog:
     image: mailhog/mailhog:latest
@@ -92,8 +107,19 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
     volumes:
       - kafka_data:/var/lib/kafka/data
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
       interval: 15s
@@ -128,6 +154,14 @@ services:
     ports:
       - "8001:8001"
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
     volumes:
       # JWT signing keys + OAuth encryption key — not baked into the image
       - ./.keys:/app/.keys
@@ -169,6 +203,14 @@ services:
     ports:
       - "8002:8002"
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8002/api/health/ || exit 1"]
       interval: 15s
@@ -197,6 +239,14 @@ services:
     ports:
       - "8003:8003"
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8003/api/health/ || exit 1"]
       interval: 15s
@@ -225,12 +275,20 @@ services:
     ports:
       - "8004:8004"
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8004/api/health/ || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8004/v1/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 20s
+      start_period: 30s
 
   # ── Core Worker (Celery) ──────────────────────────────────────────────────
 
@@ -255,6 +313,11 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
     restart: unless-stopped
 
   core-beat:
@@ -278,6 +341,11 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
     restart: unless-stopped
 
   core-consumer:
@@ -301,6 +369,11 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
     restart: unless-stopped
 
   # ── DynamoDB Local (Chat History) ────────────────────────────────────────
@@ -327,6 +400,11 @@ services:
     depends_on:
       - identity
       - core
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
     restart: unless-stopped
 
   # ── Reverse Proxy ───────────────────────────────────────────────────────────
@@ -337,6 +415,11 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
     volumes:
       - ./infra/docker/nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
       # Mount SSL certs if you have them (self-signed for local, real certs for prod)

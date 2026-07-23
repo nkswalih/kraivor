@@ -11,8 +11,9 @@ Usage:
     pytest tests/test_*.py   # Specific files
 """
 
-import os
 from pathlib import Path
+
+import os
 
 _keys_dir = Path(__file__).resolve().parent.parent.parent / ".keys"
 _keys_dir.mkdir(parents=True, exist_ok=True)
@@ -38,14 +39,30 @@ for _key_name in ("jwt-private.pem", "jwt-public.pem"):
         )
         break
 
+_oauth_key_path = _keys_dir / "oauth-encryption.key"
+if not _oauth_key_path.exists():
+    import secrets
+
+    _oauth_key_path.write_text(secrets.token_hex(32))
+
 os.environ.setdefault("JWT_PRIVATE_KEY_PATH", str(_keys_dir / "jwt-private.pem"))
 os.environ.setdefault("JWT_PUBLIC_KEY_PATH", str(_keys_dir / "jwt-public.pem"))
+os.environ.setdefault("OAUTH_TOKEN_ENCRYPTION_KEY", str(_oauth_key_path))
 
-from .base import *
+# Required by base.py — must be set before import to satisfy required_env()
+os.environ.setdefault(
+    "SECRET_KEY", "test-secret-key-for-testing-only-do-not-use-in-production"
+)
+os.environ.setdefault("FRONTEND_URL", "http://localhost")
+os.environ.setdefault("EMAIL_HOST", "localhost")
+os.environ.setdefault("EMAIL_PORT", "1025")
+os.environ.setdefault("EMAIL_USE_TLS", "False")
+os.environ.setdefault("EMAIL_FROM", "noreply@kraivor.test")
+
+from .base import *  # noqa: E402
 
 os.environ.setdefault("DJANGO_TEST_MODE", "1")
 os.environ.setdefault("APP_ENV", "test")
-os.environ.setdefault("SECRET_KEY", "test-secret-key-for-testing-only-do-not-use-in-production")
 os.environ.setdefault("DATABASE_URL", "sqlite://:memory:")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/15")
 os.environ.setdefault("JWT_PRIVATE_KEY_PATH", ".keys/jwt-private.pem")
@@ -53,26 +70,15 @@ os.environ.setdefault("JWT_PUBLIC_KEY_PATH", ".keys/jwt-public.pem")
 os.environ.setdefault("JWT_ALGORITHM", "RS256")
 os.environ.setdefault("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "15")
 os.environ.setdefault("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "30")
-os.environ.setdefault("FRONTEND_URL", "http://localhost")
 os.environ.setdefault("EMAIL_BACKEND", "django.core.mail.backends.locmem.EmailBackend")
-os.environ.setdefault("EMAIL_HOST", "localhost")
-os.environ.setdefault("EMAIL_PORT", "1025")
-os.environ.setdefault("EMAIL_USE_TLS", "False")
 os.environ.setdefault("EMAIL_USE_SSL", "False")
-os.environ.setdefault("EMAIL_FROM", "noreply@kraivor.test")
+os.environ.setdefault("EMAIL_USE_TLS", "False")
 
 DEBUG = True
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
-    }
-}
+DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
 
-PASSWORD_HASHERS = [
-    "django.contrib.auth.hashers.MD5PasswordHasher",
-]
+PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 CACHES = {
     "default": {
@@ -87,9 +93,12 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+}
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
 }
 
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
@@ -98,34 +107,14 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "filters": {
-        "RequireDebugFalse": {
-            "()": "django.utils.log.RequireDebugFalse",
-        },
-        "RequireDebugTrue": {
-            "()": "django.utils.log.RequireDebugTrue",
-        },
+        "RequireDebugFalse": {"()": "django.utils.log.RequireDebugFalse"},
+        "RequireDebugTrue": {"()": "django.utils.log.RequireDebugTrue"},
     },
-    "formatters": {
-        "simple": {
-            "format": "%(levelname)s %(message)s",
-        },
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "simple",
-        },
-    },
-    "root": {
-        "handlers": ["console"],
-        "level": "WARNING",
-    },
+    "formatters": {"simple": {"format": "%(levelname)s %(message)s"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "simple"}},
+    "root": {"handlers": ["console"], "level": "WARNING"},
     "loggers": {
-        "django": {
-            "handlers": ["console"],
-            "level": "WARNING",
-            "propagate": False,
-        },
+        "django": {"handlers": ["console"], "level": "WARNING", "propagate": False},
         "django.db.backends": {
             "handlers": ["console"],
             "level": "WARNING",

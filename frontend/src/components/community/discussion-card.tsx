@@ -2,12 +2,11 @@
 
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { MessageSquare, Share2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { MessageSquare } from 'lucide-react';
 import { TagChip } from './tag-chip';
 import { UpvoteButton } from './upvote-button';
+import { ShareDialog } from './share-dialog';
 import { Avatar } from '@/components/profiles/avatar';
-import { copyToClipboard } from '@/lib/utils';
 import type { Discussion } from '@/types/domain/community';
 
 function timeAgo(date: string): string {
@@ -24,30 +23,26 @@ function timeAgo(date: string): string {
 
 interface DiscussionCardProps {
   discussion: Discussion;
+  resolvedAuthor?: { username: string; display_name: string; avatar_url: string } | null;
 }
 
-export function DiscussionCard({ discussion }: DiscussionCardProps) {
+export function DiscussionCard({ discussion, resolvedAuthor }: DiscussionCardProps) {
   const router = useRouter();
   const params = useParams();
   const workspace = params?.workspace as string;
 
-  const handleShare = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const url = `${window.location.origin}/${workspace}/community/${discussion.id}`;
-    const ok = await copyToClipboard(url);
-    if (ok) {
-      toast.success('Link copied to clipboard');
-    } else {
-      toast.error('Failed to copy link');
-    }
-  };
+  const authorUsername = resolvedAuthor?.username ?? discussion.author_username;
+  const authorDisplayName = resolvedAuthor?.display_name ?? discussion.author_display_name;
+  const authorAvatarUrl = resolvedAuthor?.avatar_url ?? discussion.author_avatar_url;
 
   return (
     <div
       role="button"
       tabIndex={0}
       onClick={() => router.push(`/${workspace}/community/${discussion.id}`)}
-      onKeyDown={(e) => { if (e.key === 'Enter') router.push(`/${workspace}/community/${discussion.id}`); }}
+      onKeyDown={e => {
+        if (e.key === 'Enter') router.push(`/${workspace}/community/${discussion.id}`);
+      }}
       className="block bg-card border border-border rounded-lg p-4 hover:border-primary/40 transition-colors cursor-pointer group"
     >
       <div className="flex gap-4">
@@ -59,13 +54,17 @@ export function DiscussionCard({ discussion }: DiscussionCardProps) {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-1.5">
-            <Avatar src={discussion.author_avatar_url} name={discussion.author_display_name} size="sm" />
+            <Avatar
+              src={authorAvatarUrl}
+              name={authorDisplayName}
+              size="sm"
+            />
             <Link
-              href={`/${workspace}/profile/${discussion.author_username}`}
-              onClick={(e) => e.stopPropagation()}
+              href={`/${workspace}/profile/${authorUsername}`}
+              onClick={e => e.stopPropagation()}
               className="font-medium text-foreground hover:underline"
             >
-              {discussion.author_display_name}
+              {authorDisplayName}
             </Link>
             <span>·</span>
             <span>{timeAgo(discussion.created_at)}</span>
@@ -77,7 +76,7 @@ export function DiscussionCard({ discussion }: DiscussionCardProps) {
 
           {discussion.tags.length > 0 && (
             <div className="flex items-center gap-2 mb-3 flex-wrap">
-              {discussion.tags.map((tag) => (
+              {discussion.tags.map(tag => (
                 <TagChip key={tag.id} name={tag.name} slug={tag.slug} />
               ))}
             </div>
@@ -87,9 +86,9 @@ export function DiscussionCard({ discussion }: DiscussionCardProps) {
             <span className="flex items-center gap-1.5 hover:text-foreground transition-colors">
               <MessageSquare className="w-4 h-4" /> {discussion.comment_count}
             </span>
-            <button onClick={handleShare} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
-              <Share2 className="w-4 h-4" /> Share
-            </button>
+            <span onClick={e => e.stopPropagation()}>
+              <ShareDialog discussionId={discussion.id} title={discussion.title} />
+            </span>
           </div>
         </div>
       </div>

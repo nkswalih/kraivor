@@ -1,3 +1,28 @@
+export type ErrorSuggestedAction = 'add_key' | 'switch_model' | 'wait' | 'retry' | 'new_conversation' | 'check_key';
+
+export type ChatMode = 'normal' | 'web_search' | 'research';
+
+export interface ErrorDetails {
+  category: string;
+  suggested_action?: ErrorSuggestedAction;
+  retry_after?: number | null;
+}
+
+export interface MessageUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cost?: number;
+}
+
+export interface DailyUsage {
+  used: number;
+  limit: number;
+  remaining: number;
+  reset_at: string;
+  input_tokens: number;
+  output_tokens: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: MessageRole;
@@ -5,6 +30,8 @@ export interface ChatMessage {
   timestamp: string;
   attachments?: MessageAttachment[];
   status: MessageStatus;
+  errorDetails?: ErrorDetails;
+  usage?: MessageUsage;
 }
 
 export enum MessageRole {
@@ -53,4 +80,7 @@ export interface SendMessagePayload {
   sessionId?: string;
   context?: ChatContext;
   attachments?: File[];
+  model?: string;
+  repo_ids?: string[];
+  mode?: ChatMode;
 }

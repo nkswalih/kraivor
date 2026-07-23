@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useProfile, useFollowers, useFollowing } from '@/lib/hooks/use-profiles';
 import { ProfileHeader } from '@/components/profiles/profile-header';
+import { UserDiscussionList } from '@/components/profiles/user-discussions-list';
+import { UserCommentList } from '@/components/profiles/user-comments-list';
 import { Avatar } from '@/components/profiles/avatar';
 import { Skeleton } from '@/components/ui/shadcn';
 import { formatRelativeTime } from '@/lib/utils';
@@ -17,8 +19,13 @@ export default function UserProfilePage() {
   const { data: profile, isLoading, error } = useProfile(username);
   const [activeTab, setActiveTab] = useState<Tab>('followers');
 
-  const { data: followersData, isLoading: followersLoading } = useFollowers(username);
-  const { data: followingData, isLoading: followingLoading } = useFollowing(username);
+  const { data: followersData, isLoading: followersLoading, refetch: refetchFollowers } = useFollowers(username);
+  const { data: followingData, isLoading: followingLoading, refetch: refetchFollowing } = useFollowing(username);
+
+  useEffect(() => {
+    if (activeTab === 'followers') refetchFollowers();
+    if (activeTab === 'following') refetchFollowing();
+  }, [activeTab, refetchFollowers, refetchFollowing]);
 
   if (isLoading) {
     return (
@@ -54,7 +61,7 @@ export default function UserProfilePage() {
 
       {/* Tabs */}
       <div className="flex border-b border-border mt-6">
-        {tabs.map((tab) => (
+        {tabs.map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
@@ -65,31 +72,26 @@ export default function UserProfilePage() {
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             )}
           >
-            {tab.label}{' '}
-            <span className="text-muted-foreground">({tab.count})</span>
+            {tab.label} <span className="text-muted-foreground">({tab.count})</span>
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
       <div className="mt-4">
-        {activeTab === 'discussions' && (
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="text-[13px]">Discussion history coming soon</p>
-          </div>
+        {activeTab === 'discussions' && profile && (
+          <UserDiscussionList userId={profile.user_id} />
         )}
 
-        {activeTab === 'comments' && (
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="text-[13px]">Comment history coming soon</p>
-          </div>
+        {activeTab === 'comments' && profile && (
+          <UserCommentList userId={profile.user_id} />
         )}
 
         {activeTab === 'followers' && (
           <div className="space-y-2">
             {followersLoading ? (
               <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
+                {[1, 2, 3].map(i => (
                   <Skeleton key={i} className="h-12 w-full rounded-md" />
                 ))}
               </div>
@@ -98,20 +100,23 @@ export default function UserProfilePage() {
                 <p className="text-[13px]">No followers yet</p>
               </div>
             ) : (
-              followers.map((f) => (
+              followers.map(f => (
                 <a
                   key={f.id}
                   href={`/profile/${f.username}`}
                   className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors"
                 >
-                  <Avatar src={f.avatar_url} fallbackSrc={f.user_avatar_url} name={f.display_name} size="md" />
+                  <Avatar
+                    src={f.avatar_url}
+                    fallbackSrc={f.user_avatar_url}
+                    name={f.display_name}
+                    size="md"
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-medium text-foreground truncate">
                       {f.display_name}
                     </p>
-                    <p className="text-[12px] text-muted-foreground truncate">
-                      @{f.username}
-                    </p>
+                    <p className="text-[12px] text-muted-foreground truncate">@{f.username}</p>
                   </div>
                   <p className="text-[11px] text-muted-foreground shrink-0">
                     Followed {formatRelativeTime(f.followed_at)}
@@ -126,7 +131,7 @@ export default function UserProfilePage() {
           <div className="space-y-2">
             {followingLoading ? (
               <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
+                {[1, 2, 3].map(i => (
                   <Skeleton key={i} className="h-12 w-full rounded-md" />
                 ))}
               </div>
@@ -135,20 +140,23 @@ export default function UserProfilePage() {
                 <p className="text-[13px]">Not following anyone yet</p>
               </div>
             ) : (
-              following.map((f) => (
+              following.map(f => (
                 <a
                   key={f.id}
                   href={`/profile/${f.username}`}
                   className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors"
                 >
-                  <Avatar src={f.avatar_url} fallbackSrc={f.user_avatar_url} name={f.display_name} size="md" />
+                  <Avatar
+                    src={f.avatar_url}
+                    fallbackSrc={f.user_avatar_url}
+                    name={f.display_name}
+                    size="md"
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-medium text-foreground truncate">
                       {f.display_name}
                     </p>
-                    <p className="text-[12px] text-muted-foreground truncate">
-                      @{f.username}
-                    </p>
+                    <p className="text-[12px] text-muted-foreground truncate">@{f.username}</p>
                   </div>
                   <p className="text-[11px] text-muted-foreground shrink-0">
                     Followed {formatRelativeTime(f.followed_at)}

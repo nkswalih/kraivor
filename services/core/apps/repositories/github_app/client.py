@@ -13,12 +13,12 @@ Usage:
     repos = client.list_installation_repos(installation_id=12345)
 """
 
-import logging
-import time
 from typing import Any
 
 import jwt as pyjwt
+import logging
 import requests
+import time
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -346,6 +346,4 @@ class GitHubAppClient:
             raise GitHubAppError(
                 "GitHub App slug is not configured. Set GITHUB_APP_SLUG."
             )
-        return (
-            f"https://github.com/apps/{self._slug}/installations/new?state={state}"
-        )
+        return f"https://github.com/apps/{self._slug}/installations/new?state={state}"

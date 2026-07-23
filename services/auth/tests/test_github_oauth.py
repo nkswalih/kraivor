@@ -2,8 +2,6 @@
 GitHub OAuth Tests
 """
 
-from unittest.mock import MagicMock, Mock, patch
-
 from authentication.models import OAuthIdentity
 from authentication.oauth.encryption import TokenEncryptionError, TokenEncryptionService
 from authentication.oauth.github import GitHubOAuthError, GitHubOAuthService
@@ -11,6 +9,7 @@ from authentication.oauth.state_manager import OAuthStateManager
 from authentication.services.user_service import find_or_create_oauth_user
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
+from unittest.mock import MagicMock, Mock, patch
 
 
 @override_settings(

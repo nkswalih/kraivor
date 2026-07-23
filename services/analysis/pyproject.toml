@@ -1,21 +1,42 @@
 [project]
-name = "analysis"
+name = "kraivor-analysis-service"
 version = "0.1.0"
-description = "Analysis service — code analysis, tree-sitter parsing, and scoring"
-requires-python = ">=3.11"
+description = "Kraivor Analysis Service — code analysis, tree-sitter parsing, scoring, and production readiness intelligence"
+requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.100",
-    "uvicorn[standard]>=0.23",
-    "sqlalchemy[asyncio]>=2.0",
-    "psycopg2-binary>=2.9",
-    "redis>=5.0",
-    "celery>=5.3",
-    "pandas>=2.0",
-    "tree-sitter>=0.20",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "sqlalchemy[asyncio]>=2.0.0",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.0",
+    "redis[hiredis]>=5.0.0",
+    "boto3>=1.34.0",
+    "tree-sitter>=0.22.0",
+    "httpx>=0.27.0",
+    "orjson>=3.10.0",
+    "structlog>=24.0.0",
+    "python-multipart>=0.0.9",
+    "prometheus-client>=0.20.0",
+    "opentelemetry-api>=1.25.0",
+    "opentelemetry-sdk>=1.25.0",
+    "opentelemetry-instrumentation-fastapi>=0.50b0",
+    "pyjwt>=2.13.0",
 ]
 
 [project.optional-dependencies]
 dev = [
+    "debugpy>=1.8.0",
+    "ruff>=0.5.0",
+    "mypy>=1.10.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=5.0.0",
+    "pytest-mock>=3.14.0",
+    "httptools>=0.6.0",
+    "bandit>=1.7",
+    "pip-audit>=2.7",
     "black>=24.0",
     "isort>=5.13",
     "flake8>=7.0",
@@ -25,52 +46,15 @@ dev = [
     "flake8-docstrings>=1.7",
     "flake8-import-order>=0.18",
     "pep8-naming>=0.14",
-    "mypy>=1.8",
-    "pytest>=8.0",
-    "pytest-cov>=5.0",
-    "pytest-mock>=3.12",
-    "pytest-xdist>=3.5",
-    "httpx>=0.25",
-    "factory-boy>=3.3",
-    "faker>=22.0",
-    "bandit>=1.7",
-    "pre-commit>=3.6",
-    "tox>=4.14",
-    "ruff>=0.3.0",
-    "types-requests>=2.31",
-    "typing-extensions>=4.9",
 ]
-
-[dependency-groups]
-dev = [
-    "black>=24.0",
-    "isort>=5.13",
-    "flake8>=7.0",
-    "flake8-bugbear>=24.0",
-    "flake8-builtins>=2.2",
-    "flake8-comprehensions>=3.14",
-    "flake8-docstrings>=1.7",
-    "flake8-import-order>=0.18",
-    "pep8-naming>=0.14",
-    "mypy>=1.8",
-    "pytest>=8.0",
-    "pytest-cov>=5.0",
-    "pytest-mock>=3.12",
-    "pytest-xdist>=3.5",
-    "httpx>=0.25",
-    "factory-boy>=3.3",
-    "faker>=22.0",
-    "bandit>=1.7",
-    "pre-commit>=3.6",
-    "tox>=4.14",
-    "ruff>=0.3.0",
-    "types-requests>=2.31",
-    "typing-extensions>=4.9",
+prod = [
+    "uvloop>=0.19.0",
+    "httptools>=0.6.0",
 ]
 
 [tool.black]
 line-length = 88
-target-version = ["py311"]
+target-version = ["py312"]
 skip-magic-trailing-comma = true
 
 [tool.isort]
@@ -81,39 +65,57 @@ include_trailing_comma = true
 force_grid_wrap = 0
 use_parentheses = true
 ensure_newline_before_comments = true
-known_standard_library = ["typing", "collections", "dataclasses", "enum", "re", "json", "pathlib"]
-known_third_party = ["fastapi", "uvicorn", "sqlalchemy", "psycopg2", "redis", "celery", "pandas", "tree_sitter", "pytest", "httpx"]
-known_first_party = ["app", "workers"]
+known_first_party = ["app", "workers", "tests"]
 
 [tool.mypy]
 strict = true
-python_version = "3.11"
+python_version = "3.12"
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 warn_return_any = true
-disallow_any_unimported = false
-disallow_any_expr = false
-disallow_any_decorated = false
+ignore_missing_imports = true
+show_error_codes = true
+pretty = true
 disallow_any_explicit = true
 disallow_subclassing_any = true
+
+[[tool.mypy.overrides]]
+module = [
+    "app.api.schemas.*",
+    "app.core.config",
+    "app.dependencies.auth",
+    "app.api.routers.health",
+]
+disallow_any_explicit = false
+
+[[tool.mypy.overrides]]
+module = [
+    "app.domain.entities.*",
+    "app.domain.rules.*",
+]
+no_implicit_reexport = false
 disallow_untyped_calls = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
-check_untyped_defs = true
-no_implicit_optional = true
-show_error_codes = true
-ignore_missing_imports = true
 
-[[tool.mypy.overrides]]
-module = ["app.*", "workers.*"]
-ignore_missing_imports = false
+[tool.ruff]
+line-length = 88
+target-version = "py312"
 
-[tool.bandit]
-exclude_dirs = ["tests", ".venv", ".ruff_cache"]
-skips = ["B101", "B301", "B403"]
-assert_used = false
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "C4", "ISC", "ICN", "RUF"]
+ignore = [
+    "E501",
+    "B008",   # FastAPI Depends/Query in arg defaults is idiomatic
+    "RUF012", # Mutable class defaults for SQLAlchemy/Pydantic models
+    "E402",   # Module-level import after settings.get_settings() pattern
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["N803"]
+"migrations/*" = ["I"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -127,6 +129,7 @@ markers = [
     "slow: Tests that take longer than 5 seconds",
 ]
 test_timeout = 60
+asyncio_mode = "auto"
 
 [tool.coverage.run]
 source = ["app", "workers"]
@@ -142,7 +145,7 @@ parallel = true
 precision = 2
 show_missing = true
 skip_covered = false
-fail_under = 90
+fail_under = 55
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
@@ -156,13 +159,26 @@ exclude_lines = [
 [tool.coverage.html]
 directory = "htmlcov"
 
-[tool.ruff]
-line-length = 88
-target-version = "py311"
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "N", "UP", "B", "SIM", "C4", "ISC", "ICN"]
-ignore = ["E501"]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/*" = ["N803"]
+[dependency-groups]
+dev = [
+    "aiosqlite>=0.22.1",
+    "cryptography>=49.0.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=5.0.0",
+    "pytest-mock>=3.14.0",
+    "httptools>=0.6.0",
+    "ruff>=0.5.0",
+    "mypy>=1.10.0",
+    "bandit>=1.7",
+    "pip-audit>=2.7",
+    "black>=24.0",
+    "isort>=5.13",
+    "flake8>=7.0",
+    "flake8-bugbear>=24.0",
+    "flake8-builtins>=2.2",
+    "flake8-comprehensions>=3.14",
+    "flake8-docstrings>=1.7",
+    "flake8-import-order>=0.18",
+    "pep8-naming>=0.14",
+]

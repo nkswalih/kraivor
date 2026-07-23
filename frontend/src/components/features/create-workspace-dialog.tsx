@@ -31,8 +31,8 @@ export function CreateWorkspaceDialog({ open, onClose, onCreated }: CreateWorksp
         router.push(`/${slug}`);
       }
     },
-    onError: (err: any) => {
-      setError(err?.message || 'Failed to create workspace');
+    onError: (err: unknown) => {
+      setError(err instanceof Error ? err.message : 'Failed to create workspace');
     },
   });
 
@@ -51,24 +51,31 @@ export function CreateWorkspaceDialog({ open, onClose, onCreated }: CreateWorksp
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onMouseDown={e => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="w-full max-w-md bg-[#141416] border border-[#27272A] rounded-xl shadow-2xl animate-scale-in">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#27272A]">
           <h2 className="text-[15px] font-semibold text-[#FAFAFA] flex items-center gap-2">
             <Plus className="w-4 h-4 text-venom-yellow" /> Create Workspace
           </h2>
-          <button onClick={onClose} className="p-1 text-text-tertiary hover:text-[#FAFAFA] transition-colors">
+          <button
+            onClick={onClose}
+            className="p-1 text-text-tertiary hover:text-[#FAFAFA] transition-colors"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
-            <label className="block text-[12px] font-medium text-text-secondary mb-1.5">Workspace Name</label>
+            <label className="block text-[12px] font-medium text-text-secondary mb-1.5">
+              Workspace Name
+            </label>
             <input
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={e => setName(e.target.value)}
               placeholder="e.g. My Project"
               className="w-full px-3 py-2 bg-[#0A0A0B] border border-[#27272A] rounded-lg text-[13px] text-[#FAFAFA] placeholder:text-text-tertiary focus:outline-none focus:border-venom-yellow/50 transition-colors"
               autoFocus
@@ -97,7 +104,11 @@ export function CreateWorkspaceDialog({ open, onClose, onCreated }: CreateWorksp
               disabled={mutation.isPending}
               className="px-4 py-1.5 bg-venom-yellow text-black text-[13px] font-medium rounded-lg hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-1.5"
             >
-              {mutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+              {mutation.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Plus className="w-3.5 h-3.5" />
+              )}
               Create
             </button>
           </div>

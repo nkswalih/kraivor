@@ -8,12 +8,12 @@ Covers:
   - Overdue task detection: background Celery task correctly identifies and
     publishes overdue events, skips terminal-status tasks.
 """
-import uuid
-from datetime import timedelta
-from unittest.mock import patch
 
 import pytest
+import uuid
+from datetime import timedelta
 from django.utils import timezone
+from unittest.mock import patch
 
 from ..constants import ProjectStatus, TaskStatus
 from ..services import ProjectService, TaskService
@@ -23,6 +23,7 @@ from .factories import ProjectFactory, TaskFactory
 @pytest.mark.django_db
 class TestProjectService:
     """ProjectService: create, list, filter by status, soft-delete, cross-workspace isolation, events."""
+
     def test_create_sets_created_by(self, workspace, user_id):
         project = ProjectService.create(
             workspace_id=str(workspace.id), user_id=user_id, name="Test"
@@ -50,19 +51,25 @@ class TestProjectService:
 
     def test_get_wrong_workspace_raises_404(self, project):
         from django.http import Http404
+
         with pytest.raises(Http404):
-            ProjectService.get(project_id=str(project.id), workspace_id=str(uuid.uuid4()))
+            ProjectService.get(
+                project_id=str(project.id), workspace_id=str(uuid.uuid4())
+            )
 
     def test_delete_soft_deletes_project_and_tasks(self, project, user_id):
         TaskFactory(project=project)
         TaskFactory(project=project)
         ProjectService.delete(project=project, user_id=user_id)
         from ..models import Project, Task
+
         assert not Project.objects.filter(id=project.id).exists()
         assert Task.objects.filter(project=project).count() == 0
 
     def test_create_publishes_event(self, workspace, user_id):
-        with patch("apps.projects.services.ProjectEventPublisher.publish_project_created") as mock:
+        with patch(
+            "apps.projects.services.ProjectEventPublisher.publish_project_created"
+        ) as mock:
             ProjectService.create(
                 workspace_id=str(workspace.id), user_id=user_id, name="Test"
             )
@@ -72,6 +79,7 @@ class TestProjectService:
 @pytest.mark.django_db
 class TestTaskService:
     """TaskService: create, initial position, status transition events, dependency validation (self/circular)."""
+
     def test_create_task(self, project, user_id):
         task = TaskService.create(project=project, reporter_id=user_id, title="My Task")
         assert task.title == "My Task"
@@ -82,14 +90,18 @@ class TestTaskService:
         assert task.position > 0
 
     def test_update_status_publishes_blocked_event(self, task, user_id):
-        with patch("apps.projects.services.TaskEventPublisher.publish_task_blocked") as mock:
+        with patch(
+            "apps.projects.services.TaskEventPublisher.publish_task_blocked"
+        ) as mock:
             TaskService.update_status(
                 task=task, new_status=TaskStatus.BLOCKED, position=None, user_id=user_id
             )
             mock.assert_called_once()
 
     def test_update_status_publishes_done_event(self, task, user_id):
-        with patch("apps.projects.services.TaskEventPublisher.publish_task_completed") as mock:
+        with patch(
+            "apps.projects.services.TaskEventPublisher.publish_task_completed"
+        ) as mock:
             TaskService.update_status(
                 task=task, new_status=TaskStatus.DONE, position=None, user_id=user_id
             )
@@ -97,6 +109,7 @@ class TestTaskService:
 
     def test_add_dependency_self_reference_raises(self, task, user_id):
         from rest_framework.exceptions import ValidationError
+
         with pytest.raises(ValidationError, match="itself"):
             TaskService.add_dependency(
                 task=task,
@@ -107,6 +120,7 @@ class TestTaskService:
 
     def test_add_dependency_circular_raises(self, project, user_id):
         from rest_framework.exceptions import ValidationError
+
         task_a = TaskFactory(project=project)
         task_b = TaskFactory(project=project)
         TaskService.add_dependency(task_a, str(task_b.id), "blocks", user_id)
@@ -130,24 +144,31 @@ class TestTaskService:
 @pytest.mark.django_db
 class TestCheckOverdueTasks:
     """Overdue detection: publishes events for overdue tasks, skips done/cancelled tasks."""
+
     def test_publishes_event_for_overdue_task(self, project):
         from ..tasks import check_overdue_tasks
+
         TaskFactory(
             project=project,
             status=TaskStatus.IN_PROGRESS,
             due_date=timezone.localdate() - timedelta(days=1),
         )
-        with patch("apps.projects.events.TaskEventPublisher.publish_task_overdue") as mock:
+        with patch(
+            "apps.projects.events.TaskEventPublisher.publish_task_overdue"
+        ) as mock:
             check_overdue_tasks()
             mock.assert_called_once()
 
     def test_skips_done_tasks(self, project):
         from ..tasks import check_overdue_tasks
+
         TaskFactory(
             project=project,
             status=TaskStatus.DONE,
             due_date=timezone.localdate() - timedelta(days=1),
         )
-        with patch("apps.projects.events.TaskEventPublisher.publish_task_overdue") as mock:
+        with patch(
+            "apps.projects.events.TaskEventPublisher.publish_task_overdue"
+        ) as mock:
             check_overdue_tasks()
             mock.assert_not_called()

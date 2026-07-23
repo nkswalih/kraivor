@@ -1,16 +1,9 @@
-import uuid
-
 import pytest
+import uuid
 from django.urls import reverse
 from rest_framework import status
 
-from ..models import Vote
-from .factories import (
-    CommentFactory,
-    DiscussionFactory,
-    TagFactory,
-    VoteFactory,
-)
+from .factories import DiscussionFactory, TagFactory, VoteFactory
 
 
 @pytest.mark.django_db
@@ -39,9 +32,7 @@ class TestDiscussionListView:
     def test_create_discussion_no_auth(self, client):
         url = reverse("discussion-list")
         resp = client.post(
-            url,
-            {"title": "Test", "body": "Body"},
-            content_type="application/json",
+            url, {"title": "Test", "body": "Body"}, content_type="application/json"
         )
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 

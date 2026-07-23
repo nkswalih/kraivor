@@ -40,16 +40,17 @@ export function ProjectBoardTab({
     })
   );
 
-  const columns = KANBAN_COLUMNS.reduce<Record<TaskStatus, Task[]>>((acc, status) => {
-    acc[status] = tasks
-      .filter((t) => t.status === status)
-      .sort((a, b) => a.position - b.position);
-    return acc;
-  }, {} as Record<TaskStatus, Task[]>);
+  const columns = KANBAN_COLUMNS.reduce<Record<TaskStatus, Task[]>>(
+    (acc, status) => {
+      acc[status] = tasks.filter(t => t.status === status).sort((a, b) => a.position - b.position);
+      return acc;
+    },
+    {} as Record<TaskStatus, Task[]>
+  );
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      const task = tasks.find((t) => t.id === event.active.id);
+      const task = tasks.find(t => t.id === event.active.id);
       setActiveTask(task ?? null);
     },
     [tasks]
@@ -65,12 +66,12 @@ export function ProjectBoardTab({
       const activeTaskId = active.id as string;
       const overContainerId = over.id as TaskStatus;
 
-      const task = tasks.find((t) => t.id === activeTaskId);
+      const task = tasks.find(t => t.id === activeTaskId);
       if (!task) return;
 
       const targetStatus = KANBAN_COLUMNS.includes(overContainerId)
         ? overContainerId
-        : (tasks.find((t) => t.id === overContainerId)?.status ?? task.status);
+        : (tasks.find(t => t.id === overContainerId)?.status ?? task.status);
 
       const targetColumnTasks = columns[targetStatus];
 
@@ -79,7 +80,7 @@ export function ProjectBoardTab({
         const maxPos = targetColumnTasks.reduce((max, t) => Math.max(max, t.position), 0);
         newPosition = maxPos + 1000;
       } else {
-        const overIndex = targetColumnTasks.findIndex((t) => t.id === overContainerId);
+        const overIndex = targetColumnTasks.findIndex(t => t.id === overContainerId);
         const above = targetColumnTasks[overIndex - 1];
         const below = targetColumnTasks[overIndex];
 
@@ -118,7 +119,7 @@ export function ProjectBoardTab({
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-4 p-6 overflow-x-auto min-h-full">
-        {KANBAN_COLUMNS.map((status) => (
+        {KANBAN_COLUMNS.map(status => (
           <KanbanColumn
             key={status}
             status={status}
@@ -128,9 +129,7 @@ export function ProjectBoardTab({
         ))}
       </div>
 
-      <DragOverlay>
-        {activeTask && <KanbanTaskCard task={activeTask} isDragging />}
-      </DragOverlay>
+      <DragOverlay>{activeTask && <KanbanTaskCard task={activeTask} isDragging />}</DragOverlay>
     </DndContext>
   );
 }

@@ -1,12 +1,16 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useDiscussion } from '@/lib/hooks/use-community';
+import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
+import { useAuthorProfiles } from '@/lib/hooks/use-profiles';
 import { Avatar } from '@/components/profiles/avatar';
 import { UpvoteButton } from './upvote-button';
 import { TagChip } from './tag-chip';
 import { CommentsSection } from './comments';
 import { TrendingSidebar } from './trending-sidebar';
 import { ShareDialog } from './share-dialog';
+import { Skeleton } from '@/components/ui/shadcn';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -29,17 +33,53 @@ interface DiscussionDetailProps {
 
 export function DiscussionDetail({ discussionId }: DiscussionDetailProps) {
   const { data: discussion, isLoading, error } = useDiscussion(discussionId);
+  useDetailBreadcrumb(discussion?.title);
   const params = useParams();
   const workspace = params?.workspace as string;
+
+  const authorProfileIds = useMemo(
+    () => (discussion?.author_id ? [discussion.author_id] : []),
+    [discussion?.author_id]
+  );
+  const { data: resolvedData } = useAuthorProfiles(authorProfileIds);
+  const profileMap = resolvedData?.profileMap ?? {};
+  const resolvedAuthor = discussion?.author_id ? profileMap?.[discussion.author_id] : undefined;
+  const authorUsername = resolvedAuthor?.username ?? discussion?.author_username ?? '';
+  const authorDisplayName = resolvedAuthor?.display_name ?? discussion?.author_display_name ?? '';
+  const authorAvatarUrl = resolvedAuthor?.avatar_url ?? discussion?.author_avatar_url ?? '';
 
   if (isLoading) {
     return (
       <div className="flex h-full w-full">
         <div className="flex-1 overflow-y-auto p-6 max-w-[1000px] mx-auto border-r border-border bg-background">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-muted rounded w-3/4" />
-            <div className="h-4 bg-muted rounded w-1/4" />
-            <div className="h-32 bg-muted rounded" />
+          <Skeleton className="h-4 w-28 mb-6" />
+          <div className="flex gap-4 mb-8">
+            <Skeleton variant="rect" className="w-10 h-24 shrink-0" />
+            <div className="flex-1 space-y-4">
+              <div className="flex items-center gap-2">
+                <Skeleton variant="circle" className="w-6 h-6" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+              <Skeleton className="h-8 w-3/4" />
+              <div className="flex gap-2">
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-6 w-24 rounded-full" />
+              </div>
+              <Skeleton variant="rect" className="h-40 w-full" />
+            </div>
+          </div>
+          <div className="border-t border-border pt-6 space-y-4">
+            {[1, 2].map(j => (
+              <div key={j} className="flex gap-3">
+                <Skeleton variant="circle" className="w-6 h-6" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-3 w-32" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -47,11 +87,7 @@ export function DiscussionDetail({ discussionId }: DiscussionDetailProps) {
   }
 
   if (error || !discussion) {
-    return (
-      <div className="p-6 text-center text-muted-foreground">
-        Discussion not found.
-      </div>
-    );
+    return <div className="p-6 text-center text-muted-foreground">Discussion not found.</div>;
   }
 
   return (
@@ -73,12 +109,16 @@ export function DiscussionDetail({ discussionId }: DiscussionDetailProps) {
 
           <div className="flex-1">
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-2">
-              <Avatar src={discussion.author_avatar_url} name={discussion.author_display_name} size="sm" />
+              <Avatar
+                src={authorAvatarUrl}
+                name={authorDisplayName}
+                size="sm"
+              />
               <Link
-                href={`/${discussion.author_username}`}
+                href={`/${workspace}/profile/${authorUsername}`}
                 className="font-medium text-foreground hover:underline"
               >
-                {discussion.author_display_name}
+                {authorDisplayName}
               </Link>
               <span>·</span>
               <span>{timeAgo(discussion.created_at)}</span>
@@ -86,13 +126,11 @@ export function DiscussionDetail({ discussionId }: DiscussionDetailProps) {
               <span>{discussion.comment_count} comments</span>
             </div>
 
-            <h1 className="text-xl font-medium text-foreground mb-4">
-              {discussion.title}
-            </h1>
+            <h1 className="text-xl font-medium text-foreground mb-4">{discussion.title}</h1>
 
             {discussion.tags.length > 0 && (
               <div className="flex items-center gap-2 mb-4 flex-wrap">
-                {discussion.tags.map((tag) => (
+                {discussion.tags.map(tag => (
                   <TagChip key={tag.id} name={tag.name} slug={tag.slug} size="md" />
                 ))}
               </div>

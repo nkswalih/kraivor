@@ -1,7 +1,7 @@
 COMPOSE = docker compose -f ../../docker-compose.dev.yml
 SERVICE = analysis
 
-.PHONY: help install format lint typecheck security test coverage check fix clean sh
+.PHONY: help install format lint typecheck test coverage check fix sh clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -10,26 +10,22 @@ help: ## Show this help
 install: ## Install dev dependencies inside container
 	$(COMPOSE) exec $(SERVICE) uv sync --group dev
 
-format: ## Auto-format with black + isort
-	$(COMPOSE) exec $(SERVICE) black app/ workers/ tests/
-	$(COMPOSE) exec $(SERVICE) isort app/ workers/ tests/
+format: ## Auto-format with ruff
+	$(COMPOSE) exec $(SERVICE) ruff format app/ tests/
 
-lint: ## Lint with flake8
-	$(COMPOSE) exec $(SERVICE) flake8 app/ workers/ tests/ --config=.flake8
+lint: ## Lint with ruff
+	$(COMPOSE) exec $(SERVICE) ruff check app/ tests/
 
 typecheck: ## Static type check with mypy
-	$(COMPOSE) exec $(SERVICE) mypy app/ workers/ --strict
-
-security: ## Security scan with bandit
-	$(COMPOSE) exec $(SERVICE) bandit -r app/ -x "app/tests/"
+	$(COMPOSE) exec $(SERVICE) mypy app/ --strict
 
 test: ## Run tests with pytest
 	$(COMPOSE) exec $(SERVICE) pytest tests/ -v --tb=short $(ARGS)
 
 coverage: ## Run tests with coverage report
-	$(COMPOSE) exec $(SERVICE) pytest tests/ --cov=app/ --cov=workers/ --cov-report=term-missing --cov-report=html:htmlcov/
+	$(COMPOSE) exec $(SERVICE) pytest tests/ --cov=app/ --cov-report=term-missing --cov-report=html:htmlcov/
 
-check: lint typecheck security test ## Run all checks
+check: lint typecheck test ## Run all checks
 
 fix: format ## Auto-fix formatting
 

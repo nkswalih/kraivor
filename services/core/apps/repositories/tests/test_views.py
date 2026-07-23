@@ -12,8 +12,8 @@ Note on soft-delete checks:
   DoesNotExist since SoftDeleteManager excludes deleted rows).
 
 Views under test:
-  RepositoryView       — GET list, POST connect
-  RepositoryDetailView — DELETE disconnect
+  RepositoryListView   — GET list
+  RepositoryDetailView — GET detail, DELETE disconnect
 
 Scenarios covered:
   - Authentication (missing user_id → 403)
@@ -24,14 +24,13 @@ Scenarios covered:
   - Service error translation (PermissionError → 403, NotFoundError → 404, etc.)
 """
 
+import pytest
 import uuid
+from rest_framework import status
 from unittest.mock import patch
 
-import pytest
-from rest_framework import status
-
 from apps.repositories.models import Repository
-from apps.repositories.views import RepositoryDetailView, RepositoryView
+from apps.repositories.views import RepositoryDetailView, RepositoryListView
 
 from .conftest import make_request
 
@@ -42,7 +41,7 @@ from .conftest import make_request
 class TestRepositoryListView:
     def _call(self, workspace, user_id):
         request = make_request("get", "/api/workspaces/x/repos/", user_id)
-        return RepositoryView.as_view()(request, workspace_pk=workspace.id)
+        return RepositoryListView.as_view()(request, workspace_pk=workspace.id)
 
     def test_returns_200_for_active_member(
         self, workspace, regular_member, member_id, repository
@@ -78,7 +77,7 @@ class TestRepositoryListView:
 
         raw = APIRequestFactory().get("/api/workspaces/x/repos/", format="json")
         # Deliberately do NOT set raw.user_id
-        response = RepositoryView.as_view()(raw, workspace_pk=workspace.id)
+        response = RepositoryListView.as_view()(raw, workspace_pk=workspace.id)
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_viewer_can_list(self, workspace, viewer_member, viewer_id, repository):
@@ -97,7 +96,7 @@ class TestRepositoryConnectView:
         request = make_request(
             "post", "/api/workspaces/x/repos/", user_id, data=data or self._PAYLOAD
         )
-        return RepositoryView.as_view()(request, workspace_pk=workspace.id)
+        return RepositoryListView.as_view()(request, workspace_pk=workspace.id)
 
     def test_returns_201_for_owner(
         self,
@@ -186,7 +185,7 @@ class TestRepositoryConnectView:
     ):
         response = self._call(workspace, owner_id, data={"github_repo": "not-valid"})
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "github_repo" in response.data
+        assert "github_repo" in response.data["detail"]
 
     def test_returns_400_for_missing_github_repo(
         self, workspace, owner_member, owner_id
@@ -200,7 +199,7 @@ class TestRepositoryConnectView:
         from apps.repositories.services import RepositoryAlreadyConnectedError
 
         with patch(
-            "apps.repositories.views.RepositoryService.connect_repository",
+            "apps.repositories.views.repositories.RepositoryService.connect_repository",
             side_effect=RepositoryAlreadyConnectedError("Already connected."),
         ):
             response = self._call(workspace, owner_id)
@@ -211,7 +210,7 @@ class TestRepositoryConnectView:
         from apps.repositories.services import GitHubAuthError
 
         with patch(
-            "apps.repositories.views.RepositoryService.connect_repository",
+            "apps.repositories.views.repositories.RepositoryService.connect_repository",
             side_effect=GitHubAuthError("No GitHub account connected."),
         ):
             response = self._call(workspace, owner_id)
@@ -221,7 +220,7 @@ class TestRepositoryConnectView:
         from apps.repositories.services import GitHubAPIError
 
         with patch(
-            "apps.repositories.views.RepositoryService.connect_repository",
+            "apps.repositories.views.repositories.RepositoryService.connect_repository",
             side_effect=GitHubAPIError("Repository not found."),
         ):
             response = self._call(workspace, owner_id)

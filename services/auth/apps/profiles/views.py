@@ -1,15 +1,19 @@
 import logging
+import requests
 import uuid
-
 from django.conf import settings
 from django.core.files.storage import default_storage
+from django.db.models import F
 from django.utils import timezone
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from authentication.internal_auth import require_internal_request
 from profiles.constants import (
     ALLOWED_IMAGE_TYPES,
     AVATAR_MAX_BYTES,
     BANNER_MAX_BYTES,
+    REPUTATION_EVENTS,
 )
-from profiles.events import publish_profile_updated
+from profiles.events import publish_follow_new, publish_profile_updated
 from profiles.models import Profile
 from profiles.permissions import IsAuthenticatedOrReadOnly
 from profiles.serializers import (
@@ -43,24 +47,83 @@ def _user_id(request) -> str | None:
     return None
 
 
+def _sync_community_author(
+    user_id: str, username: str, display_name: str, avatar_url: str
+) -> None:
+    """Sync denormalized author fields to core service community discussions/comments."""
+    base = getattr(settings, "CORE_SERVICE_URL", "http://core:8002")
+    endpoint = f"{base}/api/community/internal/sync-author/"
+    header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
+    secret = getattr(settings, "INTERNAL_REQUEST_TOKEN", "")
+    try:
+        resp = requests.post(
+            endpoint,
+            json={
+                "author_id": user_id,
+                "username": username,
+                "display_name": display_name,
+                "avatar_url": avatar_url,
+            },
+            headers={header: secret},
+            timeout=5,
+        )
+        if resp.status_code != 200:
+            logger.warning(
+                "community_sync.failed",
+                extra={"author_id": user_id, "status": resp.status_code},
+            )
+    except requests.exceptions.RequestException as exc:
+        logger.warning(
+            "community_sync.error", extra={"author_id": user_id, "error": str(exc)}
+        )
+
+
 class ProfileDetailView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Get profile",
+        description="Returns profile details by username.",
+        tags=["Profiles"],
+        parameters=[
+            OpenApiParameter(
+                "username",
+                str,
+                description="Profile username",
+                location=OpenApiParameter.PATH,
+            )
+        ],
+        responses={200: ProfileSerializer},
+    )
     def get(self, request, username):
         uid = _user_id(request)
         profile = ProfileService.get_by_username(username)
         if not profile or (not profile.is_public and uid != str(profile.user_id)):
-            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         serializer = ProfileSerializer(profile)
         data = serializer.data
-        data["is_following"] = bool(uid) and ProfileService.is_following(uid, str(profile.user_id))
+        data["is_following"] = bool(uid) and ProfileService.is_following(
+            uid, str(profile.user_id)
+        )
         data["is_owner"] = uid is not None and uid == str(profile.user_id)
         return Response(data)
 
+    @extend_schema(
+        summary="Update profile",
+        description="Update profile details. Only the profile owner can update.",
+        tags=["Profiles"],
+        request=UpdateProfileSerializer,
+        responses={200: ProfileSerializer},
+    )
     def patch(self, request, username):
         uid = _user_id(request)
         if not uid:  # pragma: no cover
-            return Response({"detail": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"detail": "Authentication required."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         profile = ProfileService.get_by_username(username)
         if not profile:  # pragma: no cover
             profile = ProfileService.get_by_user_id(uid)
@@ -68,14 +131,32 @@ class ProfileDetailView(APIView):
             display_name = request.data.get("display_name", username)
             profile = Profile(user_id=uid, username=username, display_name=display_name)
         if uid != str(profile.user_id):
-            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN
+            )
+        old_username = profile.username
+        old_display_name = profile.display_name
+        old_avatar_url = profile.avatar_url
         old_values = {}
-        for field in ("display_name", "bio", "avatar_url", "website_url"):
+        for field in ("username", "display_name", "bio", "avatar_url", "website_url"):
             old_values[field] = getattr(profile, field)
         serializer = UpdateProfileSerializer(profile, data=request.data, partial=True)
         if not serializer.is_valid():  # pragma: no cover
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         serializer.save()
+        profile.refresh_from_db()
+        # Sync denormalized author fields to community if identity fields changed
+        if (
+            profile.username != old_username
+            or profile.display_name != old_display_name
+            or profile.avatar_url != old_avatar_url
+        ):
+            _sync_community_author(
+                str(profile.user_id),
+                profile.username,
+                profile.display_name,
+                profile.avatar_url,
+            )
         publish_profile_updated(profile, old_values=old_values)
         return Response(ProfileSerializer(profile).data)
 
@@ -83,6 +164,12 @@ class ProfileDetailView(APIView):
 class MyProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get my profile",
+        description="Returns the authenticated users own profile.",
+        tags=["Profiles"],
+        responses={200: ProfileSerializer},
+    )
     def get(self, request):
         uid = str(request.user.id)
         profile = ProfileService.get_by_user_id(uid)
@@ -99,10 +186,23 @@ class MyProfileView(APIView):
 class ProfileSearchView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Search profiles",
+        description="Search profiles by query string. Supports pagination.",
+        tags=["Profiles"],
+        parameters=[
+            OpenApiParameter("q", str, description="Search query"),
+            OpenApiParameter("page", int, description="Page number (1-indexed)"),
+        ],
+        responses={200: OpenApiResponse(description="Paginated search results")},
+    )
     def get(self, request):
         query = request.query_params.get("q", "").strip()
         if not query:
-            return Response({"detail": "Query parameter 'q' is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Query parameter 'q' is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         page = int(request.query_params.get("page", 1))
         items, total = ProfileService.search(query, page=page, page_size=PAGE_SIZE)
         return Response(
@@ -118,12 +218,22 @@ class ProfileSearchView(APIView):
 class FollowerListView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="List followers",
+        description="Returns followers for a given profile.",
+        tags=["Profiles"],
+        responses={200: FollowerSerializer(many=True)},
+    )
     def get(self, request, username):
         profile = ProfileService.get_by_username(username)
         if not profile:  # pragma: no cover
-            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         page = int(request.query_params.get("page", 1))
-        items, total = ProfileService.get_followers(profile, page=page, page_size=PAGE_SIZE)
+        items, total = ProfileService.get_followers(
+            profile, page=page, page_size=PAGE_SIZE
+        )
         return Response(
             {
                 "results": FollowerSerializer(items, many=True).data,
@@ -137,12 +247,22 @@ class FollowerListView(APIView):
 class FollowingListView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="List following",
+        description="Returns profiles that a given user follows.",
+        tags=["Profiles"],
+        responses={200: FollowingSerializer(many=True)},
+    )
     def get(self, request, username):
         profile = ProfileService.get_by_username(username)
         if not profile:  # pragma: no cover
-            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         page = int(request.query_params.get("page", 1))
-        items, total = ProfileService.get_following(profile, page=page, page_size=PAGE_SIZE)
+        items, total = ProfileService.get_following(
+            profile, page=page, page_size=PAGE_SIZE
+        )
         return Response(
             {
                 "results": FollowingSerializer(items, many=True).data,
@@ -156,19 +276,43 @@ class FollowingListView(APIView):
 class FollowView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Follow user",
+        description="Follow a profile. Returns 409 if already following or self-follow.",
+        tags=["Profiles"],
+        responses={204: OpenApiResponse(description="Followed successfully")},
+    )
     def post(self, request, username):
         target = ProfileService.get_by_username(username)
         if not target:  # pragma: no cover
-            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         result = ProfileService.follow(str(request.user.id), str(target.user_id))
         if result is None:
-            return Response({"detail": "Already following or self-follow."}, status=status.HTTP_409_CONFLICT)
+            return Response(
+                {"detail": "Already following or self-follow."},
+                status=status.HTTP_409_CONFLICT,
+            )
+        publish_follow_new(
+            follower_id=str(request.user.id),
+            target_user_id=str(target.user_id),
+            follower_username=getattr(request.user, "username", ""),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @extend_schema(
+        summary="Unfollow user",
+        description="Unfollow a profile.",
+        tags=["Profiles"],
+        responses={204: OpenApiResponse(description="Unfollowed successfully")},
+    )
     def delete(self, request, username):
         target = ProfileService.get_by_username(username)
         if not target:  # pragma: no cover
-            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         ProfileService.unfollow(str(request.user.id), str(target.user_id))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -176,18 +320,37 @@ class FollowView(APIView):
 class FollowStatusView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Follow status",
+        description="Check if the current user is following a given profile.",
+        tags=["Profiles"],
+        responses={200: OpenApiResponse(description="Follow status")},
+    )
     def get(self, request, username):
         uid = _user_id(request)
         target = ProfileService.get_by_username(username)
         if not target:  # pragma: no cover
-            return Response({"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
-        is_following = ProfileService.is_following(uid, str(target.user_id)) if uid else False
+            return Response(
+                {"detail": "Profile not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        is_following = (
+            ProfileService.is_following(uid, str(target.user_id)) if uid else False
+        )
         return Response({"is_following": is_following})
 
 
 class LeaderboardView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Leaderboard",
+        description="Returns leaderboard of profiles ranked by reputation score.",
+        tags=["Profiles"],
+        parameters=[
+            OpenApiParameter("page", int, description="Page number (1-indexed)")
+        ],
+        responses={200: OpenApiResponse(description="Paginated leaderboard")},
+    )
     def get(self, request):
         page = int(request.query_params.get("page", 1))
         items, total = ProfileService.get_leaderboard(page=page, page_size=50)
@@ -204,6 +367,19 @@ class LeaderboardView(APIView):
 class TopContributorsView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Top contributors",
+        description="Returns top contributors ranked by reputation.",
+        tags=["Profiles"],
+        parameters=[
+            OpenApiParameter(
+                "limit",
+                int,
+                description="Number of contributors to return (default 10)",
+            )
+        ],
+        responses={200: OpenApiResponse(description="Top contributors")},
+    )
     def get(self, request):
         limit = int(request.query_params.get("limit", 10))
         contributors = ReputationService.get_top_contributors(limit=limit)
@@ -213,10 +389,24 @@ class TopContributorsView(APIView):
 class UsernameCheckView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    @extend_schema(
+        summary="Check username availability",
+        description="Check if a username is available for registration.",
+        tags=["Profiles"],
+        parameters=[
+            OpenApiParameter(
+                "username", str, description="Username to check availability"
+            )
+        ],
+        responses={200: OpenApiResponse(description="Username availability status")},
+    )
     def get(self, request):
         username = request.query_params.get("username", "").strip()
         if not username:  # pragma: no cover
-            return Response({"detail": "username parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "username parameter is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         exists = Profile.objects.filter(username=username).exists()
         return Response({"username": username, "available": not exists})
 
@@ -240,17 +430,23 @@ class ResolveProfilesByIdView(APIView):
 
     permission_classes = []
 
+    @extend_schema(
+        summary="Resolve profiles by ID (internal)",
+        description="Internal endpoint. Resolves user IDs to profile data. Requires X-Internal-Request header.",
+        tags=["Profiles"],
+        responses={200: OpenApiResponse(description="Profile resolution result")},
+    )
     def post(self, request):  # pragma: no cover
-        internal_header = getattr(settings, "INTERNAL_REQUEST_HEADER", "X-Internal-Request")
-        if request.headers.get(internal_header) != "1":
-            return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+        forbidden = require_internal_request(request)
+        if forbidden:
+            return forbidden
 
         user_ids = request.data.get("user_ids", [])
         if not isinstance(user_ids, list) or not user_ids:
             return Response({"profiles": {}}, status=status.HTTP_200_OK)
 
         profiles = Profile.objects.filter(
-            user_id__in=[uuid.UUID(uid) for uid in user_ids if uid],
+            user_id__in=[uuid.UUID(uid) for uid in user_ids if uid]
         )
 
         result = {
@@ -270,6 +466,12 @@ class ProfileUploadView(APIView):  # pragma: no cover
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
+    @extend_schema(
+        summary="Upload profile image",
+        description="Upload an avatar or banner image for the current user's profile.",
+        tags=["Profiles"],
+        responses={200: OpenApiResponse(description="Upload successful - returns URL")},
+    )
     def post(self, request):
         uid = str(request.user.id)
         field = request.data.get("field")
@@ -282,13 +484,14 @@ class ProfileUploadView(APIView):  # pragma: no cover
             )
         if not file:
             return Response(
-                {"detail": "No file provided."},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"detail": "No file provided."}, status=status.HTTP_400_BAD_REQUEST
             )
 
         if file.content_type not in ALLOWED_IMAGE_TYPES:
             return Response(
-                {"detail": f"Invalid file type. Allowed: {', '.join(ALLOWED_IMAGE_TYPES)}"},
+                {
+                    "detail": f"Invalid file type. Allowed: {', '.join(ALLOWED_IMAGE_TYPES)}"
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -300,11 +503,7 @@ class ProfileUploadView(APIView):  # pragma: no cover
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        ext_map = {
-            "image/png": "png",
-            "image/jpeg": "jpg",
-            "image/webp": "webp",
-        }
+        ext_map = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}
         ext = ext_map.get(file.content_type, "jpg")
         stamp = timezone.now().strftime("%Y%m%d%H%M%S")
         unique_id = uuid.uuid4().hex[:8]
@@ -326,3 +525,111 @@ class ProfileUploadView(APIView):  # pragma: no cover
                 {"detail": f"Upload failed: {e}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class ProfilesByIdsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Get profiles by IDs",
+        description="""
+        Accepts a list of user UUIDs and returns profile data for all matching users.
+        Used by other services (e.g. chat) to resolve user IDs to display names and avatars.
+        """,
+        tags=["Profiles"],
+        request=ProfileSerializer,
+        responses={200: ProfileSerializer(many=True)},
+    )
+    def post(self, request):
+        user_ids = request.data.get("user_ids", [])
+        if not user_ids:
+            return Response({"profiles": {}}, status=status.HTTP_200_OK)
+
+        profiles = Profile.objects.filter(user_id__in=user_ids)
+
+        result = {
+            str(p.user_id): {
+                "username": p.username,
+                "display_name": p.display_name,
+                "avatar_url": p.avatar_url or p.user.avatar_url or "",
+                "user_avatar_url": p.user.avatar_url or "",
+            }
+            for p in profiles
+        }
+
+        return Response({"profiles": result}, status=status.HTTP_200_OK)
+
+
+class CommunityEventWebhookView(APIView):
+    """
+    POST /api/profiles/internal/community-event/
+
+    Internal endpoint. Processes community events to update profile counters.
+    Used by core service to sync discussion_count and reputation_score.
+
+    Request:
+      {"event_type": "discussion.created", "author_id": "uuid"}
+
+    Security:
+      - Requires X-Internal-Request header
+    """
+
+    permission_classes = []
+
+    @extend_schema(
+        summary="Process community event (internal)",
+        description="Internal endpoint. Processes community events to update profile counters.",
+        tags=["Profiles"],
+        responses={200: OpenApiResponse(description="Event processed")},
+    )
+    def post(self, request):  # pragma: no cover
+        forbidden = require_internal_request(request)
+        if forbidden:
+            return forbidden
+
+        event_type = request.data.get("event_type")
+        author_id = request.data.get("author_id")
+        if not event_type or not author_id:
+            return Response(
+                {"error": "event_type and author_id are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            author_uuid = uuid.UUID(author_id)
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "Invalid author_id"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if event_type == "discussion.created":
+            Profile.objects.filter(user_id=author_uuid).update(
+                discussion_count=F("discussion_count") + 1
+            )
+        elif event_type == "discussion.deleted":
+            Profile.objects.filter(user_id=author_uuid, discussion_count__gt=0).update(
+                discussion_count=F("discussion_count") - 1
+            )
+        elif event_type == "comment.created":
+            Profile.objects.filter(user_id=author_uuid).update(
+                comment_count=F("comment_count") + 1
+            )
+        elif event_type == "comment.deleted":
+            Profile.objects.filter(user_id=author_uuid, comment_count__gt=0).update(
+                comment_count=F("comment_count") - 1
+            )
+        elif event_type == "backfill.user_stats":
+            stats = request.data.get("data", {})
+            Profile.objects.filter(user_id=author_uuid).update(
+                discussion_count=stats.get("discussion_count", 0),
+                comment_count=stats.get("comment_count", 0),
+                reputation_score=stats.get("reputation_score", 0),
+            )
+
+        delta = REPUTATION_EVENTS.get(event_type)
+        if delta:
+            Profile.objects.filter(user_id=author_uuid).update(
+                reputation_score=F("reputation_score") + delta
+            )
+
+        return Response({"processed": True})

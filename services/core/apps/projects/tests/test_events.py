@@ -7,17 +7,17 @@ Covers:
     blocked, overdue) and verifies Kafka topic routing.
   - ``task.overdue`` bypasses ``transaction.on_commit`` (Celery context).
 """
-from unittest.mock import patch
 
 import pytest
+from unittest.mock import patch
 
 from ..events import ProjectEventPublisher, TaskEventPublisher, _build_envelope
-from .factories import ProjectFactory, TaskFactory
 
 
 @pytest.mark.django_db
 class TestEventEnvelope:
     """Verifies the standard event envelope structure (fields, source, version)."""
+
     def test_envelope_has_required_fields(self):
         envelope = _build_envelope(
             event_type="test.event",
@@ -25,8 +25,16 @@ class TestEventEnvelope:
             user_id="user-456",
             data={"key": "value"},
         )
-        required = ["event_id", "event_type", "source_service", "workspace_id",
-                     "user_id", "timestamp", "version", "data"]
+        required = [
+            "event_id",
+            "event_type",
+            "source_service",
+            "workspace_id",
+            "user_id",
+            "timestamp",
+            "version",
+            "data",
+        ]
         for field in required:
             assert field in envelope, f"Missing field: {field}"
 
@@ -42,6 +50,7 @@ class TestEventEnvelope:
 @pytest.mark.django_db
 class TestProjectEventPublisher:
     """Project events: publish_project_created, publish_project_archived call Kafka with correct topic/envelope."""
+
     def test_publish_project_created_calls_kafka(self, project):
         with patch("apps.projects.events._publish") as mock_publish:
             with patch("django.db.transaction.on_commit", side_effect=lambda fn: fn()):
@@ -64,8 +73,10 @@ class TestProjectEventPublisher:
 @pytest.mark.django_db
 class TestTaskEventPublisher:
     """Task events: assigned, created, completed, blocked (on_commit) and overdue (no on_commit)."""
+
     def test_publish_task_assigned_includes_assignee_id(self, task):
         import uuid
+
         task.assignee_id = uuid.uuid4()
         task.save()
         with patch("apps.projects.events._publish") as mock_publish:

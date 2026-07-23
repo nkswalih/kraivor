@@ -7,7 +7,7 @@ from .base import *  # noqa: F401,F403
 
 DEBUG = False
 
-SECRET_KEY = "test-secret-key"
+SECRET_KEY = "test-secret-key"  # nosec - test settings
 
 ALLOWED_HOSTS = ["*"]
 
@@ -19,9 +19,7 @@ MIDDLEWARE = [
 
 REST_FRAMEWORK = {
     **base_settings.REST_FRAMEWORK,
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "core.middleware.test_auth.TestAuthentication",
-    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": ["core.middleware.test_auth.TestAuthentication"],
 }
 
 # =============================================================================
@@ -72,6 +70,12 @@ INTERNAL_REQUEST_HEADER = "X-Internal-Request"
 # =============================================================================
 # TEST OPTIMIZATIONS
 # =============================================================================
+
+DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+STORAGES = {
+    "default": {"BACKEND": DEFAULT_FILE_STORAGE},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
 
 LOGGING = {"version": 1, "disable_existing_loggers": True}
 

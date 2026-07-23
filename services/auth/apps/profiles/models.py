@@ -1,5 +1,4 @@
 import uuid
-
 from django.conf import settings
 from django.db import models
 
@@ -17,9 +16,7 @@ class PublicProfileManager(ActiveProfileManager):
 class Profile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="profile",
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"
     )
     username = models.CharField(max_length=50, unique=True, db_index=True)
     display_name = models.CharField(max_length=120)
@@ -49,9 +46,7 @@ class Profile(models.Model):
         db_table = "profiles"
         indexes = [
             models.Index(fields=["username"], name="profile_username_idx"),
-            models.Index(
-                fields=["-reputation_score"], name="profile_reputation_idx"
-            ),
+            models.Index(fields=["-reputation_score"], name="profile_reputation_idx"),
             models.Index(
                 fields=["is_public", "-reputation_score"],
                 name="profile_public_reputation_idx",
@@ -88,18 +83,15 @@ class UserFollow(models.Model):
         db_table = "user_follows"
         constraints = [
             models.UniqueConstraint(
-                fields=["follower", "following"],
-                name="unique_user_follow",
+                fields=["follower", "following"], name="unique_user_follow"
             )
         ]
         indexes = [
             models.Index(
-                fields=["follower_id", "-created_at"],
-                name="follow_follower_idx",
+                fields=["follower_id", "-created_at"], name="follow_follower_idx"
             ),
             models.Index(
-                fields=["following_id", "-created_at"],
-                name="follow_following_idx",
+                fields=["following_id", "-created_at"], name="follow_following_idx"
             ),
         ]
 

@@ -10,19 +10,23 @@ export const knowledgeEndpoints = {
   create: (workspacePk: string, payload: CreateKnowledgePayload) =>
     coreApi.post<KnowledgeSpace>(`/workspaces/${workspacePk}/knowledge/`, payload),
 
-  get: (knowledgePk: string) =>
-    coreApi.get<KnowledgeSpace>(`/knowledge/${knowledgePk}/`),
+  get: (knowledgePk: string) => coreApi.get<KnowledgeSpace>(`/knowledge/${knowledgePk}/`),
 
   update: (knowledgePk: string, payload: Partial<CreateKnowledgePayload>) =>
-    coreApi.put<KnowledgeSpace>(`/knowledge/${knowledgePk}/`, payload),
+    coreApi.patch<KnowledgeSpace>(`/knowledge/${knowledgePk}/`, payload),
 
-  delete: (knowledgePk: string) =>
-    coreApi.delete<void>(`/knowledge/${knowledgePk}/`),
+  delete: (knowledgePk: string) => coreApi.delete<void>(`/knowledge/${knowledgePk}/`),
 
   getVersions: (knowledgePk: string) =>
-    coreApi.get<Array<{ id: string; version_number: number; created_at: string; created_by: string; description: string | null }>>(
-      `/knowledge/${knowledgePk}/versions/`
-    ),
+    coreApi.get<
+      Array<{
+        id: string;
+        version_number: number;
+        created_at: string;
+        created_by: string;
+        description: string | null;
+      }>
+    >(`/knowledge/${knowledgePk}/versions/`),
 
   restoreVersion: (knowledgePk: string, versionPk: string) =>
     coreApi.post<KnowledgeSpace>(`/knowledge/${knowledgePk}/versions/${versionPk}/restore/`),

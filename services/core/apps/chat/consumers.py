@@ -3,45 +3,49 @@ WebSocket consumers for real-time chat, notifications, and presence.
 """
 
 import json
-import logging
 
+import asyncio
+import html
+import logging
+import uuid
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
+from datetime import UTC, datetime
 from django.utils import timezone
 
+from apps.chat.dynamodb import delete_message as dynamodb_delete_message
+from apps.chat.services import ChatRoomService
+from apps.chat.tasks import persist_to_dynamodb, trigger_ai_response
+from apps.notifications.tasks import dispatch_notification as dispatch_notification_task
 from core.infrastructure.redis import get_redis
 
 logger = logging.getLogger(__name__)
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
-    async def connect(self):
-        self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
-        self.room_group = f"chat_{self.room_id}"
-        self.user_id = self.scope.get("user_id")
+    async def connect(self) -> None:
+        self.room_id: str = self.scope["url_route"]["kwargs"]["room_id"]
+        self.room_group: str = f"chat_{self.room_id}"
+        self.user_id: str | None = self.scope.get("user_id")
 
         if not self.user_id:
             logger.warning("chat.connect.rejected.no_user")
             await self.close(code=4001)
             return
 
-        # Join room group
         await self.channel_layer.group_add(self.room_group, self.channel_name)
-
-        # Track presence in Redis
         await self._add_presence()
-
+        await database_sync_to_async(ChatRoomService.mark_room_read)(
+            room_id=self.room_id, user_id=self.user_id
+        )
         await self.accept()
         logger.info(
             "chat.connect.accepted",
             extra={"room_id": self.room_id, "user_id": self.user_id},
         )
 
-    async def disconnect(self, close_code):
-        # Remove from presence set
+    async def disconnect(self, close_code: int) -> None:
         await self._remove_presence()
-
-        # Leave room group
         await self.channel_layer.group_discard(self.room_group, self.channel_name)
         logger.info(
             "chat.disconnected",
@@ -52,14 +56,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
             },
         )
 
-    async def receive(self, text_data):
+    async def receive(self, text_data: str) -> None:
         try:
-            data = json.loads(text_data)
+            data: dict = json.loads(text_data)
         except json.JSONDecodeError:
             await self.send(text_data=json.dumps({"error": "invalid_json"}))
             return
 
-        action = data.get("action", "message")
+        action: str = data.get("action", "message")
 
         if action == "message":
             await self._handle_message(data)
@@ -76,8 +80,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 text_data=json.dumps({"error": f"unknown_action: {action}"})
             )
 
-    async def chat_message(self, event):
-        """Broadcast chat message to room."""
+    async def chat_message(self, event: dict) -> None:
+        content: str = html.escape(event.get("content", ""))
         await self.send(
             text_data=json.dumps(
                 {
@@ -85,7 +89,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "message_id": event["message_id"],
                     "sender_id": event["sender_id"],
                     "sender_name": event["sender_name"],
-                    "content": event["content"],
+                    "content": content,
                     "content_type": event["content_type"],
                     "reply_to": event.get("reply_to", ""),
                     "mentions": event.get("mentions", []),
@@ -94,8 +98,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
         )
 
-    async def typing_event(self, event):
-        """Broadcast typing indicator."""
+    async def typing_event(self, event: dict) -> None:
         await self.send(
             text_data=json.dumps(
                 {
@@ -106,8 +109,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
         )
 
-    async def presence_update(self, event):
-        """Broadcast presence change."""
+    async def presence_update(self, event: dict) -> None:
         await self.send(
             text_data=json.dumps(
                 {
@@ -118,19 +120,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
         )
 
-    async def _handle_message(self, data):
-        content = data.get("content", "").strip()
+    async def _update_last_message(
+        self, room_id: str, content: str, sender_name: str
+    ) -> None:
+        await database_sync_to_async(ChatRoomService.update_last_message)(
+            room_id=room_id, content=content, sender_name=sender_name
+        )
+        await database_sync_to_async(ChatRoomService.increment_message_count)(
+            room_id=room_id
+        )
+
+    async def _handle_message(self, data: dict) -> None:
+        content: str = html.escape(data.get("content", "").strip())
         if not content:
             return
 
-        import uuid
-        from datetime import UTC, datetime
+        message_id: str = str(uuid.uuid4())
+        now: str = datetime.now(tz=UTC).isoformat()
+        mentions: list[str] = data.get("mentions", [])
 
-        message_id = str(uuid.uuid4())
-        now = datetime.now(tz=UTC).isoformat()
-        mentions = data.get("mentions", [])
+        await self._update_last_message(
+            room_id=self.room_id,
+            content=content,
+            sender_name=self.scope.get("user_name", ""),
+        )
 
-        # Broadcast to room group
         await self.channel_layer.group_send(
             self.room_group,
             {
@@ -146,9 +160,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             },
         )
 
-        # Persist to DynamoDB via Celery
-        from apps.chat.tasks import persist_to_dynamodb
-
         persist_to_dynamodb.delay(
             room_id=self.room_id,
             sender_id=self.user_id,
@@ -159,10 +170,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             mentions=mentions,
         )
 
-        # Trigger AI response if AI bot mentioned
         if "ai" in mentions or "assistant" in mentions:
-            from apps.chat.tasks import trigger_ai_response
-
             trigger_ai_response.delay(
                 room_id=self.room_id,
                 message_id=message_id,
@@ -174,7 +182,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 ),
             )
 
-    async def _handle_typing(self, data, event_type):
+        for mentioned_user_id in mentions:
+            if mentioned_user_id and mentioned_user_id != self.user_id:
+                dispatch_notification_task.delay(
+                    user_id=mentioned_user_id,
+                    notification_type="chat.mention",
+                    title=f"{self.scope.get('user_name', 'Someone')} mentioned you",
+                    body=content[:200],
+                    link=f"/chat/{self.room_id}",
+                    workspace_id=(
+                        self.scope.get("workspace_ids", [None])[0]
+                        if self.scope.get("workspace_ids")
+                        else None
+                    ),
+                    actor_id=self.user_id,
+                )
+
+    async def _handle_typing(self, data: dict, event_type: str) -> None:
         await self.channel_layer.group_send(
             self.room_group,
             {
@@ -185,22 +209,26 @@ class ChatConsumer(AsyncWebsocketConsumer):
             },
         )
 
-    async def _handle_mark_read(self, data):
-        message_id = data.get("message_id")
-        if not message_id:
+    async def _handle_mark_read(self, data: dict) -> None:
+        message_id: str | None = data.get("message_id")
+        if not message_id or not self.user_id:
             return
+        await database_sync_to_async(ChatRoomService.mark_room_read)(
+            room_id=self.room_id, user_id=self.user_id
+        )
         await self.channel_layer.group_send(
             self.room_group,
             {"type": "chat_message", "message_id": message_id, "read_by": self.user_id},
         )
 
-    async def _handle_delete(self, data):
-        message_id = data.get("message_id")
+    async def _handle_delete(self, data: dict) -> None:
+        message_id: str | None = data.get("message_id")
         if not message_id:
             return
-        from apps.chat.dynamodb import delete_message
-
-        delete_message(self.room_id, message_id)
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None, dynamodb_delete_message, self.room_id, message_id
+        )
         await self.channel_layer.group_send(
             self.room_group,
             {
@@ -211,10 +239,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             },
         )
 
-    async def _add_presence(self):
+    async def _add_presence(self) -> None:
         redis = get_redis()
         if redis:
-            key = f"presence:room:{self.room_id}"
+            key: str = f"presence:room:{self.room_id}"
             redis.sadd(key, self.user_id)
             redis.expire(key, 120)
             await self.channel_layer.group_send(
@@ -226,10 +254,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 },
             )
 
-    async def _remove_presence(self):
+    async def _remove_presence(self) -> None:
         redis = get_redis()
         if redis:
-            key = f"presence:room:{self.room_id}"
+            key: str = f"presence:room:{self.room_id}"
             redis.srem(key, self.user_id)
             await self.channel_layer.group_send(
                 self.room_group,
@@ -242,29 +270,29 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
 
 class NotificationConsumer(AsyncWebsocketConsumer):
-    async def connect(self):
-        self.user_id = self.scope.get("user_id")
+    async def connect(self) -> None:
+        self.user_id: str | None = self.scope.get("user_id")
         if not self.user_id:
             await self.close(code=4001)
             return
 
-        self.notification_group = f"notify_user_{self.user_id}"
+        self.notification_group: str = f"notify_user_{self.user_id}"
         await self.channel_layer.group_add(self.notification_group, self.channel_name)
         await self.accept()
         logger.info("notif.connect.accepted", extra={"user_id": self.user_id})
 
-    async def disconnect(self, close_code):
+    async def disconnect(self, close_code: int) -> None:
         await self.channel_layer.group_discard(
             self.notification_group, self.channel_name
         )
 
-    async def receive(self, text_data):
+    async def receive(self, text_data: str) -> None:
         try:
-            data = json.loads(text_data)
+            data: dict = json.loads(text_data)
         except json.JSONDecodeError:
             return
 
-        action = data.get("action")
+        action: str | None = data.get("action")
         if action == "mark_read":
             await self._mark_read(data.get("notification_id"))
         elif action == "mark_all_read":
@@ -272,8 +300,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         elif action == "dismiss":
             await self._dismiss(data.get("notification_id"))
 
-    async def send_notification(self, event):
-        """Send notification payload to the client."""
+    async def send_notification(self, event: dict) -> None:
         await self.send(
             text_data=json.dumps(
                 {
@@ -283,6 +310,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                     "title": event["title"],
                     "body": event["body"],
                     "link": event.get("link", ""),
+                    "metadata": event.get("metadata", {}),
                     "workspace_id": event.get("workspace_id", ""),
                     "actor_id": event.get("actor_id", ""),
                     "created_at": event["created_at"],
@@ -291,7 +319,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         )
 
     @database_sync_to_async
-    def _mark_read(self, notification_id):
+    def _mark_read(self, notification_id: str) -> None:
         from apps.notifications.models import Notification
 
         Notification.objects.filter(id=notification_id, user_id=self.user_id).update(
@@ -299,7 +327,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         )
 
     @database_sync_to_async
-    def _mark_all_read(self):
+    def _mark_all_read(self) -> None:
         from apps.notifications.models import Notification
 
         Notification.objects.filter(user_id=self.user_id, read_at__isnull=True).update(
@@ -307,20 +335,20 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         )
 
     @database_sync_to_async
-    def _dismiss(self, notification_id):
+    def _dismiss(self, notification_id: str) -> None:
         from apps.notifications.models import Notification
 
         Notification.objects.filter(id=notification_id, user_id=self.user_id).delete()
 
 
 class PresenceConsumer(AsyncWebsocketConsumer):
-    async def connect(self):
-        self.user_id = self.scope.get("user_id")
+    async def connect(self) -> None:
+        self.user_id: str | None = self.scope.get("user_id")
         if not self.user_id:
             await self.close(code=4001)
             return
 
-        self.presence_key = f"presence:user:{self.user_id}"
+        self.presence_key: str = f"presence:user:{self.user_id}"
         redis = get_redis()
         if redis:
             redis.setex(self.presence_key, 60, "online")
@@ -328,14 +356,14 @@ class PresenceConsumer(AsyncWebsocketConsumer):
         await self.accept()
         logger.debug("presence.connect", extra={"user_id": self.user_id})
 
-    async def disconnect(self, close_code):
+    async def disconnect(self, close_code: int) -> None:
         redis = get_redis()
         if redis:
             redis.delete(self.presence_key)
 
-    async def receive(self, text_data):
+    async def receive(self, text_data: str) -> None:
         try:
-            data = json.loads(text_data)
+            data: dict = json.loads(text_data)
         except json.JSONDecodeError:
             return
 

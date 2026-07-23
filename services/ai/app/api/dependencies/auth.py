@@ -1,0 +1,140 @@
+import hashlib
+import hmac
+import httpx
+import jwt
+import logging
+import time
+from fastapi import HTTPException, Request
+from pydantic import BaseModel
+
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+
+class JWTPayload(BaseModel):
+    sub: str
+    email: str
+    name: str | None = None
+    workspace_ids: list[str] = []
+    roles: dict = {}
+
+
+_jwks_cache: dict | None = None
+_jwks_cache_time: float = 0
+
+
+def _get_jwks() -> dict:
+    global _jwks_cache, _jwks_cache_time
+    now = time.time()
+
+    if _jwks_cache and (now - _jwks_cache_time) < settings.jwt_jwks_cache_ttl:
+        return _jwks_cache
+
+    try:
+        response = httpx.get(settings.identity__jwks__url, timeout=10)
+        response.raise_for_status()
+        _jwks_cache = response.json()
+        _jwks_cache_time = now
+        return _jwks_cache
+    except httpx.RequestError as e:
+        logger.error(f"Failed to fetch JWKS: {e}")
+        if _jwks_cache:
+            return _jwks_cache
+        raise HTTPException(status_code=503, detail="JWKS unavailable") from e
+
+
+def _verify_token(token: str) -> dict:
+    jwks = _get_jwks()
+    jwk = jwks["keys"][0]
+
+    signing_key = jwt.PyJWK(jwk, algorithm=settings.jwt_algorithm)
+
+    payload = jwt.decode(
+        token,
+        signing_key.key,
+        algorithms=[settings.jwt_algorithm],
+        audience=settings.jwt_audience,
+        issuer=settings.jwt_issuer,
+        options={"verify_exp": settings.jwt_verify_expiration},
+    )
+    return payload
+
+
+def _verify_internal_header(request: Request) -> bool:
+    """Validate X-Internal-Request header against the shared secret.
+
+    Uses HMAC comparison to prevent timing attacks.
+    Returns False if the secret is not configured (secure-by-default).
+    """
+    header_value = request.headers.get(settings.internal_request_header)
+    if not header_value or not settings.internal_request_secret:
+        return False
+    return hmac.compare_digest(
+        header_value.encode(),
+        settings.internal_request_secret.encode(),
+    )
+
+
+def get_current_user(request: Request) -> JWTPayload:
+    if _verify_internal_header(request):
+        return JWTPayload(
+            sub=request.headers.get("X-User-ID", ""),
+            email=request.headers.get("X-Email", ""),
+            name=request.headers.get("X-User-Name"),
+            workspace_ids=(
+                request.headers.get("X-Workspace-IDs", "").split(",")
+                if request.headers.get("X-Workspace-IDs")
+                else []
+            ),
+            roles={},
+        )
+
+    auth_header = request.headers.get("Authorization", "")
+
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "error": "missing_authorization",
+                "message": "Authorization header required",
+            },
+        )
+
+    token = auth_header[7:]
+
+    try:
+        payload = _verify_token(token)
+        return JWTPayload(
+            sub=payload.get("sub") or payload.get("user_id", ""),
+            email=payload.get("email", ""),
+            name=payload.get("name"),
+            workspace_ids=payload.get("workspace_ids", []),
+            roles=payload.get("roles", {}),
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=401,
+            detail={"error": "token_expired", "message": "Token has expired"},
+        ) from None
+    except jwt.InvalidTokenError as e:
+        logger.warning(f"JWT validation failed: {e}")
+        raise HTTPException(
+            status_code=401,
+            detail={"error": "invalid_token", "message": "Invalid or malformed token"},
+        ) from e
+    except Exception as e:
+        logger.error(f"JWT verification error: {e}")
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "error": "verification_failed",
+                "message": "Token verification failed",
+            },
+        ) from e
+
+
+def invalidate_jwks_cache():
+    global _jwks_cache, _jwks_cache_time
+    _jwks_cache = None
+    _jwks_cache_time = 0

@@ -1,0 +1,245 @@
+import uuid
+from datetime import UTC, datetime, timedelta
+from sqlalchemy import desc, func, select
+from sqlalchemy import update as sa_update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.domain.entities.conversation import Conversation as ConversationEntity
+from app.domain.entities.message import Message as MessageEntity
+from app.domain.entities.message import MessageRole
+from app.infrastructure.db.models.conversation import Conversation
+from app.infrastructure.db.models.message import Message
+
+
+async def ensure_conversation(
+    db: AsyncSession,
+    conversation_id: str,
+    user_id: str,
+    workspace_id: str,
+    model: str | None = None,
+) -> Conversation:
+    result = await db.execute(
+        select(Conversation).where(Conversation.id == conversation_id)
+    )
+    conv = result.scalar_one_or_none()
+    if not conv:
+        conv = Conversation(
+            id=conversation_id,
+            user_id=user_id,
+            workspace_id=workspace_id,
+            title="New conversation",
+            model=model,
+            message_count=0,
+        )
+        db.add(conv)
+        await db.flush()
+    return conv
+
+
+async def save_message(db: AsyncSession, msg: MessageEntity) -> Message:
+    now = datetime.now(UTC)
+
+    # Known latency cost: SELECT before INSERT to enforce strictly increasing timestamps
+    # within a conversation. Without this, ORDER BY created_at ASC can encounter ties when
+    # multiple messages are saved in rapid succession (e.g., user + assistant in same request).
+    # The 1µs bump ensures chronological ordering without a unique constraint race.
+    last_ts = await db.scalar(
+        select(Message.created_at)
+        .where(Message.conversation_id == msg.conversation_id)
+        .order_by(Message.created_at.desc())
+        .limit(1)
+    )
+    if last_ts is not None and now <= last_ts:
+        now = last_ts + timedelta(microseconds=1)
+
+    row = Message(
+        id=str(uuid.uuid4()),
+        conversation_id=msg.conversation_id,
+        user_id=msg.user_id or "",
+        role=msg.role.value,
+        content=msg.content,
+        model=msg.model,
+        tokens_input=msg.tokens_input,
+        tokens_output=msg.tokens_output,
+        msg_metadata=msg.metadata,
+        created_at=now,
+    )
+    db.add(row)
+    await db.flush()
+    return row
+
+
+async def update_conversation_after_message(
+    db: AsyncSession,
+    conversation_id: str,
+    last_message_ts: datetime | None = None,
+    title: str | None = None,
+    model: str | None = None,
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+) -> None:
+    result = await db.execute(
+        select(Conversation).where(Conversation.id == conversation_id)
+    )
+    conv = result.scalar_one_or_none()
+    if not conv:
+        return
+
+    conv.message_count = (conv.message_count or 0) + 2
+    conv.last_message_at = last_message_ts or datetime.now(UTC)
+
+    if title:
+        first_msg_result = await db.execute(
+            select(Message)
+            .where(Message.conversation_id == conversation_id, Message.role == "user")
+            .order_by(Message.created_at.asc())
+            .limit(1)
+        )
+        first_msg = first_msg_result.scalar_one_or_none()
+        if first_msg:
+            content = first_msg.content
+            conv.title = content[:80] + ("..." if len(content) > 80 else "")
+        else:
+            conv.title = title[:80]
+
+    if model:
+        conv.model = model
+    await db.flush()
+
+
+async def update_conversation(
+    db: AsyncSession,
+    conversation_id: str,
+    title: str | None = None,
+    is_pinned: bool | None = None,
+) -> ConversationEntity | None:
+    values = {}
+    if title is not None:
+        values["title"] = title[:255]
+    if is_pinned is not None:
+        values["is_pinned"] = is_pinned
+    if not values:
+        return await get_conversation(db, conversation_id)
+
+    values["updated_at"] = func.now()
+
+    await db.execute(
+        sa_update(Conversation)
+        .where(Conversation.id == conversation_id)
+        .values(**values)
+        .execution_options(synchronize_session=False)
+    )
+    await db.flush()
+
+    return await get_conversation(db, conversation_id)
+
+
+async def list_conversations(
+    db: AsyncSession,
+    user_id: str,
+    workspace_id: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[ConversationEntity]:
+    query = (
+        select(Conversation)
+        .where(Conversation.user_id == user_id)
+        .order_by(desc(Conversation.is_pinned), desc(Conversation.last_message_at))
+        .offset(offset)
+        .limit(limit)
+    )
+    if workspace_id:
+        query = query.where(Conversation.workspace_id == workspace_id)
+
+    result = await db.execute(query)
+    rows = result.scalars().all()
+    return [
+        ConversationEntity(
+            id=str(r.id),
+            user_id=r.user_id,
+            workspace_id=r.workspace_id,
+            title=r.title,
+            model=r.model,
+            message_count=r.message_count,
+            is_archived=r.is_archived,
+            is_pinned=r.is_pinned,
+            last_message_at=r.last_message_at,
+            created_at=r.created_at,
+            updated_at=r.updated_at or r.created_at,
+        )
+        for r in rows
+    ]
+
+
+async def get_messages(
+    db: AsyncSession, conversation_id: str, limit: int = 100, offset: int = 0
+) -> list[MessageEntity]:
+    """Return messages ordered oldest-first for the given conversation.
+
+    When ``limit`` is set and ``offset`` is 0 the query returns the *last*
+    ``limit`` messages (most-recent window) while still ordering them
+    oldest-first so callers get a chronologically correct conversation.
+    """
+    if offset == 0 and limit:
+        # Subquery: grab the IDs of the most-recent N messages, ordered desc,
+        # then reverse so the outer query returns them in ascending (oldest-first)
+        # chronological order.
+        subq = (
+            select(Message.id)
+            .where(Message.conversation_id == conversation_id)
+            .order_by(Message.created_at.desc())
+            .limit(limit)
+            .subquery()
+        )
+        result = await db.execute(
+            select(Message)
+            .where(Message.id.in_(select(subq.c.id)))
+            .order_by(Message.created_at.asc())
+        )
+    else:
+        result = await db.execute(
+            select(Message)
+            .where(Message.conversation_id == conversation_id)
+            .order_by(Message.created_at.asc())
+            .offset(offset)
+            .limit(limit)
+        )
+    rows = result.scalars().all()
+    return [
+        MessageEntity(
+            role=MessageRole(r.role),
+            content=r.content,
+            conversation_id=str(r.conversation_id),
+            user_id=r.user_id,
+            model=r.model,
+            tokens_input=r.tokens_input,
+            tokens_output=r.tokens_output,
+            metadata=r.msg_metadata,
+            created_at=r.created_at,
+        )
+        for r in rows
+    ]
+
+
+async def get_conversation(
+    db: AsyncSession, conversation_id: str
+) -> ConversationEntity | None:
+    result = await db.execute(
+        select(Conversation).where(Conversation.id == conversation_id)
+    )
+    r = result.scalar_one_or_none()
+    if not r:
+        return None
+    return ConversationEntity(
+        id=str(r.id),
+        user_id=r.user_id,
+        workspace_id=r.workspace_id,
+        title=r.title,
+        model=r.model,
+        message_count=r.message_count,
+        is_archived=r.is_archived,
+        is_pinned=r.is_pinned,
+        last_message_at=r.last_message_at,
+        created_at=r.created_at,
+        updated_at=r.updated_at or r.created_at,
+    )

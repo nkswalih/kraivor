@@ -12,4 +12,4 @@ class IsAuthenticatedOrReadOnly(BasePermission):
     def has_permission(self, request, view):
         if request.method in ("GET", "HEAD", "OPTIONS"):
             return True
-        return bool(request.user_id)
+        return bool(getattr(request, "user_id", None))

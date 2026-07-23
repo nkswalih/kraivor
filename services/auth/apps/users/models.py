@@ -1,5 +1,4 @@
 import uuid
-
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
@@ -15,7 +14,9 @@ class UserManager(BaseUserManager):
         if not email:
             raise ValueError("The Email field is required")
         email = self.normalize_email(email)
-        extra_fields.pop("name", "")  # name is a direct model field, not in extra_fields
+        extra_fields.pop(
+            "name", ""
+        )  # name is a direct model field, not in extra_fields
         user = self.model(email=email, **extra_fields)
         if password:
             user.set_password(password)

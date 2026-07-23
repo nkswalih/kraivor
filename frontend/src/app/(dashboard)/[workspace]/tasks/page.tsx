@@ -10,19 +10,17 @@ import { TaskRow } from '@/components/features/tasks/task-row';
 import { TaskDrawer } from '@/components/features/tasks/task-drawer';
 import { CreateTaskDialog } from '@/components/features/tasks/create-task-dialog';
 import { StatusIcon } from '@/components/features/tasks/status-icon';
-import {
-  KANBAN_COLUMNS, ACTIVE_TASK_STATUSES, type TaskStatus,
-} from '@/types/domain/projects';
+import { KANBAN_COLUMNS, ACTIVE_TASK_STATUSES, type TaskStatus } from '@/types/domain/projects';
 import { cn } from '@/lib/utils';
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
-  backlog:     'Backlog',
-  todo:        'Todo',
+  backlog: 'Backlog',
+  todo: 'Todo',
   in_progress: 'In Progress',
-  in_review:   'In Review',
-  blocked:     'Blocked',
-  done:        'Done',
-  cancelled:   'Cancelled',
+  in_review: 'In Review',
+  blocked: 'Blocked',
+  done: 'Done',
+  cancelled: 'Cancelled',
 };
 
 type View = 'active' | 'backlog';
@@ -33,21 +31,22 @@ export default function TasksPage() {
   const [activeView, setActiveView] = useState<View>('active');
   const [collapsedStatuses, setCollapsedStatuses] = useState<Set<TaskStatus>>(new Set());
 
-  const {
-    openCreateTask,
-    createTaskOpen,
-    createTaskDefaultProjectId,
-    closeCreateTask,
-  } = useProjectsStore();
+  const { openCreateTask, createTaskOpen, createTaskDefaultProjectId, closeCreateTask } =
+    useProjectsStore();
 
   const { data, isLoading } = useTasks(workspaceId);
   const tasks = data?.results ?? [];
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'c' && !e.metaKey && !e.ctrlKey && !e.shiftKey &&
-          document.activeElement?.tagName !== 'INPUT' &&
-          document.activeElement?.tagName !== 'TEXTAREA') {
+      if (
+        e.key === 'c' &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.shiftKey &&
+        document.activeElement?.tagName !== 'INPUT' &&
+        document.activeElement?.tagName !== 'TEXTAREA'
+      ) {
         openCreateTask();
       }
     };
@@ -57,16 +56,19 @@ export default function TasksPage() {
 
   const statusesToShow: TaskStatus[] =
     activeView === 'active'
-      ? KANBAN_COLUMNS.filter((s) => ACTIVE_TASK_STATUSES.includes(s) || s === 'done')
+      ? KANBAN_COLUMNS.filter(s => ACTIVE_TASK_STATUSES.includes(s) || s === 'done')
       : ['backlog', 'cancelled'];
 
-  const grouped = statusesToShow.reduce<Record<TaskStatus, typeof tasks>>((acc, status) => {
-    acc[status] = tasks.filter((t) => t.status === status);
-    return acc;
-  }, {} as Record<TaskStatus, typeof tasks>);
+  const grouped = statusesToShow.reduce<Record<TaskStatus, typeof tasks>>(
+    (acc, status) => {
+      acc[status] = tasks.filter(t => t.status === status);
+      return acc;
+    },
+    {} as Record<TaskStatus, typeof tasks>
+  );
 
   const toggleCollapse = (status: TaskStatus) => {
-    setCollapsedStatuses((prev) => {
+    setCollapsedStatuses(prev => {
       const next = new Set(prev);
       next.has(status) ? next.delete(status) : next.add(status);
       return next;
@@ -83,7 +85,7 @@ export default function TasksPage() {
           </h1>
           <div className="h-4 w-px bg-[var(--krait-border)]" />
           <div className="flex items-center gap-0.5">
-            {(['active', 'backlog'] as const).map((view) => (
+            {(['active', 'backlog'] as const).map(view => (
               <button
                 key={view}
                 onClick={() => setActiveView(view)}
@@ -91,7 +93,7 @@ export default function TasksPage() {
                   'text-[12px] font-medium px-2.5 py-1 rounded-[4px] capitalize transition-colors',
                   activeView === view
                     ? 'bg-[var(--krait-surface-3)] text-[var(--text-primary)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 )}
               >
                 {view}
@@ -129,7 +131,7 @@ export default function TasksPage() {
 
         {!isLoading && (
           <div className="py-2">
-            {statusesToShow.map((status) => {
+            {statusesToShow.map(status => {
               const statusTasks = grouped[status] ?? [];
               const isCollapsed = collapsedStatuses.has(status);
 
@@ -146,7 +148,7 @@ export default function TasksPage() {
                       size={13}
                       className={cn(
                         'ml-auto transition-transform duration-150 text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]',
-                        isCollapsed && '-rotate-90',
+                        isCollapsed && '-rotate-90'
                       )}
                     />
                   </button>
@@ -177,7 +179,8 @@ export default function TasksPage() {
                 <CheckSquare size={32} className="text-[var(--text-tertiary)] mb-3" />
                 <p className="text-[14px] text-[var(--text-secondary)]">No issues yet</p>
                 <p className="text-[12px] text-[var(--text-tertiary)] mt-1">
-                  Press <kbd className="border border-[var(--krait-border)] px-1 rounded">C</kbd> to create your first issue.
+                  Press <kbd className="border border-[var(--krait-border)] px-1 rounded">C</kbd> to
+                  create your first issue.
                 </p>
               </div>
             )}

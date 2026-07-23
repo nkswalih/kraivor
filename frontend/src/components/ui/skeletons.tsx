@@ -40,7 +40,10 @@ export function SkeletonTable({ rows = 5 }: { rows?: number }) {
         <SkeletonLine className="w-8 ml-auto" />
       </div>
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="grid grid-cols-[2fr_1fr_1fr_100px] gap-4 p-3 border-b border-[#27272A]/50">
+        <div
+          key={i}
+          className="grid grid-cols-[2fr_1fr_1fr_100px] gap-4 p-3 border-b border-[#27272A]/50"
+        >
           <SkeletonLine className="w-40" />
           <SkeletonLine className="w-20" />
           <SkeletonLine className="w-14" />

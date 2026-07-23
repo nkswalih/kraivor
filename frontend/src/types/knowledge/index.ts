@@ -172,7 +172,10 @@ export function resolveArrowPoints(d: Partial<ArrowElementData>): [number, numbe
   const ey = (d as Record<string, unknown>).endPoint
     ? ((d as Record<string, unknown>).endPoint as Position).y
     : 0;
-  return [[sx, sy], [ex, ey]];
+  return [
+    [sx, sy],
+    [ex, ey],
+  ];
 }
 
 export interface ShapeElementData {
@@ -207,15 +210,17 @@ export interface CanvasState {
 
 export interface KnowledgeAssetReference {
   id: string;
-  knowledgeSpaceId: string;
-  fileName: string;
-  fileSize: number;
-  fileType: 'image' | 'pdf' | 'file' | 'code';
-  mimeType: string;
+  knowledge_space_id: string;
+  file_name: string;
+  file_size: number;
+  file_type: 'image' | 'pdf' | 'file' | 'code';
+  mime_type: string;
+  storage_key: string;
   url: string | null;
-  uploadedBy: string;
-  createdAt: string;
+  uploaded_by: string;
   metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string | null;
 }
 
 export interface KnowledgeSpaceVersionSummary {
@@ -227,7 +232,13 @@ export interface KnowledgeSpaceVersionSummary {
 }
 
 export interface KnowledgeWsEvent {
-  type: 'canvas_update' | 'cursor_move' | 'element_lock' | 'user_join' | 'user_leave' | 'version_created';
+  type:
+    | 'canvas_update'
+    | 'cursor_move'
+    | 'element_lock'
+    | 'user_join'
+    | 'user_leave'
+    | 'version_created';
   knowledgeSpaceId: string;
   userId: string;
   data: Record<string, unknown>;

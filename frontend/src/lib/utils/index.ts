@@ -26,6 +26,18 @@ export function formatRelativeTime(date: string | Date): string {
   return formatDate(date);
 }
 
+export function formatCompactTime(date: string | Date): string {
+  const now = new Date();
+  const then = new Date(date);
+  const diffInSeconds = Math.floor((now.getTime() - then.getTime()) / 1000);
+
+  if (diffInSeconds < 60) return 'now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
+  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d`;
+  return '30d+';
+}
+
 export function truncate(str: string, length: number): string {
   if (str.length <= length) return str;
   return str.slice(0, length) + '...';
@@ -74,6 +86,13 @@ export function getInitials(name: string): string {
     .slice(0, 2);
 }
 
+/**
+ * Best available avatar: profile S3 upload > OAuth/GitHub/Google > null
+ */
+export function avatarUrl(src?: string | null, fallbackSrc?: string | null): string | null {
+  return src || fallbackSrc || null;
+}
+
 export function parseJwt(
   token: string
 ): { exp: number; iat: number; [key: string]: unknown } | null {
@@ -91,6 +110,36 @@ export function parseJwt(
   } catch {
     return null;
   }
+}
+
+export async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      return true;
+    } catch {
+      return false;
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  }
+}
+
+export function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  const r = parseInt(clean.substring(0, 2), 16);
+  const g = parseInt(clean.substring(2, 4), 16);
+  const b = parseInt(clean.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 export function isTokenExpired(token: string, thresholdMs = 60000): boolean {

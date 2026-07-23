@@ -1,19 +1,19 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import type { ComponentType } from 'react';
+import { memo, type ComponentType } from 'react';
 import type { CodeElementData } from '@/types/knowledge';
 
-const MonacoEditor = dynamic(
-  () => import('@monaco-editor/react').then(mod => mod.Editor),
-  { ssr: false, loading: () => <div className="w-full h-full bg-krait-surface3 animate-pulse" /> }
-) as ComponentType<Record<string, unknown>>;
+const MonacoEditor = dynamic(() => import('@monaco-editor/react').then(mod => mod.Editor), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-krait-surface3 animate-pulse" />,
+}) as ComponentType<Record<string, unknown>>;
 
 interface Props {
   data: CodeElementData;
 }
 
-export function CodeElement({ data }: Props) {
+export const CodeElement = memo(function CodeElement({ data }: Props) {
   return (
     <div
       className="w-full h-full overflow-hidden"
@@ -41,4 +41,10 @@ export function CodeElement({ data }: Props) {
       </div>
     </div>
   );
-}
+}, (prev, next) =>
+  prev.data.code === next.data.code &&
+  prev.data.language === next.data.language &&
+  prev.data.backgroundColor === next.data.backgroundColor &&
+  prev.data.theme === next.data.theme &&
+  prev.data.showLineNumbers === next.data.showLineNumbers
+);

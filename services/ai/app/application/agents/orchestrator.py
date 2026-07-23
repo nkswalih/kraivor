@@ -1,0 +1,516 @@
+import json
+import hashlib
+import re
+
+import logging
+
+from app.application.agents.prompts.orchestrator import (
+    CODE_GENERATION_PROMPT,
+    GREETING_PROMPT,
+    ORCHESTRATOR_SYSTEM_PROMPT,
+    RESPOND_DIRECT_PROMPT,
+    WRITING_PROMPT,
+)
+from app.application.provisioning.key_resolver import KeyResolver
+from app.infrastructure.llm.client import LLMClient, LLM_SHORT_TIMEOUT
+from app.infrastructure.llm.error_classifier import ClassifiedError, ErrorCategory
+from app.infrastructure.llm.failover_engine import FailoverEngine
+from app.infrastructure.llm.router import ModelRouter
+
+logger = logging.getLogger(__name__)
+
+INTENT_CACHE_TTL = 300  # 5 minutes
+
+# Fix A: Regex to detect obvious greetings — bypasses intent classification LLM call entirely.
+# Saves 1-2 seconds per greeting. Pattern matches: hi, hy, hello, hey, yo, sup, greetings,
+# good morning/afternoon/evening, what's up, how are you, etc.
+_GREETING_RE = re.compile(
+    r"^(hi|hy|hello|hey|yo|sup|greetings|howdy|hola|"
+    r"good\s+(morning|afternoon|evening|day)|"
+    r"what'?s\s+up|how\s+are\s+you|how(?:'s| is) it going|"
+    r"how(?:'s| is) everything|what'?s\s+new|howdy|"
+    r"hiya|heya|wassup|whassup|howdydo|r'you good|"
+    r"you good|hey there|hello there|hi there|"
+    r"gm|gn|morning|evening|afternoon)"
+    r"[\s!?.]*$",
+    re.IGNORECASE,
+)
+
+# Fix: Workspace keyword pre-check — detects workspace-related queries and routes
+# directly to tool_executor, bypassing the unreliable LLM intent classifier.
+_WORKSPACE_RE = re.compile(
+    r"(?:my|the|our|show|list|get|see|what|where|display|check|view|which|find|search|any|all|how many|tell me about)"
+    r".*"
+    r"(?:repo|repository|repos|repositories|"
+    r"project|projects|task|tasks|todo|todos|"
+    r"knowledge|knowledge\s*space|"
+    r"notification|notifications|"
+    r"discussion|discussions|community|"
+    r"analysis|analy[sz]ed|report|reports|"
+    r"profile|member|team|connected|linked|status)",
+    re.IGNORECASE,
+)
+
+# Strong signal: "this workspace", "my workspace", "our workspace" — always a workspace query
+_WORKSPACE_STRONG_RE = re.compile(
+    r"(?:this|my|our)\s+workspace",
+    re.IGNORECASE,
+)
+
+# Fix: Date/time keyword pre-check — detects date/time questions and routes
+# to tool_executor where get_current_date tool is available.
+_DATE_TIME_RE = re.compile(
+    r"(?:what|tell|show|give|what'?s|whats|current|today|right now|exact)"
+    r".*"
+    r"(?:date|time|day|year|month|hour|minute|clock|timestamp|today|now)",
+    re.IGNORECASE,
+)
+
+_DIRECT_INTENTS = {
+    "greeting",
+    "conversation",
+    "unknown",
+}
+
+_EVIDENCE_INTENTS = {
+    "question",
+    "programming",
+    "documentation",
+    "planning",
+    "translation",
+    "devops",
+    "security_audit",
+    "data_science",
+    "cloud_engineering",
+    "system_design",
+    "ui_ux",
+    "database_design",
+    "testing",
+    "full_stack",
+    "code_generation",
+    "writing",
+}
+
+_NEWS_KEYWORDS = {
+    "news", "breaking", "today", "latest news", "recent news",
+    "current events", "what happened", "headlines", "daily news",
+    "tech news", "technology news", "world news", "global news",
+    "morning briefing", "daily briefing", "news compilation",
+    "what's going on", "what's happening",
+}
+
+_INTENT_PROMPT_MAP = {
+    "greeting": GREETING_PROMPT,
+    "code_generation": CODE_GENERATION_PROMPT,
+    "documentation": CODE_GENERATION_PROMPT,
+    "writing": WRITING_PROMPT,
+}
+
+_INTENT_ROUTE_MAP = {
+    "code_generation": "code_generation",
+    "documentation": "code_generation",
+    "writing": "code_generation",
+}
+
+
+def _format_prompt(
+    template: str, user_name: str | None, user_context: str | None
+) -> str:
+    name = user_name or "the user"
+    ctx = f"Known context about the user:\n{user_context}" if user_context else ""
+    return template.format(user_name=name, user_context=ctx)
+
+
+def _provider_error_state(error: ClassifiedError) -> dict:
+    """Build state dict for graceful degradation on provider failure."""
+    return {
+        "provider_error": error.user_message,
+        "provider_error_category": error.category.value,
+        "provider_error_details": {
+            "category": error.category.value,
+            "provider": error.provider,
+            "suggested_action": error.suggested_action.value,
+            "retry_after": error.retry_after,
+        },
+    }
+
+
+class OrchestratorNode:
+    def __init__(self):
+        self.router = ModelRouter()
+        self.key_resolver = KeyResolver()
+        self.failover = FailoverEngine(self.key_resolver)
+
+    async def __call__(self, state: dict) -> dict:
+        user_id = state.get("user_id", "")
+        user_name = state.get("user_name")
+        user_context = state.get("user_context")
+        message = state.get("message", "")
+        user_model = state.get("model")
+        history = state.get("context_history") or []
+
+        stripped = message.strip()
+
+        # Fix A: Bypass intent classification for obvious greetings.
+        # MUST run before gibberish filter — 2-char greetings like "hi" would be caught.
+        # Saves 1-2 seconds by skipping the intent LLM call entirely.
+        if _GREETING_RE.match(stripped):
+            logger.info("Greeting detected via regex, bypassing intent classification")
+            intent_prompt = _format_prompt(GREETING_PROMPT, user_name, user_context)
+            greet_route = self.router.get_route_for_user("simple_qa", user_model)
+            try:
+                greet_msgs = [{"role": "system", "content": intent_prompt}, {"role": "user", "content": message}]
+                greet_result = await self.failover.execute(
+                    greet_msgs, user_id, greet_route, timeout=LLM_SHORT_TIMEOUT,
+                    max_tokens=greet_route["max_tokens"],
+                )
+                return {
+                    "intent": "greeting",
+                    "complexity": "simple",
+                    "response": greet_result["content"],
+                    "usage": greet_result,
+                    "required_agents": [],
+                    "context_hints": [],
+                    "needs_evidence": False,
+                }
+            except ClassifiedError as e:
+                logger.warning("provider_error node=greeting category=%s", e.category.value)
+                return {
+                    "intent": "greeting",
+                    "complexity": "simple",
+                    "required_agents": [],
+                    "context_hints": [],
+                    "needs_evidence": False,
+                    **_provider_error_state(e),
+                    "response": None,
+                }
+
+        # Skip pipeline for obvious gibberish / non-sensical queries.
+        # Prevents wasting LLM calls on input like "bhbbkbljh" or "????".
+        if len(stripped) < 3 or not re.search(r'[a-zA-Z]{2,}', stripped):
+            logger.info("gibberish_detected message='%s', returning early", stripped[:20])
+            return {
+                "intent": "conversation",
+                "complexity": "simple",
+                "response": "I'm not sure I understand. Could you rephrase that?",
+                "required_agents": [],
+                "context_hints": [],
+                "needs_evidence": False,
+            }
+        # Also catch vowel-less strings (e.g. "bhbbkbljh") — real words always have vowels
+        if len(stripped) >= 5 and not re.search(r'[aeiouyAEIOUY]', stripped):
+            logger.info("gibberish_detected_no_vowels message='%s', returning early", stripped[:20])
+            return {
+                "intent": "conversation",
+                "complexity": "simple",
+                "response": "I'm not sure I understand. Could you rephrase that?",
+                "required_agents": [],
+                "context_hints": [],
+                "needs_evidence": False,
+            }
+
+        # Fix: Workspace keyword pre-check — force tool_executor for workspace queries.
+        if _WORKSPACE_RE.search(message) or _WORKSPACE_STRONG_RE.search(message):
+            logger.info("Workspace query detected via keyword, forcing tool_executor route")
+            return {
+                "intent": "workspace_query",
+                "complexity": "simple",
+                "required_agents": [],
+                "context_hints": [],
+                "needs_rag": False,
+                "needs_tools": True,
+                "needs_evidence": False,
+                "response": None,
+            }
+
+        # Fix: Date/time keyword pre-check — route to tool_executor for date questions
+        if _DATE_TIME_RE.search(message):
+            logger.info("Date/time query detected via keyword, forcing tool_executor route")
+            return {
+                "intent": "workspace_query",
+                "complexity": "simple",
+                "required_agents": [],
+                "context_hints": [],
+                "needs_rag": False,
+                "needs_tools": True,
+                "needs_evidence": False,
+                "response": None,
+            }
+
+        history_hash = hashlib.sha256(
+            "|".join(h.get("content", "")[:100] for h in history[-3:]).encode()
+        ).hexdigest()[:16]
+        intent_cache_key = f"intent:{user_id}:{hashlib.sha256(f'{message}:{history_hash}'.encode()).hexdigest()[:24]}"
+
+        try:
+            from app.infrastructure.cache.redis_client import get_redis
+            r = await get_redis()
+            cached = await r.get(intent_cache_key)
+            if cached:
+                return json.loads(cached)
+        except Exception:
+            pass
+
+        route = self.router.get_route_for_user("intent_classify", user_model)
+
+        gen_kwargs = {
+            "max_tokens": route["max_tokens"],
+        }
+        # Use json_object format for providers that support it
+        if route.get("model", "").startswith("qwen/"):
+            gen_kwargs["response_format"] = {"type": "json_object"}
+
+        # Build intent classification messages — include recent history so the
+        # classifier understands context (e.g. "continue" after a long answer).
+        classify_msgs = [
+            {"role": "system", "content": ORCHESTRATOR_SYSTEM_PROMPT},
+        ]
+        if history:
+            for h in history[-8:]:
+                classify_msgs.append(
+                    {"role": h.get("role", "user"), "content": h.get("content", "")[:600]}
+                )
+        classify_msgs.append({"role": "user", "content": message})
+
+        try:
+            response = await self.failover.execute(
+                classify_msgs, user_id, route, timeout=LLM_SHORT_TIMEOUT, **gen_kwargs,
+            )
+        except ClassifiedError as e:
+            logger.warning("provider_error node=orchestrator category=%s", e.category.value)
+            # If the message is a workspace query, route to tool_executor even on LLM failure
+            if _WORKSPACE_RE.search(message) or _WORKSPACE_STRONG_RE.search(message):
+                return {
+                    "intent": "workspace_query",
+                    "complexity": "simple",
+                    "required_agents": [],
+                    "context_hints": [],
+                    "needs_rag": False,
+                    "needs_tools": True,
+                    "needs_evidence": False,
+                    "response": None,
+                }
+            return {
+                "intent": "question",
+                "complexity": "simple",
+                "required_agents": [],
+                "context_hints": [],
+                "needs_rag": True,
+                "needs_tools": False,
+                "needs_evidence": True,
+                "response": None,
+                **_provider_error_state(e),
+            }
+
+        try:
+            analysis = json.loads(response["content"])
+        except (json.JSONDecodeError, KeyError):
+            analysis = {
+                "intent": "question",
+                "complexity": "simple",
+                "needs_context": False,
+                "needs_rag": False,
+                "context_hints": [],
+                "required_agents": [],
+            }
+
+        intent = analysis.get("intent", "conversation")
+        needs_context = analysis.get("needs_context", False)
+        needs_rag = analysis.get("needs_rag", False)
+        needs_tools = analysis.get("needs_tools", False)
+
+        # Route to tool executor for workspace queries that need live data.
+        is_workspace_query = needs_tools and intent not in _EVIDENCE_INTENTS
+        if is_workspace_query or (intent == "workspace_query"):
+            result = {
+                "intent": intent,
+                "complexity": analysis.get("complexity", "simple"),
+                "required_agents": analysis.get("required_agents", []),
+                "context_hints": analysis.get("context_hints", []),
+                "needs_rag": False,
+                "needs_tools": True,
+                "needs_evidence": False,
+                "response": None,
+            }
+            try:
+                from app.infrastructure.cache.redis_client import get_redis
+                r = await get_redis()
+                await r.setex(intent_cache_key, INTENT_CACHE_TTL, json.dumps(result))
+            except Exception:
+                pass
+            return result
+
+        # News/current-events queries: route to tool_executor for web_search_news
+        msg_lower = message.lower()
+        is_news_query = any(kw in msg_lower for kw in _NEWS_KEYWORDS)
+        if is_news_query and intent in _EVIDENCE_INTENTS:
+            result = {
+                "intent": intent,
+                "complexity": analysis.get("complexity", "simple"),
+                "required_agents": [],
+                "context_hints": analysis.get("context_hints", []),
+                "needs_rag": False,
+                "needs_tools": True,
+                "needs_evidence": False,
+                "response": None,
+            }
+            try:
+                from app.infrastructure.cache.redis_client import get_redis
+                r = await get_redis()
+                await r.setex(intent_cache_key, INTENT_CACHE_TTL, json.dumps(result))
+            except Exception:
+                pass
+            return result
+
+        # For direct-response intents (greeting, casual chat), generate immediately
+        if intent in _DIRECT_INTENTS and not needs_context and not needs_rag:
+            intent_prompt = _INTENT_PROMPT_MAP.get(intent, RESPOND_DIRECT_PROMPT)
+            intent_prompt = _format_prompt(intent_prompt, user_name, user_context)
+            intent_route_name = _INTENT_ROUTE_MAP.get(intent, "simple_qa")
+            respond_route = self.router.get_route_for_user(intent_route_name, user_model)
+
+            messages = []
+            for h in history[-15:]:
+                messages.append(
+                    {"role": h.get("role", "user"), "content": h.get("content", "")[:1000]}
+                )
+            messages.append({"role": "system", "content": intent_prompt})
+            messages.append({"role": "user", "content": message})
+
+            try:
+                result = await self.failover.execute(
+                    messages, user_id, respond_route,
+                    timeout=LLM_SHORT_TIMEOUT, max_tokens=respond_route["max_tokens"],
+                )
+            except ClassifiedError as e:
+                logger.warning("provider_error node=direct_response category=%s", e.category.value)
+                return {
+                    "intent": intent,
+                    "complexity": analysis.get("complexity", "simple"),
+                    "required_agents": [],
+                    "context_hints": [],
+                    "needs_evidence": False,
+                    "response": None,
+                    **_provider_error_state(e),
+                }
+
+            response = {
+                "intent": intent,
+                "complexity": analysis.get("complexity", "simple"),
+                "response": result["content"],
+                "usage": result,
+                "required_agents": [],
+                "context_hints": [],
+                "needs_evidence": False,
+            }
+            try:
+                from app.infrastructure.cache.redis_client import get_redis
+                r = await get_redis()
+                await r.setex(intent_cache_key, INTENT_CACHE_TTL, json.dumps(response))
+            except Exception:
+                pass
+            return response
+
+        # For evidence-gathering intents, route through the knowledge pipeline
+        # In normal mode, skip evidence gathering — respond directly via LLM.
+        # In web_search mode, enable evidence gathering.
+        # In research mode, enable evidence + RAG for deep analysis.
+        chat_mode = state.get("chat_mode", "normal") if isinstance(state, dict) else "normal"
+        if intent in _EVIDENCE_INTENTS:
+            if needs_tools:
+                result = {
+                    "intent": intent,
+                    "complexity": analysis.get("complexity", "simple"),
+                    "required_agents": analysis.get("required_agents", []),
+                    "context_hints": analysis.get("context_hints", []),
+                    "needs_rag": False,
+                    "needs_tools": True,
+                    "needs_evidence": False,
+                    "response": None,
+                }
+            elif chat_mode == "normal":
+                # Normal mode: generate direct response without evidence gathering
+                intent_prompt = _INTENT_PROMPT_MAP.get(intent, RESPOND_DIRECT_PROMPT)
+                intent_prompt = _format_prompt(intent_prompt, user_name, user_context)
+                respond_route = self.router.get_route_for_user("simple_qa", user_model)
+                messages = []
+                for h in history[-15:]:
+                    messages.append(
+                        {"role": h.get("role", "user"), "content": h.get("content", "")[:1000]}
+                    )
+                messages.append({"role": "system", "content": intent_prompt})
+                messages.append({"role": "user", "content": message})
+                try:
+                    llm_result = await self.failover.execute(
+                        messages, user_id, respond_route,
+                        timeout=LLM_SHORT_TIMEOUT, max_tokens=respond_route["max_tokens"],
+                    )
+                    result = {
+                        "intent": intent,
+                        "complexity": analysis.get("complexity", "simple"),
+                        "response": llm_result["content"],
+                        "usage": llm_result,
+                        "required_agents": [],
+                        "context_hints": [],
+                        "needs_evidence": False,
+                    }
+                except ClassifiedError as e:
+                    logger.warning("provider_error node=normal_response category=%s", e.category.value)
+                    result = {
+                        "intent": intent,
+                        "complexity": analysis.get("complexity", "simple"),
+                        "required_agents": [],
+                        "context_hints": [],
+                        "needs_evidence": False,
+                        "response": None,
+                        **_provider_error_state(e),
+                    }
+            elif chat_mode == "research":
+                # Research mode: full pipeline — evidence + RAG + analysts
+                result = {
+                    "intent": intent,
+                    "complexity": analysis.get("complexity", "simple"),
+                    "required_agents": analysis.get("required_agents", []),
+                    "context_hints": analysis.get("context_hints", []),
+                    "needs_rag": True,
+                    "needs_tools": False,
+                    "needs_evidence": True,
+                    "response": None,
+                }
+            else:
+                # Web search mode (or any other): evidence gathering enabled
+                result = {
+                    "intent": intent,
+                    "complexity": analysis.get("complexity", "simple"),
+                    "required_agents": analysis.get("required_agents", []),
+                    "context_hints": analysis.get("context_hints", []),
+                    "needs_rag": needs_rag,
+                    "needs_tools": False,
+                    "needs_evidence": True,
+                    "response": None,
+                }
+            try:
+                from app.infrastructure.cache.redis_client import get_redis
+                r = await get_redis()
+                await r.setex(intent_cache_key, INTENT_CACHE_TTL, json.dumps(result))
+            except Exception:
+                pass
+            return result
+
+        result = {
+            "intent": intent,
+            "complexity": analysis.get("complexity", "simple"),
+            "required_agents": analysis.get("required_agents", []),
+            "context_hints": analysis.get("context_hints", []),
+            "needs_rag": needs_rag,
+            "needs_tools": needs_tools,
+            "needs_evidence": False,
+            "response": None,
+        }
+        try:
+            from app.infrastructure.cache.redis_client import get_redis
+            r = await get_redis()
+            await r.setex(intent_cache_key, INTENT_CACHE_TTL, json.dumps(result))
+        except Exception:
+            pass
+        return result

@@ -16,6 +16,7 @@ from .models import OAuthIdentity, RefreshToken
 # RefreshToken Admin
 # ---------------------------------------------------------------------------
 
+
 @admin.register(RefreshToken)
 class RefreshTokenAdmin(admin.ModelAdmin):
     """
@@ -52,30 +53,27 @@ class RefreshTokenAdmin(admin.ModelAdmin):
         "device_name",
     )
 
-    readonly_fields = (
-        "id",
-        "token_hash",
-        "user",
-        "created_at",
-        "last_used_at",
-    )
+    readonly_fields = ("id", "token_hash", "user", "created_at", "last_used_at")
 
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
 
     fieldsets = (
-        ("Token", {
-            "fields": ("id", "token_hash")
-        }),
-        ("User", {
-            "fields": ("user",)
-        }),
-        ("Device", {
-            "fields": ("device_id", "device_name", "device_type", "ip_address", "user_agent")
-        }),
-        ("Status", {
-            "fields": ("revoked", "expires_at", "last_used_at", "created_at")
-        }),
+        ("Token", {"fields": ("id", "token_hash")}),
+        ("User", {"fields": ("user",)}),
+        (
+            "Device",
+            {
+                "fields": (
+                    "device_id",
+                    "device_name",
+                    "device_type",
+                    "ip_address",
+                    "user_agent",
+                )
+            },
+        ),
+        ("Status", {"fields": ("revoked", "expires_at", "last_used_at", "created_at")}),
     )
 
     # -----------------------------------------------------------------------
@@ -84,6 +82,7 @@ class RefreshTokenAdmin(admin.ModelAdmin):
 
     def id_short(self, obj):
         return str(obj.id)[:8]
+
     id_short.short_description = "ID"
 
     def user_email(self, obj):
@@ -92,6 +91,7 @@ class RefreshTokenAdmin(admin.ModelAdmin):
             f"/admin/users/user/{obj.user_id}/change/",
             obj.user.email,
         )
+
     user_email.short_description = "User"
     user_email.admin_order_field = "user__email"
 
@@ -102,6 +102,7 @@ class RefreshTokenAdmin(admin.ModelAdmin):
         if obj.device_type:
             parts.append(f"({obj.device_type})")
         return " ".join(parts) or "—"
+
     device_info.short_description = "Device"
 
     def status_badge(self, obj):
@@ -116,6 +117,7 @@ class RefreshTokenAdmin(admin.ModelAdmin):
         return format_html(
             '<span style="color: #22c55e; font-weight: bold;">Active</span>'
         )
+
     status_badge.short_description = "Status"
 
     # -----------------------------------------------------------------------
@@ -129,42 +131,42 @@ class RefreshTokenAdmin(admin.ModelAdmin):
     # Bulk actions
     # -----------------------------------------------------------------------
 
-    actions = [
-        "revoke_selected",
-        "revoke_expired",
-        "revoke_all_for_user",
-    ]
+    actions = ["revoke_selected", "revoke_expired", "revoke_all_for_user"]
 
     def revoke_selected(self, request, queryset):
         count = queryset.filter(revoked=False).update(revoked=True)
         self.message_user(request, f"{count} session(s) revoked.", messages.SUCCESS)
+
     revoke_selected.short_description = "Revoke selected sessions"
 
     def revoke_expired(self, request, queryset):
-        count = queryset.filter(
-            revoked=False,
-            expires_at__lt=now(),
-        ).update(revoked=True)
-        self.message_user(request, f"{count} expired session(s) revoked.", messages.SUCCESS)
+        count = queryset.filter(revoked=False, expires_at__lt=now()).update(
+            revoked=True
+        )
+        self.message_user(
+            request, f"{count} expired session(s) revoked.", messages.SUCCESS
+        )
+
     revoke_expired.short_description = "Revoke all expired sessions"
 
     def revoke_all_for_user(self, request, queryset):
         user_ids = queryset.values_list("user_id", flat=True).distinct()
-        count = RefreshToken.objects.filter(
-            user_id__in=user_ids,
-            revoked=False,
-        ).update(revoked=True)
+        count = RefreshToken.objects.filter(user_id__in=user_ids, revoked=False).update(
+            revoked=True
+        )
         self.message_user(
             request,
             f"{count} session(s) revoked for {user_ids.count()} user(s).",
             messages.SUCCESS,
         )
+
     revoke_all_for_user.short_description = "Revoke all sessions for these users"
 
 
 # ---------------------------------------------------------------------------
 # OAuthIdentity Admin
 # ---------------------------------------------------------------------------
+
 
 @admin.register(OAuthIdentity)
 class OAuthIdentityAdmin(admin.ModelAdmin):
@@ -186,44 +188,39 @@ class OAuthIdentityAdmin(admin.ModelAdmin):
         "created_at",
     )
 
-    list_filter = (
-        "provider",
-        ("created_at", admin.DateFieldListFilter),
-    )
+    list_filter = ("provider", ("created_at", admin.DateFieldListFilter))
 
-    search_fields = (
-        "user__email",
-        "user__name",
-        "provider_user_id",
-        "provider_email",
-    )
+    search_fields = ("user__email", "user__name", "provider_user_id", "provider_email")
 
-    readonly_fields = (
-        "id",
-        "user",
-        "raw_data",
-        "created_at",
-        "updated_at",
-    )
+    readonly_fields = ("id", "user", "raw_data", "created_at", "updated_at")
 
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
 
     fieldsets = (
-        ("Identity", {
-            "fields": ("id", "provider", "provider_user_id", "provider_email")
-        }),
-        ("User", {
-            "fields": ("user",)
-        }),
-        ("Tokens", {
-            "fields": ("access_token_encrypted", "refresh_token_encrypted", "expires_at"),
-            "classes": ("collapse",),
-        }),
-        ("Metadata", {
-            "fields": ("raw_data", "deleted_at", "created_at", "updated_at"),
-            "classes": ("collapse",),
-        }),
+        (
+            "Identity",
+            {"fields": ("id", "provider", "provider_user_id", "provider_email")},
+        ),
+        ("User", {"fields": ("user",)}),
+        (
+            "Tokens",
+            {
+                "fields": (
+                    "access_token_encrypted",
+                    "refresh_token_encrypted",
+                    "expires_at",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Metadata",
+            {
+                "fields": ("raw_data", "deleted_at", "created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
     )
 
     # -----------------------------------------------------------------------
@@ -232,6 +229,7 @@ class OAuthIdentityAdmin(admin.ModelAdmin):
 
     def id_short(self, obj):
         return str(obj.id)[:8]
+
     id_short.short_description = "ID"
 
     def user_email(self, obj):
@@ -240,21 +238,19 @@ class OAuthIdentityAdmin(admin.ModelAdmin):
             f"/admin/users/user/{obj.user_id}/change/",
             obj.user.email,
         )
+
     user_email.short_description = "User"
     user_email.admin_order_field = "user__email"
 
     def provider_badge(self, obj):
-        colors = {
-            "github": "#6e40c9",
-            "google": "#4285f4",
-            "apple": "#000000",
-        }
+        colors = {"github": "#6e40c9", "google": "#4285f4", "apple": "#000000"}
         color = colors.get(obj.provider, "#666")
         return format_html(
             '<span style="color: {}; font-weight: bold; text-transform: uppercase;">{}</span>',
             color,
             obj.provider,
         )
+
     provider_badge.short_description = "Provider"
     provider_badge.admin_order_field = "provider"
 
@@ -262,12 +258,9 @@ class OAuthIdentityAdmin(admin.ModelAdmin):
         if not obj.expires_at:
             return "—"
         if obj.expires_at < now():
-            return format_html(
-                '<span style="color: #ef4444;">Expired</span>'
-            )
-        return format_html(
-            '<span style="color: #22c55e;">Valid</span>'
-        )
+            return format_html('<span style="color: #ef4444;">Expired</span>')
+        return format_html('<span style="color: #22c55e;">Valid</span>')
+
     token_status.short_description = "Token Status"
 
     # -----------------------------------------------------------------------
@@ -281,17 +274,20 @@ class OAuthIdentityAdmin(admin.ModelAdmin):
     # Bulk actions
     # -----------------------------------------------------------------------
 
-    actions = [
-        "soft_delete_selected",
-        "restore_selected",
-    ]
+    actions = ["soft_delete_selected", "restore_selected"]
 
     def soft_delete_selected(self, request, queryset):
         count = queryset.filter(deleted_at__isnull=True).update(deleted_at=now())
-        self.message_user(request, f"{count} OAuth identity(ies) soft-deleted.", messages.WARNING)
+        self.message_user(
+            request, f"{count} OAuth identity(ies) soft-deleted.", messages.WARNING
+        )
+
     soft_delete_selected.short_description = "Soft-delete selected identities"
 
     def restore_selected(self, request, queryset):
         count = queryset.filter(deleted_at__isnull=False).update(deleted_at=None)
-        self.message_user(request, f"{count} OAuth identity(ies) restored.", messages.SUCCESS)
+        self.message_user(
+            request, f"{count} OAuth identity(ies) restored.", messages.SUCCESS
+        )
+
     restore_selected.short_description = "Restore selected identities"

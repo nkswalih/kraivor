@@ -41,7 +41,9 @@ class AuthApi {
   async initiateOAuth(provider: 'github' | 'google'): Promise<{ authorization_url: string }> {
     try {
       // Adjust this endpoint path if your apiClient base URL is different
-      const response = await apiClient.get<{ authorization_url: string }>(`/auth/oauth/${provider}/`);
+      const response = await apiClient.get<{ authorization_url: string }>(
+        `/auth/oauth/${provider}/`
+      );
       return response;
     } catch (error) {
       throw handleApiError(error);
@@ -71,6 +73,7 @@ class AuthApi {
       return { mfaRequired: false };
     } catch (error) {
       useAuthStore.getState().setLoading(false);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((error as any).mfaRequired) throw error;
       throw handleApiError(error);
     }
@@ -89,8 +92,11 @@ class AuthApi {
     try {
       // Inject device_id seamlessly
       const finalPayload = { ...payload, device_id: getDeviceId() };
-      const response = await apiClient.post<AuthResponse>(API_ENDPOINTS.AUTH.OTP_VERIFY, finalPayload);
-      
+      const response = await apiClient.post<AuthResponse>(
+        API_ENDPOINTS.AUTH.OTP_VERIFY,
+        finalPayload
+      );
+
       const token = response.access_token || response.accessToken || '';
       if (token && response.user) {
         useAuthStore.getState().setAuth(response.user, token);
@@ -126,7 +132,11 @@ class AuthApi {
 
   async refreshSession(): Promise<void> {
     try {
-      const response = await apiClient.post<{ access_token?: string; accessToken?: string; user?: User }>(API_ENDPOINTS.AUTH.REFRESH);
+      const response = await apiClient.post<{
+        access_token?: string;
+        accessToken?: string;
+        user?: User;
+      }>(API_ENDPOINTS.AUTH.REFRESH);
       const token = response.access_token || response.accessToken || '';
       if (!token) throw new Error('No access token returned from refresh');
 
@@ -159,7 +169,9 @@ class AuthApi {
   }
 
   async refreshToken(): Promise<string> {
-    const response = await apiClient.post<{ access_token?: string; accessToken?: string }>(API_ENDPOINTS.AUTH.REFRESH);
+    const response = await apiClient.post<{ access_token?: string; accessToken?: string }>(
+      API_ENDPOINTS.AUTH.REFRESH
+    );
     const token = response.access_token || response.accessToken || '';
     return token;
   }
@@ -195,10 +207,12 @@ class AuthApi {
   async verifyEmail(payload: VerifyEmailPayload): Promise<void> {
     try {
       await apiClient.post(API_ENDPOINTS.AUTH.VERIFY_EMAIL, payload);
-    } catch (error: any) {
+    } catch (error: unknown) {
       const apiError = handleApiError(error);
-      if (error?.response?.data?.error_code) {
-        (apiError as any).errorCode = error.response.data.error_code;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((error as any)?.response?.data?.error_code) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (apiError as any).errorCode = (error as any).response.data.error_code;
       }
       throw apiError;
     }
@@ -206,10 +220,9 @@ class AuthApi {
 
   async resendVerification(email: string): Promise<{ message: string }> {
     try {
-      return await apiClient.post<{ message: string }>(
-        API_ENDPOINTS.AUTH.RESEND_VERIFICATION,
-        { email }
-      );
+      return await apiClient.post<{ message: string }>(API_ENDPOINTS.AUTH.RESEND_VERIFICATION, {
+        email,
+      });
     } catch (error) {
       throw handleApiError(error);
     }
@@ -279,14 +292,24 @@ class AuthApi {
   async getApiKeys(): Promise<
     Array<{ id: string; name: string; prefix: string; created_at: string; last_used_at?: string }>
   > {
+    type AK = { id: string; name: string; prefix: string; created_at: string; last_used_at?: string };
     try {
-      return await apiClient.get(API_ENDPOINTS.AUTH.API_KEYS);
+      const data = await apiClient.get<unknown>(API_ENDPOINTS.AUTH.API_KEYS);
+      if (Array.isArray(data)) return data as AK[];
+      if (data && typeof data === 'object') {
+        const obj = data as Record<string, unknown>;
+        if (Array.isArray(obj.keys)) return obj.keys as AK[];
+        if (Array.isArray(obj.results)) return obj.results as AK[];
+      }
+      return [];
     } catch (error) {
       throw handleApiError(error);
     }
   }
 
-  async createApiKey(name: string): Promise<{ id: string; name: string; key: string; created_at: string }> {
+  async createApiKey(
+    name: string
+  ): Promise<{ id: string; name: string; key: string; created_at: string }> {
     try {
       return await apiClient.post(API_ENDPOINTS.AUTH.API_KEYS, { name });
     } catch (error) {

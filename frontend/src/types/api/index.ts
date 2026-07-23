@@ -73,6 +73,10 @@ export interface ChatRoom {
   topic: string;
   is_active: boolean;
   last_message_at: string | null;
+  last_message_content: string;
+  last_message_sender_name: string;
+  participant_user_ids: string[];
+  unread_count?: number;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -177,6 +181,7 @@ export interface Notification {
   title: string;
   body: string;
   link: string;
+  metadata: Record<string, unknown> | null;
   actor_id: string | null;
   read_at: string | null;
   created_at: string;

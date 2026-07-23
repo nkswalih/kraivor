@@ -20,10 +20,10 @@ Environment Variables:
 - Override any setting with environment variables
 """
 
-import os
 from pathlib import Path
 
 import environ
+import os
 
 from .base import *
 
@@ -63,7 +63,9 @@ if _env_file:
 
 os.environ.setdefault("APP_ENV", "development")
 os.environ.setdefault("SECRET_KEY", "dev-secret-key-not-for-production")
-os.environ.setdefault("DATABASE_URL", "postgresql://kraivor:kraivor@localhost:5433/kraivor")
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql://kraivor:kraivor@localhost:5433/kraivor"
+)
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("JWT_PRIVATE_KEY_PATH", ".keys/jwt-private.pem")
 os.environ.setdefault("JWT_PUBLIC_KEY_PATH", ".keys/jwt-public.pem")
@@ -105,17 +107,9 @@ FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 # =============================================================================
 CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=False)
 
-CORS_ALLOWED_ORIGINS = env.list(
-    "CORS_ALLOWED_ORIGINS",
-    default=[
-        "http://localhost",
-    ],
-)
+CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=["http://localhost"])
 
-CORS_ALLOW_CREDENTIALS = env.bool(
-    "CORS_ALLOW_CREDENTIALS",
-    default=True,
-)
+CORS_ALLOW_CREDENTIALS = env.bool("CORS_ALLOW_CREDENTIALS", default=True)
 
 # =============================================================================
 # COOKIES - Development
@@ -195,6 +189,11 @@ CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
 # =============================================================================
-# STORAGE - Development (local filesystem)
+# STORAGE - Development (S3 via real AWS)
 # =============================================================================
-DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+STORAGES = {
+    "default": {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}

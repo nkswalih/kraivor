@@ -1,7 +1,5 @@
 """Unit tests for APIKey service layer."""
 
-from datetime import timedelta
-
 import pytest
 from api_keys.models import APIKey
 from api_keys.services.generator import generate_api_key
@@ -14,15 +12,14 @@ from api_keys.services.key_service import (
     create_api_key,
     revoke_api_key,
 )
+from datetime import timedelta
 from django.utils import timezone
 
 
 @pytest.fixture
 def user(db, django_user_model):
     return django_user_model.objects.create(
-        email="test@example.com",
-        name="Test User",
-        email_verified=True,
+        email="test@example.com", name="Test User", email_verified=True
     )
 
 
@@ -101,8 +98,10 @@ class TestAuthenticateAPIKey:
 
     def test_expired_key_raises(self, user):
         result = create_api_key(
-            user, "Expired", ["analysis:read"],
-            expires_at=timezone.now() - timedelta(seconds=1)
+            user,
+            "Expired",
+            ["analysis:read"],
+            expires_at=timezone.now() - timedelta(seconds=1),
         )
         with pytest.raises(APIKeyExpiredError):
             authenticate_api_key(result.raw_key)

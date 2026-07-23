@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useKnowledgeDetail } from '@/lib/hooks/use-knowledge';
 import { useCanvasAutosave } from '@/lib/hooks/use-canvas';
+import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { useKnowledgeStore } from '@/lib/stores/knowledge-store';
 import { KnowledgeCanvas } from '@/components/knowledge/canvas/knowledge-canvas';
 import { CanvasSidebar } from '@/components/knowledge/canvas/canvas-sidebar';
@@ -25,6 +26,7 @@ export default function KnowledgeDetailPage() {
   const dirtySpaceIds = useKnowledgeStore(s => s.dirtySpaceIds);
 
   const { data: space, isLoading } = useKnowledgeDetail(id || undefined);
+  useDetailBreadcrumb(space?.name);
 
   const workspaceId = space?.workspace_id ?? '';
 
@@ -40,9 +42,9 @@ export default function KnowledgeDetailPage() {
     initCanvas(spaceId, {
       elements: (existingCanvas?.elements as CanvasState['elements']) ?? [],
       viewport: (existingCanvas?.viewport as CanvasState['viewport']) ?? { x: 0, y: 0, zoom: 1 },
-      gridEnabled: (existingCanvas as Record<string, unknown>)?.gridEnabled as boolean ?? true,
-      snapEnabled: (existingCanvas as Record<string, unknown>)?.snapEnabled as boolean ?? true,
-      gridSize: (existingCanvas as Record<string, unknown>)?.gridSize as number ?? 20,
+      gridEnabled: ((existingCanvas as Record<string, unknown>)?.gridEnabled as boolean) ?? true,
+      snapEnabled: ((existingCanvas as Record<string, unknown>)?.snapEnabled as boolean) ?? true,
+      gridSize: ((existingCanvas as Record<string, unknown>)?.gridSize as number) ?? 20,
     });
   }, [space, id, spaceId, setActiveSpace, initCanvas]);
 
@@ -101,7 +103,10 @@ export default function KnowledgeDetailPage() {
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
         <BookOpen className="w-10 h-10 text-muted-foreground mb-3" />
         <h3 className="text-base font-medium text-foreground mb-1">Space not found</h3>
-        <a href={`/${workspaceSlug}/knowledge`} className="text-[13px] text-venom-yellow hover:text-venom-gold mt-2">
+        <a
+          href={`/${workspaceSlug}/knowledge`}
+          className="text-[13px] text-venom-yellow hover:text-venom-gold mt-2"
+        >
           Back to knowledge spaces
         </a>
       </div>
@@ -128,9 +133,7 @@ export default function KnowledgeDetailPage() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {saveIndicator()}
-        </div>
+        <div className="flex items-center gap-2">{saveIndicator()}</div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">

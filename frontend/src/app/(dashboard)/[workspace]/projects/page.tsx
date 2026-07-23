@@ -3,10 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import {
-  KanbanSquare, Plus, LayoutGrid, List,
-  Search, Loader2,
-} from 'lucide-react';
+import { KanbanSquare, Plus, LayoutGrid, List, Search } from 'lucide-react';
 import { useProjects } from '@/lib/hooks/use-projects';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useProjectsStore } from '@/lib/stores/projects-store';
@@ -14,20 +11,36 @@ import { ProjectCard } from '@/components/features/projects/project-card';
 import { CreateProjectDialog } from '@/components/features/projects/create-project-dialog';
 import type { Project, ProjectStatus } from '@/types/domain/projects';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/shadcn';
 
 const STATUS_BADGE: Record<string, { text: string; className: string }> = {
-  planning:  { text: 'Planning',  className: 'text-[var(--text-secondary)] bg-[var(--krait-surface-3)] border-[var(--krait-border)]' },
-  active:    { text: 'Active',    className: 'text-[var(--venom-yellow)] bg-[var(--venom-glow)] border-[var(--venom-gold)]/30' },
-  completed: { text: 'Completed', className: 'text-[var(--color-success)] bg-[var(--color-success)]/10 border-[var(--color-success)]/20' },
-  archived:  { text: 'Archived',  className: 'text-[var(--text-tertiary)] bg-[var(--krait-surface-2)] border-[var(--krait-border)]' },
+  planning: {
+    text: 'Planning',
+    className:
+      'text-[var(--text-secondary)] bg-[var(--krait-surface-3)] border-[var(--krait-border)]',
+  },
+  active: {
+    text: 'Active',
+    className: 'text-[var(--venom-yellow)] bg-[var(--venom-glow)] border-[var(--venom-gold)]/30',
+  },
+  completed: {
+    text: 'Completed',
+    className:
+      'text-[var(--color-success)] bg-[var(--color-success)]/10 border-[var(--color-success)]/20',
+  },
+  archived: {
+    text: 'Archived',
+    className:
+      'text-[var(--text-tertiary)] bg-[var(--krait-surface-2)] border-[var(--krait-border)]',
+  },
 };
 
 const STATUS_FILTERS: { label: string; value: ProjectStatus | undefined }[] = [
-  { label: 'All',       value: undefined },
-  { label: 'Active',    value: 'active' },
-  { label: 'Planning',  value: 'planning' },
+  { label: 'All', value: undefined },
+  { label: 'Active', value: 'active' },
+  { label: 'Planning', value: 'planning' },
   { label: 'Completed', value: 'completed' },
-  { label: 'Archived',  value: 'archived' },
+  { label: 'Archived', value: 'archived' },
 ];
 
 export default function ProjectsPage() {
@@ -47,7 +60,7 @@ export default function ProjectsPage() {
 
   const { data: projects, isLoading } = useProjects(workspaceId, projectStatusFilter);
 
-  const filtered = (projects ?? []).filter((p) =>
+  const filtered = (projects ?? []).filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -61,7 +74,7 @@ export default function ProjectsPage() {
           </h1>
           <div className="h-4 w-px bg-[var(--krait-border)]" />
           <div className="flex items-center gap-0.5">
-            {STATUS_FILTERS.map((f) => (
+            {STATUS_FILTERS.map(f => (
               <button
                 key={f.label}
                 onClick={() => setProjectStatusFilter(f.value)}
@@ -69,7 +82,7 @@ export default function ProjectsPage() {
                   'text-[12px] font-medium px-2.5 py-1 rounded-[4px] transition-colors',
                   projectStatusFilter === f.value
                     ? 'bg-[var(--krait-surface-3)] text-[var(--text-primary)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 )}
               >
                 {f.label}
@@ -80,7 +93,7 @@ export default function ProjectsPage() {
 
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-[var(--krait-surface-1)] border border-[var(--krait-border)] rounded-[6px] p-0.5">
-            {(['grid', 'list'] as const).map((mode) => (
+            {(['grid', 'list'] as const).map(mode => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
@@ -88,7 +101,7 @@ export default function ProjectsPage() {
                   'p-1.5 rounded transition-colors',
                   viewMode === mode
                     ? 'bg-[var(--krait-surface-3)] text-[var(--text-primary)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 )}
               >
                 {mode === 'grid' ? <LayoutGrid size={14} /> : <List size={14} />}
@@ -109,10 +122,13 @@ export default function ProjectsPage() {
 
       <div className="px-6 py-3 border-b border-[var(--krait-border)] bg-[var(--krait-obsidian)]">
         <div className="relative max-w-sm">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+          <Search
+            size={13}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]"
+          />
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={e => setSearch(e.target.value)}
             placeholder="Search projects..."
             className="w-full bg-[var(--krait-surface-1)] border border-[var(--krait-border)] rounded-[6px] pl-8 pr-3 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--krait-border-hi)] transition-colors"
           />
@@ -121,9 +137,19 @@ export default function ProjectsPage() {
 
       <div className="flex-1 overflow-y-auto p-6 bg-[var(--krait-void)]">
         {isLoading && (
-          <div className="flex items-center justify-center h-40">
-            <Loader2 size={20} className="animate-spin text-[var(--venom-yellow)]" />
-          </div>
+          viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <ProjectCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : (
+            <div className="max-w-3xl border border-[var(--krait-border)] rounded-[8px] bg-[var(--krait-surface-1)] overflow-hidden divide-y divide-[var(--krait-border)]">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <ProjectListRowSkeleton key={i} />
+              ))}
+            </div>
+          )
         )}
 
         {!isLoading && filtered.length === 0 && (
@@ -143,29 +169,21 @@ export default function ProjectsPage() {
           </div>
         )}
 
-        {!isLoading && filtered.length > 0 && (
-          viewMode === 'grid' ? (
+        {!isLoading &&
+          filtered.length > 0 &&
+          (viewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filtered.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  workspaceSlug={workspace}
-                />
+              {filtered.map(project => (
+                <ProjectCard key={project.id} project={project} workspaceSlug={workspace} />
               ))}
             </div>
           ) : (
             <div className="max-w-3xl space-y-0 border border-[var(--krait-border)] rounded-[8px] bg-[var(--krait-surface-1)] overflow-hidden divide-y divide-[var(--krait-border)]">
-              {filtered.map((project) => (
-                <ProjectListRow
-                  key={project.id}
-                  project={project}
-                  workspaceSlug={workspace}
-                />
+              {filtered.map(project => (
+                <ProjectListRow key={project.id} project={project} workspaceSlug={workspace} />
               ))}
             </div>
-          )
-        )}
+          ))}
       </div>
 
       <CreateProjectDialog
@@ -173,6 +191,42 @@ export default function ProjectsPage() {
         onClose={closeCreateProject}
         workspaceId={workspaceId}
       />
+    </div>
+  );
+}
+
+function ProjectCardSkeleton() {
+  return (
+    <div className="bg-[var(--krait-surface-1)] border border-[var(--krait-border)] rounded-[8px] p-5">
+      <div className="flex items-start justify-between mb-4 pl-2">
+        <Skeleton variant="rect" className="w-9 h-9 rounded-[6px]" />
+        <Skeleton className="h-5 w-16 rounded" />
+      </div>
+      <Skeleton className="h-4 w-3/4 mb-2" />
+      <Skeleton className="h-3 w-full mb-1" />
+      <Skeleton className="h-3 w-2/3 mb-4" />
+      <div className="flex items-center gap-4 mb-4">
+        <Skeleton className="h-3 w-16" />
+        <Skeleton className="h-3 w-20" />
+      </div>
+      <div className="space-y-1.5">
+        <div className="flex justify-between">
+          <Skeleton className="h-2.5 w-14" />
+          <Skeleton className="h-2.5 w-8" />
+        </div>
+        <Skeleton className="h-1 w-full rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+function ProjectListRowSkeleton() {
+  return (
+    <div className="flex items-center gap-4 px-5 py-3">
+      <Skeleton variant="rect" className="w-6 h-6 rounded shrink-0" />
+      <Skeleton className="h-4 w-1/3 flex-1" />
+      <Skeleton className="h-4 w-16 rounded" />
+      <Skeleton className="h-3 w-14" />
     </div>
   );
 }

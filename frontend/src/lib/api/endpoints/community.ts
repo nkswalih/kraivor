@@ -15,21 +15,20 @@ export const communityEndpoints = {
     page?: number;
     tag?: string;
     sort?: SortOption;
+    search?: string;
     workspace_id?: string;
   }) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set('page', String(params.page));
     if (params?.tag) qs.set('tag', params.tag);
     if (params?.sort) qs.set('sort', params.sort);
+    if (params?.search) qs.set('search', params.search);
     if (params?.workspace_id) qs.set('workspace_id', params.workspace_id);
     const query = qs.toString();
-    return coreApi.get<PaginatedResponse<Discussion>>(
-      `/community/${query ? `?${query}` : ''}`
-    );
+    return coreApi.get<PaginatedResponse<Discussion>>(`/community/${query ? `?${query}` : ''}`);
   },
 
-  getDiscussion: (discussionId: string) =>
-    coreApi.get<Discussion>(`/community/${discussionId}/`),
+  getDiscussion: (discussionId: string) => coreApi.get<Discussion>(`/community/${discussionId}/`),
 
   createDiscussion: (payload: DiscussionCreatePayload) =>
     coreApi.post<Discussion>('/community/', payload),
@@ -37,17 +36,12 @@ export const communityEndpoints = {
   updateDiscussion: (discussionId: string, payload: DiscussionUpdatePayload) =>
     coreApi.patch<Discussion>(`/community/${discussionId}/`, payload),
 
-  deleteDiscussion: (discussionId: string) =>
-    coreApi.delete<void>(`/community/${discussionId}/`),
+  deleteDiscussion: (discussionId: string) => coreApi.delete<void>(`/community/${discussionId}/`),
 
   voteDiscussion: (discussionId: string, value: 1 | -1) =>
-    coreApi.post<{ value: number; action: string }>(
-      `/community/${discussionId}/vote/`,
-      { value }
-    ),
+    coreApi.post<{ value: number; action: string }>(`/community/${discussionId}/vote/`, { value }),
 
-  removeVote: (discussionId: string) =>
-    coreApi.delete<void>(`/community/${discussionId}/vote/`),
+  removeVote: (discussionId: string) => coreApi.delete<void>(`/community/${discussionId}/vote/`),
 
   listComments: (discussionId: string, params?: { page?: number; sort?: 'newest' | 'top' }) => {
     const qs = new URLSearchParams();
@@ -72,9 +66,7 @@ export const communityEndpoints = {
     ),
 
   removeCommentVote: (discussionId: string, commentId: string) =>
-    coreApi.delete<void>(
-      `/community/${discussionId}/comments/${commentId}/vote/`
-    ),
+    coreApi.delete<void>(`/community/${discussionId}/comments/${commentId}/vote/`),
 
   getTrending: (limit?: number) => {
     const qs = limit ? `?limit=${limit}` : '';

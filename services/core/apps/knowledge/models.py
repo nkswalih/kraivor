@@ -107,18 +107,12 @@ class KnowledgeAsset(TimestampedModel):
     """
 
     knowledge_space = models.ForeignKey(
-        KnowledgeSpace,
-        on_delete=models.CASCADE,
-        related_name="assets",
-        db_index=True,
+        KnowledgeSpace, on_delete=models.CASCADE, related_name="assets", db_index=True
     )
     file_name = models.CharField(
-        max_length=512,
-        help_text="Original file name including extension.",
+        max_length=512, help_text="Original file name including extension."
     )
-    file_size = models.BigIntegerField(
-        help_text="File size in bytes.",
-    )
+    file_size = models.BigIntegerField(help_text="File size in bytes.")
     file_type = models.CharField(
         max_length=32,
         choices=[
@@ -130,8 +124,7 @@ class KnowledgeAsset(TimestampedModel):
         default="file",
     )
     mime_type = models.CharField(
-        max_length=127,
-        help_text="MIME type (e.g. image/png, application/pdf).",
+        max_length=127, help_text="MIME type (e.g. image/png, application/pdf)."
     )
     storage_key = models.CharField(
         max_length=1024,
@@ -145,7 +138,7 @@ class KnowledgeAsset(TimestampedModel):
         help_text="Pre-signed or public URL for direct access.",
     )
     uploaded_by = models.UUIDField(
-        help_text="identity.users.id of the user who uploaded this file.",
+        help_text="identity.users.id of the user who uploaded this file."
     )
     metadata = models.JSONField(
         default=dict,
@@ -157,13 +150,9 @@ class KnowledgeAsset(TimestampedModel):
         db_table = "knowledge_assets"
         indexes = [
             models.Index(
-                fields=["knowledge_space", "file_type"],
-                name="idx_ka_space_type",
+                fields=["knowledge_space", "file_type"], name="idx_ka_space_type"
             ),
-            models.Index(
-                fields=["uploaded_by"],
-                name="idx_ka_uploaded_by",
-            ),
+            models.Index(fields=["uploaded_by"], name="idx_ka_uploaded_by"),
         ]
         verbose_name = "Knowledge Asset"
         verbose_name_plural = "Knowledge Assets"
@@ -187,19 +176,16 @@ class KnowledgeSpaceVersion(TimestampedModel):
     """
 
     knowledge_space = models.ForeignKey(
-        KnowledgeSpace,
-        on_delete=models.CASCADE,
-        related_name="versions",
-        db_index=True,
+        KnowledgeSpace, on_delete=models.CASCADE, related_name="versions", db_index=True
     )
     version_number = models.PositiveIntegerField(
-        help_text="Incremental version number within this knowledge space.",
+        help_text="Incremental version number within this knowledge space."
     )
     canvas_snapshot = models.JSONField(
-        help_text="Deep copy of canvas_data at this version.",
+        help_text="Deep copy of canvas_data at this version."
     )
     created_by = models.UUIDField(
-        help_text="identity.users.id of the user who triggered this save.",
+        help_text="identity.users.id of the user who triggered this save."
     )
     description = models.CharField(
         max_length=255,
@@ -212,15 +198,14 @@ class KnowledgeSpaceVersion(TimestampedModel):
         db_table = "knowledge_space_versions"
         constraints = [
             models.UniqueConstraint(
-                fields=["knowledge_space", "version_number"],
-                name="uq_ksv_version",
-            ),
+                fields=["knowledge_space", "version_number"], name="uq_ksv_version"
+            )
         ]
         indexes = [
             models.Index(
                 fields=["knowledge_space", "-version_number"],
                 name="idx_ksv_version_desc",
-            ),
+            )
         ]
         ordering = ["-version_number"]
         verbose_name = "Knowledge Space Version"

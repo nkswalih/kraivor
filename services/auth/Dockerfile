@@ -44,9 +44,10 @@ FROM python:3.11-slim AS runtime
 
 WORKDIR /app
 
-# Runtime system deps only (libpq for psycopg2)
+# Runtime system deps (libpq for psycopg2, curl for healthcheck)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Non-root user for security
@@ -75,6 +76,9 @@ RUN chown -R appuser:appgroup /app
 USER appuser
 
 EXPOSE 8001
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8001/api/health/ || exit 1
 
 # Gunicorn: 2 workers per CPU core is the standard starting point
 # Adjust WEB_CONCURRENCY env var at runtime without rebuilding

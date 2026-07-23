@@ -12,11 +12,12 @@ Architecture:
 ADR: ``task.overdue`` bypasses ``transaction.on_commit`` because it is published
 from a Celery task that runs outside any active database transaction.
 """
+
 import json
+
 import logging
 import uuid
 from datetime import UTC, datetime
-
 from django.db import transaction
 
 logger = logging.getLogger(__name__)
@@ -73,12 +74,17 @@ def _publish(topic: str, payload: dict) -> None:
     except Exception as exc:
         logger.error(
             "event.publish.failed",
-            extra={"topic": topic, "event_type": payload.get("event_type"), "error": str(exc)},
+            extra={
+                "topic": topic,
+                "event_type": payload.get("event_type"),
+                "error": str(exc),
+            },
         )
 
 
 class ProjectEventPublisher:
     """Publishes project lifecycle events (created, updated, archived) to ``project.events`` topic."""
+
     TOPIC = "project.events"
 
     @staticmethod
@@ -128,6 +134,7 @@ class ProjectEventPublisher:
 
 class TaskEventPublisher:
     """Publishes task domain events (created, assigned, completed, blocked, overdue) to ``task.events``."""
+
     TOPIC = "task.events"
 
     @staticmethod

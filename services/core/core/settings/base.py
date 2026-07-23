@@ -1,6 +1,13 @@
 from pathlib import Path
 
 import environ
+import mimetypes
+
+mimetypes.add_type("text/markdown", ".md", strict=True)
+mimetypes.add_type("text/markdown", ".mdx", strict=True)
+mimetypes.add_type("text/yaml", ".yaml", strict=True)
+mimetypes.add_type("text/yaml", ".yml", strict=True)
+mimetypes.add_type("application/toml", ".toml", strict=True)
 
 env = environ.Env(DEBUG=(bool, False))
 
@@ -40,7 +47,10 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
     "channels",
+    "storages",
     "apps.workspaces",
     "apps.repositories",
     "apps.knowledge",
@@ -48,12 +58,14 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.projects",
     "apps.community",
+    "apps.search",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "core.middleware.csrf_exempt_api.CsrfExemptApiMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -86,7 +98,35 @@ STATIC_URL = "/static/"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# =============================================================================
+# File Storage — S3 via MinIO (Development) or real S3 (Production)
+# =============================================================================
+# Defaults to S3. Set DEFAULT_FILE_STORAGE env var to switch back to
+# FileSystemStorage if needed (e.g., for local testing without Docker).
+
+DEFAULT_FILE_STORAGE = env(
+    "DEFAULT_FILE_STORAGE", default="storages.backends.s3boto3.S3Boto3Storage"
+)
+
+STORAGES = {
+    "default": {"BACKEND": DEFAULT_FILE_STORAGE},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+
+AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
+AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
+AWS_S3_ACCESS_KEY_ID = env("AWS_S3_ACCESS_KEY_ID", default="") or None
+AWS_S3_SECRET_ACCESS_KEY = env("AWS_S3_SECRET_ACCESS_KEY", default="") or None
+AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
+AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="us-east-1")
+AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN", default="")
+AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL", default="") or None
+AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
+AWS_DEFAULT_ACL = "public-read"
+AWS_QUERYSTRING_AUTH = False
+
 DATABASES = {"default": env.db_url("DATABASE_URL")}
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=300)
 
 AUTH_PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
@@ -106,6 +146,12 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["apps.workspaces.permissions.IsAuthenticated"],
     "DEFAULT_AUTHENTICATION_CLASSES": [],
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_PAGINATION_CLASS": "core.pagination.StandardPagination",
+    "EXCEPTION_HANDLER": "core.exceptions.core_exception_handler",
+    "DEFAULT_THROTTLE_CLASSES": [],
+    "DEFAULT_THROTTLE_RATES": {},
+    "DEFAULT_VERSIONING_CLASS": None,
 }
 
 IDENTITY_JWKS_URL = env(
@@ -210,6 +256,11 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 # =============================================================================
+# Identity Service
+# =============================================================================
+IDENTITY_SERVICE_URL = env("IDENTITY_SERVICE_URL", default="http://identity:8001")
+
+# =============================================================================
 # Kafka — Event Bus
 # =============================================================================
 
@@ -225,6 +276,7 @@ KAFKA_AUTO_CREATE_TOPICS = env.bool("KAFKA_AUTO_CREATE_TOPICS", default=True)
 DYNAMODB_LOCAL = env.bool("DYNAMODB_LOCAL", default=False)
 DYNAMODB_ENDPOINT = env("DYNAMODB_ENDPOINT", default="http://localhost:8000")
 DYNAMODB_CHAT_TABLE = env("DYNAMODB_CHAT_TABLE", default="kraivor-chat-messages")
+DYNAMODB_CHAT_V2_TABLE = env("DYNAMODB_CHAT_V2_TABLE", default="kraivor-chat-v2")
 AWS_REGION = env("AWS_REGION", default="us-east-1")
 
 # =============================================================================
@@ -234,6 +286,99 @@ AWS_REGION = env("AWS_REGION", default="us-east-1")
 REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/0")
 
 # =============================================================================
+# Redis Cache
+# =============================================================================
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": env("REDIS_URL", default="redis://localhost:6379/0"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+            "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
+            "PARSER_CLASS": "redis.connection.DefaultParser",
+            "IGNORE_EXCEPTIONS": True,
+            "PICKLE_VERSION": -1,
+        },
+        "KEY_PREFIX": "kraivor",
+        "TIMEOUT": 300,
+    },
+    "local": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "kraivor-local",
+        "TIMEOUT": 60,
+    },
+}
+
+# =============================================================================
+# Sentry — Error Tracking & Performance Monitoring (optional)
+# =============================================================================
+
+SENTRY_DSN = env("SENTRY_DSN", default="")
+
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration(), CeleryIntegration(), RedisIntegration()],
+        traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
+        send_default_pii=False,
+    )
+
+# =============================================================================
+# Structured Logging
+# =============================================================================
+
+try:
+    import pythonjsonlogger  # noqa: F401
+
+    _json_formatter = "pythonjsonlogger.jsonlogger.JsonFormatter"
+except ImportError:
+    _json_formatter = "logging.Formatter"
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "()": _json_formatter,
+            "format": "%(asctime)s %(name)s %(levelname)s %(message)s %(module)s %(lineno)d",
+        },
+        "verbose": {
+            "format": "%(levelname)s %(asctime)s %(module)s:%(lineno)d %(message)s"
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json" if not DEBUG else "verbose",
+        }
+    },
+    "root": {"handlers": ["console"], "level": "INFO"},
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "celery": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
+}
+
+# =============================================================================
+# AWS Lambda — Notification dispatch (email / Slack / SMS)
+# =============================================================================
+
+AWS_LAMBDA_NOTIFICATION_FN = env("AWS_LAMBDA_NOTIFICATION_FN", default="")
+
+# =============================================================================
 # Firebase — Push Notifications (optional)
 # =============================================================================
 
@@ -241,3 +386,4 @@ FIREBASE_CREDENTIALS_PATH = env("FIREBASE_CREDENTIALS_PATH", default=None)
 
 # Internal request header check
 INTERNAL_REQUEST_HEADER = "X-Internal-Request"
+INTERNAL_REQUEST_SECRET = env("INTERNAL_REQUEST_SECRET", default="")

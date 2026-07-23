@@ -8,8 +8,8 @@ POST /api/auth/reset-password/   — Reset password with token
 """
 
 import logging
-
 from django.conf import settings
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -35,6 +35,15 @@ class ForgotPasswordView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Request password reset",
+        description="Sends a password reset email with a signed JWT token. Rate limited to prevent abuse.",
+        tags=["Users"],
+        responses={
+            200: OpenApiResponse(description="Password reset email sent"),
+            429: OpenApiResponse(description="Rate limit exceeded"),
+        },
+    )
     def post(self, request):
         email = request.data.get("email", "").strip().lower()
         if not email:
@@ -45,7 +54,9 @@ class ForgotPasswordView(APIView):
 
         rate_key = f"forgot_password:{email}"
         try:
-            rate_limiter.is_allowed(rate_key, limit=_RESEND_LIMIT, window_seconds=_RESEND_WINDOW)
+            rate_limiter.is_allowed(
+                rate_key, limit=_RESEND_LIMIT, window_seconds=_RESEND_WINDOW
+            )
         except RateLimitExceededError as exc:
             response = Response(
                 {
@@ -63,7 +74,7 @@ class ForgotPasswordView(APIView):
         except User.DoesNotExist:
             return Response(
                 {
-                    "message": "If that email exists, a password reset link has been sent.",
+                    "message": "If that email exists, a password reset link has been sent."
                 },
                 status=status.HTTP_200_OK,
             )
@@ -157,6 +168,15 @@ class ResetPasswordView(APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary="Reset password",
+        description="Accepts a signed JWT token and a new password. Validates the token and updates the user's password.",
+        tags=["Users"],
+        responses={
+            200: OpenApiResponse(description="Password reset successfully"),
+            400: OpenApiResponse(description="Invalid or expired token"),
+        },
+    )
     def post(self, request):
         token = request.data.get("token", "").strip()
         new_password = request.data.get("password", "").strip()
@@ -169,7 +189,10 @@ class ResetPasswordView(APIView):
 
         if not new_password or len(new_password) < 8:
             return Response(
-                {"error": "Password must be at least 8 characters.", "error_code": "weak_password"},
+                {
+                    "error": "Password must be at least 8 characters.",
+                    "error_code": "weak_password",
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

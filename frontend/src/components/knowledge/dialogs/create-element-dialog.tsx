@@ -10,7 +10,12 @@ interface Props {
   onSelect: (type: CanvasElementType) => void;
 }
 
-const elementTypes: Array<{ type: CanvasElementType; label: string; description: string; icon: typeof Type }> = [
+const elementTypes: Array<{
+  type: CanvasElementType;
+  label: string;
+  description: string;
+  icon: typeof Type;
+}> = [
   { type: 'text', label: 'Text', description: 'Simple text block', icon: Type },
   { type: 'markdown', label: 'Markdown', description: 'Rich formatted text', icon: FileText },
   { type: 'code', label: 'Code', description: 'Syntax-highlighted code', icon: Terminal },
@@ -22,7 +27,10 @@ export function CreateElementDialog({ open, onClose, onSelect }: Props) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <div
         className="w-[400px] rounded-xl border border-border bg-krait-surface1 shadow-2xl"
         onClick={e => e.stopPropagation()}
@@ -37,7 +45,10 @@ export function CreateElementDialog({ open, onClose, onSelect }: Props) {
           {elementTypes.map(et => (
             <button
               key={et.type}
-              onClick={() => { onSelect(et.type); onClose(); }}
+              onClick={() => {
+                onSelect(et.type);
+                onClose();
+              }}
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border bg-krait-surface2 hover:bg-krait-surface3 hover:border-venom-yellow/30 transition-all text-center group"
             >
               <et.icon className="w-6 h-6 text-venom-yellow group-hover:scale-110 transition-transform" />

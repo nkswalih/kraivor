@@ -4,10 +4,10 @@ import { SignalHigh, SignalMedium, SignalLow } from 'lucide-react';
 import type { TaskPriority } from '@/types/domain/projects';
 
 const CONFIG: Record<TaskPriority, { Icon: typeof SignalHigh; className: string }> = {
-  critical: { Icon: SignalHigh,   className: 'text-[var(--venom-orange)]' },
-  high:     { Icon: SignalHigh,   className: 'text-[var(--venom-yellow)]' },
-  medium:   { Icon: SignalMedium, className: 'text-[var(--text-secondary)]' },
-  low:      { Icon: SignalLow,    className: 'text-[var(--text-tertiary)]' },
+  critical: { Icon: SignalHigh, className: 'text-red-500' },
+  high: { Icon: SignalHigh, className: 'text-orange-500' },
+  medium: { Icon: SignalMedium, className: 'text-yellow-500' },
+  low: { Icon: SignalLow, className: 'text-green-500' },
 };
 
 interface PriorityIconProps {

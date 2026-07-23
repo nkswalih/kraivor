@@ -6,3 +6,7 @@ class ChatConfig(AppConfig):
     name = "apps.chat"
     label = "chat"
     verbose_name = "Chat"
+
+    def ready(self) -> None:
+        import apps.chat.handlers  # noqa
+        import core.signals  # noqa

@@ -149,7 +149,7 @@ export function RegisterForm() {
   const onSubmit = async (data: RegisterFormData) => {
     setServerError(null);
     try {
-      await registerUser({ email: data.email, password: data.password, name: data.name });
+      await registerUser({ email: data.email, password: data.password, password_confirm: data.confirmPassword, name: data.name });
       router.push(`${ROUTES.VERIFY_EMAIL}?email=${encodeURIComponent(data.email)}`);
     } catch {
       setServerError('Registration failed. Please try again or use a different email.');
@@ -177,8 +177,8 @@ export function RegisterForm() {
           setIsOAuthLoading(false);
         }
       }
-    } catch (error: any) {
-      setServerError(error.message || `Could not connect to ${provider}.`);
+    } catch (error: unknown) {
+      setServerError(error instanceof Error ? error.message : `Could not connect to ${provider}.`);
       setIsOAuthLoading(false);
     }
   };
@@ -317,7 +317,9 @@ export function RegisterForm() {
               </button>
             </div>
             <PasswordStrength password={passwordValue} />
-            {errors.password && <p className="text-xs text-red-400 mt-1">{errors.password.message}</p>}
+            {errors.password && (
+              <p className="text-xs text-red-400 mt-1">{errors.password.message}</p>
+            )}
           </div>
 
           {/* Confirm password */}

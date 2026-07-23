@@ -9,14 +9,14 @@ from .models import User
 
 class SignUpSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, style={"input_type": "password"})
-    password_confirm = serializers.CharField(write_only=True, style={"input_type": "password"})
+    password_confirm = serializers.CharField(
+        write_only=True, style={"input_type": "password"}
+    )
 
     class Meta:
         model = User
         fields = ["email", "password", "password_confirm", "name"]
-        extra_kwargs = {
-            "email": {"validators": [EmailValidator()]},
-        }
+        extra_kwargs = {"email": {"validators": [EmailValidator()]}}
 
     def validate_email(self, value):
         if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", value):
@@ -31,12 +31,16 @@ class SignUpSerializer(serializers.ModelSerializer):
         try:
             validate_password(value)
         except serializers.ValidationError as e:
-            raise serializers.ValidationError(f"Password is too weak: {', '.join(e.detail)}") from e
+            raise serializers.ValidationError(
+                f"Password is too weak: {', '.join(e.detail)}"
+            ) from e
         return value
 
     def validate(self, data):
         if data["password"] != data["password_confirm"]:
-            raise serializers.ValidationError({"password_confirm": "Passwords do not match"})
+            raise serializers.ValidationError(
+                {"password_confirm": "Passwords do not match"}
+            )
         return data
 
     def create(self, validated_data):

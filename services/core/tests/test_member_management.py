@@ -20,14 +20,13 @@ Test structure:
   TestCeleryTasks              — task dispatch verification
 """
 
+import pytest
 import uuid
 from datetime import timedelta
-from unittest.mock import MagicMock, patch
-
-import pytest
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
+from unittest.mock import MagicMock, patch
 
 from apps.workspaces.constants import WorkspacePlan, WorkspaceRole
 from apps.workspaces.models import Workspace, WorkspaceInvitation, WorkspaceMember
@@ -144,7 +143,9 @@ def team_workspace_with_members(team_workspace, admin_id, member_id, viewer_id):
 
 @pytest.fixture
 def mock_events():
-    with patch("apps.workspaces.services.WorkspaceEventPublisher") as MockPublisher:
+    with patch(
+        "apps.workspaces.services.workspace_service.WorkspaceEventPublisher"
+    ) as MockPublisher:
         mock = MagicMock()
         MockPublisher.return_value = mock
         yield mock
@@ -486,7 +487,9 @@ class TestWorkspaceService:
 class TestInvitationService:
     def test_create_invitation_success(self, workspace, owner_id, mock_events):
         service = InvitationService(event_publisher=mock_events)
-        with patch("apps.workspaces.services._dispatch_invitation_email"):
+        with patch(
+            "apps.workspaces.services.invitation_service._dispatch_invitation_email"
+        ):
             invitation = service.create_invitation(
                 workspace=workspace,
                 actor_id=owner_id,
@@ -512,7 +515,9 @@ class TestInvitationService:
         service = InvitationService(event_publisher=mock_events)
 
         tokens = set()
-        with patch("apps.workspaces.services._dispatch_invitation_email"):
+        with patch(
+            "apps.workspaces.services.invitation_service._dispatch_invitation_email"
+        ):
             for i in range(10):
                 inv = service.create_invitation(
                     workspace=workspace,
@@ -529,7 +534,9 @@ class TestInvitationService:
         """Cannot send two pending invitations to the same email."""
         service = InvitationService(event_publisher=mock_events)
 
-        with patch("apps.workspaces.services._dispatch_invitation_email"):
+        with patch(
+            "apps.workspaces.services.invitation_service._dispatch_invitation_email"
+        ):
             service.create_invitation(
                 workspace=workspace,
                 actor_id=owner_id,
@@ -560,7 +567,9 @@ class TestInvitationService:
         )
 
         service = InvitationService(event_publisher=mock_events)
-        with patch("apps.workspaces.services._dispatch_invitation_email"):
+        with patch(
+            "apps.workspaces.services.invitation_service._dispatch_invitation_email"
+        ):
             # Should succeed — previous invitation is expired
             invitation = service.create_invitation(
                 workspace=workspace,
@@ -615,7 +624,9 @@ class TestInvitationService:
         new_user_id = uuid.uuid4()
 
         service = InvitationService(event_publisher=mock_events)
-        with patch("apps.workspaces.services._dispatch_member_joined_notification"):
+        with patch(
+            "apps.workspaces.services.invitation_service._dispatch_member_joined_notification"
+        ):
             returned_inv, member = service.accept_invitation(
                 token=invitation.token, user_id=new_user_id, user_email=invitation.email
             )
@@ -637,7 +648,9 @@ class TestInvitationService:
         new_user_id = uuid.uuid4()
 
         service = InvitationService(event_publisher=mock_events)
-        with patch("apps.workspaces.services._dispatch_member_joined_notification"):
+        with patch(
+            "apps.workspaces.services.invitation_service._dispatch_member_joined_notification"
+        ):
             service.accept_invitation(
                 token=invitation.token, user_id=new_user_id, user_email=invitation.email
             )
@@ -940,7 +953,7 @@ class TestMemberViews:
             {"role": "owner"},
             format="json",
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 400
 
     def test_remove_member(self, workspace_with_members, admin_id, viewer_id, ws_url):
         client = _authed_client(admin_id)
@@ -974,7 +987,9 @@ class TestInvitationViews:
     def test_invite_member_success(self, team_workspace_with_members, admin_id, ws_url):
         client = _authed_client(admin_id, "Admin User")
 
-        with patch("apps.workspaces.services._dispatch_invitation_email"):
+        with patch(
+            "apps.workspaces.services.invitation_service._dispatch_invitation_email"
+        ):
             resp = client.post(
                 ws_url(f"workspaces/{team_workspace_with_members.id}/members/invite/"),
                 {"email": "newdev@example.com", "role": "member"},
@@ -997,7 +1012,9 @@ class TestInvitationViews:
         client = _authed_client(owner_id, "Owner")
 
         with (
-            patch("apps.workspaces.services._dispatch_invitation_email") as mock_task,
+            patch(
+                "apps.workspaces.services.invitation_service._dispatch_invitation_email"
+            ) as mock_task,
             django_capture_on_commit_callbacks(execute=True),
         ):
             resp = client.post(
@@ -1013,7 +1030,9 @@ class TestInvitationViews:
         client = _authed_client(owner_id, "Owner")
         url = ws_url(f"workspaces/{workspace_with_members.id}/members/invite/")
 
-        with patch("apps.workspaces.services._dispatch_invitation_email"):
+        with patch(
+            "apps.workspaces.services.invitation_service._dispatch_invitation_email"
+        ):
             client.post(
                 url, {"email": "dup@example.com", "role": "member"}, format="json"
             )
@@ -1057,7 +1076,9 @@ class TestInvitationViews:
         new_user_id = uuid.uuid4()
         client = _authed_client(new_user_id, email="joiner@example.com")
 
-        with patch("apps.workspaces.services._dispatch_member_joined_notification"):
+        with patch(
+            "apps.workspaces.services.invitation_service._dispatch_member_joined_notification"
+        ):
             resp = client.post(ws_url(f"invitations/{invitation.token}/accept/"))
 
         assert resp.status_code == 200
@@ -1155,7 +1176,9 @@ class TestKafkaEvents:
         service = InvitationService(event_publisher=mock_publisher)
 
         with (
-            patch("apps.workspaces.services._dispatch_invitation_email"),
+            patch(
+                "apps.workspaces.services.invitation_service._dispatch_invitation_email"
+            ),
             django_capture_on_commit_callbacks(execute=True),
         ):
             service.create_invitation(
@@ -1187,7 +1210,9 @@ class TestKafkaEvents:
         service = InvitationService(event_publisher=mock_publisher)
 
         with (
-            patch("apps.workspaces.services._dispatch_member_joined_notification"),
+            patch(
+                "apps.workspaces.services.invitation_service._dispatch_member_joined_notification"
+            ),
             django_capture_on_commit_callbacks(execute=True),
         ):
             service.accept_invitation(
@@ -1220,10 +1245,7 @@ class TestKafkaEvents:
         mock_publisher = MagicMock()
         service = WorkspaceService(event_publisher=mock_publisher)
 
-        with (
-            patch("apps.workspaces.services._dispatch_invitation_email"),
-            patch("apps.workspaces.tasks.notify_member_removed.delay"),
-        ):
+        with patch("apps.workspaces.tasks.notify_member_removed.delay"):
             service.remove_member(
                 workspace=workspace_with_members,
                 actor_id=owner_id,
@@ -1242,7 +1264,7 @@ class TestCeleryTasks:
         self, workspace, owner_id, django_capture_on_commit_callbacks
     ):
         with patch(
-            "apps.workspaces.services._dispatch_invitation_email"
+            "apps.workspaces.services.invitation_service._dispatch_invitation_email"
         ) as mock_dispatch:
             service = InvitationService(event_publisher=MagicMock())
             with django_capture_on_commit_callbacks(execute=True):

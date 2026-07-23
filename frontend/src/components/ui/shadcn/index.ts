@@ -7,3 +7,4 @@ export { Avatar, AvatarImage, AvatarFallback } from './avatar';
 export { Spinner } from './spinner';
 export { Badge } from './badge';
 export { Skeleton } from './skeleton';
+export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from './popover';

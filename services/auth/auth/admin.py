@@ -28,6 +28,7 @@ admin.site.index_title = "Identity Service Dashboard"
 # Custom AdminSite class (optional — for future extensions)
 # ---------------------------------------------------------------------------
 
+
 class KraivorAdminSite(admin.AdminSite):
     """
     Custom admin site for Kraivor Identity Service.

@@ -15,9 +15,7 @@ export function MarkdownElement({ data }: Props) {
         backgroundColor: data.backgroundColor ?? undefined,
       }}
     >
-      <ReactMarkdown>
-        {data.source}
-      </ReactMarkdown>
+      <ReactMarkdown>{data.source}</ReactMarkdown>
     </div>
   );
 }

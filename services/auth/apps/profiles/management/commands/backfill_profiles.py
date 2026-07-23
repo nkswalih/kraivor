@@ -28,5 +28,7 @@ class Command(BaseCommand):
             created += 1
 
         self.stdout.write(
-            self.style.SUCCESS(f"Created {created} profile(s) for users that lacked one.")
+            self.style.SUCCESS(
+                f"Created {created} profile(s) for users that lacked one."
+            )
         )

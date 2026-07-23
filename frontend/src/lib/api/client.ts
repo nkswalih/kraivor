@@ -167,7 +167,11 @@ export default apiClient;
 /* ─── CORE BACKEND API (native fetch, no axios) ──────────────────── */
 
 class CoreApiError extends Error {
-  constructor(public status: number, public code: string, message: string) {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string
+  ) {
     super(message);
     this.name = 'CoreApiError';
   }
@@ -208,64 +212,112 @@ async function tryRefreshToken(): Promise<string | null> {
   return coreRefreshPromise;
 }
 
+const REQUEST_TIMEOUT = 15_000;
+
 async function coreRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const base = process.env.NEXT_PUBLIC_API_URL ?? '/api';
   const token = getJwt();
 
-  const isFormData = init.body instanceof FormData;
-  let res = await fetch(`${base}${path}`, {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+  const fetchOptions = (overrides: RequestInit = {}): RequestInit => ({
     ...init,
+    ...overrides,
+    signal: overrides.signal ?? controller.signal,
     headers: {
-      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+      ...(init.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init.headers,
+      ...overrides.headers,
     },
   });
 
-  /* ── On 401, try to refresh the token and retry once ── */
-  if (res.status === 401) {
-    const newToken = await tryRefreshToken();
-    if (newToken) {
-      res = await fetch(`${base}${path}`, {
-        ...init,
-        headers: {
-          ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-          Authorization: `Bearer ${newToken}`,
-          ...init.headers,
-        },
-      });
+  const doFetch = (opts: RequestInit = {}) => fetch(`${base}${path}`, fetchOptions(opts));
+
+  try {
+    let res = await doFetch();
+
+    /* ── On 401, try to refresh the token and retry once ── */
+    if (res.status === 401) {
+      const newToken = await tryRefreshToken();
+      if (newToken) {
+        res = await doFetch({ headers: { Authorization: `Bearer ${newToken}` } as Record<string, string> });
+      }
     }
+
+    if (res.status === 401) {
+      useAuthStore.getState().clearAuth();
+      throw new CoreApiError(401, 'token_expired', 'Session expired');
+    }
+
+    if (res.status === 204) return undefined as T;
+
+    const body = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new CoreApiError(
+        res.status,
+        body.error ?? body.code ?? 'unknown_error',
+        body.message ?? body.detail ?? 'Request failed'
+      );
+    }
+
+    return body as T;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  if (res.status === 401) {
-    useAuthStore.getState().clearAuth();
-    throw new CoreApiError(401, 'token_expired', 'Session expired');
-  }
-
-  if (res.status === 204) return undefined as T;
-
-  const body = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new CoreApiError(
-      res.status,
-      body.error ?? body.code ?? 'unknown_error',
-      body.message ?? body.detail ?? 'Request failed'
-    );
-  }
-
-  return body as T;
 }
 
 export { coreRequest };
 
 export const coreApi = {
-  get:    <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'GET', ...init }),
-  post:   <T>(path: string, body?: unknown, init?: RequestInit) =>
-    coreRequest<T>(path, { method: 'POST', body: body != null ? JSON.stringify(body) : undefined, ...init }),
-  patch:  <T>(path: string, body?: unknown, init?: RequestInit) =>
-    coreRequest<T>(path, { method: 'PATCH', body: body != null ? JSON.stringify(body) : undefined, ...init }),
-  put:    <T>(path: string, body?: unknown, init?: RequestInit) =>
-    coreRequest<T>(path, { method: 'PUT', body: body != null ? JSON.stringify(body) : undefined, ...init }),
-  delete: <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'DELETE', ...init }),
+  get: <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'GET', ...init }),
+  post: <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, {
+      method: 'POST',
+      body: body != null ? JSON.stringify(body) : undefined,
+      ...init,
+    }),
+  patch: <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, {
+      method: 'PATCH',
+      body: body != null ? JSON.stringify(body) : undefined,
+      ...init,
+    }),
+  put: <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, {
+      method: 'PUT',
+      body: body != null ? JSON.stringify(body) : undefined,
+      ...init,
+    }),
+  delete: <T>(path: string, init?: RequestInit) =>
+    coreRequest<T>(path, { method: 'DELETE', ...init }),
+};
+
+/* ─── IDENTITY SERVICE API (same gateway, separate export) ─────── */
+export const identityRequest = coreRequest;
+
+export const identityApi = {
+  get: <T>(path: string, init?: RequestInit) => coreRequest<T>(path, { method: 'GET', ...init }),
+  post: <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, {
+      method: 'POST',
+      body: body != null ? JSON.stringify(body) : undefined,
+      ...init,
+    }),
+  patch: <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, {
+      method: 'PATCH',
+      body: body != null ? JSON.stringify(body) : undefined,
+      ...init,
+    }),
+  put: <T>(path: string, body?: unknown, init?: RequestInit) =>
+    coreRequest<T>(path, {
+      method: 'PUT',
+      body: body != null ? JSON.stringify(body) : undefined,
+      ...init,
+    }),
+  delete: <T>(path: string, init?: RequestInit) =>
+    coreRequest<T>(path, { method: 'DELETE', ...init }),
 };

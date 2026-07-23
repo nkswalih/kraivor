@@ -1,5 +1,4 @@
 import uuid
-
 from django.db import models
 
 
@@ -54,7 +53,9 @@ class Discussion(models.Model):
         indexes = [
             models.Index(fields=["-created_at"], name="disc_created_idx"),
             models.Index(fields=["-upvote_count"], name="disc_upvote_idx"),
-            models.Index(fields=["-upvote_count", "-created_at"], name="disc_trending_idx"),
+            models.Index(
+                fields=["-upvote_count", "-created_at"], name="disc_trending_idx"
+            ),
             models.Index(fields=["is_pinned", "-created_at"], name="disc_pinned_idx"),
         ]
 
@@ -116,7 +117,11 @@ class Vote(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user_id = models.UUIDField(db_index=True)
     discussion = models.ForeignKey(
-        Discussion, on_delete=models.CASCADE, null=True, blank=True, related_name="votes"
+        Discussion,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="votes",
     )
     comment = models.ForeignKey(
         Comment, on_delete=models.CASCADE, null=True, blank=True, related_name="votes"
@@ -128,19 +133,17 @@ class Vote(models.Model):
         db_table = "community_votes"
         constraints = [
             models.CheckConstraint(
-                check=(
+                condition=(
                     models.Q(discussion__isnull=False, comment__isnull=True)
                     | models.Q(discussion__isnull=True, comment__isnull=False)
                 ),
                 name="vote_single_target",
             ),
             models.UniqueConstraint(
-                fields=["user_id", "discussion"],
-                name="unique_discussion_vote",
+                fields=["user_id", "discussion"], name="unique_discussion_vote"
             ),
             models.UniqueConstraint(
-                fields=["user_id", "comment"],
-                name="unique_comment_vote",
+                fields=["user_id", "comment"], name="unique_comment_vote"
             ),
         ]
         indexes = [

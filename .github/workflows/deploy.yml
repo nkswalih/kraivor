@@ -1,0 +1,128 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options: [dev, prod]
+
+env:
+  AWS_REGION: us-east-1
+  TF_VERSION: "1.7.0"
+
+jobs:
+  # ── Terraform Plan ──────────────────────────────────────────
+  terraform-plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: infra/terraform/environments/${{ github.event.inputs.environment || 'dev' }}
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+        working-directory: infra/terraform/environments/${{ github.event.inputs.environment || 'dev' }}
+        env:
+          TF_VAR_ssh_key_name: ${{ secrets.EC2_SSH_KEY_NAME }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+
+      - name: Upload Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: infra/terraform/environments/${{ github.event.inputs.environment || 'dev' }}/tfplan
+
+  # ── Terraform Apply ─────────────────────────────────────────
+  terraform-apply:
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: infra/terraform/environments/${{ github.event.inputs.environment || 'dev' }}
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+        working-directory: infra/terraform/environments/${{ github.event.inputs.environment || 'dev' }}
+        env:
+          TF_VAR_ssh_key_name: ${{ secrets.EC2_SSH_KEY_NAME }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+
+  # ── Deploy to EC2 ──────────────────────────────────────────
+  deploy-ec2:
+    needs: terraform-apply
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get EC2 IP from Terraform
+        id: tf-output
+        run: |
+          cd infra/terraform/environments/${{ github.event.inputs.environment || 'dev' }}
+          echo "ec2_ip=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
+        env:
+          TF_VAR_ssh_key_name: ${{ secrets.EC2_SSH_KEY_NAME }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.tf-output.outputs.ec2_ip }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ec2-user/kraivor
+            git pull origin main
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+      - name: Health Check
+        run: |
+          for i in {1..30}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${{ steps.tf-output.outputs.ec2_ip }}/health || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 10
+          done
+          echo "❌ Health check failed"
+          exit 1

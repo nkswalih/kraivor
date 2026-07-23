@@ -8,9 +8,9 @@ import { useAuthStore } from '@/lib/stores/auth-store';
 import { useMyProfile } from '@/lib/hooks/use-profiles';
 
 export function CreateDialog() {
-  const open = useCommunityStore((s) => s.createDialogOpen);
-  const setOpen = useCommunityStore((s) => s.setCreateDialogOpen);
-  const user = useAuthStore((s) => s.user);
+  const open = useCommunityStore(s => s.createDialogOpen);
+  const setOpen = useCommunityStore(s => s.setCreateDialogOpen);
+  const user = useAuthStore(s => s.user);
   const { data: myProfile } = useMyProfile();
   const mutation = useCreateDiscussion();
 
@@ -27,9 +27,13 @@ export function CreateDialog() {
     await mutation.mutateAsync({
       title: title.trim(),
       body: body.trim(),
-      tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+      tags: tags
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean),
       author_username: myProfile?.username ?? user?.email?.split('@')[0] ?? 'anonymous',
-      author_display_name: myProfile?.display_name ?? user?.name ?? user?.email?.split('@')[0] ?? 'Anonymous',
+      author_display_name:
+        myProfile?.display_name ?? user?.name ?? user?.email?.split('@')[0] ?? 'Anonymous',
       author_avatar_url: myProfile?.avatar_url ?? user?.avatar_url ?? '',
     });
 
@@ -44,7 +48,10 @@ export function CreateDialog() {
       <div className="bg-card border border-border rounded-lg w-full max-w-lg mx-4 p-6 animate-fade-up">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium text-foreground">New Discussion</h2>
-          <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">
+          <button
+            onClick={() => setOpen(false)}
+            className="text-muted-foreground hover:text-foreground"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -54,7 +61,7 @@ export function CreateDialog() {
             type="text"
             placeholder="Title"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={e => setTitle(e.target.value)}
             className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
             required
             minLength={10}
@@ -63,7 +70,7 @@ export function CreateDialog() {
           <textarea
             placeholder="What's on your mind?"
             value={body}
-            onChange={(e) => setBody(e.target.value)}
+            onChange={e => setBody(e.target.value)}
             rows={5}
             className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary resize-none"
             required
@@ -74,7 +81,7 @@ export function CreateDialog() {
             type="text"
             placeholder="Tags (comma separated)"
             value={tags}
-            onChange={(e) => setTags(e.target.value)}
+            onChange={e => setTags(e.target.value)}
             className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
           />
 

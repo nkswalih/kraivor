@@ -1,17 +1,16 @@
 """
 apps/api_keys/views.py
- 
+
 API key management endpoints.  Views are intentionally thin.
- 
+
 POST   /api/auth/api-keys/           Create a new API key
 GET    /api/auth/api-keys/           List current user's API keys
 DELETE /api/auth/api-keys/<key_id>/  Revoke an API key
 """
- 
+
 from __future__ import annotations
 
 import logging
-
 from api_keys.authentication.backend import APIKeyAuthentication
 from api_keys.selectors.api_key import get_user_api_keys
 from api_keys.serializers import (
@@ -25,6 +24,7 @@ from api_keys.services.key_service import (
     create_api_key,
     revoke_api_key,
 )
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -32,20 +32,30 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 logger = logging.getLogger(__name__)
- 
- 
+
+
 class APIKeyListCreateView(APIView):
-    authentication_classes = [
-        APIKeyAuthentication,
-        JWTAuthentication,
-    ]
+    authentication_classes = [APIKeyAuthentication, JWTAuthentication]
     permission_classes = [IsAuthenticated]
- 
+
+    @extend_schema(
+        summary="List API keys",
+        description="List the current user's API keys.",
+        tags=["API Keys"],
+        responses={200: APIKeyListSerializer(many=True)},
+    )
     def get(self, request):
         keys = get_user_api_keys(user_id=str(request.user.id))
         serializer = APIKeyListSerializer(keys, many=True)
         return Response({"api_keys": serializer.data}, status=status.HTTP_200_OK)
- 
+
+    @extend_schema(
+        summary="Create API key",
+        description="Create a new API key for the authenticated user. The raw key is returned once in the response.",
+        tags=["API Keys"],
+        request=APIKeyCreateSerializer,
+        responses={201: APIKeyCreateResponseSerializer},
+    )
     def post(self, request):
         serializer = APIKeyCreateSerializer(data=request.data)
         if not serializer.is_valid():
@@ -53,7 +63,7 @@ class APIKeyListCreateView(APIView):
                 {"error": "Invalid request data", "details": serializer.errors},
                 status=status.HTTP_400_BAD_REQUEST,
             )
- 
+
         try:
             created = create_api_key(
                 user=request.user,
@@ -72,20 +82,23 @@ class APIKeyListCreateView(APIView):
                 {"error": "Failed to create API key.", "error_code": "internal_error"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
- 
+
         # Attach raw_key transiently — serializer picks it up, DB never sees it
         created.api_key.raw_key = created.raw_key
         response_serializer = APIKeyCreateResponseSerializer(created.api_key)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
- 
- 
+
+
 class APIKeyRevokeView(APIView):
-    authentication_classes = [
-        APIKeyAuthentication,
-        JWTAuthentication,
-    ]
+    authentication_classes = [APIKeyAuthentication, JWTAuthentication]
     permission_classes = [IsAuthenticated]
- 
+
+    @extend_schema(
+        summary="Revoke API key",
+        description="Revoke (delete) an API key by its ID.",
+        tags=["API Keys"],
+        responses={200: OpenApiResponse(description="API key revoked successfully")},
+    )
     def delete(self, request, key_id: str):
         try:
             revoke_api_key(user=request.user, key_id=key_id)
@@ -102,5 +115,7 @@ class APIKeyRevokeView(APIView):
                 {"error": "Failed to revoke API key.", "error_code": "internal_error"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
- 
-        return Response({"message": "API key revoked successfully."}, status=status.HTTP_200_OK)
+
+        return Response(
+            {"message": "API key revoked successfully."}, status=status.HTTP_200_OK
+        )

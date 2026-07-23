@@ -2,9 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Bell, Mail, Building2, Users, Hash, Check, Loader2, X,
-} from 'lucide-react';
+import { Bell, Mail, Building2, Users, Hash, Check, Loader2, X, ThumbsUp } from 'lucide-react';
 import { notificationEndpoints, workspaceEndpoints, chatEndpoints } from '@/lib/api/endpoints';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { formatRelativeTime } from '@/lib/utils';
@@ -32,6 +30,12 @@ export default function InboxPage() {
     queryFn: () => notificationEndpoints.list(),
   });
 
+  // My pending invitations (works for users without workspaces)
+  const { data: myInvitationsData } = useQuery({
+    queryKey: ['invitations', 'mine'],
+    queryFn: () => workspaceEndpoints.myPendingInvitations(),
+  });
+
   const { data: allInvitationsData } = useQuery({
     queryKey: ['invitations', 'all'],
     queryFn: async () => {
@@ -41,6 +45,10 @@ export default function InboxPage() {
             workspaceId: w.id,
             workspaceName: w.name,
             invitations: invs ?? [],
+          })).catch(() => ({
+            workspaceId: w.id,
+            workspaceName: w.name,
+            invitations: [],
           }))
         )
       );
@@ -52,23 +60,49 @@ export default function InboxPage() {
   const notifs: Notification[] = notifications ?? [];
   const unreadCount = unreadData?.unread_count ?? 0;
 
-  // Pending invitations for current user
+  // Pending invitations for current user — combine my-invitations + per-workspace
   const pendingInvites = useMemo(() => {
-    if (!allInvitationsData || !user?.email) return [];
     const items: { id: string; workspaceName: string; role: string; token: string }[] = [];
-    for (const ws of allInvitationsData) {
-      for (const inv of ws.invitations) {
-        if (inv.status === 'pending' && inv.email === user.email) {
-          items.push({ id: inv.id, workspaceName: ws.workspaceName, role: inv.role, token: inv.token });
+    const seen = new Set<string>();
+    // Primary source: /invitations/pending/ endpoint (works for all users)
+    for (const inv of myInvitationsData ?? []) {
+      const token = inv.token;
+      if (!seen.has(token)) {
+        seen.add(token);
+        items.push({
+          id: inv.id,
+          workspaceName: (inv as any).workspace_name ?? 'Unknown',
+          role: inv.role,
+          token,
+        });
+      }
+    }
+    // Fallback: per-workspace invitations (for admins)
+    if (allInvitationsData) {
+      for (const ws of allInvitationsData) {
+        for (const inv of ws.invitations ?? []) {
+          if (inv.status === 'pending' && inv.email === user?.email && !seen.has(inv.token)) {
+            seen.add(inv.token);
+            items.push({
+              id: inv.id,
+              workspaceName: ws.workspaceName,
+              role: inv.role,
+              token: inv.token,
+            });
+          }
         }
       }
     }
     return items;
-  }, [allInvitationsData, user?.email]);
+  }, [myInvitationsData, allInvitationsData, user?.email]);
 
   // Category counts
-  const workspaceNotifCount = notifs.filter(n => n.notification_type?.startsWith('workspace.') && !n.read_at).length;
-  const memberNotifCount = notifs.filter(n => n.notification_type?.includes('member') && !n.read_at).length;
+  const workspaceNotifCount = notifs.filter(
+    n => n.notification_type?.startsWith('workspace.') && !n.read_at
+  ).length;
+  const memberNotifCount = notifs.filter(
+    n => n.notification_type?.includes('member') && !n.read_at
+  ).length;
 
   const TABS: { id: InboxTab; label: string; icon: React.ElementType; count?: number }[] = [
     { id: 'all', label: 'All', icon: Bell, count: unreadCount },
@@ -92,7 +126,10 @@ export default function InboxPage() {
             return (
               <button
                 key={tab.id}
-                onClick={() => { setActiveTab(tab.id); setSelectedId(null); }}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setSelectedId(null);
+                }}
                 className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-[6px] text-[13px] font-medium transition-colors text-left ${
                   active
                     ? 'bg-[#27272A] text-[#FAFAFA]'
@@ -102,7 +139,7 @@ export default function InboxPage() {
                 <Icon className="w-4 h-4 shrink-0" />
                 <span className="flex-1">{tab.label}</span>
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span className="text-[10px] font-semibold bg-[#6366F1] text-white min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1">
+                  <span className="text-[10px] font-semibold bg-venom-yellow text-black min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1">
                     {tab.count > 99 ? '99+' : tab.count}
                   </span>
                 )}
@@ -123,10 +160,7 @@ export default function InboxPage() {
           />
         )}
         {activeTab === 'invitations' && (
-          <InvitationsPanel
-            pendingInvites={pendingInvites}
-            queryClient={queryClient}
-          />
+          <InvitationsPanel pendingInvites={pendingInvites} queryClient={queryClient} />
         )}
         {activeTab === 'workspaces' && (
           <WorkspacesPanel
@@ -137,16 +171,9 @@ export default function InboxPage() {
           />
         )}
         {activeTab === 'members' && (
-          <MembersPanel
-            notifications={notifs}
-            workspaceId={workspaceId ?? undefined}
-          />
+          <MembersPanel notifications={notifs} workspaceId={workspaceId ?? undefined} />
         )}
-        {activeTab === 'channels' && (
-          <ChannelsPanel
-            workspaceId={workspaceId ?? undefined}
-          />
-        )}
+        {activeTab === 'channels' && <ChannelsPanel workspaceId={workspaceId ?? undefined} />}
       </main>
     </div>
   );
@@ -159,13 +186,13 @@ export default function InboxPage() {
 function acceptInviteInPanel(
   token: string,
   mut: { mutate: (t: string, opts?: { onSuccess?: () => void }) => void; isPending: boolean },
-  onAcceptSuccess?: () => void,
+  onAcceptSuccess?: () => void
 ) {
   return (
     <button
       onClick={() => mut.mutate(token, { onSuccess: onAcceptSuccess })}
       disabled={mut.isPending}
-      className="shrink-0 px-2.5 py-1 bg-[#6366F1] hover:bg-[#4F46E5] text-white text-[11px] font-medium rounded-[4px] transition-colors disabled:opacity-50 flex items-center gap-1"
+      className="shrink-0 px-2.5 py-1 bg-venom-yellow hover:bg-venom-gold text-black text-[11px] font-medium rounded-[4px] transition-colors disabled:opacity-50 flex items-center gap-1"
     >
       {mut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
       Accept
@@ -173,29 +200,48 @@ function acceptInviteInPanel(
   );
 }
 
-function notificationDetail(n: Notification, onDismiss: (id: string) => void, acceptMut?: { mutate: (t: string) => void; isPending: boolean }) {
+function notificationDetail(
+  n: Notification,
+  onDismiss: (id: string) => void,
+  acceptMut?: { mutate: (t: string) => void; isPending: boolean }
+) {
   const isInvite = n.notification_type === 'workspace.invitation';
+  const isFollow = n.notification_type === 'profile.follow.new';
   const token = isInvite && n.link ? n.link.replace('/invitations/', '') : '';
+  const followerUsername = isFollow ? (n.metadata?.follower_username as string) : undefined;
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-[#27272A] flex items-center justify-center text-sm font-bold text-[#FAFAFA] shrink-0">
-          {n.title.charAt(0).toUpperCase()}
-        </div>
+        {isFollow ? (
+          <div className="w-10 h-10 rounded-full bg-venom-yellow flex items-center justify-center text-sm font-bold text-black shrink-0">
+            {(followerUsername || 'U').charAt(0).toUpperCase()}
+          </div>
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-[#27272A] flex items-center justify-center text-sm font-bold text-[#FAFAFA] shrink-0">
+            {n.title.charAt(0).toUpperCase()}
+          </div>
+        )}
         <div>
-          <p className="text-[15px] font-semibold text-[#FAFAFA]">{n.title}</p>
+          <p className="text-[15px] font-semibold text-[#FAFAFA]">
+            {isFollow ? (followerUsername || 'Someone') : n.title}
+          </p>
           <p className="text-[12px] text-[#A1A1AA]">{formatRelativeTime(n.created_at)}</p>
         </div>
       </div>
-      {n.body && (
+      {isFollow ? (
+        <p className="text-[14px] text-[#D1D5DB] leading-relaxed">Followed you</p>
+      ) : n.body ? (
         <p className="text-[14px] text-[#D1D5DB] leading-relaxed whitespace-pre-wrap">{n.body}</p>
-      )}
+      ) : null}
       <div className="flex items-center gap-2 pt-2">
-        {isInvite && token && acceptMut && (
-          acceptInviteInPanel(token, acceptMut, () => onDismiss(n.id))
-        )}
+        {isInvite &&
+          token &&
+          acceptMut &&
+          acceptInviteInPanel(token, acceptMut, () => onDismiss(n.id))}
         {n.link && !isInvite && (
-          <a href={n.link} className="text-[12px] text-venom-yellow hover:text-venom-gold">View details</a>
+          <a href={n.link} className="text-[12px] text-venom-yellow hover:text-venom-gold">
+            View details
+          </a>
         )}
         <button
           onClick={() => onDismiss(n.id)}
@@ -262,30 +308,60 @@ function AllPanel({
         <div className="p-3 space-y-1">
           {notifications.map(n => {
             const isInvite = n.notification_type === 'workspace.invitation';
+            const isFollow = n.notification_type === 'profile.follow.new';
+            const isUpvote = n.notification_type.endsWith('upvoted');
             const token = isInvite && n.link ? n.link.replace('/invitations/', '') : '';
+            const followerUsername = isFollow ? (n.metadata?.follower_username as string) : undefined;
             return (
               <div
                 key={n.id}
-                onClick={() => { onSelect(n.id); if (!n.read_at) markReadMut.mutate(n.id); }}
+                onClick={() => {
+                  onSelect(n.id);
+                  if (!n.read_at) markReadMut.mutate(n.id);
+                }}
                 className={`w-full flex gap-3 p-3 rounded-lg text-left transition-colors cursor-pointer ${
                   selectedId === n.id
                     ? 'bg-[#27272A]'
                     : n.read_at
                       ? 'hover:bg-[#18181B]'
-                      : 'bg-[#6366F1]/5 hover:bg-[#6366F1]/10'
+                      : 'bg-venom-yellow/5 hover:bg-venom-yellow/10'
                 }`}
               >
-                <div className="w-9 h-9 rounded-full bg-[#27272A] flex items-center justify-center text-xs font-bold text-[#FAFAFA] shrink-0 mt-0.5">
-                  {n.title.charAt(0).toUpperCase()}
-                </div>
+                {isFollow ? (
+                  <div className="w-10 h-10 rounded-full bg-venom-yellow flex items-center justify-center shrink-0">
+                    <span className="text-sm font-bold text-black">
+                      {(followerUsername || 'U').charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                ) : isUpvote ? (
+                  <div className="w-9 h-9 rounded-full bg-venom-yellow/15 flex items-center justify-center shrink-0 mt-0.5">
+                    <ThumbsUp className="w-4 h-4 text-venom-yellow" />
+                  </div>
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-[#27272A] flex items-center justify-center text-xs font-bold text-[#FAFAFA] shrink-0 mt-0.5">
+                    {n.title.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-[13px] font-medium text-[#FAFAFA] truncate">{n.title}</p>
+                    {isFollow ? (
+                      <p className="text-[13px] font-semibold text-[#FAFAFA] truncate">
+                        {followerUsername || 'Someone'}
+                      </p>
+                    ) : (
+                      <p className="text-[13px] font-medium text-[#FAFAFA] truncate">{n.title}</p>
+                    )}
                     <span className="text-[10px] text-[#A1A1AA] shrink-0 whitespace-nowrap mt-0.5">
                       {formatRelativeTime(n.created_at)}
                     </span>
                   </div>
-                  <p className="text-[12px] text-[#A1A1AA] line-clamp-1 mt-0.5 text-left">{n.body || n.title}</p>
+                  {isFollow ? (
+                    <p className="text-[12px] text-[#A1A1AA] mt-0.5 text-left">Followed you</p>
+                  ) : (
+                    <p className="text-[12px] text-[#A1A1AA] line-clamp-1 mt-0.5 text-left">
+                      {n.body || n.title}
+                    </p>
+                  )}
                 </div>
                 {isInvite && token && (
                   <div onClick={e => e.stopPropagation()}>
@@ -303,7 +379,7 @@ function AllPanel({
           (() => {
             const n = notifications.find(x => x.id === selectedId);
             if (!n) return <p className="text-[#A1A1AA] text-[13px]">Select a notification</p>;
-            return notificationDetail(n, (id) => dismissMut.mutate(id), acceptMut);
+            return notificationDetail(n, id => dismissMut.mutate(id), acceptMut);
           })()
         ) : (
           <div className="flex items-center justify-center h-full">
@@ -328,7 +404,10 @@ function InvitationsPanel({
 }) {
   const acceptMut = useMutation({
     mutationFn: (token: string) => workspaceEndpoints.acceptInvitation(token),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['invitations', 'all'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invitations', 'all'] });
+      queryClient.invalidateQueries({ queryKey: ['invitations', 'mine'] });
+    },
   });
 
   if (pendingInvites.length === 0) {
@@ -343,7 +422,10 @@ function InvitationsPanel({
     <div className="flex-1 overflow-y-auto p-4">
       <div className="space-y-2 max-w-[500px]">
         {pendingInvites.map(inv => (
-          <div key={inv.id} className="flex items-center gap-3 p-3 rounded-lg bg-[#111113] border border-[#27272A]">
+          <div
+            key={inv.id}
+            className="flex items-center gap-3 p-3 rounded-lg bg-[#111113] border border-[#27272A]"
+          >
             <div className="w-9 h-9 rounded-lg bg-[#27272A] flex items-center justify-center text-xs font-bold text-[#FAFAFA] shrink-0">
               {inv.workspaceName.charAt(0).toUpperCase()}
             </div>
@@ -354,9 +436,13 @@ function InvitationsPanel({
             <button
               onClick={() => acceptMut.mutate(inv.token)}
               disabled={acceptMut.isPending}
-              className="shrink-0 px-3 py-1.5 bg-[#6366F1] hover:bg-[#4F46E5] text-white text-xs font-medium rounded-[6px] transition-colors disabled:opacity-50 flex items-center gap-1"
+              className="shrink-0 px-3 py-1.5 bg-venom-yellow hover:bg-venom-gold text-black text-xs font-medium rounded-[6px] transition-colors disabled:opacity-50 flex items-center gap-1"
             >
-              {acceptMut.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              {acceptMut.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Check className="w-3.5 h-3.5" />
+              )}
               Accept
             </button>
           </div>
@@ -383,7 +469,7 @@ function WorkspacesPanel({
 }) {
   const filtered = useMemo(
     () => notifications.filter(n => n.notification_type?.startsWith('workspace.')),
-    [notifications],
+    [notifications]
   );
 
   const markReadMut = useMutation({
@@ -429,13 +515,16 @@ function WorkspacesPanel({
             return (
               <div
                 key={n.id}
-                onClick={() => { onSelect(n.id); if (!n.read_at) markReadMut.mutate(n.id); }}
+                onClick={() => {
+                  onSelect(n.id);
+                  if (!n.read_at) markReadMut.mutate(n.id);
+                }}
                 className={`w-full flex gap-3 p-3 rounded-lg text-left transition-colors cursor-pointer ${
                   selectedId === n.id
                     ? 'bg-[#27272A]'
                     : n.read_at
                       ? 'hover:bg-[#18181B]'
-                      : 'bg-[#6366F1]/5 hover:bg-[#6366F1]/10'
+                      : 'bg-venom-yellow/5 hover:bg-venom-yellow/10'
                 }`}
               >
                 <div className="w-9 h-9 rounded-full bg-[#27272A] flex items-center justify-center text-xs font-bold text-[#FAFAFA] shrink-0 mt-0.5">
@@ -448,7 +537,9 @@ function WorkspacesPanel({
                       {formatRelativeTime(n.created_at)}
                     </span>
                   </div>
-                  <p className="text-[12px] text-[#A1A1AA] line-clamp-1 mt-0.5 text-left">{n.body || n.title}</p>
+                  <p className="text-[12px] text-[#A1A1AA] line-clamp-1 mt-0.5 text-left">
+                    {n.body || n.title}
+                  </p>
                 </div>
                 {isInvite && token && (
                   <div onClick={e => e.stopPropagation()}>
@@ -466,7 +557,7 @@ function WorkspacesPanel({
           (() => {
             const n = filtered.find(x => x.id === selectedId);
             if (!n) return <p className="text-[#A1A1AA] text-[13px]">Select a notification</p>;
-            return notificationDetail(n, (id) => dismissMut.mutate(id), acceptMut);
+            return notificationDetail(n, id => dismissMut.mutate(id), acceptMut);
           })()
         ) : (
           <div className="flex items-center justify-center h-full">
@@ -491,7 +582,7 @@ function MembersPanel({
 }) {
   const memberNotifs = useMemo(
     () => notifications.filter(n => n.notification_type?.includes('member')),
-    [notifications],
+    [notifications]
   );
 
   const { data: rooms } = useQuery({
@@ -516,10 +607,15 @@ function MembersPanel({
       <div className="max-w-[500px] space-y-6">
         {memberNotifs.length > 0 && (
           <div>
-            <p className="text-[10px] font-semibold tracking-wider text-[#A1A1AA] uppercase mb-2">Activity</p>
+            <p className="text-[10px] font-semibold tracking-wider text-[#A1A1AA] uppercase mb-2">
+              Activity
+            </p>
             <div className="space-y-1">
               {memberNotifs.map(n => (
-                <div key={n.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${n.read_at ? '' : 'bg-[#6366F1]/5'}`}>
+                <div
+                  key={n.id}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${n.read_at ? '' : 'bg-venom-yellow/5'}`}
+                >
                   <div className="w-8 h-8 rounded-full bg-[#27272A] flex items-center justify-center text-xs font-bold text-[#FAFAFA] shrink-0">
                     {n.title.charAt(0).toUpperCase()}
                   </div>
@@ -527,7 +623,9 @@ function MembersPanel({
                     <p className="text-[12px] text-[#FAFAFA] truncate">{n.title}</p>
                     <p className="text-[11px] text-[#A1A1AA] line-clamp-1">{n.body}</p>
                   </div>
-                  <span className="text-[10px] text-[#A1A1AA] shrink-0">{formatRelativeTime(n.created_at)}</span>
+                  <span className="text-[10px] text-[#A1A1AA] shrink-0">
+                    {formatRelativeTime(n.created_at)}
+                  </span>
                 </div>
               ))}
             </div>
@@ -536,7 +634,9 @@ function MembersPanel({
 
         {dmRooms.length > 0 && (
           <div>
-            <p className="text-[10px] font-semibold tracking-wider text-[#A1A1AA] uppercase mb-2">Direct Messages</p>
+            <p className="text-[10px] font-semibold tracking-wider text-[#A1A1AA] uppercase mb-2">
+              Direct Messages
+            </p>
             <div className="space-y-1">
               {dmRooms.map(room => (
                 <a
@@ -550,7 +650,9 @@ function MembersPanel({
                   <div className="flex-1 min-w-0">
                     <p className="text-[12px] font-medium text-[#FAFAFA] truncate">{room.name}</p>
                     {room.last_message_at && (
-                      <p className="text-[10px] text-[#A1A1AA]">{formatRelativeTime(room.last_message_at)}</p>
+                      <p className="text-[10px] text-[#A1A1AA]">
+                        {formatRelativeTime(room.last_message_at)}
+                      </p>
                     )}
                   </div>
                 </a>
@@ -629,9 +731,7 @@ function ChannelsPanel({ workspaceId }: { workspaceId?: string }) {
               key={room.id}
               onClick={() => setSelectedRoom(room.id)}
               className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg text-left transition-colors ${
-                selectedRoom === room.id
-                  ? 'bg-[#27272A]'
-                  : 'hover:bg-[#18181B]'
+                selectedRoom === room.id ? 'bg-[#27272A]' : 'hover:bg-[#18181B]'
               }`}
             >
               <div className="w-8 h-8 rounded-lg bg-[#27272A] flex items-center justify-center shrink-0">
@@ -639,9 +739,7 @@ function ChannelsPanel({ workspaceId }: { workspaceId?: string }) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-medium text-[#FAFAFA] truncate">#{room.name}</p>
-                {room.topic && (
-                  <p className="text-[11px] text-[#A1A1AA] truncate">{room.topic}</p>
-                )}
+                {room.topic && <p className="text-[11px] text-[#A1A1AA] truncate">{room.topic}</p>}
               </div>
             </button>
           ))}
@@ -669,23 +767,29 @@ function ChannelsPanel({ workspaceId }: { workspaceId?: string }) {
             </div>
           ) : (
             <div className="space-y-3">
-              {messages.slice(0, 20).map((msg: any) => (
+              {messages.slice(0, 20).map((msg: { message_id: string; id: string; sender_name: string; created_at: string; content: string; read_at?: string | null; link?: string; notification_type?: string }) => (
                 <div key={msg.message_id || msg.id} className="flex gap-3">
                   <div className="w-8 h-8 rounded-full bg-[#27272A] flex items-center justify-center text-xs font-bold text-[#FAFAFA] shrink-0">
                     {(msg.sender_name || 'U').charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-[12px] font-medium text-[#FAFAFA]">{msg.sender_name || 'Unknown'}</span>
-                      <span className="text-[10px] text-[#A1A1AA]">{formatRelativeTime(msg.created_at)}</span>
+                      <span className="text-[12px] font-medium text-[#FAFAFA]">
+                        {msg.sender_name || 'Unknown'}
+                      </span>
+                      <span className="text-[10px] text-[#A1A1AA]">
+                        {formatRelativeTime(msg.created_at)}
+                      </span>
                     </div>
-                    <p className="text-[13px] text-[#D1D5DB] mt-0.5 whitespace-pre-wrap break-words">{msg.content}</p>
+                    <p className="text-[13px] text-[#D1D5DB] mt-0.5 whitespace-pre-wrap break-words">
+                      {msg.content}
+                    </p>
                   </div>
                 </div>
               ))}
               <a
                 href={`/${workspaceId}/chat/${selectedRoom}`}
-                className="block text-[12px] text-[#6366F1] hover:text-[#4F46E5] text-center py-2"
+                className="block text-[12px] text-venom-yellow hover:text-venom-gold text-center py-2"
               >
                 Open channel →
               </a>

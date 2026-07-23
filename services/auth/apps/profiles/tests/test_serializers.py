@@ -25,22 +25,30 @@ class TestProfileSerializer:
 @pytest.mark.django_db
 class TestUpdateProfileSerializer:
     def test_validate_username_valid(self, profile):
-        serializer = UpdateProfileSerializer(profile, data={"username": "new_valid_name"}, partial=True)
+        serializer = UpdateProfileSerializer(
+            profile, data={"username": "new_valid_name"}, partial=True
+        )
         assert serializer.is_valid()
 
     def test_validate_username_empty(self, profile):
-        serializer = UpdateProfileSerializer(profile, data={"username": ""}, partial=True)
+        serializer = UpdateProfileSerializer(
+            profile, data={"username": ""}, partial=True
+        )
         assert not serializer.is_valid()
 
     def test_validate_username_sanitized(self, profile):
-        serializer = UpdateProfileSerializer(profile, data={"username": "  UPPER_CASE  "}, partial=True)
+        serializer = UpdateProfileSerializer(
+            profile, data={"username": "  UPPER_CASE  "}, partial=True
+        )
         assert serializer.is_valid()
         serializer.save()
         profile.refresh_from_db()
         assert profile.username == "upper_case"
 
     def test_validate_username_too_short(self, profile):
-        serializer = UpdateProfileSerializer(profile, data={"username": "a#b"}, partial=True)
+        serializer = UpdateProfileSerializer(
+            profile, data={"username": "a#b"}, partial=True
+        )
         assert serializer.is_valid()
         serializer.save()
         assert profile.username == "ab"

@@ -1,4 +1,3 @@
-
 import pytest
 from django.urls import reverse
 from profiles.models import UserFollow
@@ -32,20 +31,18 @@ class TestProfileDetailView:
         client.force_authenticate(user=user)
         url = reverse("profile-detail", kwargs={"username": profile.username})
         resp = client.patch(
-            url,
-            {"display_name": "New Name"},
-            content_type="application/json",
+            url, {"display_name": "New Name"}, content_type="application/json"
         )
         assert resp.status_code == status.HTTP_200_OK
         assert resp.json()["display_name"] == "New Name"
 
-    def test_update_other_profile_forbidden(self, client, profile, user, other_user, other_profile):
+    def test_update_other_profile_forbidden(
+        self, client, profile, user, other_user, other_profile
+    ):
         client.force_authenticate(user=user)
         url = reverse("profile-detail", kwargs={"username": other_profile.username})
         resp = client.patch(
-            url,
-            {"display_name": "Hacked Name"},
-            content_type="application/json",
+            url, {"display_name": "Hacked Name"}, content_type="application/json"
         )
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 
@@ -100,7 +97,9 @@ class TestFollowView:
         url = reverse("profile-follow", kwargs={"username": other_profile.username})
         resp = client.delete(url)
         assert resp.status_code == status.HTTP_204_NO_CONTENT
-        assert not UserFollow.objects.filter(follower=user, following=other_user).exists()
+        assert not UserFollow.objects.filter(
+            follower=user, following=other_user
+        ).exists()
 
     def test_follow_no_auth(self, client, other_profile):
         url = reverse("profile-follow", kwargs={"username": other_profile.username})

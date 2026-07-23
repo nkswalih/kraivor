@@ -5,7 +5,7 @@ import { useKnowledgeStore } from '@/lib/stores/knowledge-store';
 import { PropertiesPanel } from '../panels/properties-panel';
 import { LayersPanel } from '../panels/layers-panel';
 import { AssetsPanel } from '../panels/assets-panel';
-import { Settings2, Layers, Paperclip, Sparkles, ChevronRight } from 'lucide-react';
+import { Settings2, Layers, Paperclip, BotMessageSquare, ChevronRight } from 'lucide-react';
 
 interface Props {
   spaceId: string;
@@ -15,7 +15,7 @@ const tabs = [
   { id: 'properties' as const, icon: Settings2, label: 'Properties' },
   { id: 'layers' as const, icon: Layers, label: 'Layers' },
   { id: 'assets' as const, icon: Paperclip, label: 'Assets' },
-  { id: 'ai' as const, icon: Sparkles, label: 'AI' },
+  { id: 'ai' as const, icon: BotMessageSquare, label: 'AI' },
 ];
 
 export function CanvasSidebar({ spaceId }: Props) {
@@ -32,10 +32,9 @@ export function CanvasSidebar({ spaceId }: Props) {
     const el = scrollContainerRef.current;
     if (!el) return;
 
-    const canScrollRight = 
-      el.scrollWidth > el.clientWidth && 
-      el.scrollLeft + el.clientWidth < el.scrollWidth - 8;
-      
+    const canScrollRight =
+      el.scrollWidth > el.clientWidth && el.scrollLeft + el.clientWidth < el.scrollWidth - 8;
+
     setShowArrow(canScrollRight);
   };
 
@@ -77,11 +76,10 @@ export function CanvasSidebar({ spaceId }: Props) {
       className="border-l border-border bg-krait-surface1 flex flex-col shrink-0"
       style={{ width: sidebarWidth }}
     >
-
       {/* Tab bar */}
       <div className="relative flex items-center border-b border-border h-10 w-full bg-krait-surface1">
         {/* Scrollable track without a scrollbar */}
-        <div 
+        <div
           ref={scrollContainerRef}
           className="flex items-center h-full w-full overflow-x-auto no-scrollbar scroll-smooth px-2 gap-1"
         >
@@ -112,9 +110,6 @@ export function CanvasSidebar({ spaceId }: Props) {
         </button>
       </div>
 
-
-
-
       {/* Panel content */}
       <div className="flex-1 overflow-y-auto">
         {activePanel === 'properties' && <PropertiesPanel spaceId={spaceId} />}
@@ -122,7 +117,7 @@ export function CanvasSidebar({ spaceId }: Props) {
         {activePanel === 'assets' && <AssetsPanel spaceId={spaceId} />}
         {activePanel === 'ai' && (
           <div className="p-4 text-center text-text-tertiary text-[13px]">
-            <Sparkles className="w-8 h-8 mx-auto mb-2 text-venom-yellow" />
+            <BotMessageSquare className="w-8 h-8 mx-auto mb-2 text-venom-yellow" />
             <p>AI assistant coming soon</p>
             <p className="text-[11px] mt-1">Generate diagrams, summaries, and more</p>
           </div>

@@ -1,0 +1,36 @@
+# Each owner line is a file pattern followed by one or more owners.
+# Order matters: the last matching pattern takes precedence.
+#
+# Teams are placeholders — create GitHub teams with these names
+# before open-source launch and replace usernames accordingly.
+
+# Default catch-all
+* @kraivor/maintainers
+
+# Frontend (Next.js)
+/frontend/ @kraivor/frontend-maintainers
+
+# Backend services
+/services/auth/ @kraivor/auth-maintainers
+/services/core/ @kraivor/core-maintainers
+/services/analysis/ @kraivor/analysis-maintainers
+/services/ai/ @kraivor/ai-maintainers
+
+# CI/CD and workflows
+/.github/ @kraivor/devops-maintainers
+
+# Docker configuration
+Dockerfile* @kraivor/devops-maintainers
+/docker-compose* @kraivor/devops-maintainers
+
+# Documentation
+/docs/ @kraivor/docs-maintainers
+README.md @kraivor/docs-maintainers
+
+# Infrastructure
+/infra/ @kraivor/devops-maintainers
+/k8s/ @kraivor/devops-maintainers
+/terraform/ @kraivor/devops-maintainers
+
+# Security
+SECURITY.md @kraivor/security-maintainers

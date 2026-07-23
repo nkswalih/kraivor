@@ -7,7 +7,6 @@ for Firebase Cloud Messaging push delivery.
 """
 
 import uuid
-
 from django.db import models
 
 
@@ -21,7 +20,22 @@ class Notification(models.Model):
         ANALYSIS_FAILED = "analysis.failed", "Analysis Failed"
         AI_INDEX_COMPLETED = "ai.index.completed", "AI Index Completed"
         AI_ANALYSIS_COMPLETED = "ai.analysis.completed", "AI Analysis Completed"
+        CHAT_MESSAGE = "chat.message", "New Chat Message"
         CHAT_MENTION = "chat.mention", "Chat Mention"
+        FOLLOW_NEW = "profile.follow.new", "New Follower"
+        DISCUSSION_CREATED = "community.discussion.created", "Discussion Created"
+        COMMENT_CREATED = "community.comment.created", "Comment Created"
+        COMMENT_REPLY = "community.comment.reply", "Comment Reply"
+        DISCUSSION_UPVOTED = "community.discussion.upvoted", "Discussion Upvoted"
+        COMMENT_UPVOTED = "community.comment.upvoted", "Comment Upvoted"
+        PROJECT_CREATED = "project.created", "Project Created"
+        TASK_CREATED = "task.created", "Task Created"
+        TASK_ASSIGNED = "task.assigned", "Task Assigned"
+        TASK_COMPLETED = "task.completed", "Task Completed"
+        TASK_BLOCKED = "task.blocked", "Task Blocked"
+        TASK_OVERDUE = "task.overdue", "Task Overdue"
+        REPOSITORY_CONNECTED = "repository.connected", "Repository Connected"
+        REPOSITORY_DISCONNECTED = "repository.disconnected", "Repository Disconnected"
         SYSTEM = "system", "System Notification"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -39,6 +53,7 @@ class Notification(models.Model):
     title = models.CharField(max_length=255)
     body = models.TextField(blank=True, default="")
     link = models.URLField(max_length=500, blank=True, default="")
+    metadata = models.JSONField(null=True, blank=True, default=dict)
     actor_id = models.UUIDField(null=True, blank=True)
     read_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

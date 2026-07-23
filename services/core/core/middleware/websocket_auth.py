@@ -1,9 +1,17 @@
 """
 WebSocket JWT authentication middleware for Django Channels.
 
-Extracts JWT from the WebSocket query string (?token=...), verifies it
-against the Identity Service JWKS endpoint, and attaches user info to
-the scope.
+Extracts JWT from WebSocket subprotocols (preferred) or query string (?token=...),
+verifies it against the Identity Service JWKS endpoint, and attaches user info
+to the scope.
+
+Subprotocol method (preferred — avoids URL exposure):
+    Client: new WebSocket(url, ['auth', '<jwt_token>'])
+    Server: reads scope["subprotocols"] = ['auth', '<jwt_token>']
+
+Query string method (fallback for backward compatibility):
+    Client: new WebSocket(url + '?token=<jwt_token>')
+    Server: reads query_string params
 
 Usage:
     from channels.routing import ProtocolTypeRouter, URLRouter
@@ -14,13 +22,12 @@ Usage:
     })
 """
 
-import logging
-from urllib.parse import parse_qs
-
 import jwt
+import logging
 from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
 from django.conf import settings
+from urllib.parse import parse_qs
 
 from core.middleware.jwt_auth import _get_jwks_client
 
@@ -29,9 +36,18 @@ logger = logging.getLogger(__name__)
 
 class JWTAuthMiddleware(BaseMiddleware):
     async def __call__(self, scope, receive, send):
-        query_string = scope.get("query_string", b"").decode("utf-8")
-        params = parse_qs(query_string)
-        token = params.get("token", [None])[0]
+        token = None
+
+        # ── Preferred: extract from subprotocol ['auth', '<jwt>'] ───────────
+        subprotocols = scope.get("subprotocols", [])
+        if len(subprotocols) >= 2 and subprotocols[0] == "auth":
+            token = subprotocols[1]
+
+        # ── Fallback: query string ?token=... ───────────────────────────────
+        if not token:
+            query_string = scope.get("query_string", b"").decode("utf-8")
+            params = parse_qs(query_string)
+            token = params.get("token", [None])[0]
 
         if not token:
             logger.warning("websocket.auth.no_token")

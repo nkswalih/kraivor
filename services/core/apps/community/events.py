@@ -1,8 +1,7 @@
 import json
+
 import logging
 import uuid
-
-from django.conf import settings
 from django.db import transaction
 
 logger = logging.getLogger(__name__)
@@ -54,13 +53,19 @@ def _publish(topic, event, user_id=None):
     except Exception as exc:
         logger.error(
             "kafka.publish.failed",
-            extra={"topic": topic, "event_type": event.get("event_type"), "error": str(exc)},
+            extra={
+                "topic": topic,
+                "event_type": event.get("event_type"),
+                "error": str(exc),
+            },
         )
 
 
 def _delivery_report(err, msg):
     if err is not None:
-        logger.error("kafka.delivery.failed", extra={"error": str(err), "topic": msg.topic()})
+        logger.error(
+            "kafka.delivery.failed", extra={"error": str(err), "topic": msg.topic()}
+        )
 
 
 def publish_discussion_created(discussion, user_id):
@@ -79,10 +84,7 @@ def publish_discussion_created(discussion, user_id):
 def publish_discussion_deleted(discussion_id, author_id):
     envelope = _build_envelope(
         event_type="discussion.deleted",
-        data={
-            "discussion_id": discussion_id,
-            "author_id": author_id,
-        },
+        data={"discussion_id": discussion_id, "author_id": author_id},
         user_id=author_id,
     )
     transaction.on_commit(lambda: _publish("community", envelope, user_id=author_id))

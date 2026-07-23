@@ -1,10 +1,10 @@
-import logging
-from threading import Lock
-
+import hmac
 import jwt
+import logging
 from django.conf import settings
 from django.http import JsonResponse
 from jwt import PyJWKClient
+from threading import Lock
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,14 @@ class JWTAuthenticationMiddleware:
         "/api/github-app/webhook/",
         "/api/health/",
     )
-    _SKIP_PREFIXES = ("/admin/", "/health/", "/api/health/")
+    _SKIP_PREFIXES = (
+        "/admin/",
+        "/health/",
+        "/api/health/",
+        "/api/schema/",
+        "/api/docs/",
+        "/api/redoc/",
+    )
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -67,8 +74,22 @@ class JWTAuthenticationMiddleware:
         if any(request.path.startswith(p) for p in self._EXEMPT_PATHS):
             return self.get_response(request)
 
-        # ── Skip: internal gateway request ───────────────────────────────────
-        if request.headers.get(settings.INTERNAL_REQUEST_HEADER):
+        # ── Internal gateway request: trust headers, skip JWT ─────────────────
+        header_value = request.headers.get(settings.INTERNAL_REQUEST_HEADER)
+        internal_secret = getattr(settings, "INTERNAL_REQUEST_SECRET", "")
+        if header_value and internal_secret and hmac.compare_digest(
+            header_value.encode(), internal_secret.encode()
+        ):
+            request.jwt_payload = {}
+            request.user_id = request.headers.get("X-User-ID", "")
+            request.user_name = request.headers.get("X-User-Name", "")
+            request.email = request.headers.get("X-Email", "")
+            request.user_email = request.headers.get("X-Email", "")
+            workspace_ids_str = request.headers.get("X-Workspace-IDs", "")
+            request.workspace_ids = [
+                w.strip() for w in workspace_ids_str.split(",") if w.strip()
+            ]
+            request.roles = {}
             return self.get_response(request)
 
         # ── Skip: public paths ────────────────────────────────────────────────
@@ -113,13 +134,25 @@ class JWTAuthenticationMiddleware:
             )
 
         # ── Attach to request ─────────────────────────────────────────────────
+        user_id = payload.get("sub") or payload.get("user_id")
         request.jwt_payload = payload
-        request.user_id = payload.get("sub") or payload.get("user_id")
+        request.user_id = user_id
         request.user_name = payload.get("name") or payload.get("email", "")
         request.email = payload.get("email")
         request.user_email = payload.get("email")
         request.workspace_ids = payload.get("workspace_ids", [])
         request.roles = payload.get("roles", {})
+
+        # Set DRF-compatible user so that IsAuthenticated etc. work.
+        # Must be a local class (not top-level) to avoid polluting module namespace.
+        class _JwtUser:
+            is_authenticated = True
+            is_anonymous = False
+            is_active = True
+            pk = user_id
+            id = user_id
+
+        request.user = _JwtUser()
 
         return self.get_response(request)
 

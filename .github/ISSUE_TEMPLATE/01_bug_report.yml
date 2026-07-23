@@ -1,0 +1,79 @@
+name: "🐛 Bug Report"
+description: Report a bug to help us improve Kraivor
+title: "bug: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+
+  - type: dropdown
+    id: service
+    attributes:
+      label: Affected Service
+      description: Which service(s) does this bug affect?
+      multiple: true
+      options:
+        - Auth
+        - Core
+        - Analysis
+        - AI
+        - Frontend
+        - CI/CD
+        - Documentation
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of the bug
+      placeholder: What happened? What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: Copy and paste any relevant log output (will be auto-formatted)
+      render: shell
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        Examples:
+        - OS: Ubuntu 24.04
+        - Browser: Chrome 125
+        - Python: 3.12
+        - Docker: 27.0
+      placeholder: OS, browser, runtime versions...
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Verification
+      options:
+        - label: I have searched existing issues for duplicates
+          required: true
+        - label: I have included steps to reproduce
+          required: true
+        - label: I have included relevant logs/screenshots
+          required: false

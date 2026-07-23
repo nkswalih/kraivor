@@ -9,7 +9,9 @@ from typing import Any
 from django.conf import settings
 
 
-def create_refresh_cookie(refresh_token: str, max_age_days: int = None) -> dict[str, Any]:
+def create_refresh_cookie(
+    refresh_token: str, max_age_days: int = None
+) -> dict[str, Any]:
     """
     Create refresh token cookie settings.
 

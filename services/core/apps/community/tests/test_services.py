@@ -1,27 +1,19 @@
+import pytest
 import uuid
 
-import pytest
-
-from ..models import Comment, Discussion, Tag, Vote
-from ..services import (
-    CommentService,
-    DiscussionService,
-    TagService,
-    VoteService,
-)
-from .factories import (
-    CommentFactory,
-    DiscussionFactory,
-    TagFactory,
-    VoteFactory,
-)
+from ..models import Comment, Discussion
+from ..services import CommentService, DiscussionService, TagService, VoteService
+from .factories import CommentFactory, DiscussionFactory, TagFactory, VoteFactory
 
 
 @pytest.mark.django_db
 class TestDiscussionService:
     def test_create_discussion(self, user_id):
         d = DiscussionService.create_discussion(
-            {"title": "Test Discussion Title Here", "body": "This is the body of the test discussion."},
+            {
+                "title": "Test Discussion Title Here",
+                "body": "This is the body of the test discussion.",
+            },
             user_id=user_id,
             username="testuser",
             display_name="Test User",
@@ -32,7 +24,11 @@ class TestDiscussionService:
 
     def test_create_with_tags(self, user_id, tag):
         d = DiscussionService.create_discussion(
-            {"title": "Test Discussion Title Here", "body": "This is the body of the test discussion.", "tags": [tag.name]},
+            {
+                "title": "Test Discussion Title Here",
+                "body": "This is the body of the test discussion.",
+                "tags": [tag.name],
+            },
             user_id=user_id,
             username="testuser",
             display_name="Test User",
@@ -97,7 +93,7 @@ class TestVoteService:
         assert discussion.upvote_count == 1
 
     def test_vote_discussion_change(self, user_id, discussion):
-        VoteFactory(discussion=discussion, user_id=uuid.UUID(user_id), value=1)
+        VoteService.vote_discussion(discussion, user_id, 1)
         vote, action = VoteService.vote_discussion(discussion, user_id, -1)
         assert action == "changed"
         assert vote.value == -1

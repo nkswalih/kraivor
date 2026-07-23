@@ -1,10 +1,40 @@
 # Environment
 .env
+.env.*
 .env.local
 .env.*.local
-docker-compose.override.yml
 .venv
 
+# Secrets & Credentials
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.crt
+*.cer
+*.cert
+*.token
+secrets.*
+credentials.*
+*-credentials.json
+*-key.json
+*-secret*.json
+*-service-account.json
+firebase-service-account.json
+oauth-encryption.key
+.opencode
+.keys/
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+terraform.tfvars
+!**/environments/*/terraform.tfvars.example
+.terraform.lock.hcl
 
 # Python
 __pycache__/
@@ -82,17 +112,6 @@ ANALYSIS_SERVICE_DESIGN.md
 AI_SERVICE_DESIGN.md
 DEPLOYMENT_DESKTOP.md
 progress.md
-
-.opencode
-.keys
-.keys/jwt-private.pem
-.keys/jwt-public.pem
-.keys/oauth-encryption.key
-oauth-encryption.key
-firebase-service-account.json
-.keys/*
-*.pem
-*.key
 
 services/core/celerybeat-schedule
 

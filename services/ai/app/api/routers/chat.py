@@ -15,6 +15,7 @@ from app.api.dependencies.backpressure import (
 from app.api.dependencies.rate_limiter import check_rate_limit
 from app.api.schemas.chat import ChatRequest, ChatResponse
 from app.application.chat.chat_service import ChatService
+from app.application.usage.usage_service import get_daily_usage_summary
 from app.infrastructure.llm.error_classifier import ClassifiedError, ErrorCategory
 from app.infrastructure.llm.router import (
     ALL_MODEL_IDS,
@@ -363,3 +364,12 @@ async def byok_remove(provider: str, user: CurrentUser):
             await db.commit()
 
     return {"ok": True, "provider": provider}
+
+
+# ── Daily usage endpoint ──────────────────────────────────────
+
+@router.get("/usage/daily")
+async def daily_usage(user: CurrentUser):
+    """Return the user's token usage for today."""
+    summary = await get_daily_usage_summary(user.sub)
+    return summary

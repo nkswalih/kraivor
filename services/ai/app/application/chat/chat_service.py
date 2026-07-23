@@ -21,6 +21,7 @@ from app.core.exceptions import AllProvidersFailedError
 from app.domain.entities.message import Message as MessageEntity
 from app.domain.entities.message import MessageRole
 from app.infrastructure.cache.query_cache import SemanticQueryCache
+from app.application.usage.usage_service import increment_daily_usage
 from app.infrastructure.db.database import async_session_factory
 from app.infrastructure.llm.error_classifier import ClassifiedError, ErrorCategory
 from app.infrastructure.llm.failover_engine import FailoverEngine
@@ -312,7 +313,7 @@ class ChatService:
                 for i in range(0, len(cached_response), chunk_size):
                     yield {"content": cached_response[i : i + chunk_size]}
                     await asyncio.sleep(0.03)
-                yield {"done": True, "conversation_id": conversation_id, "title": None}
+                yield {"done": True, "conversation_id": conversation_id, "title": None, "usage": {}}
                 await self._persist_streaming_response(
                     user_id, message, cached_response, conversation_id, workspace_id, model, {}
                 )
@@ -382,10 +383,19 @@ class ChatService:
             for i in range(0, len(full_response), chunk_size):
                 yield {"content": full_response[i : i + chunk_size]}
                 await asyncio.sleep(0.03)
-            yield {"done": True, "conversation_id": conversation_id, "title": None}
+            yield {"done": True, "conversation_id": conversation_id, "title": None, "usage": usage}
             await self._persist_streaming_response(
                 user_id, message, full_response, conversation_id, workspace_id, model, usage
             )
+            # Track daily token usage
+            try:
+                await increment_daily_usage(
+                    user_id,
+                    input_tokens=usage.get("input_tokens", 0),
+                    output_tokens=usage.get("output_tokens", 0),
+                )
+            except Exception as e:
+                logger.debug("daily_usage_increment failed: %s", e)
             # Cache the response for similar future queries (skip very short responses)
             if len(full_response) > 50:
                 try:
@@ -397,7 +407,7 @@ class ChatService:
         # Fallback: graph didn't produce a response (shouldn't happen in normal flow)
         # Stream a simple error message rather than making a duplicate LLM call.
         yield {"content": "I wasn't able to generate a response. Please try again."}
-        yield {"done": True, "conversation_id": conversation_id, "title": None}
+        yield {"done": True, "conversation_id": conversation_id, "title": None, "usage": {}}
 
     async def _persist_streaming_response(
         self,

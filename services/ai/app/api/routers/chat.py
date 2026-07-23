@@ -3,7 +3,7 @@ import json
 from typing import Annotated
 
 import uuid
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sse_starlette.sse import EventSourceResponse
 
 from app.api.dependencies.auth import JWTPayload, get_current_user
@@ -15,6 +15,7 @@ from app.api.dependencies.backpressure import (
 from app.api.dependencies.rate_limiter import check_rate_limit
 from app.api.schemas.chat import ChatRequest, ChatResponse
 from app.application.chat.chat_service import ChatService
+from app.infrastructure.llm.error_classifier import ClassifiedError, ErrorCategory
 from app.infrastructure.llm.router import (
     ALL_MODEL_IDS,
     BYOK_MODELS,
@@ -22,6 +23,7 @@ from app.infrastructure.llm.router import (
     KRAIVOR_MODEL,
     MODEL_BACKEND_MAP,
 )
+from app.core.exceptions import AllProvidersFailedError
 
 CurrentUser = Annotated[JWTPayload, Depends(get_current_user)]
 RateLimit = Annotated[None, Depends(check_rate_limit)]
@@ -83,12 +85,29 @@ async def chat(request: ChatRequest, user: CurrentUser, _: RateLimit = None):
                         user_name=user.name,
                         model=request.model,
                     ):
-                        if chunk.get("done"):
+                        if chunk.get("type") == "error":
+                            yield {"event": "error", "data": json.dumps(chunk)}
+                        elif chunk.get("done"):
                             yield {"event": "done", "data": json.dumps(chunk)}
                         elif chunk.get("status"):
                             yield {"event": "status", "data": json.dumps(chunk)}
                         else:
                             yield {"event": "chunk", "data": json.dumps(chunk)}
+                except ClassifiedError as e:
+                    yield {"event": "error", "data": json.dumps({
+                        "type": "error",
+                        "error": e.user_message,
+                        "category": e.category.value,
+                        "suggested_action": e.suggested_action.value,
+                        "retry_after": e.retry_after,
+                    })}
+                except AllProvidersFailedError as e:
+                    yield {"event": "error", "data": json.dumps({
+                        "type": "error",
+                        "error": "AI service is temporarily at capacity. Please try again in a few minutes.",
+                        "category": "all_providers_failed",
+                        "suggested_action": "add_key",
+                    })}
                 finally:
                     await release_llm_slot()
 
@@ -117,13 +136,43 @@ async def chat(request: ChatRequest, user: CurrentUser, _: RateLimit = None):
             sources=result.get("sources"),
         )
     except asyncio.TimeoutError:
-        from fastapi import HTTPException
         raise HTTPException(
             status_code=504,
             detail={
                 "error": "llm_timeout",
                 "message": "The AI model took too long to respond. Please try a simpler question.",
                 "retry_after": 10,
+            },
+        )
+    except ClassifiedError as e:
+        status_map = {
+            ErrorCategory.BILLING_EXHAUSTED: 402,
+            ErrorCategory.RATE_LIMITED: 429,
+            ErrorCategory.AUTH_FAILED: 401,
+            ErrorCategory.PROVIDER_UNAVAILABLE: 503,
+            ErrorCategory.CONTEXT_OVERFLOW: 413,
+            ErrorCategory.TIMEOUT: 504,
+        }
+        status = status_map.get(e.category, 500)
+        headers = {}
+        if e.retry_after:
+            headers["Retry-After"] = str(int(e.retry_after))
+        raise HTTPException(
+            status_code=status,
+            detail={
+                "error": e.category.value,
+                "message": e.user_message,
+                "suggested_action": e.suggested_action.value,
+            },
+            headers=headers,
+        )
+    except AllProvidersFailedError as e:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "error": "all_providers_failed",
+                "message": "AI credits are exhausted for today. Add your own API key in Settings to continue, or try again tomorrow.",
+                "suggested_action": "add_key",
             },
         )
     finally:
@@ -155,13 +204,37 @@ async def completions(request: dict, user: CurrentUser, _: RateLimit = None):
             sources=result.get("sources"),
         )
     except asyncio.TimeoutError:
-        from fastapi import HTTPException
         raise HTTPException(
             status_code=504,
             detail={
                 "error": "llm_timeout",
                 "message": "The AI model took too long to respond.",
                 "retry_after": 10,
+            },
+        )
+    except ClassifiedError as e:
+        status_map = {
+            ErrorCategory.BILLING_EXHAUSTED: 402,
+            ErrorCategory.RATE_LIMITED: 429,
+            ErrorCategory.AUTH_FAILED: 401,
+            ErrorCategory.PROVIDER_UNAVAILABLE: 503,
+        }
+        status = status_map.get(e.category, 500)
+        raise HTTPException(
+            status_code=status,
+            detail={
+                "error": e.category.value,
+                "message": e.user_message,
+                "suggested_action": e.suggested_action.value,
+            },
+        )
+    except AllProvidersFailedError as e:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "error": "all_providers_failed",
+                "message": "AI credits are exhausted for today. Add your own API key in Settings to continue, or try again tomorrow.",
+                "suggested_action": "add_key",
             },
         )
     finally:

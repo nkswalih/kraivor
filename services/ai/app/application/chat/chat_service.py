@@ -17,13 +17,48 @@ from app.application.memory.user_memory_service import (
 )
 from app.application.provisioning.key_resolver import KeyResolver
 from app.core.config import settings
+from app.core.exceptions import AllProvidersFailedError
 from app.domain.entities.message import Message as MessageEntity
 from app.domain.entities.message import MessageRole
+from app.infrastructure.cache.query_cache import SemanticQueryCache
 from app.infrastructure.db.database import async_session_factory
+from app.infrastructure.llm.error_classifier import ClassifiedError, ErrorCategory
+from app.infrastructure.llm.failover_engine import FailoverEngine
 from app.infrastructure.llm.router import ModelRouter
 from app.infrastructure.service_client import ServiceClient
 
 logger = logging.getLogger(__name__)
+
+
+def _format_error_for_user(error: ClassifiedError | AllProvidersFailedError) -> dict:
+    """Build a user-friendly error response with actionable details."""
+    if isinstance(error, AllProvidersFailedError):
+        return {
+            "response": (
+                "All AI providers are currently unavailable. This is usually due to "
+                "exceeded credits or rate limits.\n\n"
+                "**What you can do:**\n"
+                "- Add your own API key in Settings (BYOK)\n"
+                "- Switch to a different model\n"
+                "- Try again in a few minutes"
+            ),
+            "provider_error": True,
+            "error_details": {
+                "category": "all_providers_failed",
+                "tried_providers": error.tried_providers,
+                "suggested_action": "add_key",
+            },
+        }
+    return {
+        "response": error.user_message,
+        "provider_error": True,
+        "error_details": {
+            "category": error.category.value,
+            "provider": error.provider,
+            "suggested_action": error.suggested_action.value,
+            "retry_after": error.retry_after,
+        },
+    }
 _HISTORY_LIMIT = 30
 _HISTORY_CACHE_TTL = 300  # 5 minutes (was 60s — almost always a cache miss at 60s)
 
@@ -46,6 +81,8 @@ class ChatService:
         self.graph = build_agent_graph(client=client)
         self.key_resolver = KeyResolver()
         self.router = ModelRouter()
+        self.query_cache = SemanticQueryCache()
+        self.failover = FailoverEngine(self.key_resolver)
 
     async def _load_history(self, conversation_id: str) -> list[dict]:
         """Load the last N messages from the database for context."""
@@ -103,6 +140,10 @@ class ChatService:
         else:
             db_history = history or []
 
+        # Simple truncation: keep last N turns to stay within token budgets
+        if len(db_history) > _HISTORY_LIMIT:
+            db_history = db_history[-_HISTORY_LIMIT:]
+
         # Load cross-session user memory
         async with async_session_factory() as db:
             user_context_str = await get_user_context(db, user_id)
@@ -148,7 +189,14 @@ class ChatService:
         # Note: Project doc seeding is handled by EvidenceGathererNode on-the-fly
         # so docs are guaranteed to exist before evidence retrieval runs.
 
-        result = await self.graph.ainvoke(state)
+        try:
+            result = await self.graph.ainvoke(state)
+        except ClassifiedError as e:
+            logger.warning("provider_error graph_invoke category=%s", e.category.value)
+            result = _format_error_for_user(e)
+        except AllProvidersFailedError as e:
+            logger.error("all_providers_failed tried=%s", e.tried_providers)
+            result = _format_error_for_user(e)
         response = result.get("response", "")
         usage = result.get("usage") or {}
 
@@ -244,10 +292,33 @@ class ChatService:
         else:
             db_history = kwargs.get("history") or []
 
+        # Simple truncation: keep last N turns to stay within token budgets
+        if len(db_history) > _HISTORY_LIMIT:
+            db_history = db_history[-_HISTORY_LIMIT:]
+
         # Load user context
         async with async_session_factory() as db:
             user_context_str = await get_user_context(db, user_id)
         user_context_str = user_context_str or None
+
+        # Check semantic query cache — skip full pipeline if a similar query was recently answered
+        model_key = model or ""
+        try:
+            cached_response = await self.query_cache.get(message, model_key)
+            if cached_response:
+                logger.info("query_cache: hit for message='%s'", message[:50])
+                import asyncio
+                chunk_size = 20
+                for i in range(0, len(cached_response), chunk_size):
+                    yield {"content": cached_response[i : i + chunk_size]}
+                    await asyncio.sleep(0.03)
+                yield {"done": True, "conversation_id": conversation_id, "title": None}
+                await self._persist_streaming_response(
+                    user_id, message, cached_response, conversation_id, workspace_id, model, {}
+                )
+                return
+        except Exception as e:
+            logger.debug("query_cache lookup failed: %s", e)
 
         # Build initial state
         state = {
@@ -289,7 +360,18 @@ class ChatService:
 
         # Run graph to get context/tool results
         yield {"status": "Planning solution"}
-        result = await self.graph.ainvoke(state)
+        try:
+            result = await self.graph.ainvoke(state)
+        except ClassifiedError as e:
+            logger.warning("provider_error stream_graph category=%s", e.category.value)
+            yield {"type": "error", "error": e.user_message, "category": e.category.value,
+                   "suggested_action": e.suggested_action.value, "provider": e.provider}
+            return
+        except AllProvidersFailedError as e:
+            logger.error("all_providers_failed stream_graph tried=%s", e.tried_providers)
+            yield {"type": "error", "error": "All AI providers are exhausted.",
+                   "category": "all_providers_failed", "suggested_action": "add_key"}
+            return
 
         # If graph already produced a response (via tool_executor or explainer), stream it
         if result.get("response"):
@@ -304,126 +386,18 @@ class ChatService:
             await self._persist_streaming_response(
                 user_id, message, full_response, conversation_id, workspace_id, model, usage
             )
+            # Cache the response for similar future queries (skip very short responses)
+            if len(full_response) > 50:
+                try:
+                    await self.query_cache.set(message, model_key, full_response)
+                except Exception as e:
+                    logger.debug("query_cache set failed: %s", e)
             return
 
-        # Build explainer prompt from graph state using intent-aware selection
-        from app.application.agents.prompts.specialist import (
-            EXPLAINER_SYSTEM_PROMPT,
-            EXPLAINER_EVIDENCE_PROMPT,
-            EXPLAINER_CASUAL_PROMPT,
-            EXPLAINER_CODE_AUDIT_PROMPT,
-            EXPLAINER_GENERAL_QA_PROMPT,
-        )
-
-        intent = result.get("intent")
-        evidence = result.get("evidence")
-        evidence_sources = result.get("evidence_sources") or []
-
-        # Emit status based on what the graph decided to do
-        if result.get("needs_tools"):
-            yield {"status": "Inspecting project"}
-        elif result.get("needs_evidence"):
-            yield {"status": "Searching knowledge base"}
-
-        findings = []
-        sections = {
-            "code_findings": "Code Review Findings",
-            "security_findings": "Security Findings",
-            "architecture_findings": "Architecture Findings",
-            "performance_findings": "Performance Findings",
-        }
-        for key, label in sections.items():
-            vals = result.get(key)
-            if vals:
-                for v in vals:
-                    findings.append(f"=== {label} ===\n{v}")
-
-        context = result.get("assembled_context") or ""
-        tool_results = result.get("tool_results")
-
-        has_findings = bool(findings)
-        has_evidence = bool(evidence)
-        has_user_context = bool(user_context_str)
-
-        # Emit status based on what data we gathered
-        if has_findings:
-            yield {"status": "Analyzing code"}
-        elif has_evidence:
-            yield {"status": "Reviewing documentation"}
-        else:
-            yield {"status": "Finalizing response"}
-
-        # Select prompt based on intent + available data
-        _AUDIT_INTENTS = {"repository_analysis", "security_analysis", "architecture_review", "performance_analysis"}
-        _CASUAL_INTENTS = {"greeting", "conversation"}
-
-        if intent in _CASUAL_INTENTS:
-            prompt_template = EXPLAINER_CASUAL_PROMPT
-        elif intent in _AUDIT_INTENTS and has_findings:
-            prompt_template = EXPLAINER_CODE_AUDIT_PROMPT
-        elif has_evidence:
-            prompt_template = EXPLAINER_EVIDENCE_PROMPT
-        elif has_user_context:
-            prompt_template = EXPLAINER_GENERAL_QA_PROMPT
-        else:
-            prompt_template = EXPLAINER_SYSTEM_PROMPT
-
-        # Build user message — user context FIRST as primary knowledge source
-        parts = []
-
-        if user_context_str:
-            parts.append(f"## What you know about this user and their projects\n{user_context_str}")
-
-        parts.append(f"## User's question\n{message}")
-
-        if evidence:
-            parts.append(f"## Verified research sources\n{evidence}")
-        if tool_results:
-            parts.append(f"## Workspace data\n{tool_results}")
-        if context:
-            parts.append(f"## Repository context\n{context}")
-        if findings:
-            parts.append("## Analysis findings\n" + "\n\n".join(findings))
-        if db_history:
-            brief = "\n".join(
-                f"{'User' if h.get('role') == 'user' else 'Assistant'}: {h.get('content', '')[:500]}"
-                for h in db_history[-15:]
-            )
-            parts.append(f"## Recent conversation\n{brief}")
-
-        # Format system prompt with user context + current date
-        name = user_name or "the user"
-        ctx = f"Known context about the user:\n{user_context_str}" if user_context_str else ""
-        date_block = _current_date_block()
-        system_prompt = prompt_template.format(user_name=name, user_context=ctx)
-        system_prompt = f"{date_block}\n\n{system_prompt}"
-
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": "\n\n".join(parts)},
-        ]
-
-        # Resolve LLM key and create streaming client
-        route = self.router.get_route_for_user("code_review", model)
-        api_key, provider = await self.key_resolver.resolve(user_id, route["model"])
-        from app.infrastructure.llm.client import LLMClient
-        client = LLMClient(api_key=api_key, provider=provider, model=route["model"])
-
-        yield {"status": "Writing response"}
-
-        # Stream token-by-token
-        full_response = ""
-        async for token in client.stream(messages, max_tokens=route["max_tokens"]):
-            full_response += token
-            yield {"content": token}
-
+        # Fallback: graph didn't produce a response (shouldn't happen in normal flow)
+        # Stream a simple error message rather than making a duplicate LLM call.
+        yield {"content": "I wasn't able to generate a response. Please try again."}
         yield {"done": True, "conversation_id": conversation_id, "title": None}
-
-        # Persist the complete response
-        usage = {"model": route["model"], "provider": provider, "input_tokens": 0, "output_tokens": 0}
-        await self._persist_streaming_response(
-            user_id, message, full_response, conversation_id, workspace_id, model, usage
-        )
 
     async def _persist_streaming_response(
         self,

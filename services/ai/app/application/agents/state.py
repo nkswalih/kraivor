@@ -45,3 +45,9 @@ class AgentState(TypedDict):
 
     response: str | None
     usage: dict | None
+
+    # Provider error propagation — set by nodes when LLM calls fail.
+    # Allows downstream nodes (especially explainer) to degrade gracefully.
+    provider_error: str | None
+    provider_error_category: str | None  # ErrorCategory value
+    provider_error_details: dict | None  # {category, provider, suggested_action, retry_after}

@@ -9,6 +9,7 @@ from app.application.tools.workspace_tools import (
     WorkspaceTools,
 )
 from app.infrastructure.llm.client import LLMClient, LLM_SHORT_TIMEOUT
+from app.infrastructure.llm.failover_engine import FailoverEngine
 from app.infrastructure.llm.router import ModelRouter
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,7 @@ class ToolExecutorNode:
         self.tools = workspace_tools
         self.router = ModelRouter()
         self.key_resolver = KeyResolver()
+        self.failover = FailoverEngine(self.key_resolver)
         self._tool_map = {
             "get_workspace_repos": self.tools.get_repos,
             "get_repo_analysis_report": self.tools.get_analysis_report,
@@ -107,8 +109,6 @@ class ToolExecutorNode:
         user_model = state.get("model")
         history = state.get("context_history") or []
         route = self.router.get_route_for_user("tool_calling", user_model)
-        api_key, provider = await self.key_resolver.resolve(user_id, route["model"])
-        client = LLMClient(api_key=api_key, provider=provider, model=route["model"])
 
         messages = [
             {
@@ -127,13 +127,21 @@ class ToolExecutorNode:
         recorded_calls = []
 
         for _round_num in range(3):
-            response = await client.generate(
-                messages,
-                tools=WORKSPACE_TOOL_DEFINITIONS,
-                max_tokens=route["max_tokens"],
-                tool_choice="auto",
-                timeout=LLM_SHORT_TIMEOUT,
-            )
+            try:
+                response = await self.failover.execute(
+                    messages, user_id, route,
+                    tools=WORKSPACE_TOOL_DEFINITIONS,
+                    max_tokens=route["max_tokens"],
+                    tool_choice="auto",
+                    timeout=LLM_SHORT_TIMEOUT,
+                )
+            except Exception as e:
+                logger.error("tool_executor LLM call failed: %s", e)
+                return {
+                    "tool_results": "I'm having trouble processing your request. Please try again.",
+                    "tool_calls": recorded_calls,
+                    "response": "I'm having trouble processing your request. Please try again.",
+                }
 
             tool_calls = response.get("tool_calls", [])
             content = response.get("content") or ""

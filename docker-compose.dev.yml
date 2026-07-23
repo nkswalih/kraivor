@@ -394,6 +394,7 @@ services:
       AI_OPENROUTER__MASTER__KEY: ${OPENROUTER_API_KEY}
       AI_KEY_ENCRYPTION_KEY: ${AI_KEY_ENCRYPTION_KEY:-dev-encryption-key-32chars!}
       AI_INTERNAL_REQUEST_SECRET: ${INTERNAL_REQUEST_TOKEN:-dev-internal-secret}
+      HF_TOKEN: ${HF_TOKEN:-}
       AI_CORS_ALLOWED_ORIGINS: ${AI_CORS_ALLOWED_ORIGINS:-http://localhost:3000}
       UV_LINK_MODE: copy
     depends_on:

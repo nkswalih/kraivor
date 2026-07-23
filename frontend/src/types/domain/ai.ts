@@ -1,5 +1,7 @@
 export type ErrorSuggestedAction = 'add_key' | 'switch_model' | 'wait' | 'retry' | 'new_conversation' | 'check_key';
 
+export type ChatMode = 'normal' | 'web_search' | 'research';
+
 export interface ErrorDetails {
   category: string;
   suggested_action?: ErrorSuggestedAction;
@@ -80,4 +82,5 @@ export interface SendMessagePayload {
   attachments?: File[];
   model?: string;
   repo_ids?: string[];
+  mode?: ChatMode;
 }

@@ -7,7 +7,9 @@ export function useDailyUsage() {
   return useQuery({
     queryKey: ['ai-daily-usage'],
     queryFn: () => aiApi.getDailyUsage(),
-    staleTime: 60_000,
-    refetchInterval: 60_000,
+    staleTime: 10_000,
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 }

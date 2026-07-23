@@ -222,6 +222,7 @@ export const aiApi = {
       repo_ids: payload.repo_ids,
       stream: false,
       model,
+      mode: payload.mode || 'normal',
     });
   },
 
@@ -249,6 +250,7 @@ export const aiApi = {
         repo_ids: payload.repo_ids,
         stream: true,
         model,
+        mode: payload.mode || 'normal',
       }),
       signal,
     });

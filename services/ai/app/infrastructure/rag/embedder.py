@@ -8,6 +8,10 @@ logger = logging.getLogger(__name__)
 
 EMBED_CACHE_TTL = 3600  # 1 hour
 
+# Module-level singleton cache for SentenceTransformer models.
+# Prevents reloading from HuggingFace on every request (saves 15-20s per message).
+_local_model_cache: dict[str, object] = {}
+
 
 class Embedder:
     def __init__(self, provider: str | None = None, api_key: str | None = None):
@@ -16,15 +20,22 @@ class Embedder:
         self._client = None
         self.dimension = 384
         if self.provider == "local":
-            try:
-                from sentence_transformers import SentenceTransformer
+            model_name = settings.embedding_model
+            if model_name in _local_model_cache:
+                self._model = _local_model_cache[model_name]
+                logger.debug("Using cached SentenceTransformer model: %s", model_name)
+            else:
+                try:
+                    from sentence_transformers import SentenceTransformer
 
-                self._model = SentenceTransformer(settings.embedding_model)
-            except Exception as e:
-                logger.warning(
-                    "Failed to load sentence_transformers, embedding will raise at call time: %s",
-                    e,
-                )
+                    self._model = SentenceTransformer(model_name)
+                    _local_model_cache[model_name] = self._model
+                    logger.info("Loaded and cached SentenceTransformer model: %s", model_name)
+                except Exception as e:
+                    logger.warning(
+                        "Failed to load sentence_transformers, embedding will raise at call time: %s",
+                        e,
+                    )
         elif self.provider == "openai":
             self._client = AsyncOpenAI(api_key=api_key)
             self.dimension = 1536
@@ -43,9 +54,13 @@ class Embedder:
 
         if self.provider == "local":
             if self._model is None:
-                from sentence_transformers import SentenceTransformer
-
-                self._model = SentenceTransformer(settings.embedding_model)
+                model_name = settings.embedding_model
+                if model_name in _local_model_cache:
+                    self._model = _local_model_cache[model_name]
+                else:
+                    from sentence_transformers import SentenceTransformer
+                    self._model = SentenceTransformer(model_name)
+                    _local_model_cache[model_name] = self._model
             result = self._model.encode(text).tolist()
         else:
             response = await self._client.embeddings.create(
@@ -66,9 +81,13 @@ class Embedder:
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
         if self.provider == "local":
             if self._model is None:
-                from sentence_transformers import SentenceTransformer
-
-                self._model = SentenceTransformer(settings.embedding_model)
+                model_name = settings.embedding_model
+                if model_name in _local_model_cache:
+                    self._model = _local_model_cache[model_name]
+                else:
+                    from sentence_transformers import SentenceTransformer
+                    self._model = SentenceTransformer(model_name)
+                    _local_model_cache[model_name] = self._model
             return self._model.encode(texts, batch_size=32).tolist()
         response = await self._client.embeddings.create(
             model="text-embedding-3-small", input=texts

@@ -170,9 +170,14 @@ class EvidenceGathererNode:
             start = time.time()
             try:
                 # Fix F: Reduce source count for non-research queries to save latency.
+                # Research mode always uses 5 sources; web_search mode uses 2 unless research keywords detected.
                 msg_lower = message.lower()
                 is_research = any(kw in msg_lower for kw in _RESEARCH_KEYWORDS)
-                max_sources = 5 if is_research else 2
+                chat_mode = state.get("chat_mode", "normal")
+                if chat_mode == "research":
+                    max_sources = 5
+                else:
+                    max_sources = 5 if is_research else 2
 
                 result = await asyncio.wait_for(
                     engine.research_with_memory(

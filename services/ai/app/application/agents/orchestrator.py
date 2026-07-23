@@ -39,7 +39,7 @@ _GREETING_RE = re.compile(
 # Fix: Workspace keyword pre-check — detects workspace-related queries and routes
 # directly to tool_executor, bypassing the unreliable LLM intent classifier.
 _WORKSPACE_RE = re.compile(
-    r"(?:my|the|our|show|list|get|see|what|where|display|check|view)"
+    r"(?:my|the|our|show|list|get|see|what|where|display|check|view|which|find|search|any|all|how many|tell me about)"
     r".*"
     r"(?:repo|repository|repos|repositories|"
     r"project|projects|task|tasks|todo|todos|"
@@ -47,7 +47,13 @@ _WORKSPACE_RE = re.compile(
     r"notification|notifications|"
     r"discussion|discussions|community|"
     r"analysis|analy[sz]ed|report|reports|"
-    r"profile|member|team)",
+    r"profile|member|team|connected|linked|status)",
+    re.IGNORECASE,
+)
+
+# Strong signal: "this workspace", "my workspace", "our workspace" — always a workspace query
+_WORKSPACE_STRONG_RE = re.compile(
+    r"(?:this|my|our)\s+workspace",
     re.IGNORECASE,
 )
 
@@ -143,34 +149,12 @@ class OrchestratorNode:
         user_model = state.get("model")
         history = state.get("context_history") or []
 
-        # Skip pipeline for obvious gibberish / non-sensical queries.
-        # Prevents wasting LLM calls on input like "bhbbkbljh" or "????".
         stripped = message.strip()
-        if len(stripped) < 3 or not re.search(r'[a-zA-Z]{2,}', stripped):
-            logger.info("gibberish_detected message='%s', returning early", stripped[:20])
-            return {
-                "intent": "conversation",
-                "complexity": "simple",
-                "response": "I'm not sure I understand. Could you rephrase that?",
-                "required_agents": [],
-                "context_hints": [],
-                "needs_evidence": False,
-            }
-        # Also catch vowel-less strings (e.g. "bhbbkbljh") — real words always have vowels
-        if len(stripped) >= 5 and not re.search(r'[aeiouyAEIOUY]', stripped):
-            logger.info("gibberish_detected_no_vowels message='%s', returning early", stripped[:20])
-            return {
-                "intent": "conversation",
-                "complexity": "simple",
-                "response": "I'm not sure I understand. Could you rephrase that?",
-                "required_agents": [],
-                "context_hints": [],
-                "needs_evidence": False,
-            }
 
         # Fix A: Bypass intent classification for obvious greetings.
+        # MUST run before gibberish filter — 2-char greetings like "hi" would be caught.
         # Saves 1-2 seconds by skipping the intent LLM call entirely.
-        if _GREETING_RE.match(message.strip()):
+        if _GREETING_RE.match(stripped):
             logger.info("Greeting detected via regex, bypassing intent classification")
             intent_prompt = _format_prompt(GREETING_PROMPT, user_name, user_context)
             greet_route = self.router.get_route_for_user("simple_qa", user_model)
@@ -201,8 +185,32 @@ class OrchestratorNode:
                     "response": None,
                 }
 
+        # Skip pipeline for obvious gibberish / non-sensical queries.
+        # Prevents wasting LLM calls on input like "bhbbkbljh" or "????".
+        if len(stripped) < 3 or not re.search(r'[a-zA-Z]{2,}', stripped):
+            logger.info("gibberish_detected message='%s', returning early", stripped[:20])
+            return {
+                "intent": "conversation",
+                "complexity": "simple",
+                "response": "I'm not sure I understand. Could you rephrase that?",
+                "required_agents": [],
+                "context_hints": [],
+                "needs_evidence": False,
+            }
+        # Also catch vowel-less strings (e.g. "bhbbkbljh") — real words always have vowels
+        if len(stripped) >= 5 and not re.search(r'[aeiouyAEIOUY]', stripped):
+            logger.info("gibberish_detected_no_vowels message='%s', returning early", stripped[:20])
+            return {
+                "intent": "conversation",
+                "complexity": "simple",
+                "response": "I'm not sure I understand. Could you rephrase that?",
+                "required_agents": [],
+                "context_hints": [],
+                "needs_evidence": False,
+            }
+
         # Fix: Workspace keyword pre-check — force tool_executor for workspace queries.
-        if _WORKSPACE_RE.search(message):
+        if _WORKSPACE_RE.search(message) or _WORKSPACE_STRONG_RE.search(message):
             logger.info("Workspace query detected via keyword, forcing tool_executor route")
             return {
                 "intent": "workspace_query",
@@ -270,6 +278,18 @@ class OrchestratorNode:
             )
         except ClassifiedError as e:
             logger.warning("provider_error node=orchestrator category=%s", e.category.value)
+            # If the message is a workspace query, route to tool_executor even on LLM failure
+            if _WORKSPACE_RE.search(message) or _WORKSPACE_STRONG_RE.search(message):
+                return {
+                    "intent": "workspace_query",
+                    "complexity": "simple",
+                    "required_agents": [],
+                    "context_hints": [],
+                    "needs_rag": False,
+                    "needs_tools": True,
+                    "needs_evidence": False,
+                    "response": None,
+                }
             return {
                 "intent": "question",
                 "complexity": "simple",
@@ -392,6 +412,10 @@ class OrchestratorNode:
             return response
 
         # For evidence-gathering intents, route through the knowledge pipeline
+        # In normal mode, skip evidence gathering — respond directly via LLM.
+        # In web_search mode, enable evidence gathering.
+        # In research mode, enable evidence + RAG for deep analysis.
+        chat_mode = state.get("chat_mode", "normal") if isinstance(state, dict) else "normal"
         if intent in _EVIDENCE_INTENTS:
             if needs_tools:
                 result = {
@@ -404,7 +428,57 @@ class OrchestratorNode:
                     "needs_evidence": False,
                     "response": None,
                 }
+            elif chat_mode == "normal":
+                # Normal mode: generate direct response without evidence gathering
+                intent_prompt = _INTENT_PROMPT_MAP.get(intent, RESPOND_DIRECT_PROMPT)
+                intent_prompt = _format_prompt(intent_prompt, user_name, user_context)
+                respond_route = self.router.get_route_for_user("simple_qa", user_model)
+                messages = []
+                for h in history[-15:]:
+                    messages.append(
+                        {"role": h.get("role", "user"), "content": h.get("content", "")[:1000]}
+                    )
+                messages.append({"role": "system", "content": intent_prompt})
+                messages.append({"role": "user", "content": message})
+                try:
+                    llm_result = await self.failover.execute(
+                        messages, user_id, respond_route,
+                        timeout=LLM_SHORT_TIMEOUT, max_tokens=respond_route["max_tokens"],
+                    )
+                    result = {
+                        "intent": intent,
+                        "complexity": analysis.get("complexity", "simple"),
+                        "response": llm_result["content"],
+                        "usage": llm_result,
+                        "required_agents": [],
+                        "context_hints": [],
+                        "needs_evidence": False,
+                    }
+                except ClassifiedError as e:
+                    logger.warning("provider_error node=normal_response category=%s", e.category.value)
+                    result = {
+                        "intent": intent,
+                        "complexity": analysis.get("complexity", "simple"),
+                        "required_agents": [],
+                        "context_hints": [],
+                        "needs_evidence": False,
+                        "response": None,
+                        **_provider_error_state(e),
+                    }
+            elif chat_mode == "research":
+                # Research mode: full pipeline — evidence + RAG + analysts
+                result = {
+                    "intent": intent,
+                    "complexity": analysis.get("complexity", "simple"),
+                    "required_agents": analysis.get("required_agents", []),
+                    "context_hints": analysis.get("context_hints", []),
+                    "needs_rag": True,
+                    "needs_tools": False,
+                    "needs_evidence": True,
+                    "response": None,
+                }
             else:
+                # Web search mode (or any other): evidence gathering enabled
                 result = {
                     "intent": intent,
                     "complexity": analysis.get("complexity", "simple"),

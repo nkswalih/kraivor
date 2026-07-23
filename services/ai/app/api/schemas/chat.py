@@ -9,6 +9,7 @@ class ChatRequest(BaseModel):
     agent_ids: list[str] | None = Field(None, description="Agent types to invoke")
     stream: bool = Field(True, description="Enable SSE streaming")
     model: str | None = Field(None, description="Preferred model override")
+    mode: str = Field("normal", description="Chat mode: normal, web_search, research")
 
 
 class ChatResponse(BaseModel):

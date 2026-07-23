@@ -3,7 +3,7 @@ import json
 from typing import Annotated
 
 import uuid
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sse_starlette.sse import EventSourceResponse
 
 from app.api.dependencies.auth import JWTPayload, get_current_user
@@ -67,8 +67,10 @@ _MODEL_META = {
 
 
 @router.post("/chat")
-async def chat(request: ChatRequest, user: CurrentUser, _: RateLimit = None):
+async def chat(request: ChatRequest, user: CurrentUser, req: Request, _: RateLimit = None):
     conv_id = request.conversation_id or str(uuid.uuid4())
+    auth_header = req.headers.get("Authorization", "")
+    auth_token = auth_header[7:] if auth_header.startswith("Bearer ") else None
 
     await acquire_llm_slot()
     try:
@@ -85,6 +87,8 @@ async def chat(request: ChatRequest, user: CurrentUser, _: RateLimit = None):
                         history=None,
                         user_name=user.name,
                         model=request.model,
+                        auth_token=auth_token,
+                        mode=request.mode,
                     ):
                         if chunk.get("type") == "error":
                             yield {"event": "error", "data": json.dumps(chunk)}
@@ -123,6 +127,8 @@ async def chat(request: ChatRequest, user: CurrentUser, _: RateLimit = None):
                 repo_ids=request.repo_ids,
                 user_name=user.name,
                 model=request.model,
+                auth_token=auth_token,
+                mode=request.mode,
             ),
             timeout=LLM_CHAIN_TIMEOUT,
         )
@@ -181,8 +187,10 @@ async def chat(request: ChatRequest, user: CurrentUser, _: RateLimit = None):
 
 
 @router.post("/completions")
-async def completions(request: dict, user: CurrentUser, _: RateLimit = None):
+async def completions(request: dict, user: CurrentUser, req: Request, _: RateLimit = None):
     conv_id = str(uuid.uuid4())
+    auth_header = req.headers.get("Authorization", "")
+    auth_token = auth_header[7:] if auth_header.startswith("Bearer ") else None
     await acquire_llm_slot()
     try:
         result = await asyncio.wait_for(
@@ -192,6 +200,7 @@ async def completions(request: dict, user: CurrentUser, _: RateLimit = None):
                 workspace_id=request.get("workspace_id", ""),
                 user_name=user.name,
                 model=request.get("model"),
+                auth_token=auth_token,
             ),
             timeout=LLM_CHAIN_TIMEOUT,
         )

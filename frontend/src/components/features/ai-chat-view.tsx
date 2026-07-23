@@ -15,6 +15,7 @@ import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { AiWelcome } from '@/components/features/ai-welcome';
 import { UpgradeCard } from '@/components/features/upgrade-card';
 import type { ChatMessage } from '@/types/domain/ai';
+import type { ErrorDetails } from '@/types/domain/ai';
 import { MessageRole, MessageStatus } from '@/types/domain/ai';
 
 interface StreamChunk {
@@ -201,6 +202,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
       try {
         let accumulated = '';
         let newConvId = conversationId;
+        let hasError = false;
         const controller = new AbortController();
         abortRef.current = controller;
         const stream = aiApi.streamMessage({
@@ -237,6 +239,30 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
             }
             break;
           }
+          // Handle structured error events from the SSE stream
+          if (c.type === 'error' || ('error' in c && typeof c.error === 'string')) {
+            hasError = true;
+            const errorChunk = c as { type?: string; error: string; category?: string;
+              suggested_action?: string; retry_after?: number | null };
+            setMessages(prev => {
+              const next = [...prev];
+              const last = next[next.length - 1];
+              if (last && last.id === assistantMsg.id) {
+                next[next.length - 1] = {
+                  ...last,
+                  content: errorChunk.error || 'An unexpected error occurred.',
+                  status: MessageStatus.ERROR,
+                  errorDetails: {
+                    category: errorChunk.category || 'unknown',
+                    suggested_action: errorChunk.suggested_action as ErrorDetails['suggested_action'],
+                    retry_after: errorChunk.retry_after,
+                  },
+                };
+              }
+              return next;
+            });
+            break;
+          }
           if ('status' in c && typeof (c as { status?: string }).status === 'string') {
             setThinkingStatus((c as { status: string }).status);
             continue;
@@ -250,29 +276,39 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
           }
         }
 
-        setMessages(prev => {
-          const next = [...prev];
-          const last = next[next.length - 1];
-          if (last && last.id === assistantMsg.id) {
-            next[next.length - 1] = { ...last, status: MessageStatus.SENT };
-          }
-          return next;
-        });
+        // Only mark as SENT if no error occurred during streaming
+        if (!hasError) {
+          setMessages(prev => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            if (last && last.id === assistantMsg.id) {
+              next[next.length - 1] = { ...last, status: MessageStatus.SENT };
+            }
+            return next;
+          });
+        }
       } catch (err) {
         const isAbort = err instanceof DOMException && err.name === 'AbortError';
-        const isRateLimit = err instanceof AiApiError && err.status === 429;
+        const isAiError = err instanceof AiApiError;
+        const isRateLimit = isAiError && err.status === 429;
         if (isRateLimit) setRateLimited(true);
         if (!isAbort) {
           setMessages(prev => {
             const next = [...prev];
             const last = next[next.length - 1];
             if (last && last.id === assistantMsg.id) {
+              const errorDetails = isAiError ? {
+                category: err.code || 'unknown',
+                suggested_action: err.suggestedAction,
+                retry_after: err.retryAfter,
+              } : undefined;
               next[next.length - 1] = {
                 ...last,
-                content: isRateLimit
-                  ? "You've hit the rate limit. Upgrade to Kraivor Pro for higher limits."
-                  : last.content || 'Sorry, something went wrong.',
+                content: isAiError
+                  ? err.message
+                  : last.content || 'Sorry, something went wrong. Please try again.',
                 status: MessageStatus.ERROR,
+                errorDetails,
               };
             }
             return next;
@@ -281,6 +317,19 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
       } finally {
         setIsStreaming(false);
         setThinkingStatus('');
+        // Safety net: ensure assistant message is never left in SENDING state
+        setMessages(prev => {
+          const next = [...prev];
+          const last = next[next.length - 1];
+          if (last && last.id === assistantMsg.id && last.status === MessageStatus.SENDING) {
+            next[next.length - 1] = {
+              ...last,
+              content: last.content || 'Something went wrong. Please try again.',
+              status: MessageStatus.ERROR,
+            };
+          }
+          return next;
+        });
       }
     },
     [input, isStreaming, conversationId, selectedModel, storeSetConversationTitle]
@@ -432,6 +481,14 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
                     thinkingStatus={isStreamingMsg ? thinkingStatus : undefined}
                     onRegenerate={isAssistant && msg.status === MessageStatus.ERROR ? handleRegenerate : undefined}
                     onEdit={msg.role === MessageRole.USER ? handleEditMessage : undefined}
+                    onAddKey={isAssistant && msg.status === MessageStatus.ERROR ? () => {
+                      // Trigger BYOK dialog — dispatch custom event
+                      window.dispatchEvent(new CustomEvent('ai-open-byok'));
+                    } : undefined}
+                    onSwitchModel={isAssistant && msg.status === MessageStatus.ERROR ? () => {
+                      // Trigger model selector — dispatch custom event
+                      window.dispatchEvent(new CustomEvent('ai-open-model-selector'));
+                    } : undefined}
                   />
                 );
               })}

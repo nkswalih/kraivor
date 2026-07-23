@@ -11,13 +11,14 @@ import {
   Share2,
   FileJson,
   Pencil,
-  BotMessageSquare,
+  AlertTriangle,
 } from 'lucide-react';
 import { SnakeIcon } from '@/components/features/ai-snake-icon';
 import { AiMarkdown } from '@/components/features/ai-markdown';
 import { ThinkingIndicator } from '@/components/features/ai-thinking-indicator';
 import type { ChatMessage } from '@/types/domain/ai';
 import { MessageRole, MessageStatus } from '@/types/domain/ai';
+import { KeyRound, ArrowRightLeft, Clock } from 'lucide-react';
 
 interface AiMessageProps {
   message: ChatMessage;
@@ -25,6 +26,8 @@ interface AiMessageProps {
   thinkingStatus?: string;
   onRegenerate?: () => void;
   onEdit?: (content: string) => void;
+  onAddKey?: () => void;
+  onSwitchModel?: () => void;
 }
 
 /* ─── Main component ─────────────────────────────────── */
@@ -35,10 +38,13 @@ export const AiMessage = memo(function AiMessage({
   thinkingStatus,
   onRegenerate,
   onEdit,
+  onAddKey,
+  onSwitchModel,
 }: AiMessageProps) {
   const isUser = message.role === MessageRole.USER;
   const isError = message.status === MessageStatus.ERROR;
   const isThinking = isStreaming && !message.content;
+  const errorDetails = message.errorDetails;
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -61,27 +67,61 @@ export const AiMessage = memo(function AiMessage({
       {/* Error state */}
       {isError ? (
         <div className="mx-auto max-w-[720px] px-4">
-          <div className="rounded-xl border border-red-900/40 bg-red-950/20 p-4">
+          <div className="rounded-xl border border-red-500/40 bg-red-950/50 p-4">
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-red-900/30 flex items-center justify-center shrink-0">
-                <BotMessageSquare className="w-4 h-4 text-red-400" />
+              <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-4 h-4 text-red-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-medium text-red-300 mb-1">
-                  Response failed
+                <p className="text-[13px] font-semibold text-red-300 mb-1">
+                  {errorDetails?.category === 'billing_exhausted' || errorDetails?.category === 'all_providers_failed'
+                    ? 'Daily Limit Reached'
+                    : errorDetails?.category === 'rate_limited'
+                    ? 'Rate Limited'
+                    : errorDetails?.category === 'provider_unavailable'
+                    ? 'Service Unavailable'
+                    : errorDetails?.category === 'context_overflow'
+                    ? 'Message Too Long'
+                    : 'Error'}
                 </p>
-                <p className="text-[13px] text-red-400/80 leading-relaxed">
+                <p className="text-[13px] text-red-300/90 leading-relaxed">
                   {message.content || 'An unexpected error occurred.'}
                 </p>
-                {onRegenerate && (
+
+                {/* Action buttons — always visible on error */}
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  {errorDetails?.suggested_action === 'add_key' && onAddKey && (
+                    <button
+                      onClick={onAddKey}
+                      className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition-colors"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      Add API Key
+                    </button>
+                  )}
+                  {errorDetails?.suggested_action === 'switch_model' && onSwitchModel && (
+                    <button
+                      onClick={onSwitchModel}
+                      className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors"
+                    >
+                      <ArrowRightLeft className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      Switch Model
+                    </button>
+                  )}
+                  {errorDetails?.suggested_action === 'wait' && errorDetails?.retry_after && (
+                    <span className="flex items-center gap-1.5 text-[12px] text-yellow-400/80">
+                      <Clock className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      Try again in {Math.ceil(errorDetails.retry_after)}s
+                    </span>
+                  )}
                   <button
                     onClick={onRegenerate}
-                    className="mt-3 flex items-center gap-1.5 text-[12px] text-red-300 hover:text-red-200 transition-colors"
+                    className="flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors"
                   >
                     <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.5} />
-                    Try again
+                    Try Again
                   </button>
-                )}
+                </div>
               </div>
             </div>
           </div>

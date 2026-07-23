@@ -196,22 +196,23 @@ def _format_comments(comments: list[dict]) -> str:
 
 
 class WorkspaceTools:
-    def __init__(self, client: ServiceClient):
+    def __init__(self, client: ServiceClient, auth_token: str | None = None):
         self.client = client
+        self.auth_token = auth_token
 
     async def get_repos(self, user_id: str, workspace_id: str) -> str:
-        repos = await self.client.get_repos(user_id, workspace_id)
+        repos = await self.client.get_repos(user_id, workspace_id, self.auth_token)
         return _format_repos(repos)
 
     async def get_analysis_report(
         self, user_id: str, workspace_id: str, repo_name: str
     ) -> str:
-        repos = await self.client.get_repos(user_id, workspace_id)
+        repos = await self.client.get_repos(user_id, workspace_id, self.auth_token)
         repo = _match_repo(repos, repo_name)
         if not repo:
             return f"No repository found matching '{repo_name}' in your workspace."
         report = await self.client.get_analysis_report(
-            user_id, workspace_id, repo["id"]
+            user_id, workspace_id, repo["id"], self.auth_token
         )
         if not report:
             return f"Repository '{repo.get('github_repo', repo_name)}' has not been analyzed yet."
@@ -220,7 +221,7 @@ class WorkspaceTools:
         return repo_info + result
 
     async def get_projects(self, user_id: str, workspace_id: str) -> str:
-        projects = await self.client.get_projects(user_id, workspace_id)
+        projects = await self.client.get_projects(user_id, workspace_id, self.auth_token)
         return _format_projects(projects)
 
     async def get_tasks(
@@ -232,31 +233,31 @@ class WorkspaceTools:
     ) -> str:
         project_id = None
         if project_name:
-            projects = await self.client.get_projects(user_id, workspace_id)
+            projects = await self.client.get_projects(user_id, workspace_id, self.auth_token)
             for p in projects:
                 if project_name.lower() in p.get("name", "").lower():
                     project_id = p["id"]
                     break
-        tasks = await self.client.get_tasks(user_id, workspace_id, project_id)
+        tasks = await self.client.get_tasks(user_id, workspace_id, project_id, self.auth_token)
         if status:
             tasks = [t for t in tasks if t.get("status", "").lower() == status.lower()]
         return _format_tasks(tasks, project_name)
 
     async def get_knowledge_spaces(self, user_id: str, workspace_id: str) -> str:
-        spaces = await self.client.get_knowledge_spaces(user_id, workspace_id)
+        spaces = await self.client.get_knowledge_spaces(user_id, workspace_id, self.auth_token)
         return _format_knowledge_spaces(spaces)
 
     async def get_notifications(
         self, user_id: str, workspace_id: str, limit: int = 10
     ) -> str:
-        notifications = await self.client.get_notifications(user_id, workspace_id)
+        notifications = await self.client.get_notifications(user_id, workspace_id, self.auth_token)
         notifications = notifications[:limit]
         return _format_notifications(notifications)
 
     async def get_discussions(
         self, user_id: str, workspace_id: str, limit: int = 10, trending: bool = False
     ) -> str:
-        discussions = await self.client.get_discussions(user_id, workspace_id)
+        discussions = await self.client.get_discussions(user_id, workspace_id, self.auth_token)
         if trending:
             discussions = sorted(
                 discussions, key=lambda d: d.get("comment_count", 0), reverse=True
@@ -267,7 +268,7 @@ class WorkspaceTools:
     async def get_discussion_comments(
         self, user_id: str, workspace_id: str, discussion_title: str, limit: int = 20
     ) -> str:
-        discussions = await self.client.get_discussions(user_id, workspace_id)
+        discussions = await self.client.get_discussions(user_id, workspace_id, self.auth_token)
         target = None
         for d in discussions:
             if discussion_title.lower() in (d.get("title", "")).lower():
@@ -276,7 +277,7 @@ class WorkspaceTools:
         if not target:
             return f"No discussion found matching '{discussion_title}'."
         comments = await self.client.get_discussion_comments(
-            user_id, workspace_id, target["id"]
+            user_id, workspace_id, target["id"], self.auth_token
         )
         comments = comments[:limit]
         return _format_comments(comments)

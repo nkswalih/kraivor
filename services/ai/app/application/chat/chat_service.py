@@ -63,6 +63,16 @@ def _format_error_for_user(error: ClassifiedError | AllProvidersFailedError) -> 
 _HISTORY_LIMIT = 30
 _HISTORY_CACHE_TTL = 300  # 5 minutes (was 60s — almost always a cache miss at 60s)
 
+# Token estimation: ~4 chars per token for English text
+_CHAR_TO_TOKEN = 4
+
+
+def _estimate_usage(response_text: str) -> dict:
+    """Estimate token usage from response text when the graph didn't provide usage."""
+    output_tokens = max(1, len(response_text) // _CHAR_TO_TOKEN)
+    input_tokens = max(1, output_tokens // 3)
+    return {"input_tokens": input_tokens, "output_tokens": output_tokens, "model": "estimated"}
+
 
 def _current_date_block() -> str:
     """Return a date context block prepended to every system prompt."""
@@ -134,6 +144,8 @@ class ChatService:
         stream: bool = False,
         model: str | None = None,
         user_name: str | None = None,
+        auth_token: str | None = None,
+        mode: str = "normal",
     ) -> dict:
         # Load conversation history from DB if we have a conversation_id
         if conversation_id and not history:
@@ -158,7 +170,9 @@ class ChatService:
             "conversation_id": conversation_id,
             "repo_ids": repo_ids,
             "model": model,
+            "auth_token": auth_token,
             "stream": stream,
+            "chat_mode": mode,
             "intent": None,
             "complexity": None,
             "required_agents": None,
@@ -308,12 +322,21 @@ class ChatService:
             cached_response = await self.query_cache.get(message, model_key)
             if cached_response:
                 logger.info("query_cache: hit for message='%s'", message[:50])
+                cached_usage = _estimate_usage(cached_response)
                 import asyncio
                 chunk_size = 20
                 for i in range(0, len(cached_response), chunk_size):
                     yield {"content": cached_response[i : i + chunk_size]}
                     await asyncio.sleep(0.03)
-                yield {"done": True, "conversation_id": conversation_id, "title": None, "usage": {}}
+                yield {"done": True, "conversation_id": conversation_id, "title": None, "usage": cached_usage}
+                try:
+                    await increment_daily_usage(
+                        user_id,
+                        input_tokens=cached_usage["input_tokens"],
+                        output_tokens=cached_usage["output_tokens"],
+                    )
+                except Exception:
+                    pass
                 await self._persist_streaming_response(
                     user_id, message, cached_response, conversation_id, workspace_id, model, {}
                 )
@@ -330,7 +353,9 @@ class ChatService:
             "conversation_id": conversation_id,
             "repo_ids": kwargs.get("repo_ids"),
             "model": model,
+            "auth_token": kwargs.get("auth_token"),
             "stream": True,
+            "chat_mode": kwargs.get("mode", "normal"),
             "intent": None,
             "complexity": None,
             "required_agents": None,
@@ -378,16 +403,20 @@ class ChatService:
         if result.get("response"):
             full_response = result["response"]
             usage = result.get("usage") or {}
+
+            # Estimate usage when graph didn't provide it (tool_executor, fallback paths)
+            if not usage.get("input_tokens") and not usage.get("output_tokens"):
+                usage = _estimate_usage(full_response)
+                result["usage"] = usage
+
             import asyncio
             chunk_size = 20
             for i in range(0, len(full_response), chunk_size):
                 yield {"content": full_response[i : i + chunk_size]}
                 await asyncio.sleep(0.03)
             yield {"done": True, "conversation_id": conversation_id, "title": None, "usage": usage}
-            await self._persist_streaming_response(
-                user_id, message, full_response, conversation_id, workspace_id, model, usage
-            )
-            # Track daily token usage
+
+            # Track daily token usage — always, even when estimated
             try:
                 await increment_daily_usage(
                     user_id,
@@ -396,6 +425,11 @@ class ChatService:
                 )
             except Exception as e:
                 logger.debug("daily_usage_increment failed: %s", e)
+
+            # Persist conversation and messages
+            await self._persist_streaming_response(
+                user_id, message, full_response, conversation_id, workspace_id, model, usage
+            )
             # Cache the response for similar future queries (skip very short responses)
             if len(full_response) > 50:
                 try:
@@ -405,9 +439,18 @@ class ChatService:
             return
 
         # Fallback: graph didn't produce a response (shouldn't happen in normal flow)
-        # Stream a simple error message rather than making a duplicate LLM call.
-        yield {"content": "I wasn't able to generate a response. Please try again."}
-        yield {"done": True, "conversation_id": conversation_id, "title": None, "usage": {}}
+        fallback_response = "I wasn't able to generate a response. Please try again."
+        fallback_usage = _estimate_usage(fallback_response)
+        yield {"content": fallback_response}
+        yield {"done": True, "conversation_id": conversation_id, "title": None, "usage": fallback_usage}
+        try:
+            await increment_daily_usage(
+                user_id,
+                input_tokens=fallback_usage["input_tokens"],
+                output_tokens=fallback_usage["output_tokens"],
+            )
+        except Exception as e:
+            logger.debug("daily_usage_increment failed (fallback): %s", e)
 
     async def _persist_streaming_response(
         self,

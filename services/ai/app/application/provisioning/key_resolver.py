@@ -53,7 +53,7 @@ def detect_provider_from_key(api_key: str) -> str | None:
 
 def _model_to_provider(model: str) -> str:
     model_lower = model.lower()
-    if "groq" in model_lower or "llama" in model_lower or "mixtral" in model_lower:
+    if "groq" in model_lower or "llama" in model_lower or "mixtral" in model_lower or "qwen" in model_lower:
         return "groq"
     if "gemini" in model_lower or "gemma" in model_lower:
         return "google"

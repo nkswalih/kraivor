@@ -6,6 +6,21 @@ export interface ErrorDetails {
   retry_after?: number | null;
 }
 
+export interface MessageUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cost?: number;
+}
+
+export interface DailyUsage {
+  used: number;
+  limit: number;
+  remaining: number;
+  reset_at: string;
+  input_tokens: number;
+  output_tokens: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: MessageRole;
@@ -14,6 +29,7 @@ export interface ChatMessage {
   attachments?: MessageAttachment[];
   status: MessageStatus;
   errorDetails?: ErrorDetails;
+  usage?: MessageUsage;
 }
 
 export enum MessageRole {

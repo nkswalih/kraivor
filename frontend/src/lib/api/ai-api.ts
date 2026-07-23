@@ -1,5 +1,5 @@
 import { useAuthStore } from '@/lib/stores/auth-store';
-import type { SendMessagePayload, ChatMessage } from '@/types/domain/ai';
+import type { SendMessagePayload, ChatMessage, DailyUsage } from '@/types/domain/ai';
 
 /* ─── AI Service Base URL ────────────────────────────────── */
 
@@ -203,6 +203,12 @@ export const aiApi = {
 
   async removeByokKey(provider: ByokProvider): Promise<{ ok: boolean }> {
     return aiFetch(`/v1/byok/${provider}`, { method: 'DELETE' } as RequestInit);
+  },
+
+  /* ─── Daily usage ─────────────────────────────────────── */
+
+  async getDailyUsage(): Promise<DailyUsage> {
+    return aiFetch<DailyUsage>('/v1/usage/daily');
   },
 
   /* ─── Send message ─────────────────────────────────────── */

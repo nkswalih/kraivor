@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     # Feature flags
     enable_parallel_analysts: bool = True
 
+    # Daily token limit per user
+    daily_token_limit: int = 100000
+
     # CORS
     cors_allowed_origins: str = "http://localhost:3000"
 

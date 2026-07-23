@@ -108,7 +108,44 @@ class ToolExecutorNode:
         message = state.get("message", "")
         user_model = state.get("model")
         history = state.get("context_history") or []
+        auth_token = state.get("auth_token")
         route = self.router.get_route_for_user("tool_calling", user_model)
+
+        # Create per-request WorkspaceTools with auth_token for safe concurrent access
+        tools = WorkspaceTools(self.tools.client, auth_token=auth_token)
+        tool_map = {
+            "get_workspace_repos": tools.get_repos,
+            "get_repo_analysis_report": tools.get_analysis_report,
+            "get_workspace_projects": tools.get_projects,
+            "get_project_tasks": tools.get_tasks,
+            "get_knowledge_spaces": tools.get_knowledge_spaces,
+            "get_user_notifications": tools.get_notifications,
+            "get_workspace_discussions": tools.get_discussions,
+            "get_discussion_comments": tools.get_discussion_comments,
+            "get_current_date": tools.get_current_date,
+            "web_search": tools.web_search,
+            "web_search_news": tools.web_search_news,
+            "web_search_instant": tools.web_search_instant,
+            "web_fetch": tools.web_fetch,
+            "browse_web": tools.browse_web,
+            "remember_user_fact": tools.remember_user_fact,
+            "research_topic": tools.research_topic,
+            "verify_fact": tools.verify_fact,
+            "get_documentation": tools.get_documentation,
+            "get_github_info": tools.get_github_info,
+            "search_knowledge": tools.search_knowledge,
+            "store_knowledge": tools.store_knowledge,
+            "get_knowledge_stats": tools.get_knowledge_stats,
+            "get_entity_graph": tools.get_entity_graph,
+            "get_top_entities": tools.get_top_entities,
+            "run_proactive_learning": tools.run_proactive_learning,
+            "summarize_knowledge": tools.summarize_knowledge,
+            "resolve_conflicts": tools.resolve_conflicts,
+            "submit_feedback": tools.submit_feedback,
+            "deduplicate_knowledge": tools.deduplicate_knowledge,
+            "export_knowledge": tools.export_knowledge,
+            "knowledge_health": tools.knowledge_health,
+        }
 
         messages = [
             {
@@ -210,7 +247,7 @@ class ToolExecutorNode:
                     })
                     continue
 
-                executor = self._tool_map.get(pc["name"])
+                executor = tool_map.get(pc["name"])
                 if executor:
                     try:
                         result_str = await executor(

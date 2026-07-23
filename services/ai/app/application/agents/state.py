@@ -12,6 +12,7 @@ class AgentState(TypedDict):
     repo_ids: list[str] | None
     model: str | None
     stream: bool
+    chat_mode: str  # "normal", "web_search", "research"
 
     intent: str | None
     complexity: str | None

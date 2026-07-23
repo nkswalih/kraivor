@@ -89,30 +89,33 @@ async def resolve_provider_key(
 
     provider = _model_to_provider(preferred_model or "openrouter")
 
-    # System Groq key for Kraivor AI models — no BYOK needed, check first
-    if provider == "groq" and settings.groq_api_key:
-        logger.info("using_system_groq_key", user_id=user_id)
-        return settings.groq_api_key, "groq"
-
     result = await db_session.execute(
         select(ApiKey).where(ApiKey.user_id == user_id, ApiKey.revoked.is_(False))
     )
     key_record = result.scalar_one_or_none()
+
+    # If user has a BYOK key for the requested provider, use it
+    if key_record:
+        field_name = PROVIDER_FIELD_MAP.get(provider)
+        encrypted_key = getattr(key_record, field_name, None) if field_name else None
+        if encrypted_key:
+            try:
+                decrypted = encrypter.decrypt(encrypted_key.encode())
+                logger.info("using_byok_key user=%s provider=%s", user_id, provider)
+                return decrypted.decode(), provider
+            except Exception:
+                logger.warning("key_decryption_failed", user_id=user_id, provider=provider)
+
+    # System Groq key for Groq models — only if user doesn't have their own
+    if provider == "groq" and settings.groq_api_key:
+        logger.info("using_system_groq_key user=%s", user_id)
+        return settings.groq_api_key, "groq"
+
     if not key_record:
         logger.warning(
             "no provisioned key for user %s, falling back to master key", user_id
         )
         return settings.openrouter__master__key, "openrouter"
-
-    field_name = PROVIDER_FIELD_MAP.get(provider)
-    encrypted_key = getattr(key_record, field_name, None) if field_name else None
-
-    if encrypted_key:
-        try:
-            decrypted = encrypter.decrypt(encrypted_key.encode())
-            return decrypted.decode(), provider
-        except Exception:
-            logger.warning("key_decryption_failed", user_id=user_id, provider=provider)
 
     # Walk fallback chain — always try OpenRouter first since it can proxy any model
     for fallback_provider in _FALLBACK_ORDER:

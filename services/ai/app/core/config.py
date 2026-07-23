@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     internal_request_secret: str = ""
 
     # Feature flags
-    enable_parallel_analysts: bool = False
+    enable_parallel_analysts: bool = True
 
     # CORS
     cors_allowed_origins: str = "http://localhost:3000"

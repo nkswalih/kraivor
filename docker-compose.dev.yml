@@ -392,6 +392,7 @@ services:
       AI_KAFKA__BOOTSTRAP__SERVERS: kafka:9094
       AI_IDENTITY__JWKS__URL: http://identity:8001/.well-known/jwks.json
       AI_OPENROUTER__MASTER__KEY: ${OPENROUTER_API_KEY}
+      AI_GROQ_API_KEY: ${GROQ_API_KEY}
       AI_KEY_ENCRYPTION_KEY: ${AI_KEY_ENCRYPTION_KEY:-dev-encryption-key-32chars!}
       AI_INTERNAL_REQUEST_SECRET: ${INTERNAL_REQUEST_TOKEN:-dev-internal-secret}
       HF_TOKEN: ${HF_TOKEN:-}

@@ -5,7 +5,7 @@ import { Lightning } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import type { ModelItem, ModelTier } from '@/lib/api/ai-api';
 import { aiApi } from '@/lib/api/ai-api';
-import { MODEL_ICONS, KraitIcon, GroqIcon } from './model-icons';
+import { MODEL_ICONS, KraitIcon, GroqIcon } from './ai-model-icons';
 
 /* ─── Fallback models (static, if API fails) ────────────── */
 

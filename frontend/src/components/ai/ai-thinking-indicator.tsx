@@ -1,6 +1,6 @@
 'use client';
 
-import { SnakeIcon } from '@/components/features/ai-snake-icon';
+import { SnakeIcon } from '@/components/ai/ai-snake-icon';
 
 /**
  * Minimal thinking indicator.

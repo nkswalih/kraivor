@@ -9,7 +9,7 @@ import { chatEndpoints, profileEndpoints } from '@/lib/api/endpoints';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useChatStore } from '@/lib/stores/chat-store';
 import { formatCompactTime, truncate, avatarUrl } from '@/lib/utils';
-import { CreateChannelDialog } from './create-channel-dialog';
+import { CreateChannelDialog } from './chat-create-channel-dialog';
 
 interface ChannelSidebarProps {
   workspaceId: string;

@@ -14,9 +14,9 @@ import {
   Paperclip,
   Search,
 } from 'lucide-react';
-import { ModelSelector, getModelIcon, getModelName } from '@/components/features/model-selector';
-import { ByokKeyDialog, ApiKeysPanel } from '@/components/features/byok-key-dialog';
-import { TokenUsageDonut } from '@/components/features/token-usage-donut';
+import { ModelSelector, getModelIcon, getModelName } from '@/components/ai/ai-model-selector';
+import { AiByokSetupDialog } from '@/components/ai/ai-byok-setup-dialog';
+import { TokenUsageDonut } from '@/components/ai/ai-token-usage-donut';
 import type { ModelItem } from '@/lib/api/ai-api';
 import type { DailyUsage, ChatMode } from '@/types/domain/ai';
 
@@ -63,9 +63,7 @@ export function AiInput({
   const [showModeDropdown, setShowModeDropdown] = useState(false);
   const [popupPos, setPopupPos] = useState<{ top: number; left: number; above: boolean } | null>(null);
   const [modeDropdownPos, setModeDropdownPos] = useState<{ top: number; left: number } | null>(null);
-  const [byokProvider, setByokProvider] = useState<string | null>(null);
-  const [showApiKeysPanel, setShowApiKeysPanel] = useState(false);
-  const [apiKeysEditProvider, setApiKeysEditProvider] = useState<string | null>(null);
+  const [showByokSetup, setShowByokSetup] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const plusRef = useRef<HTMLButtonElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -159,35 +157,28 @@ export function AiInput({
     };
   }, [showModelSelector, showModeDropdown]);
 
-  /* ─── Model select: check if BYOK → show key dialog ──── */
+  /* ─── Listen for ai-open-byok event (from error actions) ── */
+  useEffect(() => {
+    const handler = () => setShowByokSetup(true);
+    window.addEventListener('ai-open-byok', handler);
+    return () => window.removeEventListener('ai-open-byok', handler);
+  }, []);
+
+  /* ─── Model select: check if BYOK → show setup dialog ──── */
   const handleModelSelect = (id: string) => {
     setShowModelSelector(false);
     const model = (models || []).find(m => m.id === id);
     if (model?.tier === 'byok') {
-      setByokProvider(model.provider);
+      setShowByokSetup(true);
       return;
     }
     onModelSelect(id);
-  };
-
-  const handleByokSave = () => {
-    if (byokProvider) {
-      const model = (models || []).find(m => m.provider === byokProvider && m.tier === 'byok');
-      if (model) onModelSelect(model.id);
-    }
-    setByokProvider(null);
   };
 
   /* ─── Mode select ───────────────────────────────────── */
   const handleModeSelect = (mode: ChatMode) => {
     setShowModeDropdown(false);
     onModeChange?.(mode);
-  };
-
-  /* ─── Settings panel: edit provider → opens key dialog ── */
-  const handleApiKeysEdit = (provider: string) => {
-    setShowApiKeysPanel(false);
-    setApiKeysEditProvider(provider);
   };
 
   /* ─── File attach (placeholder) ─────────────────────── */
@@ -259,7 +250,7 @@ export function AiInput({
               <button
                 type="button"
                 disabled={isStreaming}
-                onClick={() => setShowApiKeysPanel(true)}
+                onClick={() => setShowByokSetup(true)}
                 className="text-text-tertiary hover:text-text-secondary transition-colors disabled:opacity-30"
                 title="Manage API Keys"
               >
@@ -397,26 +388,10 @@ export function AiInput({
         document.body,
       )}
 
-      {byokProvider && (
-        <ByokKeyDialog
-          provider={byokProvider}
-          onClose={() => setByokProvider(null)}
-          onSave={handleByokSave}
-        />
-      )}
-
-      {showApiKeysPanel && (
-        <ApiKeysPanel
-          onClose={() => setShowApiKeysPanel(false)}
-          onEdit={handleApiKeysEdit}
-        />
-      )}
-
-      {apiKeysEditProvider && (
-        <ByokKeyDialog
-          provider={apiKeysEditProvider}
-          onClose={() => setApiKeysEditProvider(null)}
-          onSave={() => setApiKeysEditProvider(null)}
+      {showByokSetup && (
+        <AiByokSetupDialog
+          onClose={() => setShowByokSetup(false)}
+          onSaved={() => setShowByokSetup(false)}
         />
       )}
     </div>

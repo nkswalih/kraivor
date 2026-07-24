@@ -53,6 +53,7 @@ def create_app() -> FastAPI:
     from app.api.routers import (
         analysis,
         api_keys,
+        byok,
         chat,
         conversations,
         embeddings,
@@ -62,6 +63,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router, prefix="/v1")
     app.include_router(chat.router, prefix="/v1")
+    app.include_router(byok.router, prefix="/v1")
     app.include_router(embeddings.router, prefix="/v1")
     app.include_router(api_keys.router, prefix="/v1")
     app.include_router(analysis.router)

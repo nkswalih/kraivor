@@ -1,5 +1,6 @@
 """Knowledge API router — endpoints for knowledge ingestion, search, and stats."""
 
+import time
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -62,10 +63,8 @@ from app.api.schemas.knowledge import (
     AdvancedSearchRequest,
     AdvancedSearchResponse,
     AdvancedSearchResult,
-    MultiModalIngestFileRequest,
     MultiModalIngestFileResponse,
     MultiModalIngestUrlRequest,
-    MultiModalIngestBatchRequest,
     MultiModalIngestTextRequest,
     MultiModalIngestTextResponse,
     MultiModalSupportedTypesResponse,
@@ -1626,7 +1625,7 @@ def _extract_decisions(text: str) -> list[dict]:
 @router.post("/seed-project-docs", response_model=dict)
 async def seed_project_docs(
     workspace_id: str,
-    user: JWTPayload = Depends(get_current_user),
+    user: JWTPayload = Depends(get_current_user),  # noqa: B008
 ):
     """Seed Kraivor project documentation into the knowledge engine.
 

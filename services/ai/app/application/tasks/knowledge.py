@@ -189,7 +189,7 @@ def check_knowledge_freshness_daily(self):
     async def _run():
         from app.knowledge_engine.store.knowledge_store import KnowledgeStore
 
-        store = KnowledgeStore()
+        KnowledgeStore()
 
         # Get all workspaces that have knowledge
         from sqlalchemy import text

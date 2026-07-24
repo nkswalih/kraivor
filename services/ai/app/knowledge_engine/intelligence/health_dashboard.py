@@ -11,7 +11,7 @@ Provides a comprehensive health report for a workspace's knowledge base:
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from sqlalchemy import text
 from app.infrastructure.db.database import async_session_factory

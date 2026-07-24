@@ -47,7 +47,7 @@ class ImageOCR:
             except ImportError:
                 raise RuntimeError(
                     "easyocr is not installed. Install with: pip install easyocr"
-                )
+                ) from None
         return self._reader
 
     async def extract_from_bytes(
@@ -66,7 +66,7 @@ class ImageOCR:
                 image = image.convert("RGB")
             image_array = np.array(image)
         except Exception as e:
-            raise ValueError(f"Invalid image file: {e}")
+            raise ValueError(f"Invalid image file: {e}") from e
 
         return await self._extract_from_array(image_array, languages)
 
@@ -85,7 +85,7 @@ class ImageOCR:
                 image = image.convert("RGB")
             image_array = np.array(image)
         except Exception as e:
-            raise ValueError(f"Cannot open image at {file_path}: {e}")
+            raise ValueError(f"Cannot open image at {file_path}: {e}") from e
 
         return await self._extract_from_array(image_array, languages)
 

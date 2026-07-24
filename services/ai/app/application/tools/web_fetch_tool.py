@@ -28,15 +28,14 @@ class WebFetchTool(BaseTool):
 
     async def run(self, url: str, extract_mode: str = "text") -> str:
         try:
-            async with aiohttp.ClientSession(headers=_HEADERS) as session:
-                async with session.get(
-                    url,
-                    timeout=aiohttp.ClientTimeout(total=20),
-                    allow_redirects=True,
-                ) as resp:
-                    if resp.status != 200:
-                        return f"HTTP {resp.status} fetching {url}"
-                    html = await resp.text()
+            async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
+                url,
+                timeout=aiohttp.ClientTimeout(total=20),
+                allow_redirects=True,
+            ) as resp:
+                if resp.status != 200:
+                    return f"HTTP {resp.status} fetching {url}"
+                html = await resp.text()
         except aiohttp.ClientError as e:
             return f"Network error fetching {url}: {e}"
         except Exception as e:
@@ -76,15 +75,14 @@ class NewsFetchTool(BaseTool):
 
     async def run(self, url: str) -> str:
         try:
-            async with aiohttp.ClientSession(headers=_HEADERS) as session:
-                async with session.get(
-                    url,
-                    timeout=aiohttp.ClientTimeout(total=20),
-                    allow_redirects=True,
-                ) as resp:
-                    if resp.status != 200:
-                        return f"HTTP {resp.status} fetching {url}"
-                    html = await resp.text()
+            async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
+                url,
+                timeout=aiohttp.ClientTimeout(total=20),
+                allow_redirects=True,
+            ) as resp:
+                if resp.status != 200:
+                    return f"HTTP {resp.status} fetching {url}"
+                html = await resp.text()
         except aiohttp.ClientError as e:
             return f"Network error fetching {url}: {e}"
         except Exception as e:

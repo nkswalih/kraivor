@@ -165,20 +165,19 @@ def classify_error(exc, provider: str, model: str) -> ClassifiedError:
     retry_after = _extract_retry_after(exc)
 
     # ── 1. Context overflow (excludes rate-limit) ────────────────────────
-    if _matches_any(error_text, _CONTEXT_OVERFLOW_PATTERNS):
-        if not _is_rate_limit_exclusion(error_text):
-            return ClassifiedError(
-                category=ErrorCategory.CONTEXT_OVERFLOW,
-                provider=provider,
-                model=model,
-                user_message=(
-                    "Your message is too long for this model. "
-                    "Start a new conversation or shorten your message."
-                ),
-                technical_message=error_text,
-                suggested_action=SuggestedAction.NEW_CONVERSATION,
-                metadata={"status_code": status_code},
-            )
+    if _matches_any(error_text, _CONTEXT_OVERFLOW_PATTERNS) and not _is_rate_limit_exclusion(error_text):
+        return ClassifiedError(
+            category=ErrorCategory.CONTEXT_OVERFLOW,
+            provider=provider,
+            model=model,
+            user_message=(
+                "Your message is too long for this model. "
+                "Start a new conversation or shorten your message."
+            ),
+            technical_message=error_text,
+            suggested_action=SuggestedAction.NEW_CONVERSATION,
+            metadata={"status_code": status_code},
+        )
 
     # ── 2. Auth failures ────────────────────────────────────────────────
     if status_code in (401, 403) or _matches_any(error_text, _AUTH_PATTERNS):

@@ -1,8 +1,7 @@
 from collections.abc import AsyncGenerator
 
-import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 from app.application.agents.graph import build_agent_graph
 from app.application.chat.conversation_repository import (
@@ -23,10 +22,11 @@ from app.domain.entities.message import MessageRole
 from app.infrastructure.cache.query_cache import SemanticQueryCache
 from app.application.usage.usage_service import increment_daily_usage
 from app.infrastructure.db.database import async_session_factory
-from app.infrastructure.llm.error_classifier import ClassifiedError, ErrorCategory
+from app.infrastructure.llm.error_classifier import ClassifiedError
 from app.infrastructure.llm.failover_engine import FailoverEngine
 from app.infrastructure.llm.router import ModelRouter
 from app.infrastructure.service_client import ServiceClient
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ def _estimate_usage(response_text: str) -> dict:
 
 def _current_date_block() -> str:
     """Return a date context block prepended to every system prompt."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return (
         f"CURRENT DATE & TIME: {now.strftime('%A, %B %d, %Y — %H:%M UTC')}\n"
         "This is the real current date from the server. Use this as your time reference. "
@@ -329,14 +329,12 @@ class ChatService:
                     yield {"content": cached_response[i : i + chunk_size]}
                     await asyncio.sleep(0.03)
                 yield {"done": True, "conversation_id": conversation_id, "title": None, "usage": cached_usage}
-                try:
+                with contextlib.suppress(Exception):
                     await increment_daily_usage(
                         user_id,
                         input_tokens=cached_usage["input_tokens"],
                         output_tokens=cached_usage["output_tokens"],
                     )
-                except Exception:
-                    pass
                 await self._persist_streaming_response(
                     user_id, message, cached_response, conversation_id, workspace_id, model, {}
                 )

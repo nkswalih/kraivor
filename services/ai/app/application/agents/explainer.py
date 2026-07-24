@@ -2,7 +2,7 @@
 
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 from app.application.agents.prompts.specialist import (
     EXPLAINER_SYSTEM_PROMPT,
@@ -33,7 +33,7 @@ _CASUAL_INTENTS = {"greeting", "conversation"}
 
 def _inject_date(prompt: str) -> str:
     """Prepend current date to any system prompt so the LLM knows today's date."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     date_line = (
         f"CURRENT DATE & TIME: {now.strftime('%A, %B %d, %Y — %H:%M UTC')}. "
         "Use this as your time reference. "

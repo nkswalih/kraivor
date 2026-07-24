@@ -255,16 +255,17 @@ class TestEmbedderCache:
     def test_embedder_uses_cache(self):
         """When model is in cache, Embedder reuses it instead of loading fresh."""
         from app.infrastructure.rag import embedder
-        from unittest.mock import MagicMock
 
         mock_model = MagicMock()
         mock_model.encode.return_value.tolist.return_value = [0.1, 0.2, 0.3]
         embedder._local_model_cache["all-MiniLM-L6-v2"] = mock_model
 
-        with patch.object(embedder.settings, "embedding_provider", "local"):
-            with patch.object(embedder.settings, "embedding_model", "all-MiniLM-L6-v2"):
-                e = embedder.Embedder()
-                assert e._model is mock_model
+        with (
+            patch.object(embedder.settings, "embedding_provider", "local"),
+            patch.object(embedder.settings, "embedding_model", "all-MiniLM-L6-v2"),
+        ):
+            e = embedder.Embedder()
+            assert e._model is mock_model
 
         # Cleanup
         embedder._local_model_cache.pop("all-MiniLM-L6-v2", None)
@@ -325,7 +326,6 @@ class TestFailoverWiring:
     def test_tool_executor_has_failover(self):
         """ToolExecutorNode uses FailoverEngine."""
         from app.application.agents.tool_executor import ToolExecutorNode
-        from unittest.mock import MagicMock
         node = ToolExecutorNode(MagicMock())
         assert hasattr(node, "failover")
         from app.infrastructure.llm.failover_engine import FailoverEngine

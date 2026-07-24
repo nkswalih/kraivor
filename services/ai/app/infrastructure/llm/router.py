@@ -145,7 +145,7 @@ class ModelRouter:
     def get_route(self, task: str) -> dict:
         return self._get_route_cached(task)
 
-    @lru_cache(maxsize=128)
+    @lru_cache(maxsize=128)  # noqa: B019
     def _get_route_cached(self, task: str) -> dict:
         route = self.TASK_ROUTES.get(task, self.TASK_ROUTES["simple_qa"])
         return {**route, "fallback_models": FREE_MODELS}
@@ -160,7 +160,7 @@ class ModelRouter:
         """
         return self._get_route_for_user_cached(task, user_model)
 
-    @lru_cache(maxsize=128)
+    @lru_cache(maxsize=128)  # noqa: B019
     def _get_route_for_user_cached(self, task: str, user_model: str | None = None) -> dict:
         route = self.get_route(task)
 

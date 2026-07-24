@@ -623,7 +623,7 @@ class WorkspaceTools:
         else:
             result = await summarizer.summarize_workspace(workspace_id)
 
-        lines = [f"## Knowledge Summary" if not topic else f"## Summary: {topic}", ""]
+        lines = ["## Knowledge Summary" if not topic else f"## Summary: {topic}", ""]
         lines.append(result["summary"])
         lines.append("")
 

@@ -88,6 +88,7 @@ def mock_settings():
         mock.jwt_verify_expiration = True
         mock.jwt_jwks_cache_ttl = 3600
         mock.internal_request_header = "X-Internal-Request"
+        mock.internal_request_secret = "test-secret"
         yield mock
 
 
@@ -177,7 +178,7 @@ class TestGetCurrentUser:
 
         mock_request = MagicMock()
         mock_request.headers = {
-            "X-Internal-Request": "true",
+            "X-Internal-Request": "test-secret",
             "X-User-ID": "user-456",
             "X-Email": "internal@example.com",
         }

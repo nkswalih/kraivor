@@ -6,10 +6,11 @@ Priority: Tavily (best quality) -> DDGS (free) -> Google Custom Search (fallback
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 
 from app.knowledge_engine.config import KnowledgeEngineConfig
 from app.knowledge_engine.sources.base import SourceResult, SourceContent
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -57,16 +58,15 @@ class WebSearchProvider:
             import aiohttp
             import trafilatura
 
-            async with aiohttp.ClientSession(headers=_HEADERS) as session:
-                async with session.get(
-                    url,
-                    timeout=aiohttp.ClientTimeout(total=20),
-                    allow_redirects=True,
-                    ssl=False,
-                ) as resp:
-                    if resp.status != 200:
-                        return None
-                    html = await resp.text()
+            async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
+                url,
+                timeout=aiohttp.ClientTimeout(total=20),
+                allow_redirects=True,
+                ssl=False,
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                html = await resp.text()
 
             text = trafilatura.extract(
                 html,
@@ -114,10 +114,8 @@ class WebSearchProvider:
             for r in response.get("results", []):
                 pub_date = None
                 if r.get("published_date"):
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         pub_date = datetime.fromisoformat(r["published_date"].replace("Z", "+00:00"))
-                    except (ValueError, TypeError):
-                        pass
 
                 results.append(SourceResult(
                     url=r.get("url", ""),
@@ -168,11 +166,12 @@ class WebSearchProvider:
                 f"&num={max_results}"
             )
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as resp:
-                    if resp.status != 200:
-                        return []
-                    data = await resp.json()
+            async with aiohttp.ClientSession() as session, session.get(
+                url, timeout=aiohttp.ClientTimeout(total=15)
+            ) as resp:
+                if resp.status != 200:
+                    return []
+                data = await resp.json()
 
             results = []
             for item in data.get("items", []):

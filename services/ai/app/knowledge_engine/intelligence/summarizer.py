@@ -99,7 +99,7 @@ class KnowledgeSummarizer:
         )
 
         # Extract topics from titles
-        topics = list(set(i["title"].split(":")[0].strip()[:50] for i in items if i["title"]))
+        topics = list({i["title"].split(":")[0].strip()[:50] for i in items if i["title"]})
 
         return {
             "summary": summary,

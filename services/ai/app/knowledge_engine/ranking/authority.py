@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from app.knowledge_engine.config import get_trust_score
 from app.knowledge_engine.sources.base import RankedSource
 
 

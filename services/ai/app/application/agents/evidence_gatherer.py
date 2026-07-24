@@ -4,6 +4,7 @@ import asyncio
 import logging
 import re
 import time
+import contextlib
 
 log = logging.getLogger(__name__)
 
@@ -80,10 +81,8 @@ class EvidenceGathererNode:
                 )
                 if result.fetchone():
                     if r and seed_key:
-                        try:
+                        with contextlib.suppress(Exception):
                             await r.setex(seed_key, _SEED_REDIS_TTL, "1")
-                        except Exception:
-                            pass
                     return
 
             from app.knowledge_engine.seed.kraivor_docs import KRAIVOR_DOCS
@@ -106,10 +105,8 @@ class EvidenceGathererNode:
                     log.warning("Failed to seed doc '%s': %s", doc["title"], e)
             log.info("Seeded %d/%d project docs for workspace %s", seeded, len(KRAIVOR_DOCS), workspace_id)
             if r and seed_key:
-                try:
+                with contextlib.suppress(Exception):
                     await r.setex(seed_key, _SEED_REDIS_TTL, "1")
-                except Exception:
-                    pass
         except Exception as e:
             log.warning("Project doc seeding failed: %s", e)
 
@@ -174,10 +171,7 @@ class EvidenceGathererNode:
                 msg_lower = message.lower()
                 is_research = any(kw in msg_lower for kw in _RESEARCH_KEYWORDS)
                 chat_mode = state.get("chat_mode", "normal")
-                if chat_mode == "research":
-                    max_sources = 5
-                else:
-                    max_sources = 5 if is_research else 2
+                max_sources = 5 if chat_mode == "research" else 5 if is_research else 2
 
                 result = await asyncio.wait_for(
                     engine.research_with_memory(

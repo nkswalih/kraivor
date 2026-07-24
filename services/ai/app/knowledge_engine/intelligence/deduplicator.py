@@ -8,13 +8,11 @@ Goes beyond URL matching to find:
 
 from __future__ import annotations
 
-import hashlib
 import logging
-import re
-from collections import defaultdict
 
 from sqlalchemy import text
 from app.infrastructure.db.database import async_session_factory
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -116,10 +114,8 @@ class SemanticDeduplicator:
         for row in rows:
             emb_list = None
             if row.embedding:
-                try:
+                with contextlib.suppress(json.JSONDecodeError, TypeError):
                     emb_list = json.loads(row.embedding)
-                except (json.JSONDecodeError, TypeError):
-                    pass
 
             items.append({
                 "id": row.id,
@@ -140,7 +136,7 @@ class SemanticDeduplicator:
             min_len = min(len(a), len(b))
             a, b = a[:min_len], b[:min_len]
 
-        dot_product = sum(x * y for x, y in zip(a, b))
+        dot_product = sum(x * y for x, y in zip(a, b, strict=False))
         norm_a = sum(x * x for x in a) ** 0.5
         norm_b = sum(x * x for x in b) ** 0.5
 

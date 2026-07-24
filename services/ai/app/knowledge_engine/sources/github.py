@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 
 from app.knowledge_engine.config import KnowledgeEngineConfig
 from app.knowledge_engine.sources.base import SourceResult, SourceContent
@@ -39,14 +39,13 @@ class GitHubProvider:
                 f"&per_page={max_results}"
             )
 
-            async with aiohttp.ClientSession(headers=_HEADERS) as session:
-                async with session.get(
-                    url,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as resp:
-                    if resp.status != 200:
-                        return []
-                    data = await resp.json()
+            async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
+                url,
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as resp:
+                if resp.status != 200:
+                    return []
+                data = await resp.json()
 
             results = []
             for item in data.get("items", [])[:max_results]:
@@ -85,47 +84,45 @@ class GitHubProvider:
 
             # Try to get README
             readme_url = f"https://api.github.com/repos/{owner}/{repo}/readme"
-            async with aiohttp.ClientSession(headers=_HEADERS) as session:
-                async with session.get(
-                    readme_url,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        import base64
-                        content = base64.b64decode(data.get("content", "")).decode("utf-8", errors="replace")
-                        if len(content) > 8000:
-                            content = content[:8000] + "\n\n[Content truncated...]"
+            async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
+                readme_url,
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    import base64
+                    content = base64.b64decode(data.get("content", "")).decode("utf-8", errors="replace")
+                    if len(content) > 8000:
+                        content = content[:8000] + "\n\n[Content truncated...]"
 
-                        return SourceContent(
-                            url=url,
-                            title=f"{owner}/{repo} README",
-                            text=content,
-                            source_provider=self.name,
-                            trust_score=self.base_trust_score,
-                        )
+                    return SourceContent(
+                        url=url,
+                        title=f"{owner}/{repo} README",
+                        text=content,
+                        source_provider=self.name,
+                        trust_score=self.base_trust_score,
+                    )
 
             # Fallback: get latest release
             release_url = f"https://api.github.com/repos/{owner}/{repo}/releases/latest"
-            async with aiohttp.ClientSession(headers=_HEADERS) as session:
-                async with session.get(
-                    release_url,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        body = data.get("body", "No release notes")
-                        if len(body) > 8000:
-                            body = body[:8000] + "\n\n[Content truncated...]"
+            async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
+                release_url,
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    body = data.get("body", "No release notes")
+                    if len(body) > 8000:
+                        body = body[:8000] + "\n\n[Content truncated...]"
 
-                        return SourceContent(
-                            url=url,
-                            title=f"{owner}/{repo} — Latest Release: {data.get('tag_name', '')}",
-                            text=body,
-                            source_provider=self.name,
-                            trust_score=self.base_trust_score,
-                            published_at=self._parse_date(data.get("published_at")),
-                        )
+                    return SourceContent(
+                        url=url,
+                        title=f"{owner}/{repo} — Latest Release: {data.get('tag_name', '')}",
+                        text=body,
+                        source_provider=self.name,
+                        trust_score=self.base_trust_score,
+                        published_at=self._parse_date(data.get("published_at")),
+                    )
 
             return None
         except Exception as e:

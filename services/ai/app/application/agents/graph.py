@@ -59,7 +59,7 @@ class _ParallelAnalystNode:
             *[_run(n, nd) for n, nd in self._analysts.items()]
         )
         merged = {}
-        for name, result in results:
+        for _name, result in results:
             if isinstance(result, dict):
                 merged.update(result)
         return merged

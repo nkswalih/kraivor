@@ -10,7 +10,6 @@ from app.api.dependencies.auth import JWTPayload, get_current_user
 from app.api.dependencies.backpressure import (
     acquire_llm_slot,
     release_llm_slot,
-    get_backpressure_stats,
 )
 from app.api.dependencies.rate_limiter import check_rate_limit
 from app.api.schemas.chat import ChatRequest, ChatResponse
@@ -19,8 +18,6 @@ from app.application.usage.usage_service import get_daily_usage_summary
 from app.infrastructure.llm.error_classifier import ClassifiedError, ErrorCategory
 from app.infrastructure.llm.router import (
     ALL_MODEL_IDS,
-    BYOK_MODELS,
-    FREE_MODELS,
     KRAIVOR_MODEL,
     MODEL_BACKEND_MAP,
 )
@@ -106,7 +103,7 @@ async def chat(request: ChatRequest, user: CurrentUser, req: Request, _: RateLim
                         "suggested_action": e.suggested_action.value,
                         "retry_after": e.retry_after,
                     })}
-                except AllProvidersFailedError as e:
+                except AllProvidersFailedError:
                     yield {"event": "error", "data": json.dumps({
                         "type": "error",
                         "error": "AI service is temporarily at capacity. Please try again in a few minutes.",
@@ -142,7 +139,7 @@ async def chat(request: ChatRequest, user: CurrentUser, req: Request, _: RateLim
             usage=usage_info,
             sources=result.get("sources"),
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         raise HTTPException(
             status_code=504,
             detail={
@@ -150,7 +147,7 @@ async def chat(request: ChatRequest, user: CurrentUser, req: Request, _: RateLim
                 "message": "The AI model took too long to respond. Please try a simpler question.",
                 "retry_after": 10,
             },
-        )
+        ) from None
     except ClassifiedError as e:
         status_map = {
             ErrorCategory.BILLING_EXHAUSTED: 402,
@@ -172,8 +169,8 @@ async def chat(request: ChatRequest, user: CurrentUser, req: Request, _: RateLim
                 "suggested_action": e.suggested_action.value,
             },
             headers=headers,
-        )
-    except AllProvidersFailedError as e:
+        ) from e
+    except AllProvidersFailedError:
         raise HTTPException(
             status_code=402,
             detail={
@@ -181,7 +178,7 @@ async def chat(request: ChatRequest, user: CurrentUser, req: Request, _: RateLim
                 "message": "AI credits are exhausted for today. Add your own API key in Settings to continue, or try again tomorrow.",
                 "suggested_action": "add_key",
             },
-        )
+        ) from None
     finally:
         await release_llm_slot()
 
@@ -213,7 +210,7 @@ async def completions(request: dict, user: CurrentUser, req: Request, _: RateLim
             usage=usage_info,
             sources=result.get("sources"),
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         raise HTTPException(
             status_code=504,
             detail={
@@ -221,7 +218,7 @@ async def completions(request: dict, user: CurrentUser, req: Request, _: RateLim
                 "message": "The AI model took too long to respond.",
                 "retry_after": 10,
             },
-        )
+        ) from None
     except ClassifiedError as e:
         status_map = {
             ErrorCategory.BILLING_EXHAUSTED: 402,
@@ -237,8 +234,8 @@ async def completions(request: dict, user: CurrentUser, req: Request, _: RateLim
                 "message": e.user_message,
                 "suggested_action": e.suggested_action.value,
             },
-        )
-    except AllProvidersFailedError as e:
+        ) from e
+    except AllProvidersFailedError:
         raise HTTPException(
             status_code=402,
             detail={
@@ -246,7 +243,7 @@ async def completions(request: dict, user: CurrentUser, req: Request, _: RateLim
                 "message": "AI credits are exhausted for today. Add your own API key in Settings to continue, or try again tomorrow.",
                 "suggested_action": "add_key",
             },
-        )
+        ) from None
     finally:
         await release_llm_slot()
 

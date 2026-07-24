@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
 
 import aiohttp
 
@@ -36,33 +35,30 @@ class PackageRegistryProvider:
     async def _search_pypi(self, query: str, max_results: int) -> list[SourceResult]:
         """Search PyPI."""
         try:
-            url = f"https://pypi.org/simple/{query}"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    f"https://pypi.org/search/?q={query}",
-                    timeout=aiohttp.ClientTimeout(total=10),
-                    headers={"Accept": "application/json"},
-                ) as resp:
-                    if resp.status != 200:
-                        return []
+            async with aiohttp.ClientSession() as session, session.get(
+                f"https://pypi.org/search/?q={query}",
+                timeout=aiohttp.ClientTimeout(total=10),
+                headers={"Accept": "application/json"},
+            ) as resp:
+                if resp.status != 200:
+                    return []
 
             # Use PyPI JSON API for specific packages
             api_url = f"https://pypi.org/pypi/{query}/json"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    api_url,
-                    timeout=aiohttp.ClientTimeout(total=10),
-                ) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        info = data.get("info", {})
-                        return [SourceResult(
-                            url=f"https://pypi.org/project/{info.get('name', query)}/",
-                            title=f"PyPI: {info.get('name', query)}",
-                            snippet=info.get("summary", "")[:500],
-                            source_provider="pypi",
-                            trust_score=0.85,
-                        )]
+            async with aiohttp.ClientSession() as session, session.get(
+                api_url,
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    info = data.get("info", {})
+                    return [SourceResult(
+                        url=f"https://pypi.org/project/{info.get('name', query)}/",
+                        title=f"PyPI: {info.get('name', query)}",
+                        snippet=info.get("summary", "")[:500],
+                        source_provider="pypi",
+                        trust_score=0.85,
+                    )]
             return []
         except Exception as e:
             logger.warning("PyPI search failed: %s", e)
@@ -72,14 +68,13 @@ class PackageRegistryProvider:
         """Search npm registry."""
         try:
             url = f"https://registry.npmjs.org/-/v1/search?text={query}&size={max_results}"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    url,
-                    timeout=aiohttp.ClientTimeout(total=10),
-                ) as resp:
-                    if resp.status != 200:
-                        return []
-                    data = await resp.json()
+            async with aiohttp.ClientSession() as session, session.get(
+                url,
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                if resp.status != 200:
+                    return []
+                data = await resp.json()
 
             results = []
             for pkg in data.get("objects", [])[:max_results]:
@@ -106,14 +101,13 @@ class PackageRegistryProvider:
 
         try:
             api_url = f"https://pypi.org/pypi/{package_name}/json"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    api_url,
-                    timeout=aiohttp.ClientTimeout(total=10),
-                ) as resp:
-                    if resp.status != 200:
-                        return None
-                    data = await resp.json()
+            async with aiohttp.ClientSession() as session, session.get(
+                api_url,
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                data = await resp.json()
 
             info = data.get("info", {})
             content = f"# {info.get('name', package_name)}\n\n"
@@ -148,14 +142,13 @@ class PackageRegistryProvider:
 
         try:
             api_url = f"https://registry.npmjs.org/{package_name}"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    api_url,
-                    timeout=aiohttp.ClientTimeout(total=10),
-                ) as resp:
-                    if resp.status != 200:
-                        return None
-                    data = await resp.json()
+            async with aiohttp.ClientSession() as session, session.get(
+                api_url,
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                data = await resp.json()
 
             latest_version = data.get("dist-tags", {}).get("latest", "")
             latest_data = data.get("versions", {}).get(latest_version, {})

@@ -7,7 +7,7 @@ Keys:
 """
 
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, UTC
 
 from app.core.config import settings
 from app.infrastructure.cache.redis_client import get_redis
@@ -18,7 +18,7 @@ _TTL_SECONDS = 48 * 60 * 60  # 48 hours
 
 
 def _today_key(user_id: str, suffix: str) -> str:
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
     return f"usage:daily:{user_id}:{today}:{suffix}"
 
 
@@ -89,7 +89,7 @@ async def get_daily_usage_summary(user_id: str) -> dict:
     remaining = max(0, limit - used)
 
     # Reset at next midnight UTC
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     reset_at = tomorrow.isoformat()
 

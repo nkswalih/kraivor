@@ -96,7 +96,6 @@ class LLMClient:
         tool_calls = []
 
         # Fix E: Retry with backoff for transient LLM failures (timeouts, rate limits, connection errors).
-        last_error = None
         for attempt in range(1 + LLM_MAX_RETRIES):
             try:
                 result, tool_calls, metrics = await self._generate_once(messages, timeout=timeout, **kwargs)
@@ -106,7 +105,6 @@ class LLMClient:
                 classified = classify_error(e, self.provider, self.model)
                 raise classified from e
             except (APITimeoutError, APIConnectionError, RateLimitError) as e:
-                last_error = e
                 if attempt < LLM_MAX_RETRIES:
                     wait = LLM_RETRY_BACKOFF[min(attempt, len(LLM_RETRY_BACKOFF) - 1)]
                     logger.warning(

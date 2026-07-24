@@ -1,3 +1,6 @@
+import contextlib
+
+from django.conf import settings
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
@@ -102,7 +105,7 @@ def index_knowledge_space_on_save(sender, instance, created, **kwargs):
         import os
 
         ai_url = os.environ.get("AI_SERVICE_URL", "http://ai:8004")
-        try:
+        with contextlib.suppress(Exception):
             httpx.post(
                 f"{ai_url}/v1/knowledge/index-canvas",
                 json={
@@ -118,8 +121,6 @@ def index_knowledge_space_on_save(sender, instance, created, **kwargs):
                 },
                 timeout=30.0,
             )
-        except Exception:
-            pass
 
     thread = threading.Thread(target=_send_to_ai, daemon=True)
     thread.start()

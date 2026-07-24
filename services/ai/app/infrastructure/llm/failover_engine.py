@@ -50,9 +50,7 @@ class ProviderHealth:
     def is_available(self, now: float) -> bool:
         if self.disabled_until and now < self.disabled_until:
             return False
-        if now < self.cooldown_until:
-            return False
-        return True
+        return not now < self.cooldown_until
 
     def record_success(self) -> None:
         self.consecutive_failures = 0

@@ -257,8 +257,13 @@ class FailoverEngine:
             resolved_provider = candidate.get("_resolved_provider", "unknown")
 
             try:
-                api_key, provider = await self.key_resolver.resolve(user_id, model)
-                client = LLMClient(api_key=api_key, provider=provider, model=model)
+                api_key, provider, custom_url = await self.key_resolver.resolve(user_id, model)
+                client = LLMClient(
+                    api_key=api_key,
+                    provider=provider,
+                    model=model,
+                    base_url=custom_url,
+                )
                 result = await client.generate(messages, timeout=timeout, **kwargs)
 
                 # Record success — both provider health and model success rate
@@ -340,8 +345,13 @@ class FailoverEngine:
             resolved_provider = candidate.get("_resolved_provider", "unknown")
 
             try:
-                api_key, provider = await self.key_resolver.resolve(user_id, model)
-                client = LLMClient(api_key=api_key, provider=provider, model=model)
+                api_key, provider, custom_url = await self.key_resolver.resolve(user_id, model)
+                client = LLMClient(
+                    api_key=api_key,
+                    provider=provider,
+                    model=model,
+                    base_url=custom_url,
+                )
                 async for token in client.stream(messages, **kwargs):
                     yield token
                 self._get_health(provider).record_success()

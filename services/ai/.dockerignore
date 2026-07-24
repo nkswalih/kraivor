@@ -19,3 +19,5 @@ node_modules/
 *.egg-info
 dist/
 build/
+.venv/
+__pypackages__/

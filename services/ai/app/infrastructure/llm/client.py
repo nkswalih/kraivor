@@ -3,6 +3,7 @@ from collections.abc import AsyncGenerator
 import asyncio
 import hashlib
 import logging
+import re
 import time
 from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI, APITimeoutError, APIConnectionError, RateLimitError, APIStatusError
@@ -35,6 +36,22 @@ LLM_RETRY_BACKOFF = [1.0, 3.0]  # seconds between retries
 
 _client_cache: dict[str, object] = {}
 
+# Strip <think>...</think> blocks from reasoning models (Qwen, etc.)
+_OPEN_TAG = "\u003cthink\u003e"
+_CLOSE_TAG = "\u003c/think\u003e"
+_THINKING_RE = re.compile(
+    r"\u003cthink\u003e.*?\u003c/think\u003e",
+    re.DOTALL,
+)
+
+
+def _strip_thinking(content: str | None) -> str:
+    """Strip thinking blocks from reasoning model output."""
+    if not content:
+        return content or ""
+    return _THINKING_RE.sub("", content).strip()
+
+
 _OPENAI_COMPATIBLE = {
     "openrouter": "https://openrouter.ai/api/v1",
     "groq": "https://api.groq.com/openai/v1",
@@ -44,24 +61,25 @@ _OPENAI_COMPATIBLE = {
 }
 
 
-def _get_cached_client(provider: str, api_key: str, model: str) -> object:
+def _get_cached_client(provider: str, api_key: str, model: str, base_url: str | None = None) -> object:
     """Return a cached client for the given provider+key combo."""
-    cache_key = hashlib.sha256(f"{provider}:{api_key}".encode()).hexdigest()[:16]
+    cache_key = hashlib.sha256(f"{provider}:{api_key}:{base_url or ''}".encode()).hexdigest()[:16]
 
     if cache_key in _client_cache:
         return _client_cache[cache_key]
 
     if provider in _OPENAI_COMPATIBLE:
-        # Fix C: Per-call timeout so a slow provider doesn't stall the pipeline.
+        resolved_url = base_url if base_url else _OPENAI_COMPATIBLE[provider]
         client = AsyncOpenAI(
             api_key=api_key,
-            base_url=_OPENAI_COMPATIBLE[provider],
+            base_url=resolved_url,
             timeout=__import__("httpx").Timeout(LLM_DEFAULT_TIMEOUT, connect=10.0),
-            max_retries=0,  # We handle retries ourselves for observability
+            max_retries=0,
         )
     elif provider == "anthropic":
         client = AsyncAnthropic(
             api_key=api_key,
+            base_url=base_url or None,
             timeout=__import__("httpx").Timeout(LLM_DEFAULT_TIMEOUT, connect=10.0),
             max_retries=0,
         )
@@ -77,10 +95,10 @@ def _get_cached_client(provider: str, api_key: str, model: str) -> object:
 
 
 class LLMClient:
-    def __init__(self, api_key: str, provider: str, model: str):
+    def __init__(self, api_key: str, provider: str, model: str, base_url: str | None = None):
         self.provider = provider
         self.model = model
-        self.client = _get_cached_client(provider, api_key, model)
+        self.client = _get_cached_client(provider, api_key, model, base_url=base_url)
 
     async def generate(self, messages: list, timeout: float | None = None, **kwargs) -> dict:
         metrics = {
@@ -95,13 +113,11 @@ class LLMClient:
         result = ""
         tool_calls = []
 
-        # Fix E: Retry with backoff for transient LLM failures (timeouts, rate limits, connection errors).
         for attempt in range(1 + LLM_MAX_RETRIES):
             try:
                 result, tool_calls, metrics = await self._generate_once(messages, timeout=timeout, **kwargs)
                 break
             except APIStatusError as e:
-                # NEW: Classify 402/403/429/5xx and raise as ClassifiedError
                 classified = classify_error(e, self.provider, self.model)
                 raise classified from e
             except (APITimeoutError, APIConnectionError, RateLimitError) as e:
@@ -117,14 +133,11 @@ class LLMClient:
                         "LLM call failed after %d attempts: %s",
                         1 + LLM_MAX_RETRIES, e,
                     )
-                    # Classify the final error
                     classified = classify_error(e, self.provider, self.model)
                     raise classified from e
             except ClassifiedError:
-                # Already classified (e.g., from a wrapped call) — re-raise
                 raise
             except Exception as e:
-                # Non-transient errors: classify and raise
                 classified = classify_error(e, self.provider, self.model)
                 raise classified from e
 
@@ -151,17 +164,16 @@ class LLMClient:
         tool_calls = []
         metrics = {"input_tokens": 0, "output_tokens": 0}
 
-        # Fix 2: Per-call timeout override (e.g., 25s for intent classification vs 45s default)
         effective_timeout = timeout or LLM_DEFAULT_TIMEOUT
 
         if self.provider in ("openrouter", "groq", "openai", "deepseek", "xai"):
-            # Override the client timeout for this call if a specific timeout was requested
             httpx_timeout = __import__("httpx").Timeout(effective_timeout, connect=10.0)
             response = await self.client.chat.completions.create(
                 model=self.model, messages=messages, timeout=httpx_timeout, **kwargs
             )
             message = response.choices[0].message
             result = message.content
+            result = _strip_thinking(result)
             raw_calls = getattr(message, "tool_calls", None)
             tool_calls = []
             if raw_calls:
@@ -176,8 +188,6 @@ class LLMClient:
                         }
                     )
             if result is None and not tool_calls:
-                # Some providers return finish_reason=tool_calls even without tools.
-                # Fall back to empty content rather than crashing the pipeline.
                 logger.warning(
                     "LLM returned null content (finish_reason=%s, model=%s, provider=%s) — "
                     "falling back to empty response",
@@ -197,7 +207,7 @@ class LLMClient:
                 ],
                 **kwargs,
             )
-            result = msg.content[0].text
+            result = _strip_thinking(msg.content[0].text)
             metrics["input_tokens"] = msg.usage.input_tokens
             metrics["output_tokens"] = msg.usage.output_tokens
 
@@ -206,7 +216,7 @@ class LLMClient:
                 model=self.model,
                 contents=messages[-1]["content"] if messages else "",
             )
-            result = response.text or ""
+            result = _strip_thinking(response.text or "")
             if hasattr(response, "usage_metadata"):
                 metrics["input_tokens"] = getattr(
                     response.usage_metadata, "prompt_token_count", 0
@@ -218,7 +228,52 @@ class LLMClient:
         return result, tool_calls, metrics
 
     async def stream(self, messages: list, **kwargs) -> AsyncGenerator[str, None]:
-        """Stream tokens from the LLM. Raises ClassifiedError on provider failures."""
+        """Stream tokens from the LLM. Strips thinking blocks from reasoning models."""
+        in_thinking = False
+        buf = ""
+
+        async def _emit_filtered(raw_token: str) -> AsyncGenerator[str, None]:
+            nonlocal in_thinking, buf
+            buf += raw_token
+
+            while buf:
+                if in_thinking:
+                    end = buf.find(_CLOSE_TAG)
+                    if end == -1:
+                        # Keep partial closing tag prefix at end, discard the rest
+                        keep = 0
+                        for prefix_len in range(min(len(_CLOSE_TAG), len(buf)), 0, -1):
+                            if buf.endswith(_CLOSE_TAG[:prefix_len]):
+                                keep = prefix_len
+                                break
+                        buf = buf[len(buf) - keep:] if keep else ""
+                        return
+                    else:
+                        # Found full closing tag — discard everything through it
+                        buf = buf[end + len(_CLOSE_TAG):]
+                        in_thinking = False
+                        if buf:
+                            continue
+                        return
+                else:
+                    start = buf.find(_OPEN_TAG)
+                    if start == -1:
+                        # Emit everything except possible partial OPEN_TAG at end
+                        safe_end = len(buf)
+                        for prefix_len in range(min(len(_OPEN_TAG), len(buf)), 0, -1):
+                            if buf.endswith(_OPEN_TAG[:prefix_len]):
+                                safe_end = len(buf) - prefix_len
+                                break
+                        if safe_end > 0:
+                            yield buf[:safe_end]
+                            buf = buf[safe_end:]
+                        return
+                    else:
+                        if start > 0:
+                            yield buf[:start]
+                        buf = buf[start + len(_OPEN_TAG):]
+                        in_thinking = True
+
         try:
             if self.provider in ("openrouter", "groq", "openai", "deepseek", "xai"):
                 stream = await self.client.chat.completions.create(
@@ -226,7 +281,11 @@ class LLMClient:
                 )
                 async for chunk in stream:
                     if delta := chunk.choices[0].delta.content:
-                        yield delta
+                        async for filtered in _emit_filtered(delta):
+                            yield filtered
+                # Flush remaining buffer
+                async for filtered in _emit_filtered(""):
+                    yield filtered
             elif self.provider == "anthropic":
                 async with self.client.messages.stream(
                     model=self.model,
@@ -238,14 +297,20 @@ class LLMClient:
                     **kwargs,
                 ) as stream:
                     async for text in stream.text_stream:
-                        yield text
+                        async for filtered in _emit_filtered(text):
+                            yield filtered
+                async for filtered in _emit_filtered(""):
+                    yield filtered
             elif self.provider == "google":
                 async for chunk in await self.client.aio.models.generate_content_stream(
                     model=self.model,
                     contents=messages[-1]["content"] if messages else "",
                 ):
                     if chunk.text:
-                        yield chunk.text
+                        async for filtered in _emit_filtered(chunk.text):
+                            yield filtered
+                async for filtered in _emit_filtered(""):
+                    yield filtered
         except APIStatusError as e:
             classified = classify_error(e, self.provider, self.model)
             raise classified from e

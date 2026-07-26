@@ -365,6 +365,29 @@
   }
 }
 
+/* ─── Krait icon pulse ─────────────────────────────────── */
+
+.krait-pulse {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes krait-pulse {
+    0%, 100% {
+      transform: scale(1);
+      filter: drop-shadow(0 0 0px rgba(250, 204, 21, 0));
+    }
+    50% {
+      transform: scale(1.08);
+      filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.45));
+    }
+  }
+
+  .krait-pulse {
+    animation: krait-pulse 1.5s ease-in-out infinite;
+  }
+}
+
 /* ─── Line reveal ────────────────────────────────────────── */
 .animate-line-reveal {
   opacity: 1;

@@ -16,11 +16,8 @@ from app.api.schemas.chat import ChatRequest, ChatResponse
 from app.application.chat.chat_service import ChatService
 from app.application.usage.usage_service import get_daily_usage_summary
 from app.infrastructure.llm.error_classifier import ClassifiedError, ErrorCategory
-from app.infrastructure.llm.router import (
-    ALL_MODEL_IDS,
-    KRAIVOR_MODEL,
-    MODEL_BACKEND_MAP,
-)
+from app.application.admin.model_registry import ModelRegistry
+from app.infrastructure.llm.router import KRAIVOR_MODEL
 from app.core.exceptions import AllProvidersFailedError
 
 CurrentUser = Annotated[JWTPayload, Depends(get_current_user)]
@@ -31,36 +28,6 @@ router = APIRouter(tags=["chat"])
 chat_service = ChatService()
 
 LLM_CHAIN_TIMEOUT = 90
-
-
-# ── Model tier metadata (mirrors frontend TIER_CONFIG) ──────
-_MODEL_META = {
-    KRAIVOR_MODEL: {"tier": "kraivor", "provider": "kraivor", "name": "Krait 2.0", "latency": "0.4s", "context": "128K"},
-    "groq-qwen3-32b": {"tier": "groq", "provider": "groq", "name": "Qwen 3 32B", "latency": "0.3s", "context": "128K"},
-    "groq-qwen3.6-27b": {"tier": "groq", "provider": "groq", "name": "Qwen 3.6 27B", "latency": "0.3s", "context": "128K"},
-    "cohere-north-mini-code": {"tier": "free", "provider": "cohere", "name": "Cohere North Mini", "latency": "0.6s", "context": "128K"},
-    "nvidia-nemotron-ultra": {"tier": "free", "provider": "nvidia", "name": "Nvidia Nemotron Ultra", "latency": "2.0s", "context": "1M"},
-    "tencent-hy3": {"tier": "free", "provider": "tencent", "name": "Tencent HY3", "latency": "3.4s", "context": "262K"},
-    "poolside-laguna-xs": {"tier": "free", "provider": "poolside", "name": "Poolside Laguna XS", "latency": "0.8s", "context": "128K"},
-    "poolside-laguna-m": {"tier": "free", "provider": "poolside", "name": "Poolside Laguna M", "latency": "1.2s", "context": "128K"},
-    "nvidia-nemotron-super": {"tier": "free", "provider": "nvidia", "name": "Nvidia Nemotron Super", "latency": "2.5s", "context": "128K"},
-    "google-gemma-4": {"tier": "free", "provider": "google", "name": "Google Gemma 4", "latency": "1.0s", "context": "128K"},
-    "nvidia-nemotron-nano": {"tier": "free", "provider": "nvidia", "name": "Nvidia Nemotron Nano", "latency": "0.6s", "context": "128K"},
-    "openai-gpt-oss": {"tier": "free", "provider": "openai", "name": "OpenAI GPT OSS", "latency": "1.8s", "context": "128K"},
-    "claude-fable-5": {"tier": "byok", "provider": "anthropic", "name": "Claude Fable 5", "latency": "1.5s", "context": "200K"},
-    "claude-opus-4-8": {"tier": "byok", "provider": "anthropic", "name": "Claude Opus 4.8", "latency": "2.0s", "context": "200K"},
-    "claude-opus-4-7": {"tier": "byok", "provider": "anthropic", "name": "Claude Opus 4.7", "latency": "2.2s", "context": "200K"},
-    "claude-sonnet-5": {"tier": "byok", "provider": "anthropic", "name": "Claude Sonnet 5", "latency": "1.2s", "context": "200K"},
-    "claude-sonnet-4-6": {"tier": "byok", "provider": "anthropic", "name": "Claude Sonnet 4.6", "latency": "1.0s", "context": "200K"},
-    "gpt-5.6-sol": {"tier": "byok", "provider": "openai", "name": "GPT-5.6 Sol", "latency": "1.0s", "context": "128K"},
-    "gpt-5.6-terra": {"tier": "byok", "provider": "openai", "name": "GPT-5.6 Terra", "latency": "1.2s", "context": "128K"},
-    "gpt-5.5": {"tier": "byok", "provider": "openai", "name": "GPT-5.5", "latency": "0.9s", "context": "128K"},
-    "gpt-5.4": {"tier": "byok", "provider": "openai", "name": "GPT-5.4", "latency": "0.8s", "context": "128K"},
-    "gemini-3.5-flash": {"tier": "byok", "provider": "google", "name": "Gemini 3.5 Flash", "latency": "0.5s", "context": "1M"},
-    "gemini-3.1-pro": {"tier": "byok", "provider": "google", "name": "Gemini 3.1 Pro", "latency": "1.5s", "context": "1M"},
-    "deepseek-v4-pro": {"tier": "byok", "provider": "deepseek", "name": "DeepSeek V4 Pro", "latency": "1.0s", "context": "128K"},
-    "grok-4.3": {"tier": "byok", "provider": "xai", "name": "Grok 4.3", "latency": "1.5s", "context": "128K"},
-}
 
 
 @router.post("/chat")
@@ -250,18 +217,7 @@ async def completions(request: dict, user: CurrentUser, req: Request, _: RateLim
 
 @router.get("/models")
 async def list_models(user: CurrentUser):
-    models = []
-    for mid in ALL_MODEL_IDS:
-        meta = _MODEL_META.get(mid, {})
-        models.append({
-            "id": mid,
-            "name": meta.get("name", mid),
-            "tier": meta.get("tier", "free"),
-            "provider": meta.get("provider", "openrouter"),
-            "latency": meta.get("latency"),
-            "context": meta.get("context"),
-            "backendModel": MODEL_BACKEND_MAP.get(mid),
-        })
+    models = ModelRegistry.get_selector_models()
     return {"models": models, "default": KRAIVOR_MODEL}
 
 

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, ChevronDown, Check, Plus } from 'lucide-react';
+import { AdminBadge } from '@/components/admin-models/admin-badge';
 import { useUIStore } from '@/lib/stores';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useAiConversationStore } from '@/lib/stores/ai-conversation-store';
@@ -169,8 +170,11 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
       {/* Spacer pushes everything else to the right */}
       <div className="flex-1" />
 
-      {/* Right Side — Search + Context Panel Icons */}
+      {/* Right Side — Admin + Search + Context Panel Icons */}
       <div className="flex items-center gap-3 shrink-0">
+        {/* Admin Badge (superadmin only) */}
+        <AdminBadge />
+
         {/* Search */}
         <button
           onClick={() => setCommandPaletteOpen(true)}

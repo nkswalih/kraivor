@@ -108,11 +108,25 @@ export function AiByokSetupDialog({ onClose, onSaved }: AiByokSetupDialogProps) 
       ]);
       if (provRes.ok) {
         const data = await provRes.json();
-        setProviders(data.providers || []);
+        setProviders((data.providers ?? []).map((p: Record<string, unknown>) => ({
+          name: p.provider ?? p.name ?? '',
+          has_key: p.has_key ?? false,
+          last_validated: p.last_validated ?? null,
+          custom_url: p.custom_url ?? null,
+        })));
       }
       if (modelRes.ok) {
         const data = await modelRes.json();
-        setModels(data.models || []);
+        setModels((data.models ?? []).map((m: Record<string, unknown>) => ({
+          model_id: m.model_id ?? '',
+          display_name: m.model_name ?? m.display_name ?? '',
+          provider: m.selected_provider ?? m.provider ?? '',
+          providers: Array.isArray(m.available_providers)
+            ? m.available_providers.map((p: Record<string, unknown>) => String(p.provider ?? ''))
+            : Array.isArray(m.providers)
+              ? m.providers.map((p: unknown) => String(p))
+              : [],
+        })));
       }
     } catch {
       // silent
@@ -463,7 +477,7 @@ export function AiByokSetupDialog({ onClose, onSaved }: AiByokSetupDialogProps) 
                               onChange={e => handleModelProviderChange(model.model_id, e.target.value)}
                               className="bg-[#1f1f24] border border-[#27272A] rounded-md px-2 py-1 text-[11px] text-[#f2f2f3] focus:outline-none focus:border-[var(--venom-yellow)]/40 transition-colors cursor-pointer"
                             >
-                              {model.providers.map(p => (
+                              {(model.providers ?? []).map(p => (
                                 <option key={p} value={p}>
                                   {PROVIDERS[p]?.name || p}
                                 </option>

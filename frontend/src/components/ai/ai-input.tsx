@@ -258,7 +258,7 @@ export function AiInput({
               </button>
               <TokenUsageDonut usage={dailyUsage} size={16} />
             </div>
-
+            {/* Ai model selector button*/}
             <div className="flex items-center gap-1.5">
               <button
                 ref={buttonRef}
@@ -270,9 +270,6 @@ export function AiInput({
                   {getModelIcon(selectedModel)}
                 </span>
                 <span className="text-[12px] font-medium text-text-secondary">{getModelName(selectedModel)}</span>
-                <div className="w-4 h-4 rounded-full border border-krait-borderHi flex items-center justify-center ml-0.5">
-                  <ArrowUp className="w-2.5 h-2.5 text-text-tertiary" strokeWidth={2.5} />
-                </div>
               </button>
               {isStreaming ? (
                 <button

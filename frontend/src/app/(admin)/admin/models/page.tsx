@@ -21,6 +21,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Checkbox } from '@/components/ui/shadcn/checkbox';
 import { Badge } from '@/components/ui/shadcn/badge';
 import { Spinner } from '@/components/ui/shadcn/spinner';
+import { ICON_OPTIONS } from '@/components/ai/ai-model-icons';
 
 interface Model {
   id: string;
@@ -36,6 +37,7 @@ interface Model {
   supports_tools: boolean;
   supports_reasoning: boolean;
   latency_display?: string;
+  icon_key?: string;
 }
 
 interface Route {
@@ -143,6 +145,7 @@ function ModelsTab() {
     supports_vision: false,
     supports_tools: false,
     supports_reasoning: false,
+    icon_key: '',
   });
 
   const fetchData = useCallback(async () => {
@@ -179,6 +182,7 @@ function ModelsTab() {
       supports_vision: false,
       supports_tools: false,
       supports_reasoning: false,
+      icon_key: '',
     });
     setEditingModel(null);
   };
@@ -202,6 +206,7 @@ function ModelsTab() {
       supports_vision: model.supports_vision,
       supports_tools: model.supports_tools,
       supports_reasoning: model.supports_reasoning,
+      icon_key: model.icon_key || '',
     });
     setDialogOpen(true);
   };
@@ -273,6 +278,7 @@ function ModelsTab() {
           <Table>
             <TableHeader>
               <TableRow className="border-krait-border">
+                <TableHead className="w-10"></TableHead>
                 <TableHead>Frontend ID</TableHead>
                 <TableHead>Backend Model</TableHead>
                 <TableHead>Provider</TableHead>
@@ -284,6 +290,18 @@ function ModelsTab() {
             <TableBody>
               {models.map((model) => (
                 <TableRow key={model.id} className="border-krait-border hover:bg-krait-surface1">
+                  <TableCell className="py-2.5">
+                    <span className="inline-flex items-center justify-center w-5 h-5">
+                      {(() => {
+                        const opt = ICON_OPTIONS.find(o => o.key === model.icon_key);
+                        if (opt) {
+                          const IconComp = opt.component;
+                          return <IconComp size={16} className="shrink-0" />;
+                        }
+                        return <div className="w-3.5 h-3.5 rounded-sm bg-krait-surface2" />;
+                      })()}
+                    </span>
+                  </TableCell>
                   <TableCell className="font-mono text-[12px]">{model.frontend_id}</TableCell>
                   <TableCell className="font-mono text-[12px] text-text-tertiary">{model.model_id}</TableCell>
                   <TableCell>{model.provider_name}</TableCell>
@@ -325,7 +343,7 @@ function ModelsTab() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setDialogOpen(open); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingModel ? 'Edit Model' : 'Add Model'}</DialogTitle>
             <DialogDescription>
@@ -374,6 +392,32 @@ function ModelsTab() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[12px] text-text-secondary">Icon</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {ICON_OPTIONS.map((opt) => {
+                  const IconComp = opt.component;
+                  const selected = form.icon_key === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      title={opt.label}
+                      onClick={() => setForm({ ...form, icon_key: selected ? '' : opt.key })}
+                      className={`flex items-center justify-center w-8 h-8 rounded-md border transition-colors ${
+                        selected
+                          ? 'bg-venom-yellow/15 border-venom-yellow/50 text-venom-yellow'
+                          : 'bg-krait-surface2 border-krait-border text-text-tertiary hover:text-text-secondary hover:border-text-tertiary'
+                      }`}
+                    >
+                      <span className="inline-flex items-center justify-center w-4 h-4">
+                        <IconComp size={16} className="shrink-0" />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">

@@ -48,7 +48,7 @@ export function ClaudeIcon({ className = 'shrink-0', size = 16 }: IconProps) {
 
 export function OpenAIIcon({ className = 'shrink-0', size = 16 }: IconProps) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="256" height="260" preserveAspectRatio="xMidYMid" viewBox="0 0 256 260" id="openai">
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} preserveAspectRatio="xMidYMid" viewBox="0 0 256 260" id="openai">
       <path fill="#fff" d="M239.184 106.203a64.716 64.716 0 0 0-5.576-53.103C219.452 28.459 191 15.784 163.213 21.74A65.586 65.586 0 0 0 52.096 45.22a64.716 64.716 0 0 0-43.23 31.36c-14.31 24.602-11.061 55.634 8.033 76.74a64.665 64.665 0 0 0 5.525 53.102c14.174 24.65 42.644 37.324 70.446 31.36a64.72 64.72 0 0 0 48.754 21.744c28.481.025 53.714-18.361 62.414-45.481a64.767 64.767 0 0 0 43.229-31.36c14.137-24.558 10.875-55.423-8.083-76.483Zm-97.56 136.338a48.397 48.397 0 0 1-31.105-11.255l1.535-.87 51.67-29.825a8.595 8.595 0 0 0 4.247-7.367v-72.85l21.845 12.636c.218.111.37.32.409.563v60.367c-.056 26.818-21.783 48.545-48.601 48.601Zm-104.466-44.61a48.345 48.345 0 0 1-5.781-32.589l1.534.921 51.722 29.826a8.339 8.339 0 0 0 8.441 0l63.181-36.425v25.221a.87.87 0 0 1-.358.665l-52.335 30.184c-23.257 13.398-52.97 5.431-66.404-17.803ZM23.549 85.38a48.499 48.499 0 0 1 25.58-21.333v61.39a8.288 8.288 0 0 0 4.195 7.316l62.874 36.272-21.845 12.636a.819.819 0 0 1-.767 0L41.353 151.53c-23.211-13.454-31.171-43.144-17.804-66.405v.256Zm179.466 41.695-63.08-36.63L161.73 77.86a.819.819 0 0 1 .768 0l52.233 30.184a48.6 48.6 0 0 1-7.316 87.635v-61.391a8.544 8.544 0 0 0-4.4-7.213Zm21.742-32.69-1.535-.922-51.619-30.081a8.39 8.39 0 0 0-8.492 0L99.98 99.808V74.587a.716.716 0 0 1 .307-.665l52.233-30.133a48.652 48.652 0 0 1 72.236 50.391v.205ZM88.061 139.097l-21.845-12.585a.87.87 0 0 1-.41-.614V65.685a48.652 48.652 0 0 1 79.757-37.346l-1.535.87-51.67 29.825a8.595 8.595 0 0 0-4.246 7.367l-.051 72.697Zm11.868-25.58 28.138-16.217 28.188 16.218v32.434l-28.086 16.218-28.188-16.218-.052-32.434Z"></path>
     </svg>
   );
@@ -57,7 +57,7 @@ export function OpenAIIcon({ className = 'shrink-0', size = 16 }: IconProps) {
 export function GeminiIcon({ className = 'shrink-0', size = 16 }: IconProps) {
   const gradId = `gemini-grad-${size}`;
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="296" height="298" fill="none" viewBox="0 0 296 298" id="gemini">
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} fill="none" viewBox="0 0 296 298" id="gemini">
       <mask id="a" width="296" height="298" x="0" y="0" maskUnits="userSpaceOnUse" style={{maskType: 'alpha'}}>
         <path fill="#3186FF" d="M141.201 4.886c2.282-6.17 11.042-6.071 13.184.148l5.985 17.37a184.004 184.004 0 0 0 111.257 113.049l19.304 6.997c6.143 2.227 6.156 10.91.02 13.155l-19.35 7.082a184.001 184.001 0 0 0-109.495 109.385l-7.573 20.629c-2.241 6.105-10.869 6.121-13.133.025l-7.908-21.296a184 184 0 0 0-109.02-108.658l-19.698-7.239c-6.102-2.243-6.118-10.867-.025-13.132l20.083-7.467A183.998 183.998 0 0 0 133.291 26.28l7.91-21.394Z"></path>
       </mask>
@@ -175,7 +175,7 @@ export function MistralIcon({ className = 'shrink-0', size = 16 }: IconProps) {
 
 export function NvidiaIcon({ className = 'shrink-0', size = 16 }: IconProps) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" id="nvidia">
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" id="nvidia">
       <path fill="#77B900" d="m8.948 14.408.001.001zM8.948 18.121v-1.247c-4.84-.605-6.492-5.983-6.492-5.983s2.164-3.222 6.5-3.561V6.155C4.153 6.547 0 10.642 0 10.642s2.35 6.856 8.948 7.479z"></path>
       <path fill="#77B900" d="M4.275 11.053s1.016 3.836 4.673 4.495v-1.14c-2.058-.704-2.738-3.134-2.738-3.134s1.202-1.442 2.73-1.255h.008V8.773a6.035 6.035 0 0 1 .796-.036c2.508 0 4 1.968 4 1.968l-2.04 1.728c-.91-1.54-1.219-2.217-2.747-2.404v4.38c.371.124.76.187 1.158.187 2.976 0 5.75-3.882 5.75-3.882s-2.571-3.526-6.493-3.401h-.004a6.489 6.489 0 0 0-.42.018v1.441l-.027.003.023-.001c-2.913.321-4.669 2.279-4.669 2.279z"></path>
       <path fill="#77B900" d="M24 4H8.948v2.155l.424-.027c5.45-.186 9.01 4.506 9.01 4.506s-4.08 5.003-8.33 5.003a6.36 6.36 0 0 1-1.095-.098v1.335c.3.035.61.063.91.063 3.957 0 6.82-2.039 9.593-4.443.459.374 2.34 1.273 2.73 1.665-2.633 2.226-8.772 4.016-12.253 4.016-.335 0-.653-.018-.971-.053V20H24V4z"></path>
@@ -204,7 +204,7 @@ export function CohereIcon({ className = 'shrink-0', size = 16 }: IconProps) {
 
 export function TencentIcon({ className = 'shrink-0', size = 16 }: IconProps) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" id="tencent">
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" id="tencent">
       <path fill="#0052D9" fillRule="evenodd" d="M9.976 1L24 9.8l-10.587.015L10.723 23H5.489L8.18 9.8H3.244L1 5.4h8.077L9.976 1z" />
     </svg>
   );
@@ -280,4 +280,35 @@ export function getModelIconById(id: string, props?: IconProps): React.ReactNode
   if (providerFn) return providerFn(props);
   // Fallback: return null (caller renders default)
   return null;
+}
+
+/* ─── Icon options for admin picker ─────────────────────── */
+
+export interface IconOption {
+  key: string;
+  label: string;
+  component: React.ComponentType<IconProps>;
+}
+
+export const ICON_OPTIONS: IconOption[] = [
+  { key: 'krait', label: 'Krait', component: KraitIcon },
+  { key: 'claude', label: 'Claude', component: ClaudeIcon },
+  { key: 'openai', label: 'OpenAI', component: OpenAIIcon },
+  { key: 'gemini', label: 'Gemini', component: GeminiIcon },
+  { key: 'grok', label: 'Grok', component: GrokIcon },
+  { key: 'deepseek', label: 'DeepSeek', component: DeepSeekIcon },
+  { key: 'meta', label: 'Meta', component: MetaIcon },
+  { key: 'mistral', label: 'Mistral', component: MistralIcon },
+  { key: 'nvidia', label: 'Nvidia', component: NvidiaIcon },
+  { key: 'groq', label: 'Groq', component: GroqIcon },
+  { key: 'cohere', label: 'Cohere', component: CohereIcon },
+  { key: 'tencent', label: 'Tencent', component: TencentIcon },
+  { key: 'poolside', label: 'Poolside', component: PoolsideIcon },
+];
+
+export function getIconByKey(key: string | null | undefined, props?: IconProps): React.ReactNode {
+  if (!key) return null;
+  const opt = ICON_OPTIONS.find(o => o.key === key);
+  if (!opt) return null;
+  return <opt.component {...props} />;
 }

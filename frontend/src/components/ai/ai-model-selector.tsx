@@ -5,7 +5,7 @@ import { Lightning } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import type { ModelItem, ModelTier } from '@/lib/api/ai-api';
 import { aiApi } from '@/lib/api/ai-api';
-import { MODEL_ICONS, KraitIcon, GroqIcon } from './ai-model-icons';
+import { MODEL_ICONS, KraitIcon, GroqIcon, getIconByKey } from './ai-model-icons';
 
 /* ─── Fallback models (static, if API fails) ────────────── */
 
@@ -182,8 +182,10 @@ function ModelRow({
   onSelect: (id: string) => void;
 }) {
   const active = selected === model.id;
+  const dbIcon = getIconByKey(model.iconKey, { size: 16, className: 'shrink-0' });
   const iconFn = MODEL_ICONS[model.id];
-  const IconComponent = iconFn ? iconFn() : null;
+  const fallbackIcon = iconFn ? iconFn({ size: 16, className: 'shrink-0' }) : null;
+  const IconComponent = dbIcon || fallbackIcon;
 
   return (
     <button

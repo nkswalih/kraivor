@@ -30,4 +30,5 @@ class PlatformModel(Base, UUIDMixin, TimestampMixin):
     supports_vision: Mapped[bool] = mapped_column(Boolean, default=False)
     supports_reasoning: Mapped[bool] = mapped_column(Boolean, default=False)
     latency_display: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    icon_key: Mapped[str | None] = mapped_column(String(50), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

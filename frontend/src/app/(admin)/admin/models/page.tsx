@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2, Loader2, Server, Route, Cpu, Zap } from 'lucide-react';
 import { adminEndpoints } from '@/lib/api/endpoints/admin';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/shadcn/tabs';
@@ -125,6 +126,7 @@ function ConfirmDeleteDialog({
 // ── Models Tab ──────────────────────────────────────────────────────────────
 
 function ModelsTab() {
+  const queryClient = useQueryClient();
   const [models, setModels] = useState<Model[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
@@ -220,6 +222,7 @@ function ModelsTab() {
         await adminEndpoints.createModel(form);
       }
       await adminEndpoints.invalidateCache();
+      queryClient.invalidateQueries({ queryKey: ['ai-models'] });
       setDialogOpen(false);
       resetForm();
       setLoading(true);
@@ -236,6 +239,7 @@ function ModelsTab() {
     try {
       await adminEndpoints.deleteModel(deleteTarget.id);
       await adminEndpoints.invalidateCache();
+      queryClient.invalidateQueries({ queryKey: ['ai-models'] });
       setDeleteTarget(null);
       setLoading(true);
       await fetchData();
@@ -343,7 +347,8 @@ function ModelsTab() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setDialogOpen(open); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg p-0">
+          <div className="max-h-[85vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle>{editingModel ? 'Edit Model' : 'Add Model'}</DialogTitle>
             <DialogDescription>
@@ -395,7 +400,7 @@ function ModelsTab() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-[12px] text-text-secondary">Icon</Label>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="grid grid-cols-6 gap-2 sm:grid-cols-8">
                 {ICON_OPTIONS.map((opt) => {
                   const IconComp = opt.component;
                   const selected = form.icon_key === opt.key;
@@ -484,7 +489,8 @@ function ModelsTab() {
               </div>
             </div>
           </div>
-          <div className="flex justify-end gap-2 mt-6">
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t border-krait-border bg-krait-obsidian">
             <DialogClose asChild>
               <Button variant="outline" className="bg-krait-surface2 border-krait-border text-text-secondary hover:bg-krait-surface1 text-[13px]">
                 Cancel
@@ -515,6 +521,7 @@ function ModelsTab() {
 // ── Routes Tab ──────────────────────────────────────────────────────────────
 
 function RoutesTab() {
+  const queryClient = useQueryClient();
   const [routes, setRoutes] = useState<Route[]>([]);
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
@@ -583,6 +590,7 @@ function RoutesTab() {
         await adminEndpoints.createRoute(form);
       }
       await adminEndpoints.invalidateCache();
+      queryClient.invalidateQueries({ queryKey: ['ai-models'] });
       setDialogOpen(false);
       resetForm();
       setLoading(true);
@@ -599,6 +607,7 @@ function RoutesTab() {
     try {
       await adminEndpoints.deleteRoute(deleteTarget.id);
       await adminEndpoints.invalidateCache();
+      queryClient.invalidateQueries({ queryKey: ['ai-models'] });
       setDeleteTarget(null);
       setLoading(true);
       await fetchData();
@@ -675,7 +684,8 @@ function RoutesTab() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setDialogOpen(open); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md p-0">
+          <div className="max-h-[85vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle>{editingRoute ? 'Edit Route' : 'Add Route'}</DialogTitle>
             <DialogDescription>
@@ -751,7 +761,8 @@ function RoutesTab() {
               </div>
             </div>
           </div>
-          <div className="flex justify-end gap-2 mt-6">
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t border-krait-border bg-krait-obsidian">
             <DialogClose asChild>
               <Button variant="outline" className="bg-krait-surface2 border-krait-border text-text-secondary hover:bg-krait-surface1 text-[13px]">
                 Cancel
@@ -782,6 +793,7 @@ function RoutesTab() {
 // ── Providers Tab ───────────────────────────────────────────────────────────
 
 function ProvidersTab() {
+  const queryClient = useQueryClient();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -846,6 +858,7 @@ function ProvidersTab() {
         await adminEndpoints.createProvider(form);
       }
       await adminEndpoints.invalidateCache();
+      queryClient.invalidateQueries({ queryKey: ['ai-models'] });
       setDialogOpen(false);
       resetForm();
       setLoading(true);
@@ -862,6 +875,7 @@ function ProvidersTab() {
     try {
       await adminEndpoints.deleteProvider(deleteTarget.id);
       await adminEndpoints.invalidateCache();
+      queryClient.invalidateQueries({ queryKey: ['ai-models'] });
       setDeleteTarget(null);
       setLoading(true);
       await fetchData();
@@ -944,7 +958,8 @@ function ProvidersTab() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setDialogOpen(open); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md p-0">
+          <div className="max-h-[85vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle>{editingProvider ? 'Edit Provider' : 'Add Provider'}</DialogTitle>
             <DialogDescription>
@@ -1009,7 +1024,8 @@ function ProvidersTab() {
               Active
             </label>
           </div>
-          <div className="flex justify-end gap-2 mt-6">
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t border-krait-border bg-krait-obsidian">
             <DialogClose asChild>
               <Button variant="outline" className="bg-krait-surface2 border-krait-border text-text-secondary hover:bg-krait-surface1 text-[13px]">
                 Cancel
@@ -1040,6 +1056,7 @@ function ProvidersTab() {
 // ── Kraivor AI Tab ──────────────────────────────────────────────────────────
 
 function KraivorAITab() {
+  const queryClient = useQueryClient();
   const [model, setModel] = useState<Model | null>(null);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -1109,6 +1126,7 @@ function KraivorAITab() {
         });
       }
       await adminEndpoints.invalidateCache();
+      queryClient.invalidateQueries({ queryKey: ['ai-models'] });
       setDialogOpen(false);
       setLoading(true);
       await fetchData();
@@ -1200,7 +1218,8 @@ function KraivorAITab() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md p-0">
+          <div className="max-h-[85vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle>Configure Kraivor AI</DialogTitle>
             <DialogDescription>
@@ -1281,7 +1300,8 @@ function KraivorAITab() {
               />
             </div>
           </div>
-          <div className="flex justify-end gap-2 mt-6">
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t border-krait-border bg-krait-obsidian">
             <DialogClose asChild>
               <Button variant="outline" className="bg-krait-surface2 border-krait-border text-text-secondary hover:bg-krait-surface1 text-[13px]">
                 Cancel

@@ -53,7 +53,7 @@ const FALLBACK_MODELS: ModelItem[] = [
 
 const GROUP_ORDER: { tier: ModelTier; label: string; icon: ReactNode }[] = [
   { tier: 'kraivor', label: 'Kraivor AI', icon: null },
-  { tier: 'groq', label: 'Groq', icon: <GroqIcon size={14} /> },
+  { tier: 'groq', label: 'Groq', icon: null },
   { tier: 'free', label: 'Free Models', icon: null },
   { tier: 'byok', label: 'BYOK Models', icon: null },
 ];

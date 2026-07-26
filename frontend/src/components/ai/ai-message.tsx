@@ -169,7 +169,7 @@ export const AiMessage = memo(function AiMessage({
                   <>
                     {/* Header — visible when content is streaming or complete */}
                     <div className="flex items-center gap-2 mb-1.5">
-                      <SnakeIcon />
+                      <SnakeIcon isAnimating={isStreaming} />
                       {/* <span className="text-[13px] font-semibold text-text-primary">
                         Kraivor AI
                       </span> */}

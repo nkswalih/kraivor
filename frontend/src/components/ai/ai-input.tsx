@@ -267,9 +267,13 @@ export function AiInput({
                 className="flex items-center gap-1.5 px-2 py-1 bg-krait-surface3 border border-krait-border/60 rounded-md hover:border-krait-borderHi transition-colors"
               >
                 <span className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
-                  {getModelIcon(selectedModel)}
+                  {getModelIcon(selectedModel, models)}
                 </span>
-                <span className="text-[12px] font-medium text-text-secondary">{getModelName(selectedModel)}</span>
+                <span className="text-[12px] font-medium text-text-secondary">
+                  {models && models.length > 0
+                    ? getModelName(selectedModel, models)
+                    : selectedModel || '\u00A0'}
+                </span>
               </button>
               {isStreaming ? (
                 <button

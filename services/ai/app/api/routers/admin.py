@@ -117,6 +117,28 @@ def _serialize_provider(p: PlatformProvider) -> dict:
     }
 
 
+_MODEL_PREFIX_TO_ICON: dict[str, str] = {
+    "cohere": "cohere",
+    "nvidia": "nvidia",
+    "poolside": "poolside",
+    "tencent": "tencent",
+    "google": "gemini",
+    "deepseek": "deepseek",
+    "meta": "meta",
+    "mistral": "mistral",
+    "anthropic": "claude",
+    "openai": "openai",
+    "xai": "grok",
+}
+
+
+def _resolve_icon_key(icon_key: str | None, model_id: str) -> str | None:
+    if icon_key:
+        return icon_key
+    prefix = model_id.split("/")[0] if "/" in model_id else ""
+    return _MODEL_PREFIX_TO_ICON.get(prefix)
+
+
 def _serialize_model(m: PlatformModel) -> dict:
     return {
         "id": str(m.id),
@@ -136,7 +158,7 @@ def _serialize_model(m: PlatformModel) -> dict:
         "supports_vision": m.supports_vision,
         "supports_reasoning": m.supports_reasoning,
         "latency_display": m.latency_display,
-        "icon_key": m.icon_key,
+        "icon_key": _resolve_icon_key(m.icon_key, m.model_id),
         "notes": m.notes,
         "created_at": m.created_at.isoformat() if m.created_at else None,
         "updated_at": m.updated_at.isoformat() if m.updated_at else None,

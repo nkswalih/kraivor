@@ -201,10 +201,30 @@ class ModelRegistry:
             "openrouter": "free",
         }
 
+        _MODEL_PREFIX_TO_ICON: dict[str, str] = {
+            "cohere": "cohere",
+            "nvidia": "nvidia",
+            "poolside": "poolside",
+            "tencent": "tencent",
+            "google": "gemini",
+            "deepseek": "deepseek",
+            "meta": "meta",
+            "mistral": "mistral",
+            "anthropic": "claude",
+            "openai": "openai",
+            "xai": "grok",
+        }
+
         def _context_display(window: int) -> str:
             if window >= 1_000_000:
                 return "1M"
             return f"{window // 1024}K"
+
+        def _resolve_icon(icon_key: str | None, model_id: str) -> str | None:
+            if icon_key:
+                return icon_key
+            prefix = model_id.split("/")[0] if "/" in model_id else ""
+            return _MODEL_PREFIX_TO_ICON.get(prefix)
 
         result = []
         for m in _models:
@@ -217,6 +237,6 @@ class ModelRegistry:
                 "backendModel": m["model_id"],
                 "latency": m["latency_display"],
                 "context": _context_display(m["context_window"]),
-                "iconKey": m["icon_key"],
+                "iconKey": _resolve_icon(m["icon_key"], m["model_id"]),
             })
         return result

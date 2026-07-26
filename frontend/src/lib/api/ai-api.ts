@@ -60,6 +60,7 @@ export interface ModelItem {
   latency?: string;
   context?: string;
   icon?: string;
+  iconKey?: string;
 }
 
 /* ─── BYOK types ──────────────────────────────────────────── */

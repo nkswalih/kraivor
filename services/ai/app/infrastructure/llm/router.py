@@ -1,5 +1,7 @@
 from functools import lru_cache
 
+from app.application.admin.model_registry import ModelRegistry
+
 FREE_MODELS = [
     "cohere/north-mini-code:free",
     "poolside/laguna-xs-2.1:free",
@@ -84,71 +86,14 @@ _INTENT_ROUTE_MAP = {
 
 
 class ModelRouter:
-    TASK_ROUTES = {
-        "intent_classify": {
-            "model": "qwen/qwen3.6-27b",
-            "fallback": "qwen/qwen3-32b",
-            "max_tokens": 256,
-        },
-        "simple_qa": {
-            "model": "qwen/qwen3.6-27b",
-            "fallback": "qwen/qwen3-32b",
-            "max_tokens": 4096,
-        },
-        "code_generation": {
-            "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-            "fallback": "qwen/qwen3-32b",
-            "max_tokens": 16384,
-        },
-        "code_review": {
-            "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-            "fallback": "qwen/qwen3-32b",
-            "max_tokens": 4096,
-        },
-        "security_analysis": {
-            "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-            "fallback": "qwen/qwen3.6-27b",
-            "max_tokens": 4096,
-        },
-        "architecture_review": {
-            "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-            "fallback": "qwen/qwen3-32b",
-            "max_tokens": 8192,
-        },
-        "performance_analysis": {
-            "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-            "fallback": "qwen/qwen3.6-27b",
-            "max_tokens": 4096,
-        },
-        "tool_calling": {
-            "model": "qwen/qwen3-32b",
-            "fallback": "nvidia/nemotron-3-ultra-550b-a55b:free",
-            "max_tokens": 4096,
-        },
-        "embeddings": {
-            "model": "openai/gpt-oss-120b:free",
-            "fallback": None,
-            "max_tokens": 8192,
-        },
-    }
+    """Routes tasks to models. Task routes are read from the database (via ModelRegistry).
 
-    TIER_ACCESS = {
-        "free": FREE_MODELS,
-        "pro": [
-            "openai/gpt-4o",
-            "anthropic/claude-5-sonnet",
-            "mistralai/mistral-large",
-        ],
-        "enterprise": ["*"],
-    }
+    Falls back to hardcoded defaults if the DB has no route for a task.
+    BYOK model overrides are checked at runtime.
+    """
 
     def get_route(self, task: str) -> dict:
-        return self._get_route_cached(task)
-
-    @lru_cache(maxsize=128)  # noqa: B019
-    def _get_route_cached(self, task: str) -> dict:
-        route = self.TASK_ROUTES.get(task, self.TASK_ROUTES["simple_qa"])
-        return {**route, "fallback_models": FREE_MODELS}
+        return ModelRegistry.get_task_route(task)
 
     def get_route_for_user(self, task: str, user_model: str | None = None) -> dict:
         """Return route for a task, overridden by the user's selected model if valid.
@@ -158,11 +103,7 @@ class ModelRouter:
           2. If user_model is KRAIVOR_MODEL → use default Kraivor route
           3. Otherwise → use default free route for the task
         """
-        return self._get_route_for_user_cached(task, user_model)
-
-    @lru_cache(maxsize=128)  # noqa: B019
-    def _get_route_for_user_cached(self, task: str, user_model: str | None = None) -> dict:
-        route = self.get_route(task)
+        route = ModelRegistry.get_task_route(task)
 
         if not user_model:
             return route
@@ -186,3 +127,13 @@ class ModelRouter:
         if fallback:
             return fallback
         return model
+
+    TIER_ACCESS = {
+        "free": FREE_MODELS,
+        "pro": [
+            "openai/gpt-4o",
+            "anthropic/claude-5-sonnet",
+            "mistralai/mistral-large",
+        ],
+        "enterprise": ["*"],
+    }

@@ -218,7 +218,15 @@ async def completions(request: dict, user: CurrentUser, req: Request, _: RateLim
 @router.get("/models")
 async def list_models(user: CurrentUser):
     models = ModelRegistry.get_selector_models()
-    return {"models": models, "default": KRAIVOR_MODEL}
+    # Derive default from DB: first kraivor provider model, else first model, else hardcoded
+    default_id = KRAIVOR_MODEL
+    for m in models:
+        if m.get("provider") == "kraivor":
+            default_id = m["id"]
+            break
+    if not models:
+        default_id = KRAIVOR_MODEL
+    return {"models": models, "default": default_id}
 
 
 # ── BYOK key management endpoints ────────────────────────────

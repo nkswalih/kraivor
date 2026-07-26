@@ -187,9 +187,8 @@ export const aiApi = {
 
   /* ─── Dynamic model listing ─────────────────────────────── */
 
-  async listModels(): Promise<ModelItem[]> {
-    const res = await aiFetch<{ models: ModelItem[]; default: string }>('/v1/models');
-    return res.models || [];
+  async listModels(): Promise<{ models: ModelItem[]; default: string }> {
+    return aiFetch<{ models: ModelItem[]; default: string }>('/v1/models');
   },
 
   /* ─── BYOK key management ──────────────────────────────── */

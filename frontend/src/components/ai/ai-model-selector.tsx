@@ -11,7 +11,7 @@ import { MODEL_ICONS, KraitIcon, GroqIcon, getIconByKey } from './ai-model-icons
 
 const FALLBACK_MODELS: ModelItem[] = [
   // ── Kraivor AI (free, built-in) ──
-  { id: 'krait-2.0', name: 'Krait 2.0', tier: 'kraivor', provider: 'kraivor', backendModel: 'openrouter/auto', latency: '0.4s', context: '128K' },
+  { id: 'krait-2.0', name: 'Krait', tier: 'kraivor', provider: 'kraivor', backendModel: 'openrouter/auto', latency: '0.4s', context: '128K' },
 
   // ── Groq (native API — fast inference) ──
   { id: 'groq-qwen3-32b', name: 'Qwen 3 32B', tier: 'groq', provider: 'groq', backendModel: 'qwen/qwen3-32b', latency: '0.3s', context: '128K' },
@@ -79,7 +79,7 @@ export function ModelSelector({ selected, onSelect, models: modelsProp }: ModelS
     aiApi
       .listModels()
       .then(data => {
-        if (!cancelled) setFetchedModels(data);
+        if (!cancelled) setFetchedModels(data.models);
       })
       .catch(() => {
         if (!cancelled) setFetchedModels(FALLBACK_MODELS);
@@ -207,15 +207,25 @@ function ModelRow({
 
 /* ─── Exports (backward compat) ─────────────────────────── */
 
-export function getModelIcon(id: string) {
+export function getModelIcon(id: string, models?: ModelItem[]) {
+  if (models && models.length > 0) {
+    const m = models.find(m => m.id === id);
+    if (m?.iconKey) {
+      const dbIcon = getIconByKey(m.iconKey, { size: 14, className: 'shrink-0' });
+      if (dbIcon) return dbIcon;
+    }
+  }
   const fn = MODEL_ICONS[id];
   if (fn) return fn();
   return <KraitIcon />;
 }
 
-export function getModelName(id: string) {
-  const m = FALLBACK_MODELS.find(m => m.id === id);
-  return m?.name ?? id;
+export function getModelName(id: string, models?: ModelItem[]) {
+  if (models && models.length > 0) {
+    const m = models.find(m => m.id === id);
+    if (m?.name) return m.name;
+  }
+  return id;
 }
 
 export function getModelGroup(id: string): ModelTier {

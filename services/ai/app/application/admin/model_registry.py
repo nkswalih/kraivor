@@ -130,6 +130,7 @@ class ModelRegistry:
                     "supports_reasoning": m.supports_reasoning,
                     "is_trial": m.is_trial,
                     "latency_display": m.latency_display,
+                    "icon_key": m.icon_key,
                 }
                 for m in db_models
             ]
@@ -216,5 +217,6 @@ class ModelRegistry:
                 "backendModel": m["model_id"],
                 "latency": m["latency_display"],
                 "context": _context_display(m["context_window"]),
+                "iconKey": m["icon_key"],
             })
         return result

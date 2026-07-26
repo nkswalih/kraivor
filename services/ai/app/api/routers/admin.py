@@ -59,6 +59,7 @@ class ModelCreate(BaseModel):
     supports_tools: bool = False
     supports_vision: bool = False
     supports_reasoning: bool = False
+    icon_key: str | None = None
     notes: str | None = None
 
 
@@ -77,6 +78,7 @@ class ModelUpdate(BaseModel):
     supports_tools: bool | None = None
     supports_vision: bool | None = None
     supports_reasoning: bool | None = None
+    icon_key: str | None = None
     notes: str | None = None
 
 
@@ -134,6 +136,7 @@ def _serialize_model(m: PlatformModel) -> dict:
         "supports_vision": m.supports_vision,
         "supports_reasoning": m.supports_reasoning,
         "latency_display": m.latency_display,
+        "icon_key": m.icon_key,
         "notes": m.notes,
         "created_at": m.created_at.isoformat() if m.created_at else None,
         "updated_at": m.updated_at.isoformat() if m.updated_at else None,

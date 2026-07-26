@@ -13,11 +13,27 @@ interface IconProps {
 
 export function KraitIcon({ className = 'shrink-0', size = 16 }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      {/* Sinuous snake body */}
       <path
-        d="M12 2C8 2 4 5 4 9c0 2.5 1.3 4.7 3.3 6 .5.3 1 .7 1.3 1.1.3.4.4.8.4 1.3v3.1c0 .6.4 1 1 1s1-.4 1-1v-3.1c0-.5.1-.9.4-1.3.3-.4.8-.8 1.3-1.1 2-1.3 3.3-3.5 3.3-6 0-4-4-7-8-7zm0 10c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"
-        fill="#EAB308"
+        d="M4 12c0-2.7 2-4.7 4-4.7s4 2 4 4.7-2 4.7-4 4.7c-1.3 0-2-.7-2-2 0-1.3 1.3-2 2.7-2s2.7.7 2.7 2"
+        stroke="#FACC15"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
       />
+      {/* Tail tuck */}
+      <path
+        d="M14.7 13.3c1.3-.7 3.3-.3 4.7 1"
+        stroke="#FACC15"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
+      />
+      {/* Head */}
+      <circle cx="4.7" cy="12" r="1.6" fill="#FACC15" />
+      {/* Antenna / highlight */}
+      <line x1="4.7" y1="10" x2="6.4" y2="8.3" stroke="#FACC15" strokeWidth="1.3" strokeLinecap="round" />
     </svg>
   );
 }

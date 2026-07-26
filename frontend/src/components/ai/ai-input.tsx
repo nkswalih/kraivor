@@ -111,7 +111,7 @@ export function AiInput({
       const above = spaceBelow < 420 && rect.top > spaceBelow;
       setPopupPos({
         top: above ? rect.top - 8 : rect.bottom + 8,
-        left: Math.max(8, rect.right - 272),
+        left: Math.max(8, rect.right - 255),
         above,
       });
       return true;

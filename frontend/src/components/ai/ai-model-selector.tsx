@@ -121,7 +121,7 @@ export function ModelSelector({ selected, onSelect, models: modelsProp }: ModelS
       className="w-64 bg-[#18181C] border border-[#27272A] rounded-xl shadow-2xl pointer-events-auto"
       onPointerDown={e => e.stopPropagation()}
     >
-      <div className="max-h-[400px] overflow-y-auto overflow-x-hidden">
+      <div className="max-h-[400px] overflow-y-auto overflow-x-clip p-0">
         {GROUP_ORDER.map(({ tier, label, icon: groupIcon }) => {
           const models = grouped.get(tier);
           if (!models || models.length === 0) return null;
@@ -129,9 +129,9 @@ export function ModelSelector({ selected, onSelect, models: modelsProp }: ModelS
           if (hasPrev) {
             return (
               <div key={tier}>
-                <div className="border-t border-[#27272A] mx-3" />
+                <div className="border-t border-[#27272A] mx-3 mt-1.5" />
                 <GroupHeader label={label} icon={groupIcon} tier={tier} />
-                <div className="pb-1.5">
+                <div>
                   {models.map(m => (
                     <ModelRow key={m.id} model={m} selected={selected} onSelect={onSelect} />
                   ))}
@@ -144,7 +144,7 @@ export function ModelSelector({ selected, onSelect, models: modelsProp }: ModelS
           return (
             <div key={tier}>
               <GroupHeader label={label} icon={groupIcon} tier={tier} />
-              <div className="pb-1.5">
+              <div>
                 {models.map(m => (
                   <ModelRow key={m.id} model={m} selected={selected} onSelect={onSelect} />
                 ))}

@@ -9,6 +9,7 @@ from app.api.dependencies.backpressure import init_backpressure
 from app.api.middleware.backpressure import BackpressureMiddleware
 from app.api.middleware.prometheus import PrometheusMiddleware
 from app.api.middleware.request_id import RequestIDMiddleware
+from app.application.admin.model_registry import ModelRegistry
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.infrastructure.cache.redis_client import close_redis
@@ -23,6 +24,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     setup_metrics(app)
     init_backpressure()
     await init_db()
+    await ModelRegistry.reload()
     await get_event_producer().start()
     invalidate_jwks_cache()
     yield
@@ -51,6 +53,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIDMiddleware)
 
     from app.api.routers import (
+        admin,
         analysis,
         api_keys,
         byok,
@@ -69,6 +72,7 @@ def create_app() -> FastAPI:
     app.include_router(analysis.router)
     app.include_router(conversations.router, prefix="/v1")
     app.include_router(knowledge.router, prefix="/v1")
+    app.include_router(admin.router)
 
     return app
 

@@ -77,3 +77,22 @@ export async function PATCH(
   const data = await response.json().catch(() => ({}));
   return Response.json(data, { status: response.status });
 }
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ path: string[] }> },
+) {
+  const path = (await params).path.join('/');
+  const token = req.headers.get('authorization')?.replace('Bearer ', '');
+
+  const response = await fetch(`${AI_URL}/${path}`, {
+    method: 'DELETE',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  if (response.status === 204) return new Response(null, { status: 204 });
+  const data = await response.json().catch(() => ({}));
+  return Response.json(data, { status: response.status });
+}

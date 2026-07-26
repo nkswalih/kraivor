@@ -62,6 +62,13 @@ def detect_provider_from_key(api_key: str) -> str | None:
 
 
 def _model_to_provider(model: str) -> str:
+    # 1. Check platform_models table first (admin-configured)
+    from app.application.admin.model_registry import ModelRegistry
+    db_provider = ModelRegistry.get_model_provider(model)
+    if db_provider:
+        return db_provider
+
+    # 2. Fallback to string heuristic
     model_lower = model.lower()
     if "groq" in model_lower or "llama" in model_lower or "mixtral" in model_lower or "qwen" in model_lower:
         return "groq"

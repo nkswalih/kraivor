@@ -203,6 +203,8 @@ ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["N803"]
+"app/api/routers/admin.py" = ["B008"]
+"app/api/dependencies/admin.py" = ["B008"]
 
 # ── uv: CPU-only torch ──────────────────────────────────────────────────────
 # torch is only used transitively (sentence-transformers for local embeddings,

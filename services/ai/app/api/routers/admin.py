@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 import logging
 import uuid
@@ -6,12 +6,10 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 
 from app.api.dependencies.admin import require_superadmin
 from app.api.dependencies.auth import JWTPayload
 from app.infrastructure.db.database import async_session_factory
-from app.infrastructure.db.models.platform_admin import PlatformAdmin
 from app.infrastructure.db.models.platform_model import PlatformModel
 from app.infrastructure.db.models.platform_provider import PlatformProvider
 from app.infrastructure.db.models.platform_task_route import PlatformTaskRoute
@@ -284,7 +282,7 @@ async def delete_provider(
         provider = result.scalar_one_or_none()
         if not provider:
             raise HTTPException(status_code=404, detail="Provider not found")
-        provider.deleted_at = datetime.now(timezone.utc)
+        provider.deleted_at = datetime.now(UTC)
         await session.commit()
         await ModelRegistry.reload()
         return {"deleted": True}
@@ -370,7 +368,7 @@ async def delete_model(
         model = result.scalar_one_or_none()
         if not model:
             raise HTTPException(status_code=404, detail="Model not found")
-        model.deleted_at = datetime.now(timezone.utc)
+        model.deleted_at = datetime.now(UTC)
         await session.commit()
         await ModelRegistry.reload()
         return {"deleted": True}
@@ -469,7 +467,7 @@ async def delete_route(
         route = result.scalar_one_or_none()
         if not route:
             raise HTTPException(status_code=404, detail="Route not found")
-        route.deleted_at = datetime.now(timezone.utc)
+        route.deleted_at = datetime.now(UTC)
         await session.commit()
         await ModelRegistry.reload()
         return {"deleted": True}

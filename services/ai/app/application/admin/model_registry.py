@@ -195,13 +195,13 @@ class ModelRegistry:
     @classmethod
     def get_selector_models(cls) -> list[dict]:
         """Get all active models formatted for the frontend model selector dropdown."""
-        _PROVIDER_TO_TIER: dict[str, str] = {
+        provider_to_tier: dict[str, str] = {
             "kraivor": "kraivor",
             "groq": "groq",
             "openrouter": "free",
         }
 
-        _MODEL_PREFIX_TO_ICON: dict[str, str] = {
+        model_prefix_to_icon: dict[str, str] = {
             "cohere": "cohere",
             "nvidia": "nvidia",
             "poolside": "poolside",
@@ -224,11 +224,11 @@ class ModelRegistry:
             if icon_key:
                 return icon_key
             prefix = model_id.split("/")[0] if "/" in model_id else ""
-            return _MODEL_PREFIX_TO_ICON.get(prefix)
+            return model_prefix_to_icon.get(prefix)
 
         result = []
         for m in _models:
-            tier = _PROVIDER_TO_TIER.get(m["provider_name"], "byok")
+            tier = provider_to_tier.get(m["provider_name"], "byok")
             result.append({
                 "id": m["frontend_id"],
                 "name": m["display_name"],

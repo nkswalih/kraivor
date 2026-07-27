@@ -227,6 +227,29 @@ export function KnowledgeCanvas({ spaceId }: Props) {
         const startH = resizeRef.current.startH;
         const pos = resizeRef.current.handlePos;
 
+        const resizeEl = c.elements.find(ee => ee.id === resizeRef.current.elementId);
+
+        // Modifier key modes for text elements
+        if (resizeEl && (resizeEl.type === 'text' || resizeEl.type === 'sticky_note')) {
+          const d = resizeEl.data as Record<string, unknown>;
+          if (e.shiftKey) {
+            const currentFontSize = (d.fontSize as number) ?? 14;
+            const newFontSize = Math.max(8, Math.min(96, Math.round(currentFontSize + dw * 0.2)));
+            state.updateElement(spaceId, resizeRef.current.elementId, {
+              data: { ...d, fontSize: newFontSize },
+            });
+            return;
+          }
+          if (e.ctrlKey) {
+            const currentPadding = (d.padding as number) ?? 12;
+            const newPadding = Math.max(0, Math.min(48, Math.round(currentPadding + dw * 0.3)));
+            state.updateElement(spaceId, resizeRef.current.elementId, {
+              data: { ...d, padding: newPadding },
+            });
+            return;
+          }
+        }
+
         let newW: number, newH: number;
         let dx = 0,
           dy = 0;
@@ -249,7 +272,6 @@ export function KnowledgeCanvas({ spaceId }: Props) {
           newH = startH;
         }
 
-        const resizeEl = c.elements.find(ee => ee.id === resizeRef.current.elementId);
         if (resizeEl && resizeEl.type === 'arrow') {
           const arrowData: ArrowElementData = JSON.parse(
             JSON.stringify(resizeEl.data)
@@ -1173,6 +1195,7 @@ export function KnowledgeCanvas({ spaceId }: Props) {
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if ((e.target as HTMLElement).contentEditable === 'true') return;
       const state = store.getState();
       switch (e.key.toLowerCase()) {
         case 'v':

@@ -8,11 +8,11 @@ interface CanvasGridProps {
   enabled: boolean;
 }
 
-const GLOW_RADIUS = 140;
+const GLOW_RADIUS = 200;
 const BASE_DOT_RADIUS = 1;
-const GLOW_DOT_RADIUS = 1.6;
-const BASE_ALPHA = 0.2;
-const GLOW_ALPHA = 0.45;
+const GLOW_DOT_RADIUS = 1.3;
+const BASE_ALPHA = 0.16;
+const GLOW_ALPHA = 0.28;
 
 export function CanvasGrid({ viewport, gridSize, enabled }: CanvasGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -54,7 +54,7 @@ export function CanvasGrid({ viewport, gridSize, enabled }: CanvasGridProps) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
-    const spacing = gridSize * viewport.zoom;
+    const spacing = Math.max(14, Math.min(48, gridSize * viewport.zoom));
     if (spacing < 4) return;
 
     const offsetX = viewport.x % spacing;
@@ -107,7 +107,7 @@ export function CanvasGrid({ viewport, gridSize, enabled }: CanvasGridProps) {
           if (distSq < glowRadiusWorldSq) {
             const dist = Math.sqrt(distSq);
             const t = 1 - dist / glowRadiusWorld;
-            const ease = t * t * (3 - 2 * t);
+            const ease = t * t * t * t;
             alpha = BASE_ALPHA + (GLOW_ALPHA - BASE_ALPHA) * ease;
             radius = BASE_DOT_RADIUS + (GLOW_DOT_RADIUS - BASE_DOT_RADIUS) * ease;
             r = Math.round(baseR + (venomR - baseR) * ease);
@@ -129,8 +129,8 @@ export function CanvasGrid({ viewport, gridSize, enabled }: CanvasGridProps) {
         mouse.x, mouse.y, 0,
         mouse.x, mouse.y, GLOW_RADIUS
       );
-      gradient.addColorStop(0, 'rgba(232, 197, 71, 0.02)');
-      gradient.addColorStop(0.5, 'rgba(232, 197, 71, 0.008)');
+      gradient.addColorStop(0, 'rgba(232, 197, 71, 0.008)');
+      gradient.addColorStop(0.5, 'rgba(232, 197, 71, 0.003)');
       gradient.addColorStop(1, 'rgba(232, 197, 71, 0)');
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'screen';

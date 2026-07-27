@@ -7,6 +7,7 @@ import { useRafBatcher } from '@/lib/hooks/use-raf-batcher';
 import { CanvasElementRenderer } from '../elements/canvas-element';
 import { CanvasToolbar } from './canvas-toolbar';
 import { CanvasMinimap } from './canvas-minimap';
+import { CanvasGrid } from './canvas-grid';
 import { nanoid } from 'nanoid';
 import { pdfjs } from 'react-pdf';
 import type { ShapeType, ArrowElementData, Position } from '@/types/knowledge';
@@ -1204,17 +1205,6 @@ export function KnowledgeCanvas({ spaceId }: Props) {
   const gridEnabled = canvas?.gridEnabled ?? true;
   const gridSize = canvas?.gridSize ?? 20;
 
-  const gridSvg = useMemo(() => {
-    if (!gridEnabled) return undefined;
-    const size = gridSize * viewport.zoom;
-    const dotColor =
-      typeof window !== 'undefined'
-        ? getComputedStyle(document.documentElement).getPropertyValue('--krait-border').trim() || '#2c2c33'
-        : '#2c2c33';
-    const dot = `<circle cx="0.5" cy="0.5" r="0.5" fill="${dotColor}"/>`;
-    return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'%3E${encodeURIComponent(dot)}%3C/svg%3E")`;
-  }, [gridEnabled, gridSize, Math.round(viewport.zoom * 10)]);
-
   return (
     <div className="relative flex-1 overflow-hidden bg-krait-void">
       <CanvasToolbar spaceId={spaceId} />
@@ -1230,9 +1220,6 @@ export function KnowledgeCanvas({ spaceId }: Props) {
                 ? 'cursor-crosshair'
                 : 'cursor-default'
         }`}
-        style={{
-          backgroundImage: gridSvg,
-        }}
         onClick={handleCanvasClick}
         onDoubleClick={handleCanvasDoubleClick}
         onMouseDown={handleMouseDown}
@@ -1241,6 +1228,7 @@ export function KnowledgeCanvas({ spaceId }: Props) {
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
+        <CanvasGrid viewport={viewport} gridSize={gridSize} enabled={gridEnabled} />
         {isDragOver && (
           <div className="absolute inset-0 bg-venom-yellow/5 border-2 border-venom-yellow/40 border-dashed rounded-lg pointer-events-none z-50 transition-all" />
         )}

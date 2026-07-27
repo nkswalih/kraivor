@@ -1,5 +1,3 @@
-from functools import lru_cache
-
 from app.application.admin.model_registry import ModelRegistry
 
 FREE_MODELS = [

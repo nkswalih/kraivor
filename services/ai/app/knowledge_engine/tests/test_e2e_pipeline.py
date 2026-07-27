@@ -38,8 +38,8 @@ def mock_db():
 @pytest.fixture
 def mock_embedder():
     """Mock the embedder to avoid model loading."""
-    with patch("app.knowledge_engine.store.knowledge_indexer.Embedder") as Mock:
-        instance = Mock.return_value
+    with patch("app.knowledge_engine.store.knowledge_indexer.Embedder") as mock:
+        instance = mock.return_value
         instance.embed = AsyncMock(return_value=[0.1] * 384)
         instance.embed_batch = AsyncMock(return_value=[[0.1] * 384])
         yield instance
@@ -146,7 +146,7 @@ def test_feedback_adjustment():
         "incorrect": -0.30,
     }
 
-    for rating, expected_adj in adjustments.items():
+    for _rating, expected_adj in adjustments.items():
         current_score = 0.7
         new_score = max(0.0, min(1.0, current_score + expected_adj))
         assert 0.0 <= new_score <= 1.0

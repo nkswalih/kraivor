@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import UTC, datetime
-from xml.etree import ElementTree
+from datetime import datetime
+from xml.etree import ElementTree as ET
 
 import aiohttp
 
 from app.knowledge_engine.sources.base import SourceResult, SourceContent
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -50,17 +51,16 @@ class ResearchPaperProvider:
                 "sortOrder": "descending",
             }
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    _ARXIV_API,
-                    params=params,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as resp:
-                    if resp.status != 200:
-                        return []
-                    xml_text = await resp.text()
+            async with aiohttp.ClientSession() as session, session.get(
+                _ARXIV_API,
+                params=params,
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as resp:
+                if resp.status != 200:
+                    return []
+                xml_text = await resp.text()
 
-            root = ElementTree.fromstring(xml_text)
+            root = ET.fromstring(xml_text)
             ns = {"atom": "http://www.w3.org/2005/Atom"}
 
             results = []
@@ -80,10 +80,8 @@ class ResearchPaperProvider:
                 pub_date_str = entry.findtext("atom:published", "", ns)
                 pub_date = None
                 if pub_date_str:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         pub_date = datetime.fromisoformat(pub_date_str.replace("Z", "+00:00"))
-                    except (ValueError, TypeError):
-                        pass
 
                 results.append(SourceResult(
                     url=link,
@@ -110,15 +108,14 @@ class ResearchPaperProvider:
                 "fields": "title,abstract,url,year,authors,citationCount",
             }
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    url,
-                    params=params,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as resp:
-                    if resp.status != 200:
-                        return []
-                    data = await resp.json()
+            async with aiohttp.ClientSession() as session, session.get(
+                url,
+                params=params,
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as resp:
+                if resp.status != 200:
+                    return []
+                data = await resp.json()
 
             results = []
             for paper in data.get("data", []):
@@ -148,16 +145,15 @@ class ResearchPaperProvider:
 
         try:
             api_url = f"{_ARXIV_API}?id_list={paper_id}"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    api_url,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as resp:
-                    if resp.status != 200:
-                        return None
-                    xml_text = await resp.text()
+            async with aiohttp.ClientSession() as session, session.get(
+                api_url,
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                xml_text = await resp.text()
 
-            root = ElementTree.fromstring(xml_text)
+            root = ET.fromstring(xml_text)
             ns = {"atom": "http://www.w3.org/2005/Atom"}
             entry = root.find("atom:entry", ns)
             if entry is None:
@@ -192,15 +188,14 @@ class ResearchPaperProvider:
             api_url = f"{_SEMANTIC_SCHOLAR_API}/paper/{paper_id}"
             params = {"fields": "title,abstract,url,year,authors,citationCount,tldr"}
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    api_url,
-                    params=params,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as resp:
-                    if resp.status != 200:
-                        return None
-                    data = await resp.json()
+            async with aiohttp.ClientSession() as session, session.get(
+                api_url,
+                params=params,
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                data = await resp.json()
 
             title = data.get("title", "")
             abstract = data.get("abstract") or ""

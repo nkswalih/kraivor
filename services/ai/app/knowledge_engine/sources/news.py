@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
-from xml.etree import ElementTree
+from datetime import datetime
+from xml.etree import ElementTree as ET
 
 import aiohttp
 
 from app.knowledge_engine.sources.base import SourceResult, SourceContent
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -41,16 +42,15 @@ class NewsProvider:
         try:
             import trafilatura
 
-            async with aiohttp.ClientSession(headers=_HEADERS) as session:
-                async with session.get(
-                    url,
-                    timeout=aiohttp.ClientTimeout(total=20),
-                    allow_redirects=True,
-                    ssl=False,
-                ) as resp:
-                    if resp.status != 200:
-                        return None
-                    html = await resp.text()
+            async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
+                url,
+                timeout=aiohttp.ClientTimeout(total=20),
+                allow_redirects=True,
+                ssl=False,
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                html = await resp.text()
 
             text = trafilatura.extract(
                 html,
@@ -91,10 +91,8 @@ class NewsProvider:
             for r in results_raw:
                 pub_date = None
                 if r.get("date"):
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         pub_date = datetime.fromisoformat(str(r["date"]).replace("Z", "+00:00"))
-                    except (ValueError, TypeError):
-                        pass
 
                 results.append(SourceResult(
                     url=r.get("url", ""),
@@ -120,17 +118,16 @@ class NewsProvider:
                 f"&ceid=US:en"
             )
 
-            async with aiohttp.ClientSession(headers=_HEADERS) as session:
-                async with session.get(
-                    url,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as resp:
-                    if resp.status != 200:
-                        return []
-                    xml_text = await resp.text()
+            async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
+                url,
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as resp:
+                if resp.status != 200:
+                    return []
+                xml_text = await resp.text()
 
             # Parse RSS
-            root = ElementTree.fromstring(xml_text)
+            root = ET.fromstring(xml_text)
             items = root.findall(".//item")[:max_results]
 
             results = []

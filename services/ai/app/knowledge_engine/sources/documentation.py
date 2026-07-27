@@ -68,7 +68,6 @@ DOCUMENTATION_SOURCES: dict[str, dict] = {
     "rust": {"url": "https://doc.rust-lang.org/book/", "trust": 0.95, "name": "Rust Book"},
     "java": {"url": "https://docs.oracle.com/en/java/", "trust": 0.90, "name": "Java Documentation"},
     "spring": {"url": "https://docs.spring.io/spring-framework/reference/", "trust": 0.90, "name": "Spring Framework"},
-    "redis": {"url": "https://redis.io/docs/", "trust": 0.90, "name": "Redis Documentation"},
     "supabase": {"url": "https://supabase.com/docs", "trust": 0.85, "name": "Supabase Documentation"},
     "vercel": {"url": "https://vercel.com/docs", "trust": 0.85, "name": "Vercel Documentation"},
     "cloudflare": {"url": "https://developers.cloudflare.com/", "trust": 0.90, "name": "Cloudflare Documentation"},
@@ -162,16 +161,15 @@ class DocumentationProvider:
                 ),
             }
 
-            async with aiohttp.ClientSession(headers=headers) as session:
-                async with session.get(
-                    url,
-                    timeout=aiohttp.ClientTimeout(total=20),
-                    allow_redirects=True,
-                    ssl=False,
-                ) as resp:
-                    if resp.status != 200:
-                        return None
-                    html = await resp.text()
+            async with aiohttp.ClientSession(headers=headers) as session, session.get(
+                url,
+                timeout=aiohttp.ClientTimeout(total=20),
+                allow_redirects=True,
+                ssl=False,
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                html = await resp.text()
 
             text = trafilatura.extract(
                 html,

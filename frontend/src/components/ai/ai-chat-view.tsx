@@ -10,11 +10,11 @@ import { workspaceEndpoints, repositoryEndpoints } from '@/lib/api/endpoints';
 import { aiApi, AiApiError } from '@/lib/api/ai-api';
 import type { HistoryMessage } from '@/lib/api/ai-api';
 import { useDailyUsage } from '@/lib/hooks/use-daily-usage';
-import { AiInput } from '@/components/features/ai-input';
-import { AiMessage } from '@/components/features/ai-message';
+import { AiInput } from '@/components/ai/ai-input';
+import { AiMessage } from '@/components/ai/ai-message';
 import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
-import { AiWelcome } from '@/components/features/ai-welcome';
-import { UpgradeCard } from '@/components/features/upgrade-card';
+import { AiWelcome } from '@/components/ai/ai-welcome';
+import { UpgradeCard } from '@/components/ai/ai-upgrade-card';
 import type { ChatMessage } from '@/types/domain/ai';
 import type { ErrorDetails } from '@/types/domain/ai';
 import type { MessageUsage, DailyUsage, ChatMode } from '@/types/domain/ai';
@@ -48,7 +48,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
   const [isStreaming, setIsStreaming] = useState(false);
   const [rateLimited, setRateLimited] = useState(false);
   const [thinkingStatus, setThinkingStatus] = useState<string>('');
-  const [selectedModel, setSelectedModel] = useState('krait-2.0');
+  const [selectedModel, setSelectedModel] = useState('');
   const [chatMode, setChatMode] = useState<ChatMode>('normal');
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationTitle, setConversationTitle] = useState('');
@@ -82,6 +82,19 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
     queryFn: () => aiApi.listModels(),
     staleTime: 300_000,
   });
+
+  /* ─── Sync selectedModel with live backend data ────────── */
+  const modelsData = modelsQuery.data;
+  useEffect(() => {
+    if (!modelsData) return;
+    const { models, default: defaultId } = modelsData;
+    if (!models || models.length === 0) return;
+    setSelectedModel(prev => {
+      if (!prev || prev === '') return defaultId;
+      if (models.some(m => m.id === prev)) return prev;
+      return defaultId;
+    });
+  }, [modelsData]);
 
   const repoIds = reposData?.map(r => r.id) ?? [];
 
@@ -436,7 +449,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
           selectedModel={selectedModel}
           onModelSelect={setSelectedModel}
           showBanner={false}
-          models={modelsQuery.data}
+          models={modelsQuery.data?.models}
           onStop={handleStop}
           dailyUsage={dailyUsageQuery.data}
           chatMode={chatMode}
@@ -570,7 +583,7 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
                 selectedModel={selectedModel}
                 onModelSelect={setSelectedModel}
                 showBanner={rateLimited}
-                models={modelsQuery.data}
+          models={modelsQuery.data?.models}
                 onStop={handleStop}
                 dailyUsage={dailyUsageQuery.data}
                 chatMode={chatMode}

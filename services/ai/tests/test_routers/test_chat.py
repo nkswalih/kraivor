@@ -1,13 +1,20 @@
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 from app.api.routers.chat import chat_service
 
 pytestmark = pytest.mark.unit
 
+MOCK_MODELS = [
+    {"id": "krait-2.0", "name": "Krait 2.0", "tier": "kraivor", "provider": "kraivor", "backendModel": "krait-2.0", "latency": "Fast", "context": "128K", "iconKey": "kraivor"},
+    {"id": "groq-qwen3.6-27b", "name": "Qwen 3.6 27B", "tier": "groq", "provider": "groq", "backendModel": "qwen/qwen3.6-27b", "latency": "Fast", "context": "32K", "iconKey": "qwen"},
+    {"id": "nvidia-nemotron-ultra", "name": "Nemotron Ultra", "tier": "free", "provider": "openrouter", "backendModel": "nvidia/nemotron-3-ultra-550b-a55b:free", "latency": "Medium", "context": "128K", "iconKey": "nvidia"},
+]
+
 
 class TestChatRouter:
-    async def test_models_endpoint(self):
+    @patch("app.api.routers.chat.ModelRegistry.get_selector_models", return_value=MOCK_MODELS)
+    async def test_models_endpoint(self, _mock):
         from app.api.routers.chat import list_models
 
         mock_user = AsyncMock()

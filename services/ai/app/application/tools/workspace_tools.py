@@ -623,7 +623,7 @@ class WorkspaceTools:
         else:
             result = await summarizer.summarize_workspace(workspace_id)
 
-        lines = [f"## Knowledge Summary" if not topic else f"## Summary: {topic}", ""]
+        lines = ["## Knowledge Summary" if not topic else f"## Summary: {topic}", ""]
         lines.append(result["summary"])
         lines.append("")
 
@@ -760,13 +760,19 @@ class WorkspaceTools:
             "",
             f"### Overall: {health['grade'].upper()} ({health['score']}/100)",
             "",
-            f"**Coverage:** {health['breakdown']['coverage']}/30 "
-            f"({stats['total_items']} items)",
-            f"**Freshness:** {health['breakdown']['freshness']}/30 "
-            f"({freshness['this_week']} this week, {freshness['stale']} stale)",
+            (
+                f"**Coverage:** {health['breakdown']['coverage']}/30 "
+                f"({stats['total_items']} items)"
+            ),
+            (
+                f"**Freshness:** {health['breakdown']['freshness']}/30 "
+                f"({freshness['this_week']} this week, {freshness['stale']} stale)"
+            ),
             f"**Quality:** {health['breakdown']['quality']}/30",
-            f"**Diversity:** {health['breakdown']['diversity']}/10 "
-            f"({stats['providers']} providers)",
+            (
+                f"**Diversity:** {health['breakdown']['diversity']}/10 "
+                f"({stats['providers']} providers)"
+            ),
             "",
         ]
 

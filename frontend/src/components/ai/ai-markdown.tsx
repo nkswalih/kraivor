@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { AiCodeBlock } from '@/components/features/ai-code-block';
+import { AiCodeBlock } from '@/components/ai/ai-code-block';
 import { useDebounce } from '@/lib/hooks/use-debounce';
 import {
   MarkdownTable,
@@ -12,7 +12,7 @@ import {
   MarkdownTR,
   MarkdownTH,
   MarkdownTD,
-} from '@/components/features/markdown-table';
+} from '@/components/ai/ai-markdown-table';
 
 interface AiMarkdownProps {
   content: string;

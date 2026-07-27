@@ -9,8 +9,8 @@ import { useChatStore } from '@/lib/stores/chat-store';
 import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { chatEndpoints, profileEndpoints } from '@/lib/api/endpoints';
 import { ChatSocket } from '@/lib/ws/chat-socket';
-import { ChannelSidebar } from '@/components/features/channel-sidebar';
-import { MembersPanel } from '@/components/features/members-panel';
+import { ChannelSidebar } from '@/components/chat/chat-channel-sidebar';
+import { MembersPanel } from '@/components/chat/chat-members-panel';
 import { formatRelativeTime, avatarUrl } from '@/lib/utils';
 import {
   SkeletonMessage,

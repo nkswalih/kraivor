@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 import aiohttp
 
 from app.knowledge_engine.sources.base import SourceResult, SourceContent
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -51,24 +52,21 @@ class CommunityProvider:
                 "filter": "withbody",
             }
 
-            async with aiohttp.ClientSession(headers=_HEADERS) as session:
-                async with session.get(
-                    url,
-                    params=params,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as resp:
-                    if resp.status != 200:
-                        return []
-                    data = await resp.json()
+            async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
+                url,
+                params=params,
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as resp:
+                if resp.status != 200:
+                    return []
+                data = await resp.json()
 
             results = []
             for item in data.get("items", [])[:max_results]:
                 pub_date = None
                 if item.get("creation_date"):
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         pub_date = datetime.fromtimestamp(item["creation_date"], tz=UTC)
-                    except (ValueError, TypeError):
-                        pass
 
                 results.append(SourceResult(
                     url=item.get("link", ""),
@@ -92,7 +90,7 @@ class CommunityProvider:
     async def _search_reddit(self, query: str, max_results: int) -> list[SourceResult]:
         """Search Reddit via public JSON API."""
         try:
-            url = f"https://www.reddit.com/search.json"
+            url = "https://www.reddit.com/search.json"
             params = {
                 "q": query,
                 "limit": max_results,
@@ -100,25 +98,22 @@ class CommunityProvider:
                 "t": "year",
             }
 
-            async with aiohttp.ClientSession(headers=_HEADERS) as session:
-                async with session.get(
-                    url,
-                    params=params,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as resp:
-                    if resp.status != 200:
-                        return []
-                    data = await resp.json()
+            async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
+                url,
+                params=params,
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as resp:
+                if resp.status != 200:
+                    return []
+                data = await resp.json()
 
             results = []
             for child in data.get("data", {}).get("children", [])[:max_results]:
                 post = child.get("data", {})
                 pub_date = None
                 if post.get("created_utc"):
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         pub_date = datetime.fromtimestamp(post["created_utc"], tz=UTC)
-                    except (ValueError, TypeError):
-                        pass
 
                 results.append(SourceResult(
                     url=f"https://reddit.com{post.get('permalink', '')}",
@@ -144,15 +139,14 @@ class CommunityProvider:
         try:
             import trafilatura
 
-            async with aiohttp.ClientSession(headers=_HEADERS) as session:
-                async with session.get(
-                    url,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                    ssl=False,
-                ) as resp:
-                    if resp.status != 200:
-                        return None
-                    html = await resp.text()
+            async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
+                url,
+                timeout=aiohttp.ClientTimeout(total=15),
+                ssl=False,
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                html = await resp.text()
 
             text = trafilatura.extract(html, include_links=True, include_tables=True)
             if not text:
@@ -181,14 +175,13 @@ class CommunityProvider:
         try:
             # Add .json to get JSON version
             json_url = url.rstrip("/") + ".json"
-            async with aiohttp.ClientSession(headers=_HEADERS) as session:
-                async with session.get(
-                    json_url,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                ) as resp:
-                    if resp.status != 200:
-                        return None
-                    data = await resp.json()
+            async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
+                json_url,
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                data = await resp.json()
 
             post = data[0]["data"]["children"][0]["data"]
             title = post.get("title", "")

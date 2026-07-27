@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { AiChatView } from '@/components/features/ai-chat-view';
+import { AiChatView } from '@/components/ai/ai-chat-view';
 
 export default function AIWorkspacePage() {
   const params = useParams<{ workspace: string }>();

@@ -3,7 +3,6 @@ import os
 import requests
 import json
 import time
-import sys
 
 BASE = "http://localhost:8004/v1/chat"
 _INTERNAL_SECRET = os.environ.get("INTERNAL_REQUEST_TOKEN", "")
@@ -50,7 +49,7 @@ for i, t in enumerate(TESTS):
                 try:
                     d = json.loads(line[6:])
                     full_text += d.get("content", "")
-                except:
+                except Exception:
                     pass
 
         display = full_text[:400].replace("\n", " ")

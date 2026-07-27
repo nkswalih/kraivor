@@ -12,8 +12,8 @@ from app.application.agents.prompts.orchestrator import (
     WRITING_PROMPT,
 )
 from app.application.provisioning.key_resolver import KeyResolver
-from app.infrastructure.llm.client import LLMClient, LLM_SHORT_TIMEOUT
-from app.infrastructure.llm.error_classifier import ClassifiedError, ErrorCategory
+from app.infrastructure.llm.client import LLM_SHORT_TIMEOUT
+from app.infrastructure.llm.error_classifier import ClassifiedError
 from app.infrastructure.llm.failover_engine import FailoverEngine
 from app.infrastructure.llm.router import ModelRouter
 

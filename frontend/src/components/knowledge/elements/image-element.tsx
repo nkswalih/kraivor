@@ -8,7 +8,9 @@ interface Props {
 
 export function ImageElement({ data }: Props) {
   return (
-    <div className="w-full h-full bg-krait-surface3 flex items-center justify-center overflow-hidden">
+    <div
+      className="w-full h-full flex items-center justify-center overflow-hidden"
+    >
       {data.url ? (
         <img
           src={data.url}

@@ -111,6 +111,14 @@ _TIMEOUT_PATTERNS = [
     re.compile(r"connection.?timed?\s*out", re.IGNORECASE),
 ]
 
+_MODEL_NOT_FOUND_PATTERNS = [
+    re.compile(r"model.?not.?found", re.IGNORECASE),
+    re.compile(r"invalid.?model", re.IGNORECASE),
+    re.compile(r"model.*not.*available", re.IGNORECASE),
+    re.compile(r"model.*not.*supported", re.IGNORECASE),
+    re.compile(r"unknown.?model", re.IGNORECASE),
+]
+
 
 def _matches_any(text: str, patterns: list[re.Pattern]) -> bool:
     return any(p.search(text) for p in patterns)
@@ -165,20 +173,19 @@ def classify_error(exc, provider: str, model: str) -> ClassifiedError:
     retry_after = _extract_retry_after(exc)
 
     # ── 1. Context overflow (excludes rate-limit) ────────────────────────
-    if _matches_any(error_text, _CONTEXT_OVERFLOW_PATTERNS):
-        if not _is_rate_limit_exclusion(error_text):
-            return ClassifiedError(
-                category=ErrorCategory.CONTEXT_OVERFLOW,
-                provider=provider,
-                model=model,
-                user_message=(
-                    "Your message is too long for this model. "
-                    "Start a new conversation or shorten your message."
-                ),
-                technical_message=error_text,
-                suggested_action=SuggestedAction.NEW_CONVERSATION,
-                metadata={"status_code": status_code},
-            )
+    if _matches_any(error_text, _CONTEXT_OVERFLOW_PATTERNS) and not _is_rate_limit_exclusion(error_text):
+        return ClassifiedError(
+            category=ErrorCategory.CONTEXT_OVERFLOW,
+            provider=provider,
+            model=model,
+            user_message=(
+                "Your message is too long for this model. "
+                "Start a new conversation or shorten your message."
+            ),
+            technical_message=error_text,
+            suggested_action=SuggestedAction.NEW_CONVERSATION,
+            metadata={"status_code": status_code},
+        )
 
     # ── 2. Auth failures ────────────────────────────────────────────────
     if status_code in (401, 403) or _matches_any(error_text, _AUTH_PATTERNS):
@@ -272,7 +279,22 @@ def classify_error(exc, provider: str, model: str) -> ClassifiedError:
             metadata={"status_code": status_code},
         )
 
-    # ── 7. OpenRouter-specific error fields ─────────────────────────────
+    # ── 7. Model not found ─────────────────────────────────────────────
+    if _matches_any(error_text, _MODEL_NOT_FOUND_PATTERNS):
+        return ClassifiedError(
+            category=ErrorCategory.UNKNOWN,
+            provider=provider,
+            model=model,
+            user_message=(
+                f"The model \"{model}\" is not available on {provider}. "
+                "Please try a different model."
+            ),
+            technical_message=error_text,
+            suggested_action=SuggestedAction.SWITCH_MODEL,
+            metadata={"status_code": status_code},
+        )
+
+    # ── 8. OpenRouter-specific error fields ─────────────────────────────
     # OpenRouter embeds errors in the response body, not just HTTP status
     if hasattr(exc, "body") and isinstance(getattr(exc, "body", None), dict):
         body_error = exc.body.get("error", {})
@@ -293,7 +315,11 @@ def classify_error(exc, provider: str, model: str) -> ClassifiedError:
                     metadata={"status_code": status_code, "or_code": code},
                 )
 
-    # ── 8. Unknown ──────────────────────────────────────────────────────
+    # ── 9. Unknown — log raw error for diagnostics ───────────────────────
+    logger.warning(
+        "unclassified_error provider=%s model=%s status=%s error_type=%s error_text=%s",
+        provider, model, status_code, type(exc).__name__, error_text[:500],
+    )
     return ClassifiedError(
         category=ErrorCategory.UNKNOWN,
         provider=provider,
@@ -301,5 +327,5 @@ def classify_error(exc, provider: str, model: str) -> ClassifiedError:
         user_message="Something went wrong. Please try again.",
         technical_message=error_text,
         suggested_action=SuggestedAction.RETRY,
-        metadata={"status_code": status_code},
+        metadata={"status_code": status_code, "error_type": type(exc).__name__},
     )

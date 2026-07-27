@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import re
 
 from app.infrastructure.rag.embedder import Embedder
 from app.knowledge_engine.store.knowledge_store import KnowledgeStore

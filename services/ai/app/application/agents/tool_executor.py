@@ -8,7 +8,7 @@ from app.application.tools.workspace_tools import (
     WORKSPACE_TOOL_DEFINITIONS,
     WorkspaceTools,
 )
-from app.infrastructure.llm.client import LLMClient, LLM_SHORT_TIMEOUT
+from app.infrastructure.llm.client import LLM_SHORT_TIMEOUT
 from app.infrastructure.llm.failover_engine import FailoverEngine
 from app.infrastructure.llm.router import ModelRouter
 

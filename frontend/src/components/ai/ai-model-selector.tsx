@@ -5,13 +5,13 @@ import { Lightning } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import type { ModelItem, ModelTier } from '@/lib/api/ai-api';
 import { aiApi } from '@/lib/api/ai-api';
-import { MODEL_ICONS, KraitIcon, GroqIcon } from './model-icons';
+import { MODEL_ICONS, KraitIcon, GroqIcon, getIconByKey } from './ai-model-icons';
 
 /* ─── Fallback models (static, if API fails) ────────────── */
 
 const FALLBACK_MODELS: ModelItem[] = [
   // ── Kraivor AI (free, built-in) ──
-  { id: 'krait-2.0', name: 'Krait 2.0', tier: 'kraivor', provider: 'kraivor', backendModel: 'openrouter/auto', latency: '0.4s', context: '128K' },
+  { id: 'krait-2.0', name: 'Krait', tier: 'kraivor', provider: 'kraivor', backendModel: 'openrouter/auto', latency: '0.4s', context: '128K' },
 
   // ── Groq (native API — fast inference) ──
   { id: 'groq-qwen3-32b', name: 'Qwen 3 32B', tier: 'groq', provider: 'groq', backendModel: 'qwen/qwen3-32b', latency: '0.3s', context: '128K' },
@@ -53,7 +53,7 @@ const FALLBACK_MODELS: ModelItem[] = [
 
 const GROUP_ORDER: { tier: ModelTier; label: string; icon: ReactNode }[] = [
   { tier: 'kraivor', label: 'Kraivor AI', icon: null },
-  { tier: 'groq', label: 'Groq', icon: <GroqIcon size={14} /> },
+  { tier: 'groq', label: 'Groq', icon: null },
   { tier: 'free', label: 'Free Models', icon: null },
   { tier: 'byok', label: 'BYOK Models', icon: null },
 ];
@@ -79,7 +79,7 @@ export function ModelSelector({ selected, onSelect, models: modelsProp }: ModelS
     aiApi
       .listModels()
       .then(data => {
-        if (!cancelled) setFetchedModels(data);
+        if (!cancelled) setFetchedModels(data.models);
       })
       .catch(() => {
         if (!cancelled) setFetchedModels(FALLBACK_MODELS);
@@ -121,7 +121,7 @@ export function ModelSelector({ selected, onSelect, models: modelsProp }: ModelS
       className="w-64 bg-[#18181C] border border-[#27272A] rounded-xl shadow-2xl pointer-events-auto"
       onPointerDown={e => e.stopPropagation()}
     >
-      <div className="max-h-[400px] overflow-y-auto overflow-x-hidden">
+      <div className="max-h-[400px] overflow-y-auto overflow-x-clip p-0">
         {GROUP_ORDER.map(({ tier, label, icon: groupIcon }) => {
           const models = grouped.get(tier);
           if (!models || models.length === 0) return null;
@@ -129,9 +129,9 @@ export function ModelSelector({ selected, onSelect, models: modelsProp }: ModelS
           if (hasPrev) {
             return (
               <div key={tier}>
-                <div className="border-t border-[#27272A] mx-3" />
+                <div className="border-t border-[#27272A] mx-3 mt-1.5" />
                 <GroupHeader label={label} icon={groupIcon} tier={tier} />
-                <div className="pb-1.5">
+                <div>
                   {models.map(m => (
                     <ModelRow key={m.id} model={m} selected={selected} onSelect={onSelect} />
                   ))}
@@ -144,7 +144,7 @@ export function ModelSelector({ selected, onSelect, models: modelsProp }: ModelS
           return (
             <div key={tier}>
               <GroupHeader label={label} icon={groupIcon} tier={tier} />
-              <div className="pb-1.5">
+              <div>
                 {models.map(m => (
                   <ModelRow key={m.id} model={m} selected={selected} onSelect={onSelect} />
                 ))}
@@ -182,8 +182,10 @@ function ModelRow({
   onSelect: (id: string) => void;
 }) {
   const active = selected === model.id;
+  const dbIcon = getIconByKey(model.iconKey, { size: 16, className: 'shrink-0' });
   const iconFn = MODEL_ICONS[model.id];
-  const IconComponent = iconFn ? iconFn() : null;
+  const fallbackIcon = iconFn ? iconFn({ size: 16, className: 'shrink-0' }) : null;
+  const IconComponent = dbIcon || fallbackIcon;
 
   return (
     <button
@@ -205,15 +207,25 @@ function ModelRow({
 
 /* ─── Exports (backward compat) ─────────────────────────── */
 
-export function getModelIcon(id: string) {
+export function getModelIcon(id: string, models?: ModelItem[]) {
+  if (models && models.length > 0) {
+    const m = models.find(m => m.id === id);
+    if (m?.iconKey) {
+      const dbIcon = getIconByKey(m.iconKey, { size: 14, className: 'shrink-0' });
+      if (dbIcon) return dbIcon;
+    }
+  }
   const fn = MODEL_ICONS[id];
   if (fn) return fn();
   return <KraitIcon />;
 }
 
-export function getModelName(id: string) {
-  const m = FALLBACK_MODELS.find(m => m.id === id);
-  return m?.name ?? id;
+export function getModelName(id: string, models?: ModelItem[]) {
+  if (models && models.length > 0) {
+    const m = models.find(m => m.id === id);
+    if (m?.name) return m.name;
+  }
+  return id;
 }
 
 export function getModelGroup(id: string): ModelTier {

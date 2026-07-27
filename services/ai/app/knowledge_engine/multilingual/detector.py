@@ -6,6 +6,7 @@ Supports 55+ languages with confidence scores.
 
 from __future__ import annotations
 
+import importlib
 import logging
 from dataclasses import dataclass
 
@@ -48,11 +49,7 @@ class LanguageDetector:
 
     def _check_available(self) -> bool:
         if self._available is None:
-            try:
-                import langdetect
-                self._available = True
-            except ImportError:
-                self._available = False
+            self._available = importlib.util.find_spec("langdetect") is not None
         return self._available
 
     def detect(self, text: str) -> DetectionResult:

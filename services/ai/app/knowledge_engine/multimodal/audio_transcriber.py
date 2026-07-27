@@ -10,10 +10,10 @@ free speech-to-text. No API keys needed. Supports:
 
 from __future__ import annotations
 
-import io
 import logging
 import tempfile
 from dataclasses import dataclass, field
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class AudioTranscriber:
                 raise RuntimeError(
                     "faster-whisper is not installed. "
                     "Install with: pip install faster-whisper"
-                )
+                ) from None
         return self._model
 
     async def transcribe_from_bytes(
@@ -73,10 +73,8 @@ class AudioTranscriber:
             return await self._transcribe_file(tmp_path, language)
         finally:
             import os
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(tmp_path)
-            except OSError:
-                pass
 
     async def transcribe_from_path(
         self,
@@ -100,9 +98,9 @@ class AudioTranscriber:
                 language=language,
                 beam_size=5,
                 vad_filter=True,  # Voice Activity Detection for better quality
-                vad_parameters=dict(
-                    min_silence_duration_ms=500,
-                ),
+                vad_parameters={
+                    "min_silence_duration_ms": 500,
+                },
             )
 
             # Collect segments

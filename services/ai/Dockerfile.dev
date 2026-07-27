@@ -7,6 +7,42 @@
 #   - Source code mounted as volume (edit on host — reflected instantly)
 #   - venv isolated outside /app (volume mount can't shadow or delete it)
 #   - All dependencies including dev (ruff, pytest, etc.)
+#   - Dependency layer cached separately from project source
+#
+# Caching strategy:
+#   Layer 1 (deps only): --mount=type=cache reuses downloaded wheels across
+#       retries (critical for large wheels like torch). Cache mount is scoped
+#       to this RUN only — parent hash + instruction text still governs layer
+#       invalidation (on pyproject.toml or uv.lock change).
+#   Layer 2 (project):   COPY . ./ invalidates on any source change, then
+#       uv sync re-installs the project. --mount=type=cache speeds up
+#       re-downloads when this layer is invalidated.
+#
+# ── Slow-build diagnosis ─────────────────────────────────────────────────────
+# If this Dockerfile builds slowly (>5 min) when previously fast:
+#
+# 1. Restart Docker Desktop / reset WSL2 VM
+#    Docker Desktop → Troubleshoot → Reset to factory defaults (keeps images)
+#    or: wsl --shutdown  (then relaunch Docker Desktop)
+#
+# 2. Check Docker Desktop → Settings → Resources
+#    Ensure CPU >= 4, Memory >= 4 GB, Disk >= 20 GB allocated to WSL2
+#
+# 3. Windows Defender exclusion (common #1 cause of slow unpack)
+#    Add exclusion for: \\wsl$\docker-desktop-data\  (the WSL2 vhdx)
+#    Add exclusion for: C:\Users\<you>\AppData\Local\Docker\wsl\
+#    Add exclusion for: the project directory (C:\VS Code\kraivor)
+#    Windows Security → Virus & threat protection → Manage settings →
+#    Exclusions → Add folder
+#
+# 4. Verify network health before blaming Dockerfile
+#    docker pull hello-world  (should complete in <5s)
+#    docker pull python:3.11-slim  (should complete in <30s)
+#
+# 5. Confirm BuildKit cache wasn't cleared
+#    docker builder ls  (check status = running)
+#    Do NOT run: docker builder prune  (unless intentional)
+#    Check: Docker Desktop → Images → check if layers show "CACHED"
 # =============================================================================
 
 FROM python:3.11-slim
@@ -14,10 +50,14 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # ── System dependencies ──────────────────────────────────────────────────────
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    git \
-    curl \
+RUN for i in 1 2 3; do \
+      apt-get update && break || \
+      { echo "apt-get update failed (attempt $i/3), retrying in 5s..."; sleep 5; }; \
+    done && \
+    apt-get install -y --no-install-recommends \
+      gcc \
+      git \
+      curl \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Install uv ──────────────────────────────────────────────────────────────
@@ -30,17 +70,35 @@ ENV UV_LINK_MODE=copy \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
     UV_COMPILE_BYTECODE=1 \
-    UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu \
+    UV_HTTP_TIMEOUT=120 \
+    UV_HTTP_RETRIES=5 \
     PATH="/opt/venv/bin:$PATH"
 
-# ── Dependency layer (cached unless pyproject.toml or uv.lock changes) ──────
-COPY pyproject.toml uv.lock /app/
+# ── Layer 1: Dependencies only (cached unless pyproject.toml or uv.lock change)
+# Cache mount reuses partial downloads on retry. On dependency change, uv
+# downloads from the index — the mount avoids re-downloading on transient failures.
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    for i in 1 2 3; do \
+      uv sync --frozen --no-install-project && exit 0 || \
+      echo "uv sync failed (attempt $i/3), retrying in 10s..."; \
+      sleep 10; \
+    done; \
+    exit 1
 
-# Install ALL deps (including dev: ruff, pytest, etc.)
-RUN uv sync --frozen
+# ── Layer 2: Application source ─────────────────────────────────────────────
+# This layer invalidates on any source file change, but dependencies above
+# are already installed and only the project itself needs syncing.
+COPY . ./
 
-# ── Application source (overridden by volume mount in dev) ──────────────────
-COPY . /app/
+# ── Layer 3: Install project only (deps already present in /opt/venv) ────────
+RUN --mount=type=cache,target=/root/.cache/uv \
+    for i in 1 2 3; do \
+      uv sync --frozen && exit 0 || \
+      echo "uv sync failed (attempt $i/3), retrying in 10s..."; \
+      sleep 10; \
+    done; \
+    exit 1
 
 EXPOSE 8004
 

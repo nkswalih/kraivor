@@ -7,6 +7,7 @@ import { useRafBatcher } from '@/lib/hooks/use-raf-batcher';
 import { CanvasElementRenderer } from '../elements/canvas-element';
 import { CanvasToolbar } from './canvas-toolbar';
 import { CanvasMinimap } from './canvas-minimap';
+import { CanvasGrid } from './canvas-grid';
 import { nanoid } from 'nanoid';
 import { pdfjs } from 'react-pdf';
 import type { ShapeType, ArrowElementData, Position } from '@/types/knowledge';
@@ -226,6 +227,29 @@ export function KnowledgeCanvas({ spaceId }: Props) {
         const startH = resizeRef.current.startH;
         const pos = resizeRef.current.handlePos;
 
+        const resizeEl = c.elements.find(ee => ee.id === resizeRef.current.elementId);
+
+        // Modifier key modes for text elements
+        if (resizeEl && (resizeEl.type === 'text' || resizeEl.type === 'sticky_note')) {
+          const d = resizeEl.data as Record<string, unknown>;
+          if (e.shiftKey) {
+            const currentFontSize = (d.fontSize as number) ?? 14;
+            const newFontSize = Math.max(8, Math.min(96, Math.round(currentFontSize + dw * 0.2)));
+            state.updateElement(spaceId, resizeRef.current.elementId, {
+              data: { ...d, fontSize: newFontSize },
+            });
+            return;
+          }
+          if (e.ctrlKey) {
+            const currentPadding = (d.padding as number) ?? 12;
+            const newPadding = Math.max(0, Math.min(48, Math.round(currentPadding + dw * 0.3)));
+            state.updateElement(spaceId, resizeRef.current.elementId, {
+              data: { ...d, padding: newPadding },
+            });
+            return;
+          }
+        }
+
         let newW: number, newH: number;
         let dx = 0,
           dy = 0;
@@ -248,7 +272,6 @@ export function KnowledgeCanvas({ spaceId }: Props) {
           newH = startH;
         }
 
-        const resizeEl = c.elements.find(ee => ee.id === resizeRef.current.elementId);
         if (resizeEl && resizeEl.type === 'arrow') {
           const arrowData: ArrowElementData = JSON.parse(
             JSON.stringify(resizeEl.data)
@@ -787,7 +810,6 @@ export function KnowledgeCanvas({ spaceId }: Props) {
   }, []);
 
   const handleElementDragStart = useCallback((e: React.MouseEvent, elementId: string) => {
-    e.stopPropagation();
     const state = store.getState();
     const c = state.spaces[spaceId];
     if (!c) return;
@@ -795,6 +817,7 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     if (!el || el.locked) return;
 
     if (state.selectedTool === 'arrow') {
+      e.stopPropagation();
       const world = screenToWorld(e.clientX, e.clientY);
       if (!world) return;
       const centerX = el.position.x + el.size.width / 2;
@@ -803,6 +826,11 @@ export function KnowledgeCanvas({ spaceId }: Props) {
       return;
     }
 
+    if (state.selectedTool !== 'select') return;
+
+    e.stopPropagation();
+    e.preventDefault();
+
     if (!e.shiftKey && !c.selectedElementIds.includes(elementId)) {
       state.setSelectedElements(spaceId, [elementId]);
     }
@@ -810,16 +838,20 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     state.pushUndoState(spaceId);
     state.setEditingElementId(null);
     if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const worldX = (e.clientX - rect.left - c.viewport.x) / c.viewport.zoom;
-    const worldY = (e.clientY - rect.top - c.viewport.y) / c.viewport.zoom;
 
-    const selectedIds = c.selectedElementIds.length > 0 ? c.selectedElementIds : [elementId];
+    const freshCanvas = store.getState().spaces[spaceId];
+    if (!freshCanvas) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const worldX = (e.clientX - rect.left - freshCanvas.viewport.x) / freshCanvas.viewport.zoom;
+    const worldY = (e.clientY - rect.top - freshCanvas.viewport.y) / freshCanvas.viewport.zoom;
+
+    const selectedIds = freshCanvas.selectedElementIds.length > 0 ? freshCanvas.selectedElementIds : [elementId];
     const startPositions: Record<string, Position> = {};
     const startArrowPts: Record<string, [number, number][]> = {};
     const startArrowCp: Record<string, Position> = {};
     for (const id of selectedIds) {
-      const selEl = c.elements.find(ee => ee.id === id);
+      const selEl = freshCanvas.elements.find(ee => ee.id === id);
       if (!selEl) continue;
       startPositions[id] = { x: selEl.position.x, y: selEl.position.y };
       if (selEl.type === 'arrow') {
@@ -1163,6 +1195,7 @@ export function KnowledgeCanvas({ spaceId }: Props) {
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if ((e.target as HTMLElement).contentEditable === 'true') return;
       const state = store.getState();
       switch (e.key.toLowerCase()) {
         case 'v':
@@ -1204,17 +1237,6 @@ export function KnowledgeCanvas({ spaceId }: Props) {
   const gridEnabled = canvas?.gridEnabled ?? true;
   const gridSize = canvas?.gridSize ?? 20;
 
-  const gridSvg = useMemo(() => {
-    if (!gridEnabled) return undefined;
-    const size = gridSize * viewport.zoom;
-    const dotColor =
-      typeof window !== 'undefined'
-        ? getComputedStyle(document.documentElement).getPropertyValue('--krait-border').trim() || '#2c2c33'
-        : '#2c2c33';
-    const dot = `<circle cx="0.5" cy="0.5" r="0.5" fill="${dotColor}"/>`;
-    return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}'%3E${encodeURIComponent(dot)}%3C/svg%3E")`;
-  }, [gridEnabled, gridSize, Math.round(viewport.zoom * 10)]);
-
   return (
     <div className="relative flex-1 overflow-hidden bg-krait-void">
       <CanvasToolbar spaceId={spaceId} />
@@ -1230,9 +1252,6 @@ export function KnowledgeCanvas({ spaceId }: Props) {
                 ? 'cursor-crosshair'
                 : 'cursor-default'
         }`}
-        style={{
-          backgroundImage: gridSvg,
-        }}
         onClick={handleCanvasClick}
         onDoubleClick={handleCanvasDoubleClick}
         onMouseDown={handleMouseDown}
@@ -1241,6 +1260,7 @@ export function KnowledgeCanvas({ spaceId }: Props) {
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
+        <CanvasGrid viewport={viewport} gridSize={gridSize} enabled={gridEnabled} />
         {isDragOver && (
           <div className="absolute inset-0 bg-venom-yellow/5 border-2 border-venom-yellow/40 border-dashed rounded-lg pointer-events-none z-50 transition-all" />
         )}
@@ -1259,6 +1279,7 @@ export function KnowledgeCanvas({ spaceId }: Props) {
               spaceId={spaceId}
               isSelected={canvas?.selectedElementIds.includes(element.id) ?? false}
               isEditing={editingElementId === element.id}
+              selectedTool={selectedTool}
               onSelect={handleElementSelect}
               onDragStart={handleElementDragStart}
               onResizeStart={handleElementResizeStart}

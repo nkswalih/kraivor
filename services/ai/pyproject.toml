@@ -26,6 +26,7 @@ dependencies = [
     "prometheus-client>=0.20",
     "structlog>=24.0",
     "sentence-transformers>=3.0",
+    "torch>=2.0",
     "duckduckgo-search>=6.0",
     "ddgs>=9.0",
     "trafilatura>=1.6",
@@ -202,3 +203,20 @@ ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["N803"]
+"app/api/routers/admin.py" = ["B008"]
+"app/api/dependencies/admin.py" = ["B008"]
+
+# ── uv: CPU-only torch ──────────────────────────────────────────────────────
+# torch is only used transitively (sentence-transformers for local embeddings,
+# argostranslate → stanza). No code imports torch directly or uses CUDA.
+# Pinning to the CPU index eliminates ~3-4 GB of unused nvidia-*/cuda-*
+# packages from the image. Revisit if GPU-backed local inference is needed.
+[[tool.uv.index]]
+url = "https://download.pytorch.org/whl/cpu"
+name = "pytorch-cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu" },
+]

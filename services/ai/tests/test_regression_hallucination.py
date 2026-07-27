@@ -6,7 +6,6 @@ Tests that the AI Agent chat pipeline correctly:
 3. Routes 'kraivor ai using model' through evidence gathering (not direct response with audit findings)
 """
 
-import pytest
 
 
 class TestOrchestratorIntentRouting:
@@ -60,13 +59,13 @@ class TestGraphRouting:
     def test_graph_has_evidence_gatherer_node(self):
         from app.application.agents.graph import build_agent_graph
         graph = build_agent_graph(client=None)
-        node_names = [n for n in graph.get_graph().nodes]
+        node_names = list(graph.get_graph().nodes)
         assert "evidence_gatherer" in node_names
 
     def test_graph_has_all_nodes(self):
         from app.application.agents.graph import build_agent_graph
         graph = build_agent_graph(client=None)
-        node_names = [n for n in graph.get_graph().nodes]
+        node_names = list(graph.get_graph().nodes)
         expected = ["orchestrator", "tool_executor", "evidence_gatherer",
                      "context_assembler", "explainer"]
         for name in expected:

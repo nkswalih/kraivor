@@ -13,8 +13,7 @@ import json
 import time
 import sys
 import uuid
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 BASE = "http://localhost:8004/v1/chat"
 _INTERNAL_SECRET = os.environ.get("INTERNAL_REQUEST_TOKEN", "")
@@ -147,13 +146,13 @@ def extract_response(r) -> tuple[str, dict]:
                 try:
                     d = json.loads(raw)
                     usage = d
-                except:
+                except Exception:
                     pass
             elif '"content"' in raw:
                 try:
                     d = json.loads(raw)
                     full_text += d.get("content", "")
-                except:
+                except Exception:
                     pass
     return full_text, usage
 
@@ -250,14 +249,14 @@ def main():
         if not model_results:
             continue
         m_ok = sum(1 for r in model_results if r.status == "ok")
-        m_err = len(model_results) - m_ok
+        len(model_results) - m_ok
         m_avg = sum(r.time_s for r in model_results) / max(len(model_results), 1)
         model_short = model.split("/")[-1][:25]
         print(f"  {model_short:25s} {m_ok:2d}/{len(model_results):2d} ok | avg {m_avg:.1f}s")
 
     # ── Per-category breakdown ───────────────────────────────
     print("\n--- Per Category ---")
-    categories = sorted(set(r.cat for r in all_results))
+    categories = sorted({r.cat for r in all_results})
     for cat in categories:
         cat_results = [r for r in all_results if r.cat == cat]
         c_ok = sum(1 for r in cat_results if r.status == "ok")

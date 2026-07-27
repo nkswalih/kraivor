@@ -378,6 +378,7 @@ services:
   # ── AI Service ──────────────────────────────────────────────────────────────
 
   ai:
+    image: kraivor-ai:dev
     build:
       context: ./services/ai
       dockerfile: Dockerfile.dev
@@ -392,6 +393,7 @@ services:
       AI_KAFKA__BOOTSTRAP__SERVERS: kafka:9094
       AI_IDENTITY__JWKS__URL: http://identity:8001/.well-known/jwks.json
       AI_OPENROUTER__MASTER__KEY: ${OPENROUTER_API_KEY}
+      AI_GROQ_API_KEY: ${GROQ_API_KEY}
       AI_KEY_ENCRYPTION_KEY: ${AI_KEY_ENCRYPTION_KEY:-dev-encryption-key-32chars!}
       AI_INTERNAL_REQUEST_SECRET: ${INTERNAL_REQUEST_TOKEN:-dev-internal-secret}
       HF_TOKEN: ${HF_TOKEN:-}
@@ -424,9 +426,7 @@ services:
       "
 
   ai-worker:
-    build:
-      context: ./services/ai
-      dockerfile: Dockerfile.dev
+    image: kraivor-ai:dev
     container_name: kraivor-ai-worker-dev
     command: celery -A app.core.celery_app worker -Q ai.inference,ai.indexing,ai.maintenance --loglevel=info
     env_file:
@@ -450,9 +450,7 @@ services:
     restart: unless-stopped
 
   ai-beat:
-    build:
-      context: ./services/ai
-      dockerfile: Dockerfile.dev
+    image: kraivor-ai:dev
     container_name: kraivor-ai-beat-dev
     command: celery -A app.core.celery_app beat --loglevel=info
     env_file:

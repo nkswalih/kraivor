@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { MessagesSquare, Shield, FileText, Gauge, CheckCircle, BotMessageSquare, Pin, PinOff, Pencil, Check, X } from 'lucide-react';
-import { AiInput } from '@/components/features/ai-input';
+import { AiInput } from '@/components/ai/ai-input';
 import { aiApi } from '@/lib/api/ai-api';
 import type { ConversationSummary, ModelItem } from '@/lib/api/ai-api';
 import type { DailyUsage, ChatMode } from '@/types/domain/ai';

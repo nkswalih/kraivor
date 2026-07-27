@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from 'react';
 import { Check, Copy, ChevronDown, ChevronRight, WrapText } from 'lucide-react';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface AiCodeBlockProps {
   code: string;
@@ -78,13 +80,20 @@ export function AiCodeBlock({ code, language }: AiCodeBlockProps) {
       {/* Code body */}
       {(!isLarge || !collapsed) && (
         <div className="relative">
-          <pre
-            className={`${
-              wrapped ? 'whitespace-pre-wrap' : 'whitespace-pre overflow-x-auto'
-            } p-4 text-[13px] leading-[1.65] font-mono text-[#d1d5db]`}
+          <SyntaxHighlighter
+            language={language || 'text'}
+            style={vscDarkPlus}
+            wrapLongLines={wrapped}
+            customStyle={{
+              margin: 0,
+              padding: '1rem',
+              background: 'transparent',
+              fontSize: '13px',
+              lineHeight: '1.65',
+            }}
           >
-            <code>{code}</code>
-          </pre>
+            {code}
+          </SyntaxHighlighter>
         </div>
       )}
     </div>

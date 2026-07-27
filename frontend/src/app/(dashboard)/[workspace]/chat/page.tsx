@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores/auth-store';
-import { ChannelSidebar } from '@/components/features/channel-sidebar';
+import { ChannelSidebar } from '@/components/chat/chat-channel-sidebar';
 import { MessageSquare } from 'lucide-react';
 
 export default function ChatPage() {

@@ -1,6 +1,5 @@
 """Middleware that tracks concurrent requests and rejects with 503 when at capacity."""
 
-import asyncio
 import time
 
 from starlette.middleware.base import BaseHTTPMiddleware

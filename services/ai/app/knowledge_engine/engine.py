@@ -70,7 +70,7 @@ class KnowledgeEngine:
         providers: list[str] | None = None,
         embedder: Any = None,
         workspace_id: str | None = None,
-    ) -> "ResearchResult":
+    ) -> ResearchResult:
         """Conduct research on a query using multiple knowledge sources.
 
         Args:
@@ -87,11 +87,9 @@ class KnowledgeEngine:
         start_time = time.time()
 
         # Check cache first
-        cache_hit = False
         if workspace_id:
             cached = await self.cache.get(workspace_id, query, cache_type="research")
             if cached:
-                cache_hit = True
                 elapsed = (time.time() - start_time) * 1000
                 await self.metrics.record_query(QueryMetric(
                     query=query, workspace_id=workspace_id, latency_ms=elapsed,
@@ -278,7 +276,7 @@ class KnowledgeEngine:
         query: str,
         workspace_id: str,
         max_sources: int = 10,
-    ) -> "ResearchResult":
+    ) -> ResearchResult:
         """Research with automatic memory: check stored knowledge first, then search web, then store results."""
         # 1. Check stored knowledge first
         stored = await self.retrieve_knowledge(workspace_id, query, top_k=3)

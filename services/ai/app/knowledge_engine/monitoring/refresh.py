@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import text
 from app.infrastructure.db.database import async_session_factory
@@ -71,7 +70,6 @@ class KnowledgeRefreshPipeline:
         source_url: str,
     ) -> dict:
         """Re-fetch and update a single knowledge item."""
-        from app.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
         from app.knowledge_engine.intelligence.versioning import KnowledgeVersioning
 
         start = time.time()

@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import time
 
@@ -48,7 +47,7 @@ async def provider_health():
         try:
             from app.infrastructure.llm.client import LLMClient
             client = LLMClient(api_key=api_key, provider=provider, model=model)
-            result = await client.generate(
+            await client.generate(
                 [{"role": "user", "content": "ping"}],
                 max_tokens=5,
                 timeout=15.0,

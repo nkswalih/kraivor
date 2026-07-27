@@ -47,7 +47,7 @@ class MultilingualEmbedder:
                 raise RuntimeError(
                     "sentence-transformers is not installed. "
                     "Install with: pip install sentence-transformers"
-                )
+                ) from None
         return self._model
 
     def embed(self, text: str) -> MultilingualEmbeddingResult:
@@ -88,7 +88,7 @@ class MultilingualEmbedder:
             ]
 
         results = []
-        for text, emb in zip(texts, embeddings):
+        for text, emb in zip(texts, embeddings, strict=False):
             results.append(MultilingualEmbeddingResult(
                 embedding=emb.tolist(),
                 dimension=len(emb),

@@ -1,6 +1,6 @@
 'use client';
 
-import { SnakeIcon } from '@/components/features/ai-snake-icon';
+import { SnakeIcon } from '@/components/ai/ai-snake-icon';
 
 /**
  * Minimal thinking indicator.
@@ -22,7 +22,7 @@ export function ThinkingIndicator({ status }: { status?: string }) {
 
   return (
     <div className="flex items-center gap-2 py-1 select-none animate-fade-up">
-      <SnakeIcon />
+      <SnakeIcon isAnimating />
 
       <span className="text-[14px] font-medium text-yellow-300 ai-think-shimmer leading-none">
         {text}

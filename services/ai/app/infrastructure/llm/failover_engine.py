@@ -24,6 +24,7 @@ from app.infrastructure.llm.error_classifier import (
 )
 from app.infrastructure.llm.client import LLMClient
 from app.application.provisioning.key_resolver import KeyResolver
+from app.application.admin.model_registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +51,7 @@ class ProviderHealth:
     def is_available(self, now: float) -> bool:
         if self.disabled_until and now < self.disabled_until:
             return False
-        if now < self.cooldown_until:
-            return False
-        return True
+        return not now < self.cooldown_until
 
     def record_success(self) -> None:
         self.consecutive_failures = 0
@@ -189,13 +188,11 @@ class FailoverEngine:
         if fallback and fallback != route["model"]:
             candidates.append({"model": fallback})
 
-        # 3. Cross-provider: Groq models if not already in chain
+        # 3. Cross-provider: active models from DB if not already in chain
         existing_models = {c["model"] for c in candidates}
-        groq_models = ["qwen/qwen3-32b", "qwen/qwen3.6-27b"]
-        for gm in groq_models:
-            if gm not in existing_models:
-                candidates.append({"model": gm})
-                break  # Only add one Groq model
+        failover_ids = ModelRegistry.get_failover_models(exclude_models=existing_models)
+        for fm in failover_ids[:1]:  # Only add one cross-provider model
+            candidates.append({"model": fm})
 
         # 4. Sort by success rate (highest first) — primary stays first if it has good rate
         #    Use a stable sort so ties preserve the original order
@@ -240,7 +237,7 @@ class FailoverEngine:
 
             health = self._get_health(provider)
             if health.is_available(now):
-                available_candidates.append({**candidate, "_resolved_provider": provider})
+                available_candidates.append({**candidate})
             else:
                 logger.info(
                     "skip_provider provider=%s model=%s cooldown_until=%.0f disabled=%s",
@@ -256,11 +253,15 @@ class FailoverEngine:
 
         for candidate in available_candidates:
             model = candidate["model"]
-            resolved_provider = candidate.get("_resolved_provider", "unknown")
 
             try:
-                api_key, provider = await self.key_resolver.resolve(user_id, model)
-                client = LLMClient(api_key=api_key, provider=provider, model=model)
+                api_key, provider, custom_url = await self.key_resolver.resolve(user_id, model)
+                client = LLMClient(
+                    api_key=api_key,
+                    provider=provider,
+                    model=model,
+                    base_url=custom_url,
+                )
                 result = await client.generate(messages, timeout=timeout, **kwargs)
 
                 # Record success — both provider health and model success rate
@@ -269,18 +270,18 @@ class FailoverEngine:
                 return result
 
             except Exception as exc:
-                classified = classify_error(exc, resolved_provider, model)
+                classified = classify_error(exc, provider, model)
                 last_error = classified
 
                 # Record failure — both provider health and model failure rate
-                health = self._get_health(resolved_provider)
+                health = self._get_health(provider)
                 health.record_failure(classified.category)
                 await self._record_model_failure(model)
 
                 logger.warning(
                     "failover_candidate_failed provider=%s model=%s category=%s "
                     "consecutive=%d user_message=%s",
-                    resolved_provider, model, classified.category.value,
+                    provider, model, classified.category.value,
                     health.consecutive_failures, classified.user_message,
                 )
 
@@ -330,7 +331,7 @@ class FailoverEngine:
 
             health = self._get_health(provider)
             if health.is_available(now):
-                available_candidates.append({**candidate, "_resolved_provider": provider})
+                available_candidates.append({**candidate})
 
         if not available_candidates:
             available_candidates = [candidates[0]]
@@ -339,11 +340,15 @@ class FailoverEngine:
 
         for candidate in available_candidates:
             model = candidate["model"]
-            resolved_provider = candidate.get("_resolved_provider", "unknown")
 
             try:
-                api_key, provider = await self.key_resolver.resolve(user_id, model)
-                client = LLMClient(api_key=api_key, provider=provider, model=model)
+                api_key, provider, custom_url = await self.key_resolver.resolve(user_id, model)
+                client = LLMClient(
+                    api_key=api_key,
+                    provider=provider,
+                    model=model,
+                    base_url=custom_url,
+                )
                 async for token in client.stream(messages, **kwargs):
                     yield token
                 self._get_health(provider).record_success()
@@ -351,15 +356,15 @@ class FailoverEngine:
                 return  # Success — stop failover
 
             except Exception as exc:
-                classified = classify_error(exc, resolved_provider, model)
+                classified = classify_error(exc, provider, model)
                 last_error = classified
-                health = self._get_health(resolved_provider)
+                health = self._get_health(provider)
                 health.record_failure(classified.category)
                 await self._record_model_failure(model)
 
                 logger.warning(
                     "failover_stream_failed provider=%s model=%s category=%s",
-                    resolved_provider, model, classified.category.value,
+                    provider, model, classified.category.value,
                 )
 
                 if classified.category in (

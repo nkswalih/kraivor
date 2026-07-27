@@ -37,6 +37,7 @@ export function PropertiesPanel({ spaceId }: Props) {
   }
 
   const isShape = ['rectangle', 'circle', 'triangle', 'rhombus', 'hexagon'].includes(selected.type);
+  const isText = selected.type === 'text' || selected.type === 'sticky_note';
 
   return (
     <div className="p-3 space-y-4 overflow-y-auto">
@@ -97,6 +98,152 @@ export function PropertiesPanel({ spaceId }: Props) {
           />
         </div>
       </div>
+
+      {/* Text properties */}
+      {isText && (
+        <div className="space-y-3 pt-1">
+          <h4 className="text-[11px] font-semibold tracking-wider text-text-tertiary uppercase">
+            Text
+          </h4>
+
+          {/* Font Size */}
+          <div className="space-y-2">
+            <label className="text-[11px] text-text-tertiary">Font Size</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={8}
+                max={96}
+                value={(selected.data.fontSize as number) ?? 14}
+                onChange={e =>
+                  updateElement(spaceId, selected.id, {
+                    data: { ...selected.data, fontSize: Number(e.target.value) },
+                  })
+                }
+                className="flex-1 accent-venom-yellow"
+              />
+              <input
+                type="number"
+                min={8}
+                max={96}
+                value={(selected.data.fontSize as number) ?? 14}
+                onChange={e =>
+                  updateElement(spaceId, selected.id, {
+                    data: { ...selected.data, fontSize: Math.max(8, Math.min(96, Number(e.target.value))) },
+                  })
+                }
+                className="w-14 px-2 py-1 bg-krait-surface3 border border-border rounded text-[12px] text-foreground text-center"
+              />
+            </div>
+          </div>
+
+          {/* Font Weight */}
+          <div className="space-y-2">
+            <label className="text-[11px] text-text-tertiary">Font Weight</label>
+            <div className="flex gap-1">
+              {(['normal', 'semibold', 'bold'] as const).map(w => (
+                <button
+                  key={w}
+                  onClick={() =>
+                    updateElement(spaceId, selected.id, {
+                      data: { ...selected.data, fontWeight: w },
+                    })
+                  }
+                  className={`flex-1 px-2 py-1 text-[11px] rounded border transition-colors ${
+                    (selected.data.fontWeight ?? 'normal') === w
+                      ? 'bg-venom-yellow/10 border-venom-yellow/40 text-venom-yellow'
+                      : 'bg-krait-surface3 border-border text-text-secondary hover:text-foreground'
+                  }`}
+                >
+                  {w.charAt(0).toUpperCase() + w.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Text Alignment */}
+          <div className="space-y-2">
+            <label className="text-[11px] text-text-tertiary">Alignment</label>
+            <div className="flex gap-1">
+              {(['left', 'center', 'right'] as const).map(a => (
+                <button
+                  key={a}
+                  onClick={() =>
+                    updateElement(spaceId, selected.id, {
+                      data: { ...selected.data, textAlign: a },
+                    })
+                  }
+                  className={`flex-1 px-2 py-1 text-[11px] rounded border transition-colors ${
+                    (selected.data.textAlign ?? 'left') === a
+                      ? 'bg-venom-yellow/10 border-venom-yellow/40 text-venom-yellow'
+                      : 'bg-krait-surface3 border-border text-text-secondary hover:text-foreground'
+                  }`}
+                >
+                  {a.charAt(0).toUpperCase() + a.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Text Color */}
+          <div className="space-y-2">
+            <label className="text-[11px] text-text-tertiary">Text Color</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={(selected.data.color as string) || '#e2e8f0'}
+                onChange={e =>
+                  updateElement(spaceId, selected.id, {
+                    data: { ...selected.data, color: e.target.value },
+                  })
+                }
+                className="w-8 h-8 p-0 border border-border rounded cursor-pointer bg-transparent"
+              />
+              <input
+                type="text"
+                value={(selected.data.color as string) || ''}
+                onChange={e =>
+                  updateElement(spaceId, selected.id, {
+                    data: { ...selected.data, color: e.target.value || '#e2e8f0' },
+                  })
+                }
+                className="flex-1 px-2 py-1 bg-krait-surface3 border border-border rounded text-[12px] text-foreground font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Padding */}
+          <div className="space-y-2">
+            <label className="text-[11px] text-text-tertiary">Padding</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={0}
+                max={48}
+                value={(selected.data.padding as number) ?? 12}
+                onChange={e =>
+                  updateElement(spaceId, selected.id, {
+                    data: { ...selected.data, padding: Number(e.target.value) },
+                  })
+                }
+                className="flex-1 accent-venom-yellow"
+              />
+              <input
+                type="number"
+                min={0}
+                max={48}
+                value={(selected.data.padding as number) ?? 12}
+                onChange={e =>
+                  updateElement(spaceId, selected.id, {
+                    data: { ...selected.data, padding: Math.max(0, Math.min(48, Number(e.target.value))) },
+                  })
+                }
+                className="w-14 px-2 py-1 bg-krait-surface3 border border-border rounded text-[12px] text-foreground text-center"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Rotation */}
       <div className="space-y-2">

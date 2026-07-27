@@ -1,4 +1,3 @@
-import hashlib
 import hmac
 import httpx
 import jwt

@@ -10,20 +10,14 @@ from app.api.dependencies.auth import JWTPayload, get_current_user
 from app.api.dependencies.backpressure import (
     acquire_llm_slot,
     release_llm_slot,
-    get_backpressure_stats,
 )
 from app.api.dependencies.rate_limiter import check_rate_limit
 from app.api.schemas.chat import ChatRequest, ChatResponse
 from app.application.chat.chat_service import ChatService
 from app.application.usage.usage_service import get_daily_usage_summary
 from app.infrastructure.llm.error_classifier import ClassifiedError, ErrorCategory
-from app.infrastructure.llm.router import (
-    ALL_MODEL_IDS,
-    BYOK_MODELS,
-    FREE_MODELS,
-    KRAIVOR_MODEL,
-    MODEL_BACKEND_MAP,
-)
+from app.application.admin.model_registry import ModelRegistry
+from app.infrastructure.llm.router import KRAIVOR_MODEL
 from app.core.exceptions import AllProvidersFailedError
 
 CurrentUser = Annotated[JWTPayload, Depends(get_current_user)]
@@ -34,36 +28,6 @@ router = APIRouter(tags=["chat"])
 chat_service = ChatService()
 
 LLM_CHAIN_TIMEOUT = 90
-
-
-# ── Model tier metadata (mirrors frontend TIER_CONFIG) ──────
-_MODEL_META = {
-    KRAIVOR_MODEL: {"tier": "kraivor", "provider": "kraivor", "name": "Krait 2.0", "latency": "0.4s", "context": "128K"},
-    "groq-qwen3-32b": {"tier": "groq", "provider": "groq", "name": "Qwen 3 32B", "latency": "0.3s", "context": "128K"},
-    "groq-qwen3.6-27b": {"tier": "groq", "provider": "groq", "name": "Qwen 3.6 27B", "latency": "0.3s", "context": "128K"},
-    "cohere-north-mini-code": {"tier": "free", "provider": "cohere", "name": "Cohere North Mini", "latency": "0.6s", "context": "128K"},
-    "nvidia-nemotron-ultra": {"tier": "free", "provider": "nvidia", "name": "Nvidia Nemotron Ultra", "latency": "2.0s", "context": "1M"},
-    "tencent-hy3": {"tier": "free", "provider": "tencent", "name": "Tencent HY3", "latency": "3.4s", "context": "262K"},
-    "poolside-laguna-xs": {"tier": "free", "provider": "poolside", "name": "Poolside Laguna XS", "latency": "0.8s", "context": "128K"},
-    "poolside-laguna-m": {"tier": "free", "provider": "poolside", "name": "Poolside Laguna M", "latency": "1.2s", "context": "128K"},
-    "nvidia-nemotron-super": {"tier": "free", "provider": "nvidia", "name": "Nvidia Nemotron Super", "latency": "2.5s", "context": "128K"},
-    "google-gemma-4": {"tier": "free", "provider": "google", "name": "Google Gemma 4", "latency": "1.0s", "context": "128K"},
-    "nvidia-nemotron-nano": {"tier": "free", "provider": "nvidia", "name": "Nvidia Nemotron Nano", "latency": "0.6s", "context": "128K"},
-    "openai-gpt-oss": {"tier": "free", "provider": "openai", "name": "OpenAI GPT OSS", "latency": "1.8s", "context": "128K"},
-    "claude-fable-5": {"tier": "byok", "provider": "anthropic", "name": "Claude Fable 5", "latency": "1.5s", "context": "200K"},
-    "claude-opus-4-8": {"tier": "byok", "provider": "anthropic", "name": "Claude Opus 4.8", "latency": "2.0s", "context": "200K"},
-    "claude-opus-4-7": {"tier": "byok", "provider": "anthropic", "name": "Claude Opus 4.7", "latency": "2.2s", "context": "200K"},
-    "claude-sonnet-5": {"tier": "byok", "provider": "anthropic", "name": "Claude Sonnet 5", "latency": "1.2s", "context": "200K"},
-    "claude-sonnet-4-6": {"tier": "byok", "provider": "anthropic", "name": "Claude Sonnet 4.6", "latency": "1.0s", "context": "200K"},
-    "gpt-5.6-sol": {"tier": "byok", "provider": "openai", "name": "GPT-5.6 Sol", "latency": "1.0s", "context": "128K"},
-    "gpt-5.6-terra": {"tier": "byok", "provider": "openai", "name": "GPT-5.6 Terra", "latency": "1.2s", "context": "128K"},
-    "gpt-5.5": {"tier": "byok", "provider": "openai", "name": "GPT-5.5", "latency": "0.9s", "context": "128K"},
-    "gpt-5.4": {"tier": "byok", "provider": "openai", "name": "GPT-5.4", "latency": "0.8s", "context": "128K"},
-    "gemini-3.5-flash": {"tier": "byok", "provider": "google", "name": "Gemini 3.5 Flash", "latency": "0.5s", "context": "1M"},
-    "gemini-3.1-pro": {"tier": "byok", "provider": "google", "name": "Gemini 3.1 Pro", "latency": "1.5s", "context": "1M"},
-    "deepseek-v4-pro": {"tier": "byok", "provider": "deepseek", "name": "DeepSeek V4 Pro", "latency": "1.0s", "context": "128K"},
-    "grok-4.3": {"tier": "byok", "provider": "xai", "name": "Grok 4.3", "latency": "1.5s", "context": "128K"},
-}
 
 
 @router.post("/chat")
@@ -106,7 +70,7 @@ async def chat(request: ChatRequest, user: CurrentUser, req: Request, _: RateLim
                         "suggested_action": e.suggested_action.value,
                         "retry_after": e.retry_after,
                     })}
-                except AllProvidersFailedError as e:
+                except AllProvidersFailedError:
                     yield {"event": "error", "data": json.dumps({
                         "type": "error",
                         "error": "AI service is temporarily at capacity. Please try again in a few minutes.",
@@ -142,7 +106,7 @@ async def chat(request: ChatRequest, user: CurrentUser, req: Request, _: RateLim
             usage=usage_info,
             sources=result.get("sources"),
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         raise HTTPException(
             status_code=504,
             detail={
@@ -150,7 +114,7 @@ async def chat(request: ChatRequest, user: CurrentUser, req: Request, _: RateLim
                 "message": "The AI model took too long to respond. Please try a simpler question.",
                 "retry_after": 10,
             },
-        )
+        ) from None
     except ClassifiedError as e:
         status_map = {
             ErrorCategory.BILLING_EXHAUSTED: 402,
@@ -172,8 +136,8 @@ async def chat(request: ChatRequest, user: CurrentUser, req: Request, _: RateLim
                 "suggested_action": e.suggested_action.value,
             },
             headers=headers,
-        )
-    except AllProvidersFailedError as e:
+        ) from e
+    except AllProvidersFailedError:
         raise HTTPException(
             status_code=402,
             detail={
@@ -181,7 +145,7 @@ async def chat(request: ChatRequest, user: CurrentUser, req: Request, _: RateLim
                 "message": "AI credits are exhausted for today. Add your own API key in Settings to continue, or try again tomorrow.",
                 "suggested_action": "add_key",
             },
-        )
+        ) from None
     finally:
         await release_llm_slot()
 
@@ -213,7 +177,7 @@ async def completions(request: dict, user: CurrentUser, req: Request, _: RateLim
             usage=usage_info,
             sources=result.get("sources"),
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         raise HTTPException(
             status_code=504,
             detail={
@@ -221,7 +185,7 @@ async def completions(request: dict, user: CurrentUser, req: Request, _: RateLim
                 "message": "The AI model took too long to respond.",
                 "retry_after": 10,
             },
-        )
+        ) from None
     except ClassifiedError as e:
         status_map = {
             ErrorCategory.BILLING_EXHAUSTED: 402,
@@ -237,8 +201,8 @@ async def completions(request: dict, user: CurrentUser, req: Request, _: RateLim
                 "message": e.user_message,
                 "suggested_action": e.suggested_action.value,
             },
-        )
-    except AllProvidersFailedError as e:
+        ) from e
+    except AllProvidersFailedError:
         raise HTTPException(
             status_code=402,
             detail={
@@ -246,26 +210,23 @@ async def completions(request: dict, user: CurrentUser, req: Request, _: RateLim
                 "message": "AI credits are exhausted for today. Add your own API key in Settings to continue, or try again tomorrow.",
                 "suggested_action": "add_key",
             },
-        )
+        ) from None
     finally:
         await release_llm_slot()
 
 
 @router.get("/models")
 async def list_models(user: CurrentUser):
-    models = []
-    for mid in ALL_MODEL_IDS:
-        meta = _MODEL_META.get(mid, {})
-        models.append({
-            "id": mid,
-            "name": meta.get("name", mid),
-            "tier": meta.get("tier", "free"),
-            "provider": meta.get("provider", "openrouter"),
-            "latency": meta.get("latency"),
-            "context": meta.get("context"),
-            "backendModel": MODEL_BACKEND_MAP.get(mid),
-        })
-    return {"models": models, "default": KRAIVOR_MODEL}
+    models = ModelRegistry.get_selector_models()
+    # Derive default from DB: first kraivor provider model, else first model, else hardcoded
+    default_id = KRAIVOR_MODEL
+    for m in models:
+        if m.get("provider") == "kraivor":
+            default_id = m["id"]
+            break
+    if not models:
+        default_id = KRAIVOR_MODEL
+    return {"models": models, "default": default_id}
 
 
 # ── BYOK key management endpoints ────────────────────────────

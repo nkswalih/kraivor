@@ -6,10 +6,7 @@ All metrics are stored in PostgreSQL and can be queried via the monitoring API.
 from __future__ import annotations
 
 import logging
-import time
-from collections import defaultdict
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from dataclasses import dataclass
 
 from sqlalchemy import text
 from app.infrastructure.db.database import async_session_factory

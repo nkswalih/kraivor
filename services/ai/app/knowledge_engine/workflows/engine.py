@@ -14,12 +14,12 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 
 
-class StepStatus(str, Enum):
+class StepStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -28,7 +28,7 @@ class StepStatus(str, Enum):
     TIMED_OUT = "timed_out"
 
 
-class WorkflowStatus(str, Enum):
+class WorkflowStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -102,7 +102,7 @@ async def _run_single_step(
         )
         step_result.status = StepStatus.COMPLETED
         step_result.output = output or {}
-    except asyncio.TimeoutError:
+    except TimeoutError:
         step_result.status = StepStatus.TIMED_OUT
         step_result.error = f"Step timed out after {step.timeout_seconds}s"
     except Exception as e:

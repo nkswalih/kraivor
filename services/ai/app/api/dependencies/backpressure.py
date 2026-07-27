@@ -9,7 +9,7 @@ On a t3.medium (2 vCPU, 4GB RAM) with 2 uvicorn workers:
 import asyncio
 import logging
 import time
-from fastapi import HTTPException, Request
+from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 

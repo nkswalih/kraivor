@@ -59,4 +59,4 @@ async def check_rate_limit(request: Request) -> None:
                     "error": "rate_limiter_unavailable",
                     "message": "Rate limiting service unavailable. Please try again later.",
                 },
-            )
+            ) from None

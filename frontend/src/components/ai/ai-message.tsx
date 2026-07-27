@@ -13,9 +13,9 @@ import {
   Pencil,
   AlertTriangle,
 } from 'lucide-react';
-import { SnakeIcon } from '@/components/features/ai-snake-icon';
-import { AiMarkdown } from '@/components/features/ai-markdown';
-import { ThinkingIndicator } from '@/components/features/ai-thinking-indicator';
+import { SnakeIcon } from '@/components/ai/ai-snake-icon';
+import { AiMarkdown } from '@/components/ai/ai-markdown';
+import { ThinkingIndicator } from '@/components/ai/ai-thinking-indicator';
 import type { ChatMessage } from '@/types/domain/ai';
 import { MessageRole, MessageStatus } from '@/types/domain/ai';
 import { KeyRound, ArrowRightLeft, Clock } from 'lucide-react';
@@ -169,7 +169,7 @@ export const AiMessage = memo(function AiMessage({
                   <>
                     {/* Header — visible when content is streaming or complete */}
                     <div className="flex items-center gap-2 mb-1.5">
-                      <SnakeIcon />
+                      <SnakeIcon isAnimating={isStreaming} />
                       {/* <span className="text-[13px] font-semibold text-text-primary">
                         Kraivor AI
                       </span> */}

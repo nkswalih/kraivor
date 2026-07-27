@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import logging
 import re
-from collections import Counter
 
 from sqlalchemy import text
 
@@ -54,7 +53,7 @@ TECH_ENTITIES = {
     "kafka": "concept", "rabbitmq": "concept", "celery": "concept",
     "jwt": "concept", "oauth": "concept", "oauth2": "concept",
     "cors": "concept", "csrf": "concept", "ssl": "concept", "tls": "concept",
-    "ci/cd": "concept", "devops": "concept", "mlops": "concept",
+    "devops": "concept", "mlops": "concept",
     "agile": "concept", "scrum": "concept", "kanban": "concept",
 }
 
@@ -99,13 +98,12 @@ def extract_relationships(text_content: str) -> list[dict]:
             source = match.group(1).strip()
             target = match.group(2).strip()
             # Only keep if both are known entities
-            if source in TECH_ENTITIES and target in TECH_ENTITIES:
-                if source != target:
-                    relationships.append({
-                        "source": source,
-                        "target": target,
-                        "type": rel_type,
-                    })
+            if source in TECH_ENTITIES and target in TECH_ENTITIES and source != target:
+                relationships.append({
+                    "source": source,
+                    "target": target,
+                    "type": rel_type,
+                })
 
     return relationships
 

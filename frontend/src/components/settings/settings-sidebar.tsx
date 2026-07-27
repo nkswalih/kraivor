@@ -13,6 +13,7 @@ import {
   Users,
   ChevronRight,
   ArrowLeft,
+  Bot,
 } from 'lucide-react';
 
 interface NavItem {
@@ -34,6 +35,7 @@ const navCategories: NavCategory[] = [
       { label: 'Profile', href: 'profile', icon: User },
       { label: 'Inbox', href: 'inbox', icon: Bell },
       { label: 'Security & Keys', href: 'security', icon: KeyRound },
+      { label: 'AI Providers', href: 'ai-providers', icon: Bot },
     ],
   },
   {

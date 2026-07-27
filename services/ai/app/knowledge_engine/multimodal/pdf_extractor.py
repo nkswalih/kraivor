@@ -11,7 +11,6 @@ Handles:
 
 from __future__ import annotations
 
-import io
 import logging
 from dataclasses import dataclass, field
 
@@ -43,12 +42,12 @@ class PDFExtractor:
         except ImportError:
             raise RuntimeError(
                 "pymupdf is not installed. Install with: pip install pymupdf"
-            )
+            ) from None
 
         try:
             doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
         except Exception as e:
-            raise ValueError(f"Invalid PDF file: {e}")
+            raise ValueError(f"Invalid PDF file: {e}") from e
 
         return self._extract_doc(doc)
 
@@ -59,12 +58,12 @@ class PDFExtractor:
         except ImportError:
             raise RuntimeError(
                 "pymupdf is not installed. Install with: pip install pymupdf"
-            )
+            ) from None
 
         try:
             doc = pymupdf.open(file_path)
         except Exception as e:
-            raise ValueError(f"Cannot open PDF at {file_path}: {e}")
+            raise ValueError(f"Cannot open PDF at {file_path}: {e}") from e
 
         return self._extract_doc(doc)
 

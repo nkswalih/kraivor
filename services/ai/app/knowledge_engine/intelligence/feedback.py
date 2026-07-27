@@ -7,7 +7,6 @@ and used to adjust quality scores for the knowledge items that were referenced.
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
 
 from sqlalchemy import text
 from app.infrastructure.db.database import async_session_factory

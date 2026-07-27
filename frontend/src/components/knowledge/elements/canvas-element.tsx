@@ -32,6 +32,7 @@ interface Props {
   spaceId: string;
   isSelected: boolean;
   isEditing: boolean;
+  selectedTool: string;
   onSelect: (id: string, multi: boolean) => void;
   onDragStart: (e: React.MouseEvent, id: string) => void;
   onResizeStart: (e: React.MouseEvent, id: string) => void;
@@ -469,6 +470,7 @@ function ArrowSvg({
 function canvasElementAreEqual(prev: Props, next: Props): boolean {
   if (prev.isSelected !== next.isSelected) return false;
   if (prev.isEditing !== next.isEditing) return false;
+  if (prev.selectedTool !== next.selectedTool) return false;
   const a = prev.element;
   const b = next.element;
   return (
@@ -491,6 +493,7 @@ export const CanvasElementRenderer = memo(function CanvasElementRenderer({
   spaceId,
   isSelected,
   isEditing,
+  selectedTool,
   onSelect,
   onDragStart,
   onResizeStart,
@@ -526,7 +529,7 @@ export const CanvasElementRenderer = memo(function CanvasElementRenderer({
           onSelect(element.id, e.shiftKey);
         }}
         onMouseDown={e => {
-          if (!element.locked) onDragStart(e, element.id);
+          if (!element.locked && (selectedTool === 'select' || selectedTool === 'arrow')) onDragStart(e, element.id);
         }}
       >
         <ArrowSvg
@@ -563,7 +566,7 @@ export const CanvasElementRenderer = memo(function CanvasElementRenderer({
         onDoubleClick(element.id);
       }}
       onMouseDown={e => {
-        if (!element.locked && !isEditing) onDragStart(e, element.id);
+        if (!element.locked && !isEditing && selectedTool === 'select') onDragStart(e, element.id);
       }}
     >
       {isShape || isFlowchartNode ? (

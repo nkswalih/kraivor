@@ -788,7 +788,6 @@ export function KnowledgeCanvas({ spaceId }: Props) {
   }, []);
 
   const handleElementDragStart = useCallback((e: React.MouseEvent, elementId: string) => {
-    e.stopPropagation();
     const state = store.getState();
     const c = state.spaces[spaceId];
     if (!c) return;
@@ -796,6 +795,7 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     if (!el || el.locked) return;
 
     if (state.selectedTool === 'arrow') {
+      e.stopPropagation();
       const world = screenToWorld(e.clientX, e.clientY);
       if (!world) return;
       const centerX = el.position.x + el.size.width / 2;
@@ -804,6 +804,11 @@ export function KnowledgeCanvas({ spaceId }: Props) {
       return;
     }
 
+    if (state.selectedTool !== 'select') return;
+
+    e.stopPropagation();
+    e.preventDefault();
+
     if (!e.shiftKey && !c.selectedElementIds.includes(elementId)) {
       state.setSelectedElements(spaceId, [elementId]);
     }
@@ -811,16 +816,20 @@ export function KnowledgeCanvas({ spaceId }: Props) {
     state.pushUndoState(spaceId);
     state.setEditingElementId(null);
     if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const worldX = (e.clientX - rect.left - c.viewport.x) / c.viewport.zoom;
-    const worldY = (e.clientY - rect.top - c.viewport.y) / c.viewport.zoom;
 
-    const selectedIds = c.selectedElementIds.length > 0 ? c.selectedElementIds : [elementId];
+    const freshCanvas = store.getState().spaces[spaceId];
+    if (!freshCanvas) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const worldX = (e.clientX - rect.left - freshCanvas.viewport.x) / freshCanvas.viewport.zoom;
+    const worldY = (e.clientY - rect.top - freshCanvas.viewport.y) / freshCanvas.viewport.zoom;
+
+    const selectedIds = freshCanvas.selectedElementIds.length > 0 ? freshCanvas.selectedElementIds : [elementId];
     const startPositions: Record<string, Position> = {};
     const startArrowPts: Record<string, [number, number][]> = {};
     const startArrowCp: Record<string, Position> = {};
     for (const id of selectedIds) {
-      const selEl = c.elements.find(ee => ee.id === id);
+      const selEl = freshCanvas.elements.find(ee => ee.id === id);
       if (!selEl) continue;
       startPositions[id] = { x: selEl.position.x, y: selEl.position.y };
       if (selEl.type === 'arrow') {
@@ -1247,6 +1256,7 @@ export function KnowledgeCanvas({ spaceId }: Props) {
               spaceId={spaceId}
               isSelected={canvas?.selectedElementIds.includes(element.id) ?? false}
               isEditing={editingElementId === element.id}
+              selectedTool={selectedTool}
               onSelect={handleElementSelect}
               onDragStart={handleElementDragStart}
               onResizeStart={handleElementResizeStart}

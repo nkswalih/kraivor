@@ -355,7 +355,7 @@ class TestRouterConfig:
         from app.infrastructure.llm.router import ModelRouter
         router = ModelRouter()
         route = router.get_route("tool_calling")
-        assert route["model"] == "qwen/qwen3-32b"
+        assert route["model"] == "llama-3.3-70b-versatile"
 
 
 # ── Config Defaults ───────────────────────────────────────────────────────────

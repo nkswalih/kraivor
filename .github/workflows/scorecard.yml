@@ -27,13 +27,13 @@ jobs:
           persist-credentials: false
 
       - name: Run analysis
-        uses: ossf/scorecard-action@v2.4.0
+        uses: ossf/scorecard-action@v2.4.4
         with:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
 
       - name: Upload SARIF to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v3.37.3
         with:
           sarif_file: results.sarif

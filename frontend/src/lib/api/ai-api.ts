@@ -233,6 +233,10 @@ export const aiApi = {
     return aiPatch<ConversationSummary>(`/v1/conversations/${conversationId}`, data);
   },
 
+  async deleteConversation(conversationId: string): Promise<{ ok: boolean }> {
+    return aiFetch<{ ok: boolean }>(`/v1/conversations/${conversationId}`, { method: 'DELETE' } as RequestInit);
+  },
+
   async *streamMessage(payload: SendMessagePayload, signal?: AbortSignal) {
     const model = payload.model ? resolveModelId(payload.model) : undefined;
     const workspaceId = useAuthStore.getState().workspaceId;

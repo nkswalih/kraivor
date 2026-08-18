@@ -1,4 +1,5 @@
 export { AiChatView } from './ai-chat-view';
+export { AiChatSidebar } from './ai-chat-sidebar';
 export { AiInput } from './ai-input';
 export { AiMessage } from './ai-message';
 export { AiWelcome } from './ai-welcome';

@@ -132,17 +132,13 @@ services:
       DJANGO_SETTINGS_MODULE: auth.settings.development
       DB_HOST: postgres
       DB_PORT: 5432
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
       EMAIL_HOST: mailhog
       EMAIL_PORT: 1025
       UV_LINK_MODE: copy
       INTERNAL_REQUEST_TOKEN: ${INTERNAL_REQUEST_TOKEN:-dev-internal-secret}
-      # Explicitly set to prevent host environment variable leakage.
-      # Docker Compose inherits host env vars, which can override .env values.
-      # This ensures the correct frontend URL regardless of host environment state.
-      # Uses http://localhost (through nginx) for OAuth redirects,
-      # since nginx proxies port 80 → host.docker.internal:3000.
       FRONTEND_URL: http://localhost
     depends_on:
       postgres:
@@ -428,6 +424,8 @@ services:
   ai-worker:
     image: kraivor-ai:dev
     container_name: kraivor-ai-worker-dev
+    healthcheck:
+      disable: true
     command: celery -A app.core.celery_app worker -Q ai.inference,ai.indexing,ai.maintenance --loglevel=info
     env_file:
       - .env
@@ -452,6 +450,8 @@ services:
   ai-beat:
     image: kraivor-ai:dev
     container_name: kraivor-ai-beat-dev
+    healthcheck:
+      disable: true
     command: celery -A app.core.celery_app beat --loglevel=info
     env_file:
       - .env

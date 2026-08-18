@@ -23,6 +23,7 @@ failed.
 """
 
 import json
+import time
 
 import logging
 import requests
@@ -362,28 +363,67 @@ class Command(BaseCommand):
         signal.signal(signal.SIGINT, _signal_handler)
         signal.signal(signal.SIGTERM, _signal_handler)
 
-        consumer = self._create_consumer(topics)
+        consumer = self._create_consumer_with_retry(topics)
         if consumer is None:
             sys.exit(1)
 
         self.stdout.write(f"Consumer started. Subscribed to: {', '.join(topics)}")
 
+        consecutive_errors = 0
+        max_consecutive_errors = 50
+
         while not _shutdown:
             try:
                 msg = consumer.poll(timeout=poll_timeout)
                 if msg is None:
+                    consecutive_errors = 0
                     continue
                 if msg.error():
-                    logger.error("consumer.poll.error", extra={"error": msg.error()})
+                    err = msg.error()
+                    logger.error("consumer.poll.error", extra={"error": str(err)})
+                    consecutive_errors += 1
+                    if consecutive_errors >= max_consecutive_errors:
+                        logger.error(
+                            "consumer.too_many_errors",
+                            extra={"count": consecutive_errors},
+                        )
+                        break
+                    time.sleep(min(consecutive_errors * 0.1, 5.0))
                     continue
 
+                consecutive_errors = 0
                 self._process_message(msg)
             except KeyboardInterrupt:
                 break
             except Exception as exc:
                 logger.error("consumer.loop.error", extra={"error": str(exc)})
+                consecutive_errors += 1
+                if consecutive_errors >= max_consecutive_errors:
+                    logger.error(
+                        "consumer.too_many_errors",
+                        extra={"count": consecutive_errors},
+                    )
+                    break
+                time.sleep(min(consecutive_errors * 0.1, 5.0))
 
         self._close(consumer)
+
+    def _create_consumer_with_retry(self, topics: list[str], max_retries: int = 30):
+        """Create consumer with exponential backoff retry for Kafka startup races."""
+        for attempt in range(max_retries):
+            consumer = self._create_consumer(topics)
+            if consumer is not None:
+                return consumer
+            if _shutdown:
+                return None
+            wait = min(2 ** attempt, 15)
+            self.stderr.write(
+                f"Kafka not ready, retrying in {wait}s "
+                f"(attempt {attempt + 1}/{max_retries})..."
+            )
+            time.sleep(wait)
+        self.stderr.write("Failed to connect to Kafka after all retries.")
+        return None
 
     def _create_consumer(self, topics: list[str]):
         try:
@@ -406,7 +446,10 @@ class Command(BaseCommand):
             )
             return None
         except KafkaException as exc:
-            self.stderr.write(f"Failed to create Kafka consumer: {exc}")
+            logger.warning(
+                "consumer.create.failed",
+                extra={"error": str(exc)},
+            )
             return None
 
     def _process_message(self, msg):

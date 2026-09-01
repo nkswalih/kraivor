@@ -76,7 +76,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: google/osv-scanner-action@v2.3.8
+      - uses: google/osv-scanner-action@v2.5.1
         with:
           scan-args: >-
             --lockfile=services/auth/uv.lock

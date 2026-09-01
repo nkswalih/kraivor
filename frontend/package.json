@@ -60,17 +60,17 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "@next/bundle-analyzer": "^15.5.22",
+    "@next/bundle-analyzer": "^15.5.24",
     "@types/node": "^22.20.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/react-syntax-highlighter": "^15.5.13",
-    "@typescript-eslint/eslint-plugin": "^8.65.0",
+    "@typescript-eslint/eslint-plugin": "^8.68.0",
     "@typescript-eslint/parser": "^8.0.0",
     "autoprefixer": "^10.5.4",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^15.5.22",
-    "postcss": "^8.5.23",
+    "eslint-config-next": "^15.5.24",
+    "postcss": "^8.5.26",
     "prettier": "^3.9.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.0"

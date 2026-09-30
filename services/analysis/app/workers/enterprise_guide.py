@@ -817,9 +817,11 @@ class EnterpriseGuideGenerator:
 
         parts = [
             f"Production Readiness Score: {scores.overall}/100 ({tier_label})",
-            f"Security: {_fmt(scores.security)} | Performance: {_fmt(scores.performance)} | "
-            f"Reliability: {_fmt(scores.reliability)} | Maintainability: {_fmt(scores.maintainability)} | "
-            f"DevOps: {_fmt(scores.devops)}",
+            (
+                f"Security: {_fmt(scores.security)} | Performance: {_fmt(scores.performance)} | "
+                f"Reliability: {_fmt(scores.reliability)} | Maintainability: {_fmt(scores.maintainability)} | "
+                f"DevOps: {_fmt(scores.devops)}"
+            ),
         ]
         if perf_metrics:
             parts.append(f"Estimated System RPM: {perf_metrics.overall_rpm}")
@@ -1603,8 +1605,10 @@ class EnterpriseGuideGenerator:
                 "sprint_number": num,
                 "title": label,
                 "objectives": [
-                    f"Resolve {len(items)} findings"
-                    f"{' (security focus)' if key == 'sprint_1' else ''}"
+                    (
+                        f"Resolve {len(items)} findings"
+                        f"{' (security focus)' if key == 'sprint_1' else ''}"
+                    )
                 ],
                 "tasks": tasks,
                 "estimated_hours": max(1, total_effort // 60),

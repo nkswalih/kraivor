@@ -44,6 +44,10 @@ dependencies = [
     "pymupdf>=1.24",
     "langdetect>=1.0.9",
     "argostranslate>=1.9",
+    # Safe XML parsing for the third-party RSS/Atom feeds in
+    # knowledge_engine/sources. The stdlib parser is exposed to entity
+    # expansion on untrusted input.
+    "defusedxml>=0.7.1",
     "python-multipart>=0.0.9",
 ]
 

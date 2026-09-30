@@ -21,6 +21,10 @@ env:
   JWT_ALGORITHM: "RS256"
   JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "15"
   JWT_REFRESH_TOKEN_EXPIRE_DAYS: "30"
+  # Coverage floors live in each service's pyproject.toml ([tool.coverage.report]
+  # fail_under), NOT here, so each service is held to its own honest number.
+  # CI only supplies --cov, without which pytest-cov never activates and no
+  # report is produced at all.
 
 jobs:
   format:
@@ -112,10 +116,15 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: SAST (Bandit)
-        run: uv run bandit -r . -x ./tests,./.venv --configfile pyproject.toml || true
+        # No longer `|| true` — bandit findings now fail the build. If a
+        # finding is a false positive, add a targeted # nosec with a reason
+        # rather than disabling the whole check.
+        run: uv run bandit -r . -x ./tests,./.venv --configfile pyproject.toml -ll
 
       - name: Dependency audit (pip-audit)
-        run: uv run pip-audit --strict || echo "::warning::HIGH/CRITICAL vulnerabilities found"
+        # Fails on any known vulnerable or yanked dependency. Ignore only the
+        # unresolvable-in-sandbox advisory class if one appears.
+        run: uv run pip-audit --strict --progress-spinner off
 
   unit-tests:
     name: Unit Tests ${{ matrix.service }}
@@ -158,6 +167,7 @@ jobs:
         run: |
           uv run pytest \
             --color=yes --tb=short --maxfail=3 \
+            --cov \
             --cov-report=term-missing:skip-covered \
             --cov-report=xml --cov-report=html -q
 
@@ -175,7 +185,7 @@ jobs:
           echo "## ${{ matrix.service }} Unit Coverage" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           if [ -f coverage.xml ]; then
-            python -c "import xml.etree.ElementTree as ET; rate = ET.parse('coverage.xml').getroot().attrib.get('line-rate', '0'); pct = float(rate) * 100; print(f'Line coverage: {pct:.2f}%'); print('✅ Meets threshold' if pct >= 85 else '⚠️ Below 85% threshold')" >> $GITHUB_STEP_SUMMARY
+            python -c "import xml.etree.ElementTree as ET, tomllib; rate = float(ET.parse('coverage.xml').getroot().attrib.get('line-rate', '0')) * 100; floor = tomllib.load(open('pyproject.toml','rb'))['tool']['coverage']['report']['fail_under']; print(f'Line coverage: {rate:.2f}%  (floor: {floor}%)'); print('✅ Meets floor' if rate >= floor else '❌ Below floor')" >> $GITHUB_STEP_SUMMARY
           else
             echo "No coverage report generated" >> $GITHUB_STEP_SUMMARY
           fi
@@ -247,6 +257,7 @@ jobs:
         run: |
           uv run pytest \
             --color=yes --tb=short --maxfail=3 \
+            --cov \
             --cov-report=term-missing:skip-covered \
             --cov-report=xml --cov-report=html -q
 
@@ -264,8 +275,58 @@ jobs:
           echo "## ${{ matrix.service }} Integration Coverage" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           if [ -f coverage.xml ]; then
-            python -c "import xml.etree.ElementTree as ET; rate = ET.parse('coverage.xml').getroot().attrib.get('line-rate', '0'); pct = float(rate) * 100; print(f'Line coverage: {pct:.2f}%'); print('✅ Meets threshold' if pct >= 85 else '⚠️ Below 85% threshold')" >> $GITHUB_STEP_SUMMARY
+            python -c "import xml.etree.ElementTree as ET, tomllib; rate = float(ET.parse('coverage.xml').getroot().attrib.get('line-rate', '0')) * 100; floor = tomllib.load(open('pyproject.toml','rb'))['tool']['coverage']['report']['fail_under']; print(f'Line coverage: {rate:.2f}%  (floor: {floor}%)'); print('✅ Meets floor' if rate >= floor else '❌ Below floor')" >> $GITHUB_STEP_SUMMARY
           else
             echo "No coverage report generated" >> $GITHUB_STEP_SUMMARY
           fi
           echo '```' >> $GITHUB_STEP_SUMMARY
+
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+  dependency-audit:
+    name: Dependency Audit (npm)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit for high/critical vulnerabilities
+        # Fails on high or critical. `postcss` currently arrives transitively
+        # via next@15 and is only cleared by a next@16 major upgrade, which is
+        # tracked as separate work rather than force-applied.
+        run: npm audit --audit-level=high

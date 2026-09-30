@@ -78,8 +78,14 @@ logs/
 # Test coverage
 .coverage
 */.coverage
+.coverage.*
 htmlcov/
 coverage.xml
+coverage/
+frontend/coverage/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
 
 # Database
 *.db

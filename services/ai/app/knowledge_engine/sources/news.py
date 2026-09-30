@@ -6,7 +6,7 @@ import aiohttp
 import contextlib
 import logging
 from datetime import datetime
-from defusedxml.ElementTree import fromstring as ET_fromstring
+from defusedxml import ElementTree as DefusedET
 
 from app.knowledge_engine.sources.base import SourceContent, SourceResult
 
@@ -127,7 +127,7 @@ class NewsProvider:
 
             # Parse RSS. This is a third-party response, so it is untrusted
             # input: a naive parser here is exposed to entity expansion.
-            root = ET_fromstring(xml_text)
+            root = DefusedET.fromstring(xml_text)
             items = root.findall(".//item")[:max_results]
 
             results = []

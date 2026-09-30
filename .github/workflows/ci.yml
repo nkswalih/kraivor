@@ -119,7 +119,15 @@ jobs:
         # No longer `|| true` — bandit findings now fail the build. If a
         # finding is a false positive, add a targeted # nosec with a reason
         # rather than disabling the whole check.
-        run: uv run bandit -r . -x ./tests,./.venv --configfile pyproject.toml -ll
+        #
+        # `migrations/` is excluded: Alembic revisions run once at deploy
+        # against a controlled schema, and their raw SQL interpolates hardcoded
+        # seed data, not request input. Skipping B608 globally would also hide
+        # genuine findings in application code, so the exclusion is by path.
+        run: >
+          uv run bandit -r .
+          -x ./tests,./.venv,./migrations
+          --configfile pyproject.toml -ll
 
       - name: Dependency audit (pip-audit)
         # Fails on any known vulnerable or yanked dependency.

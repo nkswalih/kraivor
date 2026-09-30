@@ -8,7 +8,7 @@ import aiohttp
 import contextlib
 import logging
 from datetime import datetime
-from defusedxml.ElementTree import fromstring as ET_fromstring
+from defusedxml import ElementTree as DefusedET
 
 from app.knowledge_engine.sources.base import SourceContent, SourceResult
 
@@ -61,7 +61,7 @@ class ResearchPaperProvider:
                 xml_text = await resp.text()
 
             # Third-party response, so untrusted: entity expansion is a DoS.
-            root = ET_fromstring(xml_text)
+            root = DefusedET.fromstring(xml_text)
             ns = {"atom": "http://www.w3.org/2005/Atom"}
 
             results = []
@@ -155,7 +155,7 @@ class ResearchPaperProvider:
                 xml_text = await resp.text()
 
             # Third-party response, so untrusted: entity expansion is a DoS.
-            root = ET_fromstring(xml_text)
+            root = DefusedET.fromstring(xml_text)
             ns = {"atom": "http://www.w3.org/2005/Atom"}
             entry = root.find("atom:entry", ns)
             if entry is None:

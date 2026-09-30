@@ -27,7 +27,18 @@ jobs:
           persist-credentials: false
 
       - name: Run analysis
-        uses: ossf/scorecard-action@v2.4.0
+        # Pinned by SHA, not tag, so the image cannot be swapped under us.
+        #
+        # v2.4.0 is unusable: that release pulls its image from
+        # gcr.io/openssf/scorecard-action, and the pull now fails with
+        # "This API method requires billing to be enabled" on the registry
+        # project's account. The image moved to ghcr.io in a later release,
+        # so the failure was a stale pin, not a broken service. This was
+        # failing on dev independently of any branch.
+        #
+        # v2.4.4 also downgrades a failed results POST to a log line instead
+        # of failing the whole job, which the API still does intermittently.
+        uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
         with:
           results_file: results.sarif
           results_format: sarif

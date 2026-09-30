@@ -174,16 +174,25 @@ flowchart LR
 | Core API | `8002` | Django DRF | Workspaces, Repos, Notes, Projects |
 | Analysis | `8003` | FastAPI | Repo Analyzer, Rule Engine, Scoring |
 | AI | `8004` | FastAPI | Multi-Agent AI, RAG Pipeline |
-| Notifications | `8005` | FastAPI | Email, Push, Slack notifications |
+| Notifications | `8005` | FastAPI | **Scaffold only — not implemented** |
 | Realtime | `8006` | Node.js | WebSocket, Chat, Presence |
+
+> `services/notifications` exists as a scaffold: every file under its `app/`
+> directory is 0 bytes, it has no tests, and it is not in the CI matrix. The
+> working notification code lives in `services/core/apps/notifications/`. See
+> [`services/notifications/README.md`](services/notifications/README.md) before
+> relying on it.
 
 **Architecture Principles:**
 
-- **Single entry point** through API Gateway (Nginx + Kong)
+- **Single entry point** through API Gateway (Nginx)
 - **Async by default** — operations >500ms run as background jobs
 - **Service owns its data** — no cross-service database queries
 - **Fail gracefully** — services degrade independently
-- **Everything observable** — correlation IDs, structured logs, metrics
+- **Everything observable** — correlation IDs, structured logs, Sentry
+
+For the request path, trust boundaries, and the workspace authorisation rules,
+see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
 ---
 
@@ -196,7 +205,11 @@ flowchart LR
 | **Database & Cache** | PostgreSQL, Redis |
 | **Async & Events** | Celery, Kafka (MSK) |
 | **Infrastructure** | Docker, Kubernetes (EKS), Terraform, AWS |
-| **Observability** | Structured logging, Correlation IDs, Metrics |
+| **Observability** | Structured logging, correlation IDs, Sentry (core, auth, frontend) |
+
+> Sentry is active in `core`, `auth`, and the frontend, but only when a DSN is
+> set (`SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`). Without them nothing is
+> reported anywhere — set the DSNs before you need the signal.
 
 ## Getting Started
 
@@ -246,9 +259,36 @@ make test   # Run tests for all services
 
 ---
 
-## Documentation & Roadmap
+## Documentation
 
-Full documentation is available at **[docs.kraivor.dev](https://docs.kraivor.dev)** (coming soon). In the meantime, check the `docs/` directory in this repository for API references and architecture guides.
+Start with these two — they answer "how does this thing actually work" and
+"what do I do when I break prod":
+
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — request path, trust
+  boundaries, the workspace authorisation rule, the internal service channel
+- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** — deploy pipeline, pre-deploy
+  checklist, rollback procedure, known gaps
+
+Service-specific references live in `docs/`:
+
+| Document | Covers |
+|----------|--------|
+| [`docs/AUTH_SERVICE.md`](docs/AUTH_SERVICE.md) | `services/auth` |
+| [`docs/CORE_SERVICE.md`](docs/CORE_SERVICE.md) | `services/core` |
+| [`docs/DOCKER.md`](docs/DOCKER.md) | local Docker workflow |
+| [`docs/CI-VS-DOCKER.md`](docs/CI-VS-DOCKER.md) | CI vs Docker differences |
+
+### Running tests
+
+```bash
+make test                    # every service
+cd services/core && uv run pytest        # one service, with coverage gate
+cd frontend && npm test                  # frontend unit tests
+cd frontend && npm run test:coverage
+```
+
+Coverage floors are enforced per service in each service's `pyproject.toml`.
+Current measured coverage: auth 88%, analysis 65%, core 56%, ai 14%.
 
 ### Roadmap
 

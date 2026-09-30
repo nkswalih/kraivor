@@ -190,20 +190,30 @@ CELERY_TASK_ALWAYS_EAGER = False
 CELERY_TASK_EAGER_PROPAGATES = False
 
 # =============================================================================
-# SENTRY ERROR TRACKING (Optional but Recommended)
+# SENTRY ERROR TRACKING
 # =============================================================================
-# Add Sentry for production error tracking:
-# import sentry_sdk
-# from sentry_sdk.integrations.django import DjangoIntegration
-#
-# SENTRY_DSN = env('SENTRY_DSN', default='')
-# if SENTRY_DSN:
-#     sentry_sdk.init(
-#         dsn=SENTRY_DSN,
-#         integrations=[DjangoIntegration()],
-#         traces_sample_rate=0.1,
-#         send_default_pii=False
-#     )
+# Previously commented out, so the auth service reported nothing anywhere.
+# Now active whenever SENTRY_DSN is set (core has done this since it landed).
+SENTRY_DSN = env("SENTRY_DSN", default="")
+
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment="production",
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+            RedisIntegration(),
+        ],
+        traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
+        # Never ship credentials/tokens to the error tracker.
+        send_default_pii=False,
+    )
 
 # =============================================================================
 # PERFORMANCE OPTIMIZATIONS - PRODUCTION
@@ -225,3 +235,26 @@ CELERY_TASK_EAGER_PROPAGATES = False
 # =============================================================================
 # Restrict admin access to specific IPs if needed:
 # ADMIN_ALLOWED_IPS = env.list('ADMIN_ALLOWED_IPS', default=[])
+
+# =============================================================================
+# PRODUCTION SECRET VALIDATION
+# =============================================================================
+# Fail fast at boot rather than shipping a service that cannot verify
+# tokens or cannot reach its siblings over the internal channel.
+# =============================================================================
+
+_PRODUCTION_REQUIRED = (
+    "SECRET_KEY",
+    "INTERNAL_REQUEST_TOKEN",
+    "JWT_PRIVATE_KEY_PATH",
+    "DATABASE_URL",
+)
+
+_missing = [name for name in _PRODUCTION_REQUIRED if not globals().get(name)]
+
+if _missing:
+    raise RuntimeError(
+        "Refusing to start in production with unset required settings: "
+        + ", ".join(_missing)
+        + ". Set these in the environment (see .env.example) before deploying."
+    )

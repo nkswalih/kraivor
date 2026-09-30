@@ -69,7 +69,11 @@ class TestProjectListCreateView:
     def test_create_requires_name(self, authed_client, workspace, workspace_member):
         resp = authed_client.post(f"/api/workspaces/{workspace.id}/projects/", {})
         assert resp.status_code == 400
-        assert "name" in resp.data
+        # Error bodies are normalised to RFC 7807 by core_exception_handler,
+        # so field names arrive flattened inside `detail`, not as top-level keys.
+        assert resp.data["code"] == "invalid"
+        assert resp.data["status"] == 400
+        assert "name" in resp.data["detail"]
 
     def test_unauthenticated_returns_403(self, api_client):
         resp = api_client.get(f"/api/workspaces/{uuid.uuid4()}/projects/")

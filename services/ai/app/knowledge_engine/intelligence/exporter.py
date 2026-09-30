@@ -71,12 +71,14 @@ class KnowledgeExporter:
             fields += ", embedding"
 
         async with async_session_factory() as session:
+            # `fields` is a fixed literal above, extended only by appending
+            # ", embedding". workspace_id is bound, not interpolated.
             result = await session.execute(text(f"""
                 SELECT {fields}
                 FROM ai.knowledge_embeddings
                 WHERE workspace_id = :ws
                 ORDER BY fetched_at DESC
-            """), {"ws": workspace_id})
+            """), {"ws": workspace_id})  # nosec B608
             rows = result.fetchall()
 
         items = []

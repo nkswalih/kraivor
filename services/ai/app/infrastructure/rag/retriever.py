@@ -37,13 +37,13 @@ class Retriever:
         async with self.db() as session:
             result = await session.execute(
                 text(
-                    "SELECT id, file_path, content, language, "
+                    # where_clause is assembled above from fixed string literals
+                    # only; every caller-supplied value is bound as a parameter.
+                    "SELECT id, file_path, content, language, "  # nosec B608
                     "repo_id, line_start, line_end, "
                     "1 - (embedding <=> :query_embedding) as similarity "
                     "FROM ai.code_embeddings "
-                    "WHERE "
-                    + where_clause
-                    + " "  # nosec - where_clause uses safe fragments with parameterized values
+                    "WHERE " + where_clause + " "
                     "AND 1 - (embedding <=> :query_embedding) > :min_score "
                     "ORDER BY similarity DESC "
                     "LIMIT :top_k"

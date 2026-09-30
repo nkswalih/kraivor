@@ -107,8 +107,16 @@ succeeded":
   floor is set to reality, not because the service is well tested. Treat AI
   service changes as high-risk and test them manually.
 - **`services/ai` cannot be fully audited by `pip-audit` out of the box.** It
-  pins CPU-only `torch` from the PyTorch index, which is not on PyPI, so
+  pins CPU-only `torch` from the PyTorch wheel index, which is not on PyPI, so
   `pip-audit` aborts with `Dependency not found on PyPI` rather than reporting
-  clean. CI exports the lock and audits it against both indexes.
+  clean. CI exports the lock, drops the `torch` requirement, and audits the
+  remaining 183 pins with `--no-deps`. The `torch` pin itself is unverified.
+- **`stanza` 1.10.1 carries PYSEC-2026-3075 and cannot be upgraded here.**
+  `argostranslate` 1.11.0 declares `stanza (==1.10.1)` as a hard pin, so the
+  only resolvable set that clears the advisory is `argostranslate` 1.9.2 with
+  `stanza` 1.14 — a two-minor-version downgrade of a direct dependency. CI
+  carries an explicit `--ignore-vuln PYSEC-2026-3075` for the `ai` service
+  rather than dropping the check, so the suppression is visible and reviewable.
+  Remove it when `argostranslate` relaxes its pin.
 - **`services/notifications` is an empty scaffold** with no deployable
   entrypoint. If anything expects it to be running, it is not.

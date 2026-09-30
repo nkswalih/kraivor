@@ -122,9 +122,43 @@ jobs:
         run: uv run bandit -r . -x ./tests,./.venv --configfile pyproject.toml -ll
 
       - name: Dependency audit (pip-audit)
-        # Fails on any known vulnerable or yanked dependency. Ignore only the
-        # unresolvable-in-sandbox advisory class if one appears.
+        # Fails on any known vulnerable or yanked dependency.
+        if: matrix.service != 'ai'
         run: uv run pip-audit --strict --progress-spinner off
+
+      # `ai` pins CPU-only torch from the PyTorch wheel index, which PyPI does
+      # not carry, so `pip-audit` cannot resolve it and aborts with
+      # "Dependency not found on PyPI" instead of reporting a result. Auditing
+      # the rest of the lock is still worth doing.
+      #
+      # PYSEC-2026-3075 (stanza 1.10.1) is ignored explicitly rather than by
+      # dropping the whole check. argostranslate 1.11.0 hard-pins
+      # `stanza (==1.10.1)`, so the only way to clear it is to downgrade
+      # argostranslate two minor versions. That is a worse outcome than the
+      # advisory, and it is not ours to decide unilaterally. Remove this
+      # ignore once argostranslate relaxes its pin.
+      - name: Dependency audit (pip-audit, torch excluded)
+        if: matrix.service == 'ai'
+        run: |
+          uv export --frozen --no-dev --no-emit-project --no-hashes -o /tmp/req.txt
+          # Drop the torch requirement and the continuation lines that belong
+          # to it, so the remaining pins resolve against PyPI alone.
+          python - <<'PY'
+          src, dst = "/tmp/req.txt", "/tmp/req-no-torch.txt"
+          kept, skip = [], False
+          for line in open(src, encoding="utf-8"):
+              if line.startswith("torch=="):
+                  skip = True
+                  continue
+              if skip and (line[0] in " \t" or line.startswith("#")):
+                  continue
+              skip = False
+              kept.append(line)
+          open(dst, "w", encoding="utf-8").writelines(kept)
+          PY
+          uv run pip-audit --strict --progress-spinner off --no-deps \
+            --ignore-vuln PYSEC-2026-3075 \
+            -r /tmp/req-no-torch.txt
 
   unit-tests:
     name: Unit Tests ${{ matrix.service }}

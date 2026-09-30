@@ -363,10 +363,9 @@ def _searchable_room_ids(
     try:
         from apps.chat.models import Room
 
-        rows = (
-            Room.objects.filter(v2_members__user_id=user_id)
-            .values_list("id", flat=True)[:cap]
-        )
+        rows = Room.objects.filter(v2_members__user_id=user_id).values_list(
+            "id", flat=True
+        )[:cap]
         return [str(r) for r in rows]
     except Exception as exc:
         logger.warning("chat_room_scope_failed", extra={"error": str(exc)})

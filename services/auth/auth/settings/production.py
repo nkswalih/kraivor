@@ -205,11 +205,7 @@ if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         environment="production",
-        integrations=[
-            DjangoIntegration(),
-            CeleryIntegration(),
-            RedisIntegration(),
-        ],
+        integrations=[DjangoIntegration(), CeleryIntegration(), RedisIntegration()],
         traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
         # Never ship credentials/tokens to the error tracker.
         send_default_pii=False,

@@ -11,7 +11,6 @@ from apps.notifications.management.commands.consume_events import (
     _dispatch_task,
 )
 
-
 TASK_NAME = "notifications.dispatch_notification"
 
 
@@ -119,9 +118,12 @@ class TestDispatchTask:
         # An empty registry makes the lookup miss, which is the condition this
         # test is asserting on. Without the patch, tests run Celery eagerly and
         # the real task would execute against the database.
-        with patch("celery.current_app.tasks", {}), patch(
-            "apps.notifications.management.commands.consume_events.logger"
-        ) as mock_logger:
+        with (
+            patch("celery.current_app.tasks", {}),
+            patch(
+                "apps.notifications.management.commands.consume_events.logger"
+            ) as mock_logger,
+        ):
             _dispatch_task("analysis.completed", {"user_id": "u-1"})
             mock_logger.error.assert_called_once()
 
@@ -200,12 +202,15 @@ class TestCommand:
             }
         ).encode()
         mock_msg.topic.return_value = "analysis.events"
-        with patch(
-            "apps.notifications.management.commands.consume_events"
-            "._dispatch_fanout_event"
-        ) as mock_fanout, patch(
-            "apps.notifications.management.commands.consume_events._dispatch_task"
-        ) as mock_dispatch:
+        with (
+            patch(
+                "apps.notifications.management.commands.consume_events"
+                "._dispatch_fanout_event"
+            ) as mock_fanout,
+            patch(
+                "apps.notifications.management.commands.consume_events._dispatch_task"
+            ) as mock_dispatch,
+        ):
             cmd._process_message(mock_msg)
             mock_fanout.assert_called_once()
             mock_dispatch.assert_not_called()
@@ -219,12 +224,15 @@ class TestCommand:
             {"event_type": "workspace.member.invited", "data": {"email": "a@b.c"}}
         ).encode()
         mock_msg.topic.return_value = "workspace.events"
-        with patch(
-            "apps.notifications.management.commands.consume_events"
-            "._dispatch_workspace_event"
-        ) as mock_ws, patch(
-            "apps.notifications.management.commands.consume_events._dispatch_task"
-        ) as mock_dispatch:
+        with (
+            patch(
+                "apps.notifications.management.commands.consume_events"
+                "._dispatch_workspace_event"
+            ) as mock_ws,
+            patch(
+                "apps.notifications.management.commands.consume_events._dispatch_task"
+            ) as mock_dispatch,
+        ):
             cmd._process_message(mock_msg)
             mock_ws.assert_called_once()
             mock_dispatch.assert_not_called()

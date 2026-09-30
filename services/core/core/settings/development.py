@@ -1,9 +1,9 @@
 # ruff: noqa: F401, F403, F405
-from .base import *
-
 # Guard: this module disables authentication globally. Refuse to load it
 # anywhere it could be reached by real users.
 import os
+
+from .base import *
 
 if os.environ.get("APP_ENV", "").lower() in {"production", "prod"}:
     raise RuntimeError(

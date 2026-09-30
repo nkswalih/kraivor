@@ -8,13 +8,13 @@ to re-test the models.
 """
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import django
 import os
 import pytest
 import sys
 import uuid
+from unittest.mock import MagicMock, patch
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent
 sys.path.insert(0, str(BASE_DIR))
@@ -33,8 +33,7 @@ def mock_chat_provisioner():
     creating a Workspace in tests fails for lack of AWS credentials.
     """
     with patch(
-        "apps.chat.services.provisioning.get_provisioner",
-        return_value=MagicMock(),
+        "apps.chat.services.provisioning.get_provisioner", return_value=MagicMock()
     ):
         yield
 
@@ -54,9 +53,7 @@ def member(workspace, db):
     from apps.workspaces.models import WorkspaceMember
 
     return WorkspaceMember.objects.create(
-        workspace=workspace,
-        user_id=uuid.uuid4(),
-        role=WorkspaceRole.MEMBER,
+        workspace=workspace, user_id=uuid.uuid4(), role=WorkspaceRole.MEMBER
     )
 
 

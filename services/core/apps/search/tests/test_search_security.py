@@ -15,11 +15,10 @@ Two vulnerabilities are covered here:
    nothing, ever.
 """
 
-import uuid
-from unittest.mock import patch
-
 import pytest
+import uuid
 from rest_framework.exceptions import NotFound
+from unittest.mock import patch
 
 pytestmark = pytest.mark.security
 
@@ -31,8 +30,7 @@ class TestSearchWorkspaceIsolation:
         from rest_framework.request import Request
 
         raw = request_factory.get(
-            "/api/search/",
-            {"q": query, "workspace": str(workspace_id)},
+            "/api/search/", {"q": query, "workspace": str(workspace_id)}
         )
         # The view reads request.query_params, which only exists on a DRF
         # Request — RequestFactory gives us a plain WSGIRequest.
@@ -56,9 +54,11 @@ class TestSearchWorkspaceIsolation:
 
         request = self._request(request_factory, workspace.id, outsider)
 
-        with patch("apps.search.views.SearchService") as service:
-            with pytest.raises(NotFound):
-                SearchView().get(request)
+        with (
+            patch("apps.search.views.SearchService") as service,
+            pytest.raises(NotFound),
+        ):
+            SearchView().get(request)
 
         service.assert_not_called()
 
@@ -82,9 +82,8 @@ class TestSearchWorkspaceIsolation:
 
         assert response.status_code == 200
         service.return_value.search.assert_called_once()
-        assert (
-            service.return_value.search.call_args.kwargs["user_id"]
-            == str(member.user_id)
+        assert service.return_value.search.call_args.kwargs["user_id"] == str(
+            member.user_id
         )
 
     def test_soft_deleted_member_is_rejected(self, request_factory, workspace, member):
@@ -121,16 +120,12 @@ class TestChatSearchScoping:
         from apps.search.services import _searchable_room_ids
 
         mine = Room.objects.create(
-            name="My DM",
-            room_type=Room.RoomType.DM,
-            created_by=member.user_id,
+            name="My DM", room_type=Room.RoomType.DM, created_by=member.user_id
         )
         RoomMember.objects.create(room=mine, user_id=member.user_id)
 
         theirs = Room.objects.create(
-            name="Someone Elses DM",
-            room_type=Room.RoomType.DM,
-            created_by=uuid.uuid4(),
+            name="Someone Elses DM", room_type=Room.RoomType.DM, created_by=uuid.uuid4()
         )
         RoomMember.objects.create(room=theirs, user_id=uuid.uuid4())
 
@@ -145,15 +140,11 @@ class TestChatSearchScoping:
 
         for _ in range(30):
             room = Room.objects.create(
-                name="Room",
-                room_type=Room.RoomType.GROUP,
-                created_by=member.user_id,
+                name="Room", room_type=Room.RoomType.GROUP, created_by=member.user_id
             )
             RoomMember.objects.create(room=room, user_id=member.user_id)
 
-        room_ids = _searchable_room_ids(
-            str(member.user_id), str(workspace.id), cap=5
-        )
+        room_ids = _searchable_room_ids(str(member.user_id), str(workspace.id), cap=5)
 
         assert len(room_ids) == 5
 
@@ -167,9 +158,7 @@ class TestChatSearchScoping:
         from apps.search.services import search_chat
 
         room = Room.objects.create(
-            name="Ops DM",
-            room_type=Room.RoomType.DM,
-            created_by=member.user_id,
+            name="Ops DM", room_type=Room.RoomType.DM, created_by=member.user_id
         )
         RoomMember.objects.create(room=room, user_id=member.user_id)
 

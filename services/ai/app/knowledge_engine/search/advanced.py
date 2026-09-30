@@ -101,13 +101,16 @@ class AdvancedSearch:
         params["limit"] = top_k * 2  # fetch more for re-ranking
 
         async with async_session_factory() as session:
+            # `fields` and `where_clause` are built from fixed literals and
+            # bound-parameter placeholders only. No caller value is
+            # interpolated into the statement text.
             result = await session.execute(text(f"""
                 SELECT {fields}
                 FROM ai.knowledge_embeddings
                 WHERE {where_clause}
                 ORDER BY text_rank DESC
                 LIMIT :limit
-            """), params)
+            """), params)  # nosec B608
             rows = result.fetchall()
 
         # Compute composite score: 0.50 * text_rank + 0.30 * trust + 0.20 * recency

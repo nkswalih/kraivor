@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-import logging
 import re
-from datetime import datetime
-from xml.etree import ElementTree as ET
 
 import aiohttp
-
-from app.knowledge_engine.sources.base import SourceResult, SourceContent
 import contextlib
+import logging
+from datetime import datetime
+from defusedxml import ElementTree as DefusedET
+
+from app.knowledge_engine.sources.base import SourceContent, SourceResult
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,8 @@ class ResearchPaperProvider:
                     return []
                 xml_text = await resp.text()
 
-            root = ET.fromstring(xml_text)
+            # Third-party response, so untrusted: entity expansion is a DoS.
+            root = DefusedET.fromstring(xml_text)
             ns = {"atom": "http://www.w3.org/2005/Atom"}
 
             results = []
@@ -153,7 +154,8 @@ class ResearchPaperProvider:
                     return None
                 xml_text = await resp.text()
 
-            root = ET.fromstring(xml_text)
+            # Third-party response, so untrusted: entity expansion is a DoS.
+            root = DefusedET.fromstring(xml_text)
             ns = {"atom": "http://www.w3.org/2005/Atom"}
             entry = root.find("atom:entry", ns)
             if entry is None:

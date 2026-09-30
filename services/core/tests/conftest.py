@@ -1,7 +1,7 @@
 """
 Test configuration for the workspaces app test suite.
 
-This conftest.py handles the two environment-specific concerns:
+This conftest.py handles the workspaces-specific concern:
 
 1. URL prefix
    The project mounts the workspaces app at a URL prefix defined in the root
@@ -9,14 +9,13 @@ This conftest.py handles the two environment-specific concerns:
    We detect it via Django's reverse() and expose it as the `ws_base` fixture
    so test functions use dynamic URLs, not hardcoded strings.
 
-2. Celery task isolation
-   All Celery tasks are configured as ALWAYS_EAGER=False in the test environment.
-   We patch them at the task level (not the broker) so tests never need a running
-   broker but still verify that tasks are dispatched correctly.
+The Celery and DynamoDB isolation fixtures deliberately do NOT live here.
+They sit in the service-root conftest.py, because a conftest under `tests/`
+applies only to the `tests/` tree — which is exactly the gap that let
+`apps/` tests reach for AWS credentials in CI.
 """
 
 import pytest
-from unittest.mock import MagicMock, patch
 from django.urls import NoReverseMatch, reverse
 
 
@@ -59,40 +58,3 @@ def ws_url(ws_prefix):
         return f"{ws_prefix}/{path}"
 
     return _build
-
-
-@pytest.fixture(autouse=True)
-def celery_task_always_eager(settings):
-    """
-    Force Celery to be synchronous AND suppress broker connection attempts.
-
-    CELERY_TASK_ALWAYS_EAGER makes tasks execute inline (synchronously)
-    without needing a broker. Combined with CELERY_TASK_EAGER_PROPAGATES,
-    exceptions in tasks bubble up to tests (useful for debugging).
-
-    This fixture is autouse=True so every test gets it automatically.
-    No test should ever need a running broker.
-    """
-    settings.CELERY_TASK_ALWAYS_EAGER = True
-    settings.CELERY_TASK_EAGER_PROPAGATES = (
-        False  # don't let task errors break non-task tests
-    )
-    settings.CELERY_BROKER_URL = "memory://"  # in-memory broker, no network
-    settings.CELERY_RESULT_BACKEND = "cache+memory://"
-
-
-@pytest.fixture(autouse=True)
-def mock_chat_provisioner():
-    """
-    Mock the chat provisioning service so tests never hit DynamoDB.
-
-    Workspace.post_save and WorkspaceMember.post_delete signals call
-    get_provisioner() which tries to write to DynamoDB.  In CI there are
-    no AWS credentials, so every Workspace.objects.create() would fail.
-    """
-    mock_provisioner = MagicMock()
-    with patch(
-        "apps.chat.services.provisioning.get_provisioner",
-        return_value=mock_provisioner,
-    ):
-        yield mock_provisioner

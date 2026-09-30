@@ -33,9 +33,8 @@ jobs:
             ci
             security
           requireScope: false
-          subjectPattern: ^[A-Z].+$
+          subjectPattern: ^[a-zA-Z].+$
           subjectPatternError: |
-            The subject "{subject}" must start with an uppercase letter.
-            Example: "feat(auth): Add OAuth login"
+            The subject "{subject}" must start with a letter (lowercase or uppercase) and cannot start with a number.
           validateSingleCommit: false
           wip: false

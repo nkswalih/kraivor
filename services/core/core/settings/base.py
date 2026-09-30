@@ -385,5 +385,11 @@ AWS_LAMBDA_NOTIFICATION_FN = env("AWS_LAMBDA_NOTIFICATION_FN", default="")
 FIREBASE_CREDENTIALS_PATH = env("FIREBASE_CREDENTIALS_PATH", default=None)
 
 # Internal request header check
-INTERNAL_REQUEST_HEADER = "X-Internal-Request"
-INTERNAL_REQUEST_SECRET = env("INTERNAL_REQUEST_SECRET", default="")
+# SECURITY: this is the shared secret that lets the gateway (and sibling
+# services) bypass JWT verification and assert X-User-ID / X-Workspace-IDs.
+# It is the SAME value as auth's INTERNAL_REQUEST_TOKEN — one canonical name
+# across services. It was previously read as INTERNAL_REQUEST_SECRET, which is
+# set in no .env file, so this branch silently never activated.
+INTERNAL_REQUEST_HEADER = env("INTERNAL_REQUEST_HEADER", default="X-Internal-Request")
+INTERNAL_REQUEST_SECRET = env("INTERNAL_REQUEST_TOKEN", default="")
+INTERNAL_REQUEST_TOKEN = INTERNAL_REQUEST_SECRET  # back-compat alias

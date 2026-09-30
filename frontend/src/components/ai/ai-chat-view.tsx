@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, usePathname } from 'next/navigation';
-import { ChevronDown, Pin, PinOff, Pencil, Loader2 } from 'lucide-react';
+import { ChevronDown, Pin, PinOff, Pencil, Loader2, Plus } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useAiConversationStore } from '@/lib/stores/ai-conversation-store';
 import { workspaceEndpoints, repositoryEndpoints } from '@/lib/api/endpoints';
@@ -12,6 +12,7 @@ import type { HistoryMessage } from '@/lib/api/ai-api';
 import { useDailyUsage } from '@/lib/hooks/use-daily-usage';
 import { AiInput } from '@/components/ai/ai-input';
 import { AiMessage } from '@/components/ai/ai-message';
+import { AiChatSidebar } from '@/components/ai/ai-chat-sidebar';
 import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { AiWelcome } from '@/components/ai/ai-welcome';
 import { UpgradeCard } from '@/components/ai/ai-upgrade-card';
@@ -176,6 +177,17 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
       router.replace(expectedPath);
     }
   }, [conversationId, workspaceSlug, router, pathname]);
+
+  /* ─── New chat ────────────────────────────────────────── */
+
+  const handleNewChat = useCallback(() => {
+    setMessages([]);
+    setConversationId(null);
+    setConversationTitle('');
+    setIsPinned(false);
+    setInput('');
+    router.push(`/${workspaceSlug}/ai`);
+  }, [router, workspaceSlug]);
 
   /* ─── Regenerate last response ────────────────────────── */
 
@@ -426,176 +438,202 @@ export function AiChatView({ workspaceSlug, initialConversationId }: AiChatViewP
 
   if (initialLoading) {
     return (
-      <div className="flex items-center justify-center h-full bg-krait-void">
-        <Loader2 className="w-5 h-5 text-venom-yellow animate-spin" />
+      <div className="flex h-full bg-krait-void">
+        <AiChatSidebar
+          conversations={conversations}
+          activeConversationId={conversationId}
+          onSelectConversation={loadConversation}
+          onNewChat={handleNewChat}
+          onRefresh={() => convListQuery.refetch()}
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-5 h-5 text-venom-yellow animate-spin" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full bg-krait-void relative">
-      {isEmpty ? (
-        <AiWelcome
-          workspaceAvatar={workspaceAvatar}
-          conversations={conversations}
-          input={input}
-          onInputChange={setInput}
-          onSend={() => handleSend()}
-          onKeyDown={e => handleKeyDown(e)}
-          onSuggestion={text => handleSend(text)}
-          onLoadConversation={loadConversation}
-          onRefreshConversations={() => { convListQuery.refetch() }}
-          isStreaming={isStreaming}
-          selectedModel={selectedModel}
-          onModelSelect={setSelectedModel}
-          showBanner={false}
-          models={modelsQuery.data?.models}
-          onStop={handleStop}
-          dailyUsage={dailyUsageQuery.data}
-          chatMode={chatMode}
-          onModeChange={setChatMode}
-        />
-      ) : (
-        <>
-          {/* Message list */}
-          <div
-            ref={listRef}
-            onScroll={handleScroll}
-            className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth"
-          >
-            {/* Chat header — editable title + pin */}
-            <div className="px-4 pt-4 pb-1">
-              <div className="max-w-[720px] mx-auto flex items-center gap-2">
-                {editingTitle ? (
-                  <input
-                    ref={titleInputRef}
-                    type="text"
-                    defaultValue={conversationTitle}
-                    className="flex-1 bg-transparent border-b border-venom-yellow/50 text-[15px] font-semibold text-text-primary outline-none py-0.5"
-                    onBlur={async (e) => {
-                      const val = e.target.value.trim();
-                      if (val && conversationId) {
-                        await aiApi.updateConversation(conversationId, { title: val });
-                        setConversationTitle(val);
-                        storeSetConversationTitle(val);
-                      }
-                      setEditingTitle(false);
-                    }}
-                    onKeyDown={async (e) => {
-                      if (e.key === 'Enter') {
-                        (e.target as HTMLInputElement).blur();
-                      }
-                      if (e.key === 'Escape') {
+    <div className="flex h-full bg-krait-void">
+      {/* Sidebar */}
+      <AiChatSidebar
+        conversations={conversations}
+        activeConversationId={conversationId}
+        onSelectConversation={loadConversation}
+        onNewChat={handleNewChat}
+        onRefresh={() => convListQuery.refetch()}
+      />
+
+      {/* Main chat area */}
+      <div className="flex-1 flex flex-col min-w-0 relative">
+        {isEmpty ? (
+          <AiWelcome
+            workspaceAvatar={workspaceAvatar}
+            input={input}
+            onInputChange={setInput}
+            onSend={() => handleSend()}
+            onKeyDown={e => handleKeyDown(e)}
+            onSuggestion={text => handleSend(text)}
+            isStreaming={isStreaming}
+            selectedModel={selectedModel}
+            onModelSelect={setSelectedModel}
+            showBanner={false}
+            models={modelsQuery.data?.models}
+            onStop={handleStop}
+            dailyUsage={dailyUsageQuery.data}
+            chatMode={chatMode}
+            onModeChange={setChatMode}
+          />
+        ) : (
+          <>
+            {/* Message list */}
+            <div
+              ref={listRef}
+              onScroll={handleScroll}
+              className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth"
+            >
+              {/* Chat header — editable title + pin + new chat */}
+              <div className="px-4 pt-4 pb-1">
+                <div className="max-w-[720px] mx-auto flex items-center gap-2">
+                  {editingTitle ? (
+                    <input
+                      ref={titleInputRef}
+                      type="text"
+                      defaultValue={conversationTitle}
+                      className="flex-1 bg-transparent border-b border-venom-yellow/50 text-[15px] font-semibold text-text-primary outline-none py-0.5"
+                      onBlur={async (e) => {
+                        const val = e.target.value.trim();
+                        if (val && conversationId) {
+                          await aiApi.updateConversation(conversationId, { title: val });
+                          setConversationTitle(val);
+                          storeSetConversationTitle(val);
+                        }
                         setEditingTitle(false);
-                      }
-                    }}
-                    autoFocus
-                  />
-                ) : (
-                  <button
-                    onClick={() => setEditingTitle(true)}
-                    className="flex-1 flex items-center gap-2 text-left group/title min-w-0"
-                  >
-                    <span className="text-[15px] font-semibold text-text-primary truncate">
-                      {conversationTitle}
-                    </span>
-                    <Pencil className="w-3.5 h-3.5 text-text-tertiary opacity-0 group-hover/title:opacity-100 transition-opacity shrink-0" strokeWidth={1.5} />
-                  </button>
-                )}
+                      }}
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Enter') {
+                          (e.target as HTMLInputElement).blur();
+                        }
+                        if (e.key === 'Escape') {
+                          setEditingTitle(false);
+                        }
+                      }}
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setEditingTitle(true)}
+                      className="flex-1 flex items-center gap-2 text-left group/title min-w-0"
+                    >
+                      <span className="text-[15px] font-semibold text-text-primary truncate">
+                        {conversationTitle}
+                      </span>
+                      <Pencil className="w-3.5 h-3.5 text-text-tertiary opacity-0 group-hover/title:opacity-100 transition-opacity shrink-0" strokeWidth={1.5} />
+                    </button>
+                  )}
 
-                {conversationId && (
+                  {conversationId && (
+                    <button
+                      onClick={async () => {
+                        const next = !isPinned;
+                        await aiApi.updateConversation(conversationId, { is_pinned: next });
+                        setIsPinned(next);
+                        storeSetPinned(next);
+                      }}
+                      className="p-1.5 rounded-md text-text-tertiary hover:text-venom-yellow hover:bg-krait-surface3 transition-all"
+                      title={isPinned ? 'Unpin' : 'Pin'}
+                    >
+                      {isPinned ? (
+                        <PinOff className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      ) : (
+                        <Pin className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      )}
+                    </button>
+                  )}
+
                   <button
-                    onClick={async () => {
-                      const next = !isPinned;
-                      await aiApi.updateConversation(conversationId, { is_pinned: next });
-                      setIsPinned(next);
-                      storeSetPinned(next);
-                    }}
+                    onClick={handleNewChat}
                     className="p-1.5 rounded-md text-text-tertiary hover:text-venom-yellow hover:bg-krait-surface3 transition-all"
-                    title={isPinned ? 'Unpin' : 'Pin'}
+                    title="New Chat"
                   >
-                    {isPinned ? (
-                      <PinOff className="w-3.5 h-3.5" strokeWidth={1.5} />
-                    ) : (
-                      <Pin className="w-3.5 h-3.5" strokeWidth={1.5} />
-                    )}
+                    <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
                   </button>
-                )}
+                </div>
               </div>
+
+              <div className="py-4 pb-6">
+                {messages.map((msg) => {
+                  const isAssistant = msg.role === MessageRole.ASSISTANT;
+                  const isStreamingMsg = isAssistant && msg.status === MessageStatus.SENDING;
+
+                  return (
+                    <AiMessage
+                      key={msg.id}
+                      message={msg}
+                      isStreaming={isStreamingMsg}
+                      thinkingStatus={isStreamingMsg ? thinkingStatus : undefined}
+                      onRegenerate={isAssistant && msg.status === MessageStatus.ERROR ? handleRegenerate : undefined}
+                      onEdit={msg.role === MessageRole.USER ? handleEditMessage : undefined}
+                      onAddKey={isAssistant && msg.status === MessageStatus.ERROR ? () => {
+                        // Trigger BYOK dialog — dispatch custom event
+                        window.dispatchEvent(new CustomEvent('ai-open-byok'));
+                      } : undefined}
+                      onSwitchModel={isAssistant && msg.status === MessageStatus.ERROR ? () => {
+                        // Trigger model selector — dispatch custom event
+                        window.dispatchEvent(new CustomEvent('ai-open-model-selector'));
+                      } : undefined}
+                    />
+                  );
+                })}
+              </div>
+
+              <UpgradeCard show={rateLimited} />
+
+              <div ref={bottomRef} />
             </div>
 
-            <div className="py-4 pb-6">
-              {messages.map((msg) => {
-                const isAssistant = msg.role === MessageRole.ASSISTANT;
-                const isStreamingMsg = isAssistant && msg.status === MessageStatus.SENDING;
+            {/* Scroll to bottom arrow */}
+            {!shouldAutoScroll && messages.length > 0 && (
+              <div className="absolute bottom-[160px] left-1/2 -translate-x-1/2 z-10">
+                <button
+                  onClick={() => {
+                    scrollToBottom();
+                    setShouldAutoScroll(true);
+                  }}
+                  className="w-6 h-6 rounded-full border border-krait-border bg-black/10 backdrop-blur-sm flex items-center justify-center text-text-tertiary hover:bg-white/10 transition-colors"
+                  aria-label="Scroll to latest message"
+                >
+                  <ChevronDown className="w-3 h-3" strokeWidth={3} />
+                </button>
+              </div>
+            )}
 
-                return (
-                  <AiMessage
-                    key={msg.id}
-                    message={msg}
-                    isStreaming={isStreamingMsg}
-                    thinkingStatus={isStreamingMsg ? thinkingStatus : undefined}
-                    onRegenerate={isAssistant && msg.status === MessageStatus.ERROR ? handleRegenerate : undefined}
-                    onEdit={msg.role === MessageRole.USER ? handleEditMessage : undefined}
-                    onAddKey={isAssistant && msg.status === MessageStatus.ERROR ? () => {
-                      // Trigger BYOK dialog — dispatch custom event
-                      window.dispatchEvent(new CustomEvent('ai-open-byok'));
-                    } : undefined}
-                    onSwitchModel={isAssistant && msg.status === MessageStatus.ERROR ? () => {
-                      // Trigger model selector — dispatch custom event
-                      window.dispatchEvent(new CustomEvent('ai-open-model-selector'));
-                    } : undefined}
-                  />
-                );
-              })}
+            {/* Input area — continuous with conversation */}
+            <div className="shrink-0 pb-3 pt-1">
+              <div className="px-4">
+                <AiInput
+                  value={input}
+                  onChange={setInput}
+                  onSend={() => handleSend()}
+                  onKeyDown={e => handleKeyDown(e)}
+                  isStreaming={isStreaming}
+                  selectedModel={selectedModel}
+                  onModelSelect={setSelectedModel}
+                  showBanner={rateLimited}
+                  models={modelsQuery.data?.models}
+                  onStop={handleStop}
+                  dailyUsage={dailyUsageQuery.data}
+                  chatMode={chatMode}
+                  onModeChange={setChatMode}
+                />
+              </div>
+              <p className="text-center text-[11px] text-text-tertiary mt-2.5 px-4">
+                AI can make mistakes. Verify critical code architectures.
+              </p>
             </div>
-
-            <UpgradeCard show={rateLimited} />
-
-            <div ref={bottomRef} />
-          </div>
-
-          {/* Scroll to bottom arrow */}
-          {!shouldAutoScroll && messages.length > 0 && (
-            <div className="absolute bottom-[160px] left-1/2 -translate-x-1/2 z-10">
-              <button
-                onClick={() => {
-                  scrollToBottom();
-                  setShouldAutoScroll(true);
-                }}
-                className="w-6 h-6 rounded-full border border-krait-border bg-black/10 backdrop-blur-sm flex items-center justify-center text-text-tertiary hover:bg-white/10 transition-colors"
-                aria-label="Scroll to latest message"
-              >
-                <ChevronDown className="w-3 h-3" strokeWidth={3} />
-              </button>
-            </div>
-          )}
-
-          {/* Input area — continuous with conversation */}
-          <div className="shrink-0 pb-3 pt-1">
-            <div className="px-4">
-              <AiInput
-                value={input}
-                onChange={setInput}
-                onSend={() => handleSend()}
-                onKeyDown={e => handleKeyDown(e)}
-                isStreaming={isStreaming}
-                selectedModel={selectedModel}
-                onModelSelect={setSelectedModel}
-                showBanner={rateLimited}
-          models={modelsQuery.data?.models}
-                onStop={handleStop}
-                dailyUsage={dailyUsageQuery.data}
-                chatMode={chatMode}
-                onModeChange={setChatMode}
-              />
-            </div>
-            <p className="text-center text-[11px] text-text-tertiary mt-2.5 px-4">
-              AI can make mistakes. Verify critical code architectures.
-            </p>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

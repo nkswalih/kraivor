@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
+import aiohttp
+import contextlib
 import logging
 from datetime import datetime
-from xml.etree import ElementTree as ET
+from defusedxml import ElementTree as DefusedET
 
-import aiohttp
-
-from app.knowledge_engine.sources.base import SourceResult, SourceContent
-import contextlib
+from app.knowledge_engine.sources.base import SourceContent, SourceResult
 
 logger = logging.getLogger(__name__)
 
@@ -126,8 +125,9 @@ class NewsProvider:
                     return []
                 xml_text = await resp.text()
 
-            # Parse RSS
-            root = ET.fromstring(xml_text)
+            # Parse RSS. This is a third-party response, so it is untrusted
+            # input: a naive parser here is exposed to entity expansion.
+            root = DefusedET.fromstring(xml_text)
             items = root.findall(".//item")[:max_results]
 
             results = []

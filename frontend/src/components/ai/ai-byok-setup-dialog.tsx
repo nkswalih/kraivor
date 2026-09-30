@@ -16,6 +16,7 @@ import {
   RotateCw,
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
+import { AI_PROVIDERS, AI_PROVIDER_ORDER } from '@/constants/ai-providers';
 
 /* ─── Types ─────────────────────────────────────────────── */
 
@@ -34,18 +35,10 @@ interface ModelAssignment {
 }
 
 /* ─── Provider metadata ─────────────────────────────────── */
+// Canonical table lives in @/constants/ai-providers — edit it there, not here.
 
-const PROVIDERS: Record<string, { name: string; placeholder: string; color: string; docsUrl: string }> = {
-  anthropic: { name: 'Anthropic', placeholder: 'sk-ant-api03-...', color: '#D97757', docsUrl: 'https://console.anthropic.com/settings/keys' },
-  openai: { name: 'OpenAI', placeholder: 'sk-proj-...', color: '#10A37F', docsUrl: 'https://platform.openai.com/api-keys' },
-  google: { name: 'Google AI', placeholder: 'AIza...', color: '#4285F4', docsUrl: 'https://aistudio.google.com/apikey' },
-  deepseek: { name: 'DeepSeek', placeholder: 'sk-...', color: '#4D6BFE', docsUrl: 'https://platform.deepseek.com/api_keys' },
-  xai: { name: 'xAI', placeholder: 'xai-...', color: '#FFFFFF', docsUrl: 'https://console.x.ai/' },
-  groq: { name: 'Groq', placeholder: 'gsk_...', color: '#F55036', docsUrl: 'https://console.groq.com/keys' },
-  openrouter: { name: 'OpenRouter', placeholder: 'sk-or-v1-...', color: '#8B5CF6', docsUrl: 'https://openrouter.ai/keys' },
-};
-
-const PROVIDER_ORDER = ['anthropic', 'openai', 'google', 'groq', 'deepseek', 'xai', 'openrouter'];
+const PROVIDERS = AI_PROVIDERS;
+const PROVIDER_ORDER = AI_PROVIDER_ORDER;
 
 const MODEL_DISPLAY_NAMES: Record<string, string> = {
   'claude-fable-5': 'Claude Fable 5',

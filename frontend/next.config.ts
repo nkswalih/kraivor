@@ -1,5 +1,7 @@
 import type { NextConfig } from 'next';
 import createBundleAnalyzer from '@next/bundle-analyzer';
+// v11 moved the Next config wrapper to a dedicated subpath export.
+import { withSentryConfig } from '@sentry/nextjs/config';
 
 const withBundleAnalyzer = createBundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
@@ -38,4 +40,13 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withBundleAnalyzer(nextConfig);
+export default withBundleAnalyzer(
+  // Sentry must wrap the outermost so source maps and instrumentation apply.
+  // No-op when SENTRY_DSN is unset, so local/CI builds are unaffected.
+  withSentryConfig(nextConfig, {
+    silent: !process.env.SENTRY_DSN,
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+    widenClientFileUpload: true,
+  })
+);

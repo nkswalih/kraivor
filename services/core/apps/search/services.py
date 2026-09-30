@@ -345,17 +345,48 @@ def search_profiles(query: str, limit: int = 10) -> list[SearchResult]:
         return []
 
 
-def search_chat(query: str, workspace_id: str, limit: int = 10) -> list[SearchResult]:
+def _searchable_room_ids(
+    user_id: str | None, workspace_id: str, cap: int = 25
+) -> list[str]:
+    """
+    Room IDs the requesting user is allowed to search.
+
+    SECURITY: chat search must never enumerate rooms the caller is not in.
+    Rooms are user-centric — DM/GROUP/AI_CHAT have no workspace FK — so the
+    membership table (Room.v2_members) is the correct authorization boundary,
+    not Room.workspace.
+
+    `cap` bounds the number of sequential DynamoDB queries per search.
+    """
+    if not user_id:
+        return []
+    try:
+        from apps.chat.models import Room
+
+        rows = Room.objects.filter(v2_members__user_id=user_id).values_list(
+            "id", flat=True
+        )[:cap]
+        return [str(r) for r in rows]
+    except Exception as exc:
+        logger.warning("chat_room_scope_failed", extra={"error": str(exc)})
+        return []
+
+
+def search_chat(
+    query: str, workspace_id: str, user_id: str | None = None, limit: int = 10
+) -> list[SearchResult]:
     if len(query) < 2:
         return []
-    from apps.chat.dynamodb import ChatMessageRepository as DynamoDBRepository
+    from apps.chat.dynamodb import search_messages
 
     try:
-        repo = DynamoDBRepository()
-        rooms = repo.search_messages(query, limit=limit)
         results = []
-        for room_id, messages in rooms.items():
-            for msg in messages:
+        for room_id in _searchable_room_ids(user_id, workspace_id):
+            # NOTE: signature is search_messages(room_id, query, limit).
+            # Previously called as search_messages(query, limit=...) which
+            # passed the query as room_id and raised TypeError, silently
+            # swallowed by the except below — chat search never worked.
+            for msg in search_messages(room_id, query, limit=limit):
                 content = msg.get("content", "")
                 score = compute_relevance(content, query, 0.8)
                 results.append(
@@ -443,7 +474,7 @@ class SearchService:
                 )
             if scope in ("all", "chats"):
                 tasks["chat"] = executor.submit(
-                    search_chat, query, workspace_id, source_limit
+                    search_chat, query, workspace_id, user_id, source_limit
                 )
             if scope in ("all", "profiles"):
                 tasks["profile"] = executor.submit(search_profiles, query, source_limit)

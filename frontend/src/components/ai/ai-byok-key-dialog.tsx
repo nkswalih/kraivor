@@ -4,16 +4,9 @@ import { createPortal } from 'react-dom';
 import { useState, useRef, useEffect } from 'react';
 import { Key, X, Check, AlertTriangle, Loader2 } from 'lucide-react';
 import { aiApi, type ByokProvider } from '@/lib/api/ai-api';
+import { getProviderMeta, AI_PROVIDERS } from '@/constants/ai-providers';
 
-const PROVIDER_META: Record<string, { name: string; placeholder: string; color: string }> = {
-  anthropic: { name: 'Anthropic', placeholder: 'sk-ant-api03-...', color: '#D97757' },
-  openai: { name: 'OpenAI', placeholder: 'sk-proj-...', color: '#10A37F' },
-  google: { name: 'Google AI', placeholder: 'AIza...', color: '#4285F4' },
-  deepseek: { name: 'DeepSeek', placeholder: 'sk-...', color: '#4D6BFE' },
-  xai: { name: 'xAI (Grok)', placeholder: 'xai-...', color: '#FFFFFF' },
-  groq: { name: 'Groq', placeholder: 'gsk_...', color: '#F55036' },
-  openrouter: { name: 'OpenRouter', placeholder: 'sk-or-v1-...', color: '#8B5CF6' },
-};
+// Canonical table lives in @/constants/ai-providers — edit it there, not here.
 
 interface ByokKeyDialogProps {
   provider: string;
@@ -27,7 +20,7 @@ export function ByokKeyDialog({ provider, onClose, onSave }: ByokKeyDialogProps)
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const meta = PROVIDER_META[provider] || { name: provider, placeholder: 'API key', color: '#888' };
+  const meta = getProviderMeta(provider);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -203,7 +196,7 @@ export function ApiKeysPanel({ onClose, onEdit }: ApiKeysPanelProps) {
     }
   };
 
-  const providers = Object.entries(PROVIDER_META);
+  const providers = Object.entries(AI_PROVIDERS);
 
   return createPortal(
     <div className="fixed inset-0 z-[2147483647] flex items-center justify-center">

@@ -59,3 +59,10 @@ repos:
       - id: bandit
         args: [-r, -x, tests]
         exclude: ^tests/
+
+  # Secret scanning. `.env` and `.keys/` are gitignored, but nothing stopped a
+  # credential being pasted into a tracked file. This hook blocks the commit.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks

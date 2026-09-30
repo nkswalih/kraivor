@@ -142,8 +142,9 @@ services:
       SECURE_SSL_REDIRECT: "false"
       DB_HOST: postgres
       DB_PORT: 5432
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
     depends_on:
       postgres:
         condition: service_healthy
@@ -185,7 +186,9 @@ services:
       DJANGO_SETTINGS_MODULE: core.settings.production
       DB_HOST: postgres
       DB_PORT: 5432
-      REDIS_HOST: redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
       DYNAMODB_LOCAL: "true"
       DYNAMODB_ENDPOINT: http://dynamodb-local:8000
@@ -226,9 +229,13 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: postgres
-      REDIS_HOST: redis
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9094
+      ANALYSIS_DATABASE__URL: postgresql+asyncpg://${POSTGRES_USER:-kraivor}:${POSTGRES_PASSWORD:-kraivor}@postgres:5432/${POSTGRES_DB:-kraivor}
+      ANALYSIS_REDIS__URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      ANALYSIS_CELERY__BROKER__URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      ANALYSIS_CELERY__RESULT__BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      ANALYSIS_KAFKA__BOOTSTRAP__SERVERS: kafka:9094
+      ANALYSIS_IDENTITY__JWKS__URL: http://identity:8001/.well-known/jwks.json
+      ANALYSIS_JWT__INTERNAL_REQUEST_SECRET: ${INTERNAL_REQUEST_TOKEN}
     depends_on:
       postgres:
         condition: service_healthy
@@ -262,9 +269,15 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: postgres
-      REDIS_HOST: redis
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9094
+      AI_DATABASE__URL: postgresql+asyncpg://${POSTGRES_USER:-kraivor}:${POSTGRES_PASSWORD:-kraivor}@postgres:5432/${POSTGRES_DB:-kraivor}
+      AI_REDIS__URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      AI_CELERY__BROKER__URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      AI_CELERY__RESULT__BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      AI_KAFKA__BOOTSTRAP__SERVERS: kafka:9094
+      AI_IDENTITY__JWKS__URL: http://identity:8001/.well-known/jwks.json
+      AI_OPENROUTER__MASTER__KEY: ${OPENROUTER_API_KEY}
+      AI_KEY_ENCRYPTION_KEY: ${AI_KEY_ENCRYPTION_KEY}
+      AI_INTERNAL_REQUEST_SECRET: ${INTERNAL_REQUEST_TOKEN}
     depends_on:
       postgres:
         condition: service_healthy
@@ -304,7 +317,9 @@ services:
       DJANGO_SETTINGS_MODULE: core.settings.production
       DB_HOST: postgres
       DB_PORT: 5432
-      REDIS_HOST: redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
     depends_on:
       postgres:
@@ -332,7 +347,9 @@ services:
       DJANGO_SETTINGS_MODULE: core.settings.production
       DB_HOST: postgres
       DB_PORT: 5432
-      REDIS_HOST: redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
     depends_on:
       postgres:
@@ -360,7 +377,9 @@ services:
       DJANGO_SETTINGS_MODULE: core.settings.production
       DB_HOST: postgres
       DB_PORT: 5432
-      REDIS_HOST: redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
     depends_on:
       postgres:

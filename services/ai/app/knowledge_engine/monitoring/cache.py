@@ -141,9 +141,11 @@ class KnowledgeCache:
             params = {"ws": workspace_id}
 
         async with async_session_factory() as session:
+            # `where` is one of two fixed literals chosen by `if cache_type`
+            # above. workspace_id and cache_type are bound, not interpolated.
             result = await session.execute(text(f"""
                 DELETE FROM ai.knowledge_cache WHERE {where}
-            """), params)
+            """), params)  # nosec B608
             await session.commit()
             return result.rowcount
 

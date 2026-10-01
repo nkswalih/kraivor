@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Loader2, Shield } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
@@ -66,12 +67,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span className="text-[12px] text-text-tertiary">{adminInfo.email}</span>
           </div>
         )}
-        <a
+        <Link
           href="/"
           className="text-[12px] text-text-tertiary hover:text-text-secondary transition-colors"
         >
           Back to app
-        </a>
+        </Link>
       </header>
 
       {/* Content */}

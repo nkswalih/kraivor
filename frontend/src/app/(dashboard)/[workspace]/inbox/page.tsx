@@ -71,7 +71,11 @@ export default function InboxPage() {
         seen.add(token);
         items.push({
           id: inv.id,
-          workspaceName: (inv as any).workspace_name ?? 'Unknown',
+          // `WorkspaceInvitation.workspace_name` is always present: the
+          // serializer sources it from a non-nullable FK to a non-null
+          // CharField, so the old `as any` cast and its `?? 'Unknown'`
+          // fallback were both unreachable.
+          workspaceName: inv.workspace_name,
           role: inv.role,
           token,
         });

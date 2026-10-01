@@ -228,3 +228,25 @@ explicit = true
 torch = [
     { index = "pytorch-cpu" },
 ]
+
+# ── uv: stanza security override ─────────────────────────────────────────────
+# argostranslate 1.11.0 (its latest release) hard-pins `stanza==1.10.1`, which
+# is vulnerable to remote code execution via pickle deserialization when
+# loading model files:
+#
+#   GHSA-v5jw-96jm-7h2c / CVE-2026-54499 / PYSEC-2026-3075 — fixed in 1.12.2
+#
+# stanza is not optional here: argostranslate's settings default
+# ARGOS_STANZA_AVAILABLE to on, and translate.py uses `stanza.Pipeline` for
+# sentence-boundary detection. That call is a stable public API across
+# 1.10 → 1.15, so overriding the pin is safe in the way that matters.
+#
+# Pinned to 1.12.2 rather than latest: it is the first patched release, so it
+# is the smallest jump away from the version argostranslate was tested with.
+#
+# Remove this override when argostranslate ships a release that allows a
+# patched stanza. Delete the matching --ignore-vuln in .github/workflows/ci.yml
+# at the same time; it exists only for this advisory.
+[tool.uv]
+override-dependencies = ["stanza==1.12.2"]
+

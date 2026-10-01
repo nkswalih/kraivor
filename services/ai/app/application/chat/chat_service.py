@@ -234,6 +234,7 @@ class ChatService:
                         model=model,
                     ),
                 )
+                assistant_msg = None
                 if response:
                     assistant_msg = await save_message(
                         db,
@@ -251,7 +252,8 @@ class ChatService:
                 await update_conversation_after_message(
                     db,
                     conversation_id,
-                    last_message_ts=assistant_msg.created_at if response else None,
+                    # assistant_msg is None when the model returned nothing.
+                    last_message_ts=assistant_msg.created_at if assistant_msg else None,
                     title=message[:80],
                     model=usage.get("model", model),
                     input_tokens=usage.get("input_tokens", 0),
@@ -482,6 +484,7 @@ class ChatService:
                         model=model,
                     ),
                 )
+                assistant_msg = None
                 if assistant_response:
                     assistant_msg = await save_message(
                         db,

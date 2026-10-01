@@ -171,6 +171,25 @@ class MultiModalIngester:
                 return await self._ingest_image(file_bytes, filename, workspace_id, user_id, tags, language)
             elif content_type == "audio":
                 return await self._ingest_audio(file_bytes, filename, workspace_id, user_id, tags, language)
+            else:
+                # Every value in MIME_TYPE_MAP and EXTENSION_MAP currently maps
+                # to one of the three branches above, so this is unreachable
+                # today. It stays because those maps are the extension point:
+                # adding a type there without a handler here would otherwise
+                # fall off the end of the function and return None, and the
+                # router dereferences result.success -> AttributeError -> 500.
+                logger.error(
+                    "No ingestion handler for content type %r (mime=%r filename=%r)",
+                    content_type,
+                    mime_type,
+                    filename,
+                )
+                return IngestionResult(
+                    success=False,
+                    source_type="unknown",
+                    content_type=content_type,
+                    error=f"No handler for content type: {content_type}",
+                )
         except Exception as e:
             logger.error("Ingestion failed for %s: %s", filename, e, exc_info=True)
             return IngestionResult(

@@ -30,8 +30,8 @@ class PhpParser(AbstractParser):
         r"Route::(?:get|post|put|patch|delete|options|any|match|resource|group|redirect|permanentRedirect|view)\([\"']([^\"']+)[\"']"
     )
     _SYMFONY_ROUTE = re.compile(r"#\[Route\([\"']([^\"']+)[\"']")
-    _USE_IMPORT = re.compile(r"use\s+([\w\\\\]+)(?:\s+as\s+(\w+))?\s*;")
-    _NAMESPACE = re.compile(r"namespace\s+([\w\\\\]+)\s*;")
+    _USE_IMPORT = re.compile(r"use\s+([\w\\]+)(?:\s+as\s+(\w+))?\s*;")
+    _NAMESPACE = re.compile(r"namespace\s+([\w\\]+)\s*;")
     _ATTRIBUTE = re.compile(r"#\[(\w+(?:\([^)]*\))?)\]")
     _COMPLEXITY_KW = re.compile(
         r"\b(?:if|elseif|for|foreach|while|switch|case|catch)\b"

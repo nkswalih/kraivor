@@ -61,22 +61,25 @@ def highlight_text(text: str, query: str) -> str:
 
 
 def compute_relevance(text: str, query: str, type_score: float = 1.0) -> float:
+    """Score how well `text` matches `query`, scaled by `type_score`.
+
+    Three tiers, best first: prefix match (1.0), substring match (0.7),
+    otherwise a character-overlap ratio capped at 0.4 so a fuzzy hit can
+    never outrank a real substring match.
+    """
     if not text or not query:
         return 0.0
     lower_text = text.lower()
     lower_query = query.lower()
-    score = 0.0
     if lower_text.startswith(lower_query):
-        score = 1.0
-    elif lower_query in lower_text:
-        score = 0.7
-    else:
-        isimilar = 0
-        for ch in lower_query:
-            if ch in lower_text:
-                isimilar += 1
-        score = (isimilar / max(len(lower_query), 1)) * 0.4
-    return score * type_score
+        return 1.0 * type_score
+    if lower_query in lower_text:
+        return 0.7 * type_score
+    # No clean match: fall back to counting how many of the query's
+    # characters appear anywhere in the text. len(lower_query) is >= 1 here
+    # because the empty-query case returned above, so max() is belt-and-braces.
+    isimilar = sum(1 for ch in lower_query if ch in lower_text)
+    return (isimilar / max(len(lower_query), 1)) * 0.4 * type_score
 
 
 def _build_url(workspace_id: str, *segments: str) -> str:

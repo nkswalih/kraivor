@@ -211,20 +211,19 @@ class SignInIdentifyView(APIView):
                 extra={"retry_after": retry_after},
             ).to_response()
 
-        try:
-            user = User.objects.get(email__iexact=email, is_active=True)
-            user_exists = True
-            email_verified = user.email_verified
-        except User.DoesNotExist:
-            user_exists = False
-            email_verified = False
+        # filter().first() rather than get() in a try/except: the original set
+        # `user_exists` and `email_verified` as a pair inside the try and again
+        # in the handler, which meant three variables tracked one fact. If no
+        # active user matches, this endpoint must not reveal that to an
+        # unauthenticated caller any differently than a signup prompt does.
+        user = User.objects.filter(email__iexact=email, is_active=True).first()
 
-        if not user_exists:
+        if user is None:
             return Response(
                 {"next_step": "signup", "user_exists": False, "email_verified": False}
             )
 
-        if not email_verified:
+        if not user.email_verified:
             return Response(
                 {
                     "next_step": "verify_email",
@@ -561,6 +560,12 @@ class RefreshTokenView(APIView):
         user_agent = request.META.get("HTTP_USER_AGENT", "")
         token_service = get_token_service()
 
+        # Bound before the try so the replay-detection log below can report
+        # the user id when validation got far enough to resolve one. The old
+        # `"user" in locals()` check was both fragile and a lie: locals()
+        # would also contain a stale `user` from an enclosing scope.
+        user = None
+
         try:
             user, tokens = token_service.validate_and_rotate(
                 refresh_token=refresh_token, ip_address=ip, user_agent=user_agent
@@ -588,7 +593,7 @@ class RefreshTokenView(APIView):
             logger.error(
                 "replay_attack_detected",
                 extra={
-                    "user_id": str(user.id) if "user" in locals() else "unknown",
+                    "user_id": str(user.id) if user is not None else "unknown",
                     "ip": ip,
                     "error": str(e),
                 },

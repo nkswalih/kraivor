@@ -750,6 +750,16 @@ class TestInvitationService:
             ).count()
             == 1
         )
+        # The idempotent path returns the *existing* member rather than
+        # creating a second row, and still marks the invitation accepted.
+        # These two return values were previously unpacked and ignored, so
+        # the "return success" claim in this test's docstring was never
+        # actually checked.
+        assert member.user_id == member_id
+        assert member.workspace_id == workspace_with_members.id
+        assert returned_inv.is_accepted is True
+        returned_inv.refresh_from_db()
+        assert returned_inv.is_accepted is True
 
     def test_revoke_invitation(self, workspace, owner_id, admin_id, mock_events):
         WorkspaceMember.objects.create(

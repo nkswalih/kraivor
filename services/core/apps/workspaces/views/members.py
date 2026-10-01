@@ -24,6 +24,7 @@ from apps.workspaces.services import (
     WorkspacePermissionError,
     WorkspaceService,
 )
+from core.exceptions import log_and_raise
 
 from .workspaces import WorkspaceDetailView
 
@@ -41,7 +42,9 @@ def _resolve_member_users(member_data: list[dict]) -> dict[str, dict]:
         resp = requests.post(
             endpoint,
             json={"user_ids": user_ids},
-            headers={settings.INTERNAL_REQUEST_HEADER: settings.INTERNAL_REQUEST_SECRET},
+            headers={
+                settings.INTERNAL_REQUEST_HEADER: settings.INTERNAL_REQUEST_SECRET
+            },
             timeout=5,
         )
         if resp.status_code == 200:
@@ -102,9 +105,21 @@ class MemberListCreateView(WorkspaceDetailView):
                 role=validated["role"],
             )
         except WorkspacePermissionError as exc:
-            raise PermissionDenied(str(exc)) from exc
+            log_and_raise(
+                exc,
+                str(exc),
+                PermissionDenied,
+                log_message="workspace.invite_permission_denied",
+                log_extra={"actor_id": request.user_id},
+            )
         except (WorkspaceLimitError, InvitationError) as exc:
-            raise ValidationError({"detail": str(exc)}) from exc
+            log_and_raise(
+                exc,
+                str(exc),
+                ValidationError,
+                log_message="workspace.invite_rejected",
+                log_extra={"actor_id": request.user_id},
+            )
 
         return Response(
             WorkspaceInvitationSerializer(
@@ -143,7 +158,13 @@ class MemberDetailView(WorkspaceDetailView):
                 new_role=serializer.validated_data["role"],
             )
         except WorkspacePermissionError as exc:
-            raise PermissionDenied(str(exc)) from exc
+            log_and_raise(
+                exc,
+                str(exc),
+                PermissionDenied,
+                log_message="workspace.mutate_permission_denied",
+                log_extra={"actor_id": request.user_id},
+            )
         except WorkspaceNotFoundError as exc:
             raise NotFound("Member not found.") from exc
 
@@ -168,7 +189,13 @@ class MemberDetailView(WorkspaceDetailView):
                 target_user_id=target_user_id,
             )
         except WorkspacePermissionError as exc:
-            raise PermissionDenied(str(exc)) from exc
+            log_and_raise(
+                exc,
+                str(exc),
+                PermissionDenied,
+                log_message="workspace.mutate_permission_denied",
+                log_extra={"actor_id": request.user_id},
+            )
         except WorkspaceNotFoundError as exc:
             raise NotFound("Member not found.") from exc
 

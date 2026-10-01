@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.workspaces.permissions import IsAuthenticated
+from core.exceptions import log_and_raise
 
 if TYPE_CHECKING:
     from apps.workspaces.models import Workspace
@@ -76,11 +77,33 @@ class RepositoryListView(WorkspaceContextMixin, APIView):
                 **serializer.validated_data,
             )
         except RepositoryPermissionError as exc:
-            raise PermissionDenied(str(exc)) from exc
+            log_and_raise(
+                exc,
+                str(exc),
+                PermissionDenied,
+                log_message="repository.connect_permission_denied",
+                log_extra={"workspace_pk": workspace_pk, "actor_id": request.user_id},
+            )
         except RepositoryAlreadyConnectedError as exc:
-            raise ValidationError({"detail": str(exc)}) from exc
+            log_and_raise(
+                exc,
+                str(exc),
+                ValidationError,
+                log_message="repository.connect_already_connected",
+                log_extra={"workspace_pk": workspace_pk, "actor_id": request.user_id},
+            )
         except (GitHubAPIError, GitHubAuthError) as exc:
-            raise ValidationError({"detail": f"GitHub error: {exc}"}) from exc
+            # GitHubAPIError/GitHubAuthError carry requests' own exception text
+            # and up to 200 characters of the upstream response body, so
+            # str(exc) is not safe to hand back. Full detail goes to the log;
+            # the client gets a stable message.
+            log_and_raise(
+                exc,
+                "Could not reach GitHub. Please try again later.",
+                ValidationError,
+                log_message="repository.connect_github_error",
+                log_extra={"workspace_pk": workspace_pk, "actor_id": request.user_id},
+            )
         return Response(RepositorySerializer(repo).data, status=status.HTTP_201_CREATED)
 
 
@@ -119,9 +142,21 @@ class RepositoryDetailView(WorkspaceContextMixin, APIView):
                 repository_id=repo_id, workspace=workspace, actor_id=request.user_id
             )
         except RepositoryPermissionError as exc:
-            raise PermissionDenied(str(exc)) from exc
+            log_and_raise(
+                exc,
+                str(exc),
+                PermissionDenied,
+                log_message="repository.disconnect_permission_denied",
+                log_extra={"repo_id": repo_id, "actor_id": request.user_id},
+            )
         except RepositoryNotFoundError as exc:
-            raise NotFound(str(exc)) from exc
+            log_and_raise(
+                exc,
+                str(exc),
+                NotFound,
+                log_message="repository.disconnect_not_found",
+                log_extra={"repo_id": repo_id, "actor_id": request.user_id},
+            )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

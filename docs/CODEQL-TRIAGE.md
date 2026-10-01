@@ -193,6 +193,64 @@ assert both that the failing call was attempted and that the original
 became `assertGreater(len(state), 20)`, which reports both values on
 failure.
 
+## Found while reviewing, not flagged by CodeQL
+
+Two defects surfaced while reading the code the alerts pointed at. Neither
+has a CodeQL rule, so neither is in the 416.
+
+### Silently discarded a malformed `AI_KEY_ENCRYPTION_KEY`
+
+`services/ai/app/core/encryption.py`:
+
+```python
+if len(key_bytes) not in (32, 44):
+    key_bytes = Fernet.generate_key()
+```
+
+A present-but-wrong-length key produced a **different encrypter on every
+process start**. Every provider sub-key encrypted under the bad key became
+permanently unreadable, and nothing raised. The length check was also wrong
+in the other direction: a 32-byte raw key passed it and then failed inside
+`Fernet` with an opaque message.
+
+Now the malformed key raises, naming the cause.
+
+The remediation hint was wrong too, and in `.env.example` as well as in the
+error it replaced:
+
+```
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+`token_hex(32)` emits 64 hex characters. `Fernet` requires 32 bytes of
+url-safe base64 — 44 characters. Following the documented instructions
+produced a key that `Fernet` rejects outright, so the service could not
+have booted with the key the docs told you to generate. Corrected to
+`Fernet.generate_key().decode()` in all three places.
+
+Two other places assumed a key format that `Fernet` rejects, so a dev stack
+or a fresh setup failed in a way that pointed nowhere useful:
+
+- `.env.example` documented the same `token_hex(32)` command and shipped
+  `AI_KEY_ENCRYPTION_KEY=your-32-byte-hex-encryption-key` as the placeholder.
+  That literal is 36 characters of non-base64 text and is rejected too.
+- `docker-compose.dev.yml` defaulted to `dev-encryption-key-32chars!` (27
+  characters, despite the name). Since `encryption.py` regenerated on a
+  length mismatch, the worker and web container each got a *different*
+  random key, so a sub-key stored by one could not be read by the other.
+  Replaced with a valid 44-character base64 default, commented as a public
+  dev-only value. `docker-compose.yml` already required a real key with no
+  default.
+
+Covered by `services/ai/tests/test_encryption.py` (8 cases).
+
+### A test that asserted nothing
+
+`apps/notifications/tests/test_tasks.py::test_dispatch_retries_on_failure`
+wrapped the entire call in `except Exception: pass`, so it passed whether or
+not the retry worked. Rewritten to assert that the failing call was attempted
+exactly once and that the original `Exception("DB error")` propagates.
+
 ## Reviewed and dismissed
 
 ### `weak-sensitive-data-hashing` (1)

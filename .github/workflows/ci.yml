@@ -138,6 +138,18 @@ jobs:
       # not carry, so `pip-audit` cannot resolve it and aborts with
       # "Dependency not found on PyPI" instead of reporting a result. Auditing
       # the rest of the lock is still worth doing.
+      #
+      # `--disable-pip` is load-bearing, not a convenience. `uv export` emits
+      # `stanza==1.12.2` because pyproject.toml overrides argostranslate's
+      # `stanza==1.10.1` pin (GHSA-v5jw-96jm-7h2c, CVE-2026-54499). pip's
+      # resolver reads both pins and reports ResolutionImpossible, so the audit
+      # dies installing instead of reporting a result. `--disable-pip` skips the
+      # install and audits the exported pins directly, which is what we want:
+      # `uv export --no-dev` is already a complete transitive pin set, so
+      # `--no-deps` loses no coverage.
+      #
+      # Verified this way: with stanza pinned back to 1.10.1 in the audited file
+      # this reports "Found 2 known vulnerabilities in 1 package" and exits 1.
       - name: Dependency audit (pip-audit, torch excluded)
         if: matrix.service == 'ai'
         run: |
@@ -157,7 +169,8 @@ jobs:
               kept.append(line)
           open(dst, "w", encoding="utf-8").writelines(kept)
           PY
-          uv run pip-audit --strict --progress-spinner off --no-deps \
+          uv run pip-audit --strict --progress-spinner off \
+            --no-deps --disable-pip \
             -r /tmp/req-no-torch.txt
 
   unit-tests:

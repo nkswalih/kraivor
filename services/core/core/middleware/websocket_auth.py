@@ -56,12 +56,6 @@ class JWTAuthMiddleware(BaseMiddleware):
 
         try:
             payload = await database_sync_to_async(self._verify_token)(token)
-            scope["user_id"] = payload.get("sub") or payload.get("user_id")
-            scope["user_name"] = payload.get("name") or payload.get("email", "")
-            scope["email"] = payload.get("email")
-            scope["workspace_ids"] = payload.get("workspace_ids", [])
-            scope["roles"] = payload.get("roles", {})
-            scope["jwt_payload"] = payload
         except jwt.ExpiredSignatureError:
             logger.warning("websocket.auth.token_expired")
             await send({"type": "websocket.close", "code": 4002})
@@ -74,6 +68,27 @@ class JWTAuthMiddleware(BaseMiddleware):
             logger.error("websocket.auth.error: %s", exc, exc_info=True)
             await send({"type": "websocket.close", "code": 4001})
             return
+
+        # A signature-valid token carrying no subject identifies nobody. The
+        # previous code stored `payload.get("sub") or payload.get("user_id")`
+        # unconditionally, so such a token produced scope["user_id"] = None and
+        # the handshake was allowed through. Every consumer happens to re-check
+        # `if not self.user_id` and close 4001 itself, but that put the
+        # authorization decision in four consumers instead of one place, and a
+        # consumer that did not re-check would have accepted an anonymous
+        # socket. Reject here instead.
+        user_id = payload.get("sub") or payload.get("user_id")
+        if not user_id:
+            logger.warning("websocket.auth.no_subject")
+            await send({"type": "websocket.close", "code": 4001})
+            return
+
+        scope["user_id"] = user_id
+        scope["user_name"] = payload.get("name") or payload.get("email", "")
+        scope["email"] = payload.get("email")
+        scope["workspace_ids"] = payload.get("workspace_ids", [])
+        scope["roles"] = payload.get("roles", {})
+        scope["jwt_payload"] = payload
 
         return await super().__call__(scope, receive, send)
 

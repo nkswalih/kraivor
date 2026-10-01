@@ -9,6 +9,7 @@ import {
   useCallback,
   useEffect,
 } from 'react';
+import type { ComponentProps } from 'react';
 
 function extractText(node: unknown): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node);
@@ -176,7 +177,7 @@ export const MarkdownTable = memo(function MarkdownTable({ children }: MarkdownT
   );
 });
 
-export const MarkdownTHead = memo(function MarkdownTHead(props: any) {
+export const MarkdownTHead = memo(function MarkdownTHead(props: ComponentProps<'thead'>) {
   return (
     <thead
       className="sticky top-0 z-20 bg-krait-surface3"
@@ -185,13 +186,13 @@ export const MarkdownTHead = memo(function MarkdownTHead(props: any) {
   );
 });
 
-export const MarkdownTBody = memo(function MarkdownTBody(props: any) {
+export const MarkdownTBody = memo(function MarkdownTBody(props: ComponentProps<'tbody'>) {
   return (
     <tbody className="divide-y divide-krait-border align-top" {...props} />
   );
 });
 
-export const MarkdownTR = memo(function MarkdownTR(props: any) {
+export const MarkdownTR = memo(function MarkdownTR(props: ComponentProps<'tr'>) {
   return (
     <tr
       className="even:bg-krait-surface1/30 hover:bg-krait-surface3/[0.35] transition-colors duration-100"
@@ -200,7 +201,7 @@ export const MarkdownTR = memo(function MarkdownTR(props: any) {
   );
 });
 
-export const MarkdownTH = memo(function MarkdownTH(props: any) {
+export const MarkdownTH = memo(function MarkdownTH(props: ComponentProps<'th'>) {
   return (
     <th
       className="px-4 py-3 text-left text-[11px] font-semibold text-text-primary uppercase tracking-wider border-r border-krait-border/40 last:border-r-0"
@@ -209,7 +210,7 @@ export const MarkdownTH = memo(function MarkdownTH(props: any) {
   );
 });
 
-export const MarkdownTD = memo(function MarkdownTD({ children, ...rest }: any) {
+export const MarkdownTD = memo(function MarkdownTD({ children, ...rest }: ComponentProps<'td'>) {
   return (
     <td
       className="px-4 py-3 text-[13px] text-text-secondary leading-relaxed border-r border-krait-border/40 last:border-r-0"

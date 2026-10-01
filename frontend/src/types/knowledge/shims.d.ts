@@ -1,14 +1,13 @@
-declare module 'react-markdown' {
-  import type { ComponentType, ReactNode } from 'react';
-  interface ReactMarkdownProps {
-    children?: string;
-    className?: string;
-        components?: Record<string, ComponentType<any>>;
-    [key: string]: unknown;
-  }
-  const ReactMarkdown: ComponentType<ReactMarkdownProps>;
-  export default ReactMarkdown;
-}
+// Ambient fallbacks for packages whose published types do not resolve under
+// this project's `moduleResolution: "bundler"`.
+//
+// The `react-markdown` shim that used to live here was deleted, and that was the
+// single change that made `import type { Components } from 'react-markdown'`
+// resolve. An ambient `declare module 'react-markdown'` *replaces* the package's
+// own types rather than augmenting them, so the real `Components` type was
+// invisible and every element override had to be typed `any`. Keeping a shim
+// for a package that ships types silently discards them -- check
+// `node_modules/<pkg>/package.json` for a `types` field before adding one.
 
 declare module '@monaco-editor/react' {
   import type { ComponentType } from 'react';

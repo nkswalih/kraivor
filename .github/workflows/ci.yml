@@ -348,6 +348,14 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      # `next build` runs ESLint as a gate, so this is the only step that
+      # catches a lint *error* -- typecheck and vitest both pass with lint
+      # errors present. frontend/Dockerfile runs the same command, so without
+      # this step the production image was the first place a lint error could
+      # fail, and it did.
+      - name: Production build
+        run: npm run build
+
   dependency-audit:
     name: Dependency Audit (npm)
     runs-on: ubuntu-latest

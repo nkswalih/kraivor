@@ -126,7 +126,9 @@ export function ExploreContent() {
     return (
       <div className="text-center py-16">
         <Search className="w-12 h-12 text-muted-foreground/40 mx-auto mb-4" />
-        <h3 className="text-[15px] font-medium text-foreground mb-1">No results for "{debounced}"</h3>
+        <h3 className="text-[15px] font-medium text-foreground mb-1">
+          No results for &quot;{debounced}&quot;
+        </h3>
         <p className="text-[13px] text-muted-foreground">
           Try different keywords or check the spelling.
         </p>

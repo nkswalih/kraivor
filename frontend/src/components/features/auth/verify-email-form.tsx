@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks';
+import { isApiError } from '@/lib/api';
 import { ROUTES } from '@/constants';
 
 export function VerifyEmailForm() {
@@ -38,12 +39,21 @@ export function VerifyEmailForm() {
       setMessage('Email verified successfully! Redirecting to login...');
       setTimeout(() => router.push(ROUTES.LOGIN), 2000);
     } catch (err: unknown) {
-      if ((err as any)?.errorCode === 'token_expired') {
+      // `handleApiError` sets `message` to a generic per-status string, so the
+      // previous `(err as any)?.message || 'Invalid verification token.'` could
+      // never reach its own fallback and the user was told "Please check your
+      // input" no matter what the service actually said. The service-specific
+      // `errorCode` is the part that distinguishes the cases worth calling out.
+      const errorCode = isApiError(err) ? err.errorCode : undefined;
+      if (errorCode === 'token_expired') {
         setStatus('expired');
         setMessage('Your verification link has expired.');
+      } else if (errorCode === 'invalid_token' || errorCode === 'missing_token') {
+        setStatus('error');
+        setMessage('Invalid verification token.');
       } else {
         setStatus('error');
-        setMessage((err as any)?.message || 'Invalid verification token.');
+        setMessage('We could not verify your email. Please request a new link.');
       }
     }
   };

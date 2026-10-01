@@ -519,10 +519,13 @@ class ProfileUploadView(APIView):  # pragma: no cover
             if not url.startswith(("http://", "https://")):
                 url = request.build_absolute_uri(url)
             return Response({"url": url, "key": saved_path})
-        except Exception as e:
+        except Exception:
+            # str(e) from an arbitrary exception carries internal detail —
+            # bucket names, object keys, SDK internals. Log it, return a
+            # generic message.
             logger.exception("Failed to upload %s for user %s", field, uid)
             return Response(
-                {"detail": f"Upload failed: {e}"},
+                {"detail": "Upload failed."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

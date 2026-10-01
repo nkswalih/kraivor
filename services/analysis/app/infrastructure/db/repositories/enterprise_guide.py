@@ -11,8 +11,13 @@ class EnterpriseGuideRepository:
         self._session = session
 
     async def save(self, guide: dict[str, object]) -> None:
-        model = EnterpriseGuideModel(**guide)
-        model = await self._session.merge(model)
+        # merge() adds the instance to the session and returns a *different*
+        # persistent one carrying values the transient one lacks (defaults,
+        # server-side columns). The original code rebound `model` to that
+        # return value and then never read it, which read as though the
+        # returned object were the thing being persisted. It is not — the
+        # flush below is. Don't bind what you don't use.
+        await self._session.merge(EnterpriseGuideModel(**guide))
         await self._session.flush()
 
     async def get_by_job(self, job_id: UUID) -> dict[str, object] | None:

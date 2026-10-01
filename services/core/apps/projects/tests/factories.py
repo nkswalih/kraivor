@@ -24,8 +24,8 @@ class ProjectFactory(factory.django.DjangoModelFactory):
     description = "Test project description"
     status = ProjectStatus.ACTIVE
     visibility = "workspace"
-    owner_id = factory.LazyFunction(lambda: uuid.uuid4())
-    created_by = factory.LazyFunction(lambda: uuid.uuid4())
+    owner_id = factory.LazyFunction(uuid.uuid4)
+    created_by = factory.LazyFunction(uuid.uuid4)
 
 
 class TaskFactory(factory.django.DjangoModelFactory):
@@ -40,8 +40,8 @@ class TaskFactory(factory.django.DjangoModelFactory):
     status = TaskStatus.BACKLOG
     priority = TaskPriority.MEDIUM
     task_type = TaskType.FEATURE
-    reporter_id = factory.LazyFunction(lambda: uuid.uuid4())
-    created_by = factory.LazyFunction(lambda: uuid.uuid4())
+    reporter_id = factory.LazyFunction(uuid.uuid4)
+    created_by = factory.LazyFunction(uuid.uuid4)
     position = factory.Sequence(lambda n: float(n * 1000))
 
 
@@ -54,4 +54,4 @@ class TaskLinkFactory(factory.django.DjangoModelFactory):
     source_task = factory.SubFactory(TaskFactory)
     target_task = factory.SubFactory(TaskFactory)
     relationship_type = TaskLinkType.BLOCKS
-    created_by = factory.LazyFunction(lambda: uuid.uuid4())
+    created_by = factory.LazyFunction(uuid.uuid4)

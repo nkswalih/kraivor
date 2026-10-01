@@ -27,18 +27,28 @@ end
 """
 
 
-async def check_rate_limit(request: Request) -> None:
-    user_id = getattr(request.state, "user_id", "anonymous")
-    key = f"ratelimit:ai:{user_id}"
+async def enforce_rate_limit(
+    user_id: str,
+    action: str,
+    *,
+    max_requests: int = 60,
+    window_seconds: int = 60,
+) -> None:
+    """Apply the sliding-window limit for one action. Raises HTTPException.
+
+    Split out of :func:`check_rate_limit` so routes with their own budgets
+    can call it directly instead of only via dependency injection. The
+    `action` becomes part of the Redis key, so limits on different actions
+    do not consume a shared budget.
+    """
+    key = f"ratelimit:ai:{action}:{user_id}"
     now = time.time()
-    window = 60
-    limit = 60
 
     if settings.redis__url:
         try:
             r = await get_redis()
             allowed, count, max_limit = await r.eval(
-                LUA_SLIDING_WINDOW, 1, key, now, window, limit
+                LUA_SLIDING_WINDOW, 1, key, now, window_seconds, max_requests
             )
             if not allowed:
                 raise HTTPException(
@@ -46,7 +56,7 @@ async def check_rate_limit(request: Request) -> None:
                     detail={
                         "error": "rate_limit_exceeded",
                         "message": f"Rate limit exceeded. {count}/{max_limit} requests used.",
-                        "retry_after": window,
+                        "retry_after": window_seconds,
                     },
                 )
         except HTTPException:
@@ -60,3 +70,9 @@ async def check_rate_limit(request: Request) -> None:
                     "message": "Rate limiting service unavailable. Please try again later.",
                 },
             ) from None
+
+
+async def check_rate_limit(request: Request) -> None:
+    """FastAPI dependency applying the default per-user AI limit."""
+    user_id = getattr(request.state, "user_id", "anonymous")
+    await enforce_rate_limit(user_id, "default")

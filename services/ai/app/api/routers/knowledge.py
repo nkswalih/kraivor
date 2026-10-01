@@ -1,12 +1,13 @@
 """Knowledge API router — endpoints for knowledge ingestion, search, and stats."""
 
+import logging
 import time
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.dependencies.auth import JWTPayload, get_current_user
-from app.api.dependencies.rate_limiter import check_rate_limit
+from app.api.dependencies.rate_limiter import check_rate_limit, enforce_rate_limit
 from app.api.schemas.knowledge import (
     KnowledgeIndexRequest,
     KnowledgeIndexResponse,
@@ -95,6 +96,8 @@ CurrentUser = Annotated[JWTPayload, Depends(get_current_user)]
 RateLimit = Annotated[None, Depends(check_rate_limit)]
 
 router = APIRouter(tags=["knowledge"])
+
+logger = logging.getLogger(__name__)
 
 
 @router.post("/knowledge/index", response_model=KnowledgeIndexResponse)
@@ -1632,7 +1635,15 @@ async def seed_project_docs(
     Call this when a workspace is first created so the AI always knows
     what Kraivor is. Safe to call multiple times (idempotent).
     """
-    check_rate_limit(user.sub, "knowledge.seed", max_requests=5, window_seconds=60)
+    # This used to call check_rate_limit(user.sub, "knowledge.seed",
+    # max_requests=5, window_seconds=60). check_rate_limit is a FastAPI
+    # dependency that takes a single Request, so that call raised TypeError
+    # on every invocation — and the try/except below turned it into a 200
+    # with {"status": "error"}, so seeding never happened and nothing looked
+    # broken. enforce_rate_limit is the callable form and must be awaited.
+    await enforce_rate_limit(
+        user.sub, "knowledge.seed", max_requests=5, window_seconds=60
+    )
 
     try:
         from app.application.tasks.knowledge import seed_kraivor_project_docs
@@ -1643,8 +1654,13 @@ async def seed_project_docs(
             "workspace_id": workspace_id,
         }
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e),
-            "workspace_id": workspace_id,
-        }
+        # Queuing failed. This is a real failure, so it must not be reported
+        # as success: the previous shape returned 200 either way, and the
+        # caller had no way to tell a queued seed from a failed one.
+        logger.error(
+            "knowledge_seed_enqueue_failed workspace=%s error=%s", workspace_id, e
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="Could not queue knowledge seeding. Please retry.",
+        ) from e

@@ -3,6 +3,7 @@ import contextlib
 import os
 import tempfile
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from app.core.config import get_settings
 
@@ -11,6 +12,24 @@ from app.core.logging import get_logger
 from app.infrastructure.cache.redis import RedisCache
 
 logger = get_logger(__name__)
+
+# Hosts that may receive the GitHub token. Compared by parsed hostname.
+_GITHUB_HOSTS = frozenset({"github.com", "www.github.com"})
+
+
+def _is_github_host(url: str) -> bool:
+    """Return True if the URL hostname is exactly a GitHub host.
+
+    Substring matching is not sufficient: ``https://github.com.evil.com/x``
+    contains ``github.com`` but its host is ``github.com.evil.com``, and a
+    naive replace would attach the token to that host.
+    """
+    try:
+        host = urlsplit(url).hostname
+    except ValueError:
+        return False
+    return host is not None and host.lower() in _GITHUB_HOSTS
+
 
 _LANGUAGE_EXTENSIONS: dict[str, list[str]] = {
     "python": [".py", ".pyi", ".pyx"],
@@ -112,8 +131,11 @@ class RepositoryFetcher:
             prefix="kraivor_analysis_", dir=settings.analysis.ephemeral_path
         )
 
-        # Add token to URL for private repos
-        if github_token and "github.com" in clone_url:
+        # Add token to URL for private repos. The host is compared exactly
+        # rather than by substring: "github.com" in url would also match
+        # https://github.com.evil.com/, and the replace below would then
+        # splice the token into an attacker-controlled URL.
+        if github_token and _is_github_host(clone_url):
             clone_url = clone_url.replace(
                 "https://github.com",
                 f"https://x-access-token:{github_token}@github.com",

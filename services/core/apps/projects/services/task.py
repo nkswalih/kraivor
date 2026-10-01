@@ -387,7 +387,11 @@ class TaskService:
                 )
                 above_pos = above.position
             except Task.DoesNotExist:
-                pass
+                # The neighbour was deleted or moved to another status. Fall
+                # back to appending, which is the correct behaviour.
+                logger.debug(
+                    "position_neighbour_missing task=%s side=above", above_task_id
+                )
         if below_task_id:
             try:
                 below = Task.objects.get(
@@ -395,7 +399,9 @@ class TaskService:
                 )
                 below_pos = below.position
             except Task.DoesNotExist:
-                pass
+                logger.debug(
+                    "position_neighbour_missing task=%s side=below", below_task_id
+                )
         if above_pos is not None and below_pos is not None:
             gap = abs(above_pos - below_pos)
             if gap < POSITION_REBALANCE_THRESHOLD:

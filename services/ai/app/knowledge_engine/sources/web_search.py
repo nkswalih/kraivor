@@ -5,12 +5,13 @@ Priority: Tavily (best quality) -> DDGS (free) -> Google Custom Search (fallback
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from datetime import datetime
 
+from app.core.url_guard import UnsafeURLError, assert_safe_url
 from app.knowledge_engine.config import KnowledgeEngineConfig
-from app.knowledge_engine.sources.base import SourceResult, SourceContent
-import contextlib
+from app.knowledge_engine.sources.base import SourceContent, SourceResult
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,11 @@ class WebSearchProvider:
     async def fetch_content(self, url: str) -> SourceContent | None:
         """Fetch and extract content from a URL."""
         try:
+            assert_safe_url(url)
+        except UnsafeURLError as e:
+            logger.warning("Refused unsafe web URL %s: %s", url, e)
+            return None
+        try:
             import aiohttp
             import trafilatura
 
@@ -62,7 +68,6 @@ class WebSearchProvider:
                 url,
                 timeout=aiohttp.ClientTimeout(total=20),
                 allow_redirects=True,
-                ssl=False,
             ) as resp:
                 if resp.status != 200:
                     return None

@@ -390,7 +390,10 @@ services:
       AI_IDENTITY__JWKS__URL: http://identity:8001/.well-known/jwks.json
       AI_OPENROUTER__MASTER__KEY: ${OPENROUTER_API_KEY}
       AI_GROQ_API_KEY: ${GROQ_API_KEY}
-      AI_KEY_ENCRYPTION_KEY: ${AI_KEY_ENCRYPTION_KEY:-dev-encryption-key-32chars!}
+      # Default is a valid Fernet key (32 bytes url-safe base64) so a dev
+      # stack boots with no .env. It is deliberately public and is NOT a
+      # production value; docker-compose.yml requires a real key.
+      AI_KEY_ENCRYPTION_KEY: ${AI_KEY_ENCRYPTION_KEY:-0EPSnviQ0OTPxSAJPoflrCyf7p3ssf6JE4uZRnV8D4Y=}
       AI_INTERNAL_REQUEST_SECRET: ${INTERNAL_REQUEST_TOKEN:-dev-internal-secret}
       HF_TOKEN: ${HF_TOKEN:-}
       AI_CORS_ALLOWED_ORIGINS: ${AI_CORS_ALLOWED_ORIGINS:-http://localhost:3000}
@@ -436,7 +439,8 @@ services:
       AI_CELERY__RESULT__BACKEND: redis://:${REDIS_PASSWORD:-kraivor_redis_2024}@redis:6379/1
       AI_KAFKA__BOOTSTRAP__SERVERS: kafka:9094
       AI_OPENROUTER__MASTER__KEY: ${OPENROUTER_API_KEY}
-      AI_KEY_ENCRYPTION_KEY: ${AI_KEY_ENCRYPTION_KEY:-dev-encryption-key-32chars!}
+      # See the comment on the web service above: dev-only public default.
+      AI_KEY_ENCRYPTION_KEY: ${AI_KEY_ENCRYPTION_KEY:-0EPSnviQ0OTPxSAJPoflrCyf7p3ssf6JE4uZRnV8D4Y=}
       UV_LINK_MODE: copy
     depends_on:
       postgres:

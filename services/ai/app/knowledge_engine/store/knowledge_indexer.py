@@ -131,8 +131,12 @@ class KnowledgeIndexer:
             import hashlib
             candidate_id = hashlib.sha256(f"{workspace_id}:{source_url}".encode()).hexdigest()[:24]
             await versioning.snapshot_before_update(workspace_id, candidate_id, reason="auto_update")
-        except Exception:
-            pass
+        except Exception as e:
+            # A missing snapshot leaves a gap in version history, so this is
+            # worth surfacing even though the upsert itself can proceed.
+            logger.warning(
+                "knowledge_snapshot_before_update_failed source=%s err=%s", source_url, e
+            )
 
         # Store the full document
         item_id = await self.store.store(

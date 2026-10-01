@@ -10,6 +10,7 @@ import logging
 from datetime import datetime
 from defusedxml import ElementTree as DefusedET
 
+from app.core.url_guard import host_matches
 from app.knowledge_engine.sources.base import SourceContent, SourceResult
 
 logger = logging.getLogger(__name__)
@@ -34,9 +35,9 @@ class ResearchPaperProvider:
 
     async def fetch_content(self, url: str) -> SourceContent | None:
         """Fetch paper abstract and metadata."""
-        if "arxiv.org" in url:
+        if host_matches(url, "arxiv.org"):
             return await self._fetch_arxiv(url)
-        if "semanticscholar.org" in url:
+        if host_matches(url, "semanticscholar.org"):
             return await self._fetch_semantic_scholar(url)
         return None
 

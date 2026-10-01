@@ -120,3 +120,34 @@ succeeded":
   Remove it when `argostranslate` relaxes its pin.
 - **`services/notifications` is an empty scaffold** with no deployable
   entrypoint. If anything expects it to be running, it is not.
+
+### Accepted risk: DNS rebinding in the URL guard
+
+The AI service's outbound-fetch guard (`services/ai/app/core/url_guard.py`)
+resolves a hostname and rejects loopback, link-local, private, reserved, and
+carrier-grade-NAT addresses **before** opening the connection. That closes
+"point the fetcher at `169.254.169.254`" and the ordinary private-range cases.
+
+It does not close **DNS rebinding**: an attacker who controls a DNS name can
+return a public address for the validation lookup and a private address when
+the HTTP client connects a moment later. The check and the connection are two
+separate resolutions of the same name, and nothing pins the first answer to
+the second.
+
+Closing it properly means resolving once, connecting to the resolved IP
+directly, and setting `Host`/SNI to the original name — which `aiohttp` and
+`httpx` both make awkward, and which breaks TLS verification and redirect
+handling if done half-way. The current posture is:
+
+- The guard is defence in depth, not a trust boundary. It assumes the
+  caller's URL is attacker-controlled, which is true for the BYOK
+  `custom_url` field and for `ingest_url`, and less true for URLs the user
+  merely supplied.
+- The `ai` service runs in a Docker network on the EC2 host. SSRF reachability
+  is bounded by what that network exposes — the Postgres and Redis containers
+  and the cloud metadata endpoint. Treat a container-to-container pivot as the
+  realistic worst case, not host root.
+
+Revisit if a caller-supplied URL ever becomes reachable from a less
+constrained network position, or if a dependency offers a pinned-resolution
+client. See `docs/CODEQL-TRIAGE.md` for the findings this guard closed.

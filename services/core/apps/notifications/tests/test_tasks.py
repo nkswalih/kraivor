@@ -1,7 +1,10 @@
 import uuid
 from datetime import timedelta
-from django.utils import timezone
 from unittest.mock import patch
+
+import pytest
+from celery.exceptions import MaxRetriesExceededError
+from django.utils import timezone
 
 from apps.notifications.models import FCMToken, Notification
 from apps.notifications.tasks import (
@@ -88,20 +91,31 @@ class TestDispatchNotificationTask:
             mock_layer.group_send.assert_called_once()
 
     def test_dispatch_retries_on_failure(self, user_id, db):
+        """A failed create must reach the retry path, not be swallowed.
+
+        This test previously wrapped the whole call in
+        `except Exception: pass`, so it passed whether or not the retry
+        worked. It now asserts the two things that matter: the create is
+        attempted, and the failure propagates out of the task.
+        """
         with patch(
             "apps.notifications.models.Notification.objects.create"
         ) as mock_create:
             mock_create.side_effect = Exception("DB error")
-            from celery.exceptions import MaxRetriesExceededError
 
-            try:
-                dispatch_notification(
-                    user_id=str(user_id), notification_type="system", title="Fail"
-                )
-            except MaxRetriesExceededError:
-                pass
-            except Exception:
-                pass
+            with patch.object(dispatch_notification, "retry") as mock_retry:
+                mock_retry.side_effect = MaxRetriesExceededError()
+                with pytest.raises(MaxRetriesExceededError):
+                    dispatch_notification(
+                        user_id=str(user_id),
+                        notification_type="system",
+                        title="Fail",
+                    )
+
+            assert mock_create.call_count == 1
+            mock_retry.assert_called_once()
+            # The original cause is handed to Celery, not swallowed.
+            assert mock_retry.call_args.kwargs["exc"].args == ("DB error",)
 
 
 class TestCleanupExpiredNotificationsTask:

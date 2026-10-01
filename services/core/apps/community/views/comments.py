@@ -87,7 +87,9 @@ class CommentListView(APIView):
                         actor_id=str(request.user_id),
                     )
             except CommentModel.DoesNotExist:
-                pass
+                # The parent comment was deleted between rendering the reply
+                # and dispatching the notification. Nothing to notify.
+                logger.debug("reply_notification_parent_missing comment=%s", comment.id)
         elif str(discussion.author_id) != str(request.user_id):
             dispatch_notification.delay(
                 user_id=str(discussion.author_id),

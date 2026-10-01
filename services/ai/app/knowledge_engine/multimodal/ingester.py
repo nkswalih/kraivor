@@ -7,11 +7,14 @@ embeddings, and stores in the knowledge base.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+from pathlib import Path
+
 import hashlib
 import logging
 import mimetypes
-from dataclasses import dataclass, field
-from pathlib import Path
+
+from app.core.url_guard import UnsafeURLError, assert_safe_url
 
 from ..config import KnowledgeEngineConfig
 from ..store.knowledge_indexer import KnowledgeIndexer
@@ -186,6 +189,17 @@ class MultiModalIngester:
     ) -> IngestionResult:
         """Ingest content from a URL. Downloads and detects type."""
         import httpx
+
+        try:
+            assert_safe_url(url)
+        except UnsafeURLError as e:
+            logger.warning("Refused unsafe ingest URL %s: %s", url, e)
+            return IngestionResult(
+                success=False,
+                source_type="url",
+                content_type="unknown",
+                error=f"URL not allowed: {e}",
+            )
 
         async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
             resp = await client.get(url)

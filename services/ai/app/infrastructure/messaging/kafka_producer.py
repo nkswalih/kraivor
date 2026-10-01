@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 class EventProducer:
     def __init__(self):
         self.producer = None
@@ -14,7 +19,9 @@ class EventProducer:
             )
             await self.producer.start()
         except ImportError:
-            pass
+            # aiokafka is an optional dependency. Without it the producer
+            # stays None and publishes become no-ops.
+            logger.debug("aiokafka not installed; Kafka publishing disabled")
 
     async def stop(self):
         if self.producer:

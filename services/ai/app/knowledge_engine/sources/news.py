@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 from defusedxml import ElementTree as DefusedET
 
+from app.core.url_guard import UnsafeURLError, assert_safe_url
 from app.knowledge_engine.sources.base import SourceContent, SourceResult
 
 logger = logging.getLogger(__name__)
@@ -39,13 +40,17 @@ class NewsProvider:
     async def fetch_content(self, url: str) -> SourceContent | None:
         """Fetch news article content."""
         try:
+            assert_safe_url(url)
+        except UnsafeURLError as e:
+            logger.warning("Refused unsafe news URL %s: %s", url, e)
+            return None
+        try:
             import trafilatura
 
             async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
                 url,
                 timeout=aiohttp.ClientTimeout(total=20),
                 allow_redirects=True,
-                ssl=False,
             ) as resp:
                 if resp.status != 200:
                     return None
@@ -142,8 +147,11 @@ class NewsProvider:
                     try:
                         from email.utils import parsedate_to_datetime
                         pub_date = parsedate_to_datetime(pub_date_str)
-                    except (ValueError, TypeError):
-                        pass
+                    except (ValueError, TypeError) as e:
+                        # RSS dates are frequently malformed. A missing
+                        # publish date is acceptable; drop the item's date
+                        # and keep the result.
+                        logger.debug("news_pubdate_unparseable value=%r err=%s", pub_date_str, e)
 
                 results.append(SourceResult(
                     url=link,

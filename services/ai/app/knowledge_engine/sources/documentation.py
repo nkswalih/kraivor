@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-import logging
 import re
 
-from app.knowledge_engine.sources.base import SourceResult, SourceContent
+import logging
+
+from app.core.url_guard import UnsafeURLError, assert_safe_url
+from app.knowledge_engine.sources.base import SourceContent, SourceResult
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +153,11 @@ class DocumentationProvider:
     async def fetch_content(self, url: str) -> SourceContent | None:
         """Fetch documentation content using trafilatura."""
         try:
+            assert_safe_url(url)
+        except UnsafeURLError as e:
+            logger.warning("Refused unsafe documentation URL %s: %s", url, e)
+            return None
+        try:
             import aiohttp
             import trafilatura
 
@@ -165,7 +172,6 @@ class DocumentationProvider:
                 url,
                 timeout=aiohttp.ClientTimeout(total=20),
                 allow_redirects=True,
-                ssl=False,
             ) as resp:
                 if resp.status != 200:
                     return None

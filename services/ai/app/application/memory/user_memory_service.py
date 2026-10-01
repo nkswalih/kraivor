@@ -145,8 +145,10 @@ async def extract_and_store_facts(
         from app.infrastructure.cache.redis_client import get_redis
         r = await get_redis()
         await r.delete(f"userctx:{user_id}")
-    except Exception:
-        pass
+    except Exception as e:
+        # Cache is optional: the fact is already committed, so a failed
+        # invalidation only risks a stale read until the TTL expires.
+        logger.debug("user_context_cache_invalidation_failed user=%s err=%s", user_id, e)
 
     return saved
 
@@ -158,8 +160,9 @@ async def get_user_context(db: AsyncSession, user_id: str, limit: int = 20) -> s
         cached = await r.get(f"userctx:{user_id}")
         if cached is not None:
             return cached
-    except Exception:
-        pass
+    except Exception as e:
+        # Cache is optional: fall through to the database.
+        logger.debug("user_context_cache_read_failed user=%s err=%s", user_id, e)
 
     result = await db.execute(
         select(UserFact)
@@ -181,8 +184,9 @@ async def get_user_context(db: AsyncSession, user_id: str, limit: int = 20) -> s
         from app.infrastructure.cache.redis_client import get_redis
         r = await get_redis()
         await r.setex(f"userctx:{user_id}", USER_CONTEXT_CACHE_TTL, context_str)
-    except Exception:
-        pass
+    except Exception as e:
+        # Cache is optional: a write failure must not fail the request.
+        logger.debug("user_context_cache_write_failed user=%s err=%s", user_id, e)
 
     return context_str
 
@@ -234,8 +238,11 @@ async def store_fact_explicit(
                 from app.infrastructure.cache.redis_client import get_redis
                 r = await get_redis()
                 await r.delete(f"userctx:{user_id}")
-            except Exception:
-                pass
+            except Exception as e:
+                # Cache is optional: the fact is already committed.
+                logger.debug(
+                    "user_context_cache_invalidation_failed user=%s err=%s", user_id, e
+                )
             return f"Remembered: {fact_type} → {fact_key} = {fact_value}"
         except Exception as e:
             await db.rollback()

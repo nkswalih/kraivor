@@ -137,8 +137,9 @@ class FailoverEngine:
                 mh = ModelHealth.from_dict(data)
                 self._model_health[model] = mh
                 return mh
-        except Exception:
-            pass
+        except Exception as e:
+            # Health cache is optional: fall back to default (unknown) health.
+            logger.debug("model_health_read_failed model=%s err=%s", model, e)
 
         mh = ModelHealth()
         self._model_health[model] = mh
@@ -154,8 +155,10 @@ class FailoverEngine:
                 _REDIS_HEALTH_TTL,
                 json.dumps(mh.to_dict()),
             )
-        except Exception:
-            pass
+        except Exception as e:
+            # Health cache is optional: the in-memory copy is authoritative
+            # for this process, so a write failure is not fatal.
+            logger.debug("model_health_write_failed model=%s err=%s", model, e)
 
     async def _record_model_success(self, model: str) -> None:
         """Record a success for a model and persist to Redis."""

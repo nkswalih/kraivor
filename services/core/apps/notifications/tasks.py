@@ -84,8 +84,10 @@ def dispatch_notification(
         from core.cache import CacheService
 
         CacheService.delete(f"notif:unread:{user_id}")
-    except Exception:
-        pass
+    except Exception as e:
+        # The notification is already delivered. A failed cache invalidation
+        # only means the unread badge may lag until the cache expires.
+        logger.debug("notif_unread_cache_invalidation_failed user=%s err=%s", user_id, e)
 
     # ── 2. Broadcast via Channels ──────────────────────────────────────────
     try:

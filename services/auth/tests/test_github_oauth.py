@@ -95,7 +95,7 @@ class TestOAuthStateManager(TestCase):
 
         manager = OAuthStateManager()
         state = manager.generate_state("github")
-        self.assertTrue(len(state) > 20)
+        self.assertGreater(len(state), 20)
         mock_client.setex.assert_called_once()
 
     def test_validate_state_valid(self, mock_redis):

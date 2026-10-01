@@ -308,13 +308,14 @@ async def remove_provider_key(
             setattr(key_record, val_col, None)
             await db.commit()
 
-    # Invalidate cache
+    # Invalidate cache. The key is already committed, so a cache failure
+    # must not fail the request — it only risks a stale model preference.
     try:
         redis = await get_redis()
         models = get_models_for_provider(provider)
         for model_id in models:
             await redis.delete(f"byok:pref:{user.sub}:{model_id}")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("byok_pref_cache_invalidation_failed user=%s err=%s", user.sub, e)
 
     return {"ok": True, "provider": provider}

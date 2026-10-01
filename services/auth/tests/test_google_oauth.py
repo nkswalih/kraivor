@@ -4,6 +4,8 @@ authentication/tests/test_google_oauth.py
 Production-grade Google OAuth tests for Kraivor Identity Service.
 """
 
+from urllib.parse import parse_qs, urlsplit
+
 import pytest
 from authentication.oauth.base import OAuthUserInfo
 from django.test import override_settings
@@ -193,10 +195,18 @@ class TestGoogleOAuthInitiateView:
         response = client.get(initiate_url)
 
         assert response.status_code == 302
-        assert "accounts.google.com" in response["Location"]
-        assert "openid" in response["Location"]
-        assert "email" in response["Location"]
-        assert "teststate123" in response["Location"]
+
+        # Match the host exactly: a substring check would also accept
+        # "accounts.google.com.evil.example", which is the whole point of
+        # asserting on the redirect target.
+        redirect = urlsplit(response["Location"])
+        assert redirect.scheme == "https"
+        assert redirect.hostname == "accounts.google.com"
+
+        params = parse_qs(redirect.query)
+        assert "openid" in params["scope"][0].split()
+        assert "email" in params["scope"][0].split()
+        assert params["state"] == ["teststate123"]
 
     @patch("authentication.oauth.google.views.GoogleStateService")
     def test_redis_failure_returns_503(self, MockStateService, client, initiate_url):

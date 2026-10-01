@@ -127,9 +127,14 @@ class GitHubAppClient:
             token = pyjwt.encode(payload, self._private_key, algorithm="RS256")
             return token if isinstance(token, str) else token.decode("utf-8")
         except Exception as exc:
-            raise GitHubAppAuthError(
-                f"Failed to generate GitHub App JWT: {exc}"
-            ) from exc
+            # The JWT library's message can quote the private key path
+            # and algorithm details, so it goes to the log rather than
+            # into the exception text that reaches the client.
+            logger.error(
+                "github_app.jwt_generation_failed",
+                extra={"error": str(exc), "error_type": type(exc).__name__},
+            )
+            raise GitHubAppAuthError("Failed to generate GitHub App JWT.") from exc
 
     # ── Installation Token ────────────────────────────────────────────────────
 
@@ -162,8 +167,17 @@ class GitHubAppClient:
         try:
             response = requests.post(url, headers=headers, timeout=10)
         except requests.exceptions.RequestException as exc:
+            # requests' message contains the full request URL.
+            logger.error(
+                "github_app.installation_token_request_failed",
+                extra={
+                    "installation_id": installation_id,
+                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                },
+            )
             raise GitHubAppAPIError(
-                f"Failed to request installation token: {exc}"
+                "Failed to request an installation token from GitHub."
             ) from exc
 
         if response.status_code == 401:
@@ -176,9 +190,19 @@ class GitHubAppClient:
                 "uninstalled or revoked."
             )
         if response.status_code != 201:
+            # GitHub's response body is third-party content and can name
+            # internal objects, so it is logged rather than returned.
+            logger.error(
+                "github_app.installation_token_unexpected_status",
+                extra={
+                    "installation_id": installation_id,
+                    "status_code": response.status_code,
+                    "response_body": response.text[:200],
+                },
+            )
             raise GitHubAppAPIError(
                 f"GitHub returned HTTP {response.status_code} when requesting "
-                f"installation token: {response.text[:200]}"
+                f"installation token."
             )
 
         data = response.json()
@@ -220,8 +244,16 @@ class GitHubAppClient:
             try:
                 response = requests.get(url, headers=headers, params=params, timeout=10)
             except requests.exceptions.RequestException as exc:
+                logger.error(
+                    "github_app.list_installation_repos_failed",
+                    extra={
+                        "installation_id": installation_id,
+                        "error": str(exc),
+                        "error_type": type(exc).__name__,
+                    },
+                )
                 raise GitHubAppAPIError(
-                    f"Failed to list installation repos: {exc}"
+                    "Failed to list installation repos from GitHub."
                 ) from exc
 
             if response.status_code == 401:
@@ -230,9 +262,17 @@ class GitHubAppClient:
                     "Installation token expired or invalid. Retry to refresh."
                 )
             if response.status_code != 200:
+                logger.error(
+                    "github_app.list_installation_repos_unexpected_status",
+                    extra={
+                        "installation_id": installation_id,
+                        "status_code": response.status_code,
+                        "response_body": response.text[:200],
+                    },
+                )
                 raise GitHubAppAPIError(
                     f"GitHub returned HTTP {response.status_code} for "
-                    f"installation repos: {response.text[:200]}"
+                    f"installation repos."
                 )
 
             data = response.json()
@@ -273,16 +313,32 @@ class GitHubAppClient:
         try:
             response = requests.get(url, headers=headers, timeout=10)
         except requests.exceptions.RequestException as exc:
+            logger.error(
+                "github_app.fetch_installation_info_failed",
+                extra={
+                    "installation_id": installation_id,
+                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                },
+            )
             raise GitHubAppAPIError(
-                f"Failed to fetch installation info: {exc}"
+                "Failed to fetch installation info from GitHub."
             ) from exc
 
         if response.status_code == 404:
             raise GitHubAppAPIError(f"Installation {installation_id} not found.")
         if response.status_code != 200:
+            logger.error(
+                "github_app.fetch_installation_info_unexpected_status",
+                extra={
+                    "installation_id": installation_id,
+                    "status_code": response.status_code,
+                    "response_body": response.text[:200],
+                },
+            )
             raise GitHubAppAPIError(
                 f"GitHub returned HTTP {response.status_code} for "
-                f"installation info: {response.text[:200]}"
+                f"installation info."
             )
 
         return response.json()
@@ -325,9 +381,18 @@ class GitHubAppClient:
             _token_cache.invalidate(installation_id)
             raise GitHubAppAuthError("Installation token expired. Please try again.")
         if response.status_code != 200:
+            logger.error(
+                "github_app.get_repo_unexpected_status",
+                extra={
+                    "installation_id": installation_id,
+                    "github_repo": github_repo,
+                    "status_code": response.status_code,
+                    "response_body": response.text[:200],
+                },
+            )
             raise GitHubAppAPIError(
                 f"GitHub returned HTTP {response.status_code} for repo "
-                f"'{github_repo}': {response.text[:200]}"
+                f"'{github_repo}'."
             )
 
         return response.json()

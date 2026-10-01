@@ -36,20 +36,33 @@ def score_authority_and_freshness(
     return ranked
 
 
+def _domain_is(domain: str, *suffixes: str) -> bool:
+    """Return True if ``domain`` equals or is a subdomain of one of ``suffixes``.
+
+    ``domain`` is a netloc, so it may carry a port. Substring checks are not
+    used here: ``"news" in domain`` matches newsapi.example.com and also
+    notnews.com, and ``"github.com" in domain`` matches github.com.evil.com.
+    """
+    host = domain.split(":", 1)[0].lower().rstrip(".")
+    return any(host == s or host.endswith("." + s) for s in suffixes)
+
+
 def get_domain_half_life(url: str) -> int:
     """Get appropriate freshness half-life based on domain."""
     from urllib.parse import urlparse
 
     domain = urlparse(url).netloc.lower()
 
-    if any(kw in domain for kw in ["news", "techcrunch", "verge", "arstechnica"]):
+    if _domain_is(domain, "techcrunch.com", "theverge.com", "arstechnica.com"):
         return 7  # News: fast decay
-    if "github.com" in domain:
+    if domain.split(":", 1)[0].lower().startswith("news."):
+        return 7  # News subdomain, e.g. news.google.com
+    if _domain_is(domain, "github.com"):
         return 30  # Releases: moderate decay
-    if any(d in domain for d in ["arxiv.org", "semanticscholar.org"]):
+    if _domain_is(domain, "arxiv.org", "semanticscholar.org"):
         return 365  # Research: slow decay
-    if any(d in domain for d in ["stackoverflow.com", "dev.to"]):
+    if _domain_is(domain, "stackoverflow.com", "dev.to"):
         return 90  # Community: moderate decay
-    if "reddit.com" in domain:
+    if _domain_is(domain, "reddit.com"):
         return 30  # Reddit: fast decay
     return 60  # Default

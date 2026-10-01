@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from app.core.url_guard import host_matches
 from app.knowledge_engine.config import KnowledgeEngineConfig
 from app.knowledge_engine.sources.base import SourceResult, SourceContent, RankedSource
 from app.knowledge_engine.sources.web_search import WebSearchProvider
@@ -167,8 +168,10 @@ class KnowledgeEngine:
                     latency_ms=elapsed * 1000, source_count=len(ranked),
                     cache_hit=False,
                 ))
-            except Exception:
-                pass
+            except Exception as e:
+                # Research-result caching and metrics are both best-effort.
+                # The result is already built, so neither may fail the query.
+                logger.debug("research_cache_write_failed query_hash=%s err=%s", len(query), e)
 
         return result
 
@@ -193,14 +196,15 @@ class KnowledgeEngine:
 
     async def fetch(self, url: str) -> SourceContent | None:
         """Fetch content from a URL using the appropriate provider."""
-        # Try to determine provider from URL
-        if "github.com" in url:
+        # Try to determine provider from URL. Hosts are matched exactly, not
+        # by substring: "github.com" in url also matches github.com.evil.com.
+        if host_matches(url, "github.com"):
             return await self.github.fetch_content(url)
-        if "arxiv.org" in url or "semanticscholar.org" in url:
+        if host_matches(url, "arxiv.org", "semanticscholar.org"):
             return await self.research_papers.fetch_content(url)
-        if "pypi.org" in url or "npmjs.com" in url:
+        if host_matches(url, "pypi.org", "npmjs.com"):
             return await self.package_registries.fetch_content(url)
-        if "stackoverflow.com" in url or "reddit.com" in url:
+        if host_matches(url, "stackoverflow.com", "reddit.com"):
             return await self.community.fetch_content(url)
 
         # Default: web search provider

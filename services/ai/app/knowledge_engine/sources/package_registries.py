@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import aiohttp
 import logging
 
-import aiohttp
-
-from app.knowledge_engine.sources.base import SourceResult, SourceContent
+from app.core.url_guard import host_matches
+from app.knowledge_engine.sources.base import SourceContent, SourceResult
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +26,9 @@ class PackageRegistryProvider:
 
     async def fetch_content(self, url: str) -> SourceContent | None:
         """Fetch package metadata."""
-        if "pypi.org" in url or "pypi" in url:
+        if host_matches(url, "pypi.org", "pythonhosted.org"):
             return await self._fetch_pypi(url)
-        if "npmjs.com" in url:
+        if host_matches(url, "npmjs.com", "npmjs.org"):
             return await self._fetch_npm(url)
         return None
 

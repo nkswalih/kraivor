@@ -221,7 +221,14 @@ class EnrichmentService:
                 )
                 continue
 
-        raise last_error  # type: ignore[misc]
+        # FREE_MODELS is a module-level list and could be empty, in which
+        # case last_error is still None and `raise last_error` would itself
+        # raise TypeError. Raise a real exception instead.
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError(
+            f"No free enrichment models configured for category {category!r}"
+        )
 
     async def _generate_executive_summary(
         self,
@@ -290,7 +297,11 @@ class EnrichmentService:
                 return result["content"]
             except Exception as e:
                 last_error = e
-                logger.warning("summary_model_failed model=%s error=%s", model, str(e))
+                logger.warning(
+                    "summary_model_failed model=%s error=%s", model, str(e)
+                )
                 continue
 
-        raise last_error  # type: ignore[misc]
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("No free models configured for executive summary generation")

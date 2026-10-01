@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+import aiohttp
+import contextlib
 import logging
 from datetime import UTC, datetime
 
-import aiohttp
-
-from app.knowledge_engine.sources.base import SourceResult, SourceContent
-import contextlib
+from app.core.url_guard import UnsafeURLError, assert_safe_url, host_matches
+from app.knowledge_engine.sources.base import SourceContent, SourceResult
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +33,9 @@ class CommunityProvider:
 
     async def fetch_content(self, url: str) -> SourceContent | None:
         """Fetch community post content."""
-        if "stackoverflow.com" in url:
+        if host_matches(url, "stackoverflow.com"):
             return await self._fetch_stackoverflow(url)
-        if "reddit.com" in url or "redd.it" in url:
+        if host_matches(url, "reddit.com", "redd.it"):
             return await self._fetch_reddit(url)
         return None
 
@@ -137,12 +137,16 @@ class CommunityProvider:
     async def _fetch_stackoverflow(self, url: str) -> SourceContent | None:
         """Fetch StackOverflow question/answer."""
         try:
+            assert_safe_url(url)
+        except UnsafeURLError as e:
+            logger.warning("Refused unsafe community URL %s: %s", url, e)
+            return None
+        try:
             import trafilatura
 
             async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
                 url,
                 timeout=aiohttp.ClientTimeout(total=15),
-                ssl=False,
             ) as resp:
                 if resp.status != 200:
                     return None

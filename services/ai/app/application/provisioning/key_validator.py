@@ -10,6 +10,7 @@ import httpx
 
 from app.api.schemas.byok import ValidateResult
 from app.application.provisioning.provider_models import DEFAULT_PROVIDER_URLS
+from app.core.url_guard import UnsafeURLError, assert_safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,19 @@ async def validate_key(
     base_url = custom_url or DEFAULT_PROVIDER_URLS.get(provider, "")
     if not base_url:
         return ValidateResult(valid=False, error=f"Unknown provider: {provider}")
+
+    # custom_url arrives from the request body, so it is attacker-controlled.
+    # Without this check, a caller can point validation at internal hosts
+    # (cloud metadata, the database, the Redis container) and use the
+    # response as an oracle. Every supported provider is a public SaaS
+    # endpoint, so custom_url is always required to be public.
+    try:
+        assert_safe_url(base_url)
+    except UnsafeURLError as e:
+        logger.warning(
+            "key_validation_refused provider=%s url=%s reason=%s", provider, base_url, e
+        )
+        return ValidateResult(valid=False, error=f"Base URL not allowed: {e}")
 
     try:
         if provider == "anthropic":

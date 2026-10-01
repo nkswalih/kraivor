@@ -1,11 +1,13 @@
 """Web fetch tool using trafilatura for clean content extraction."""
 
 import logging
+import re
 
 import aiohttp
 import trafilatura
 
 from app.application.tools.base import BaseTool
+from app.core.url_guard import UnsafeURLError, assert_safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +23,36 @@ _HEADERS = {
 
 _MAX_CHARS = 8000
 
+_SCRIPT_OR_STYLE = re.compile(
+    r"<(script|style)\b[^>]*>.*?</\1\s*>",
+    re.IGNORECASE | re.DOTALL,
+)
+_HTML_TAG = re.compile(r"<[^>]+>")
+_WHITESPACE = re.compile(r"\s+")
+
+
+def _strip_html(html: str) -> str:
+    """Strip script/style blocks and tags from HTML.
+
+    The pattern is case-insensitive and tolerates whitespace before the
+    closing ``>`` so that ``<SCRIPT>`` and ``</script >`` are removed
+    rather than passed through to the model as text.
+    """
+    text = _SCRIPT_OR_STYLE.sub("", html)
+    text = _HTML_TAG.sub(" ", text)
+    return _WHITESPACE.sub(" ", text).strip()
+
 
 class WebFetchTool(BaseTool):
     name = "web_fetch"
     description = "Fetch and extract clean text content from a URL"
 
     async def run(self, url: str, extract_mode: str = "text") -> str:
+        try:
+            assert_safe_url(url)
+        except UnsafeURLError as e:
+            return f"Refused to fetch {url}: {e}"
+
         try:
             async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
                 url,
@@ -56,12 +82,7 @@ class WebFetchTool(BaseTool):
 
         if not text:
             # Fallback: basic HTML stripping
-            import re
-
-            text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL)
-            text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL)
-            text = re.sub(r"<[^>]+>", " ", text)
-            text = re.sub(r"\s+", " ", text).strip()
+            text = _strip_html(html)
 
         if len(text) > _MAX_CHARS:
             text = text[:_MAX_CHARS] + "\n\n[Content truncated...]"
@@ -74,6 +95,11 @@ class NewsFetchTool(BaseTool):
     description = "Fetch news articles from a URL"
 
     async def run(self, url: str) -> str:
+        try:
+            assert_safe_url(url)
+        except UnsafeURLError as e:
+            return f"Refused to fetch {url}: {e}"
+
         try:
             async with aiohttp.ClientSession(headers=_HEADERS) as session, session.get(
                 url,
@@ -101,12 +127,7 @@ class NewsFetchTool(BaseTool):
             text = None
 
         if not text:
-            import re
-
-            text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL)
-            text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL)
-            text = re.sub(r"<[^>]+>", " ", text)
-            text = re.sub(r"\s+", " ", text).strip()
+            text = _strip_html(html)
 
         if len(text) > _MAX_CHARS:
             text = text[:_MAX_CHARS] + "\n\n[Content truncated...]"

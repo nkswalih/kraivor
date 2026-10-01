@@ -208,13 +208,9 @@ class AuthApi {
     try {
       await apiClient.post(API_ENDPOINTS.AUTH.VERIFY_EMAIL, payload);
     } catch (error: unknown) {
-      const apiError = handleApiError(error);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if ((error as any)?.response?.data?.error_code) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (apiError as any).errorCode = (error as any).response.data.error_code;
-      }
-      throw apiError;
+      // The ApiException now carries `errorCode` straight from the response
+      // body, so this no longer needs to bolt it on through an `any` cast.
+      throw handleApiError(error);
     }
   }
 

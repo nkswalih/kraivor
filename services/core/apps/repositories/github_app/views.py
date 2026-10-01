@@ -344,10 +344,11 @@ class GitHubAppInstallationRefreshView(WorkspaceContextMixin, APIView):
         try:
             service = GitHubAppInstallationService()
             installation = service.refresh_installation(int(installation_pk))
+        except (GitHubAppAPIError, GitHubAppAuthError) as exc:
+            # Subclasses of GitHubAppError, so they must be caught first.
+            raise ValidationError({"detail": str(exc)}) from exc
         except GitHubAppError as exc:
             raise NotFound(str(exc)) from exc
-        except (GitHubAppAPIError, GitHubAppAuthError) as exc:
-            raise ValidationError({"detail": str(exc)}) from exc
 
         return Response(GitHubAppInstallationSerializer(installation).data)
 

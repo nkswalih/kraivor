@@ -49,8 +49,9 @@ class Embedder:
             cached = await r.get(cache_key)
             if cached:
                 return json.loads(cached)
-        except Exception:
-            pass
+        except Exception as e:
+            # Cache is optional: fall through to a live embedding call.
+            logger.debug("embed_cache_read_failed err=%s", e)
 
         if self.provider == "local":
             if self._model is None:
@@ -73,8 +74,9 @@ class Embedder:
             import json
             r = await get_redis()
             await r.setex(cache_key, EMBED_CACHE_TTL, json.dumps(result))
-        except Exception:
-            pass
+        except Exception as e:
+            # Cache is optional: a write failure must not fail the embed.
+            logger.debug("embed_cache_write_failed err=%s", e)
 
         return result
 

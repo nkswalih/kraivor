@@ -248,8 +248,9 @@ class OrchestratorNode:
             cached = await r.get(intent_cache_key)
             if cached:
                 return json.loads(cached)
-        except Exception:
-            pass
+        except Exception as e:
+            # Cache is optional: fall through to a live classification.
+            logger.debug("intent_cache read failed: %s", e)
 
         route = self.router.get_route_for_user("intent_classify", user_model)
 
@@ -336,8 +337,9 @@ class OrchestratorNode:
                 from app.infrastructure.cache.redis_client import get_redis
                 r = await get_redis()
                 await r.setex(intent_cache_key, INTENT_CACHE_TTL, json.dumps(result))
-            except Exception:
-                pass
+            except Exception as e:
+                # Cache is optional: a write failure must not fail the request.
+                logger.debug("intent_cache write failed: %s", e)
             return result
 
         # News/current-events queries: route to tool_executor for web_search_news
@@ -358,8 +360,9 @@ class OrchestratorNode:
                 from app.infrastructure.cache.redis_client import get_redis
                 r = await get_redis()
                 await r.setex(intent_cache_key, INTENT_CACHE_TTL, json.dumps(result))
-            except Exception:
-                pass
+            except Exception as e:
+                # Cache is optional: a write failure must not fail the request.
+                logger.debug("intent_cache write failed: %s", e)
             return result
 
         # For direct-response intents (greeting, casual chat), generate immediately
@@ -407,8 +410,9 @@ class OrchestratorNode:
                 from app.infrastructure.cache.redis_client import get_redis
                 r = await get_redis()
                 await r.setex(intent_cache_key, INTENT_CACHE_TTL, json.dumps(response))
-            except Exception:
-                pass
+            except Exception as e:
+                # Cache is optional: a write failure must not fail the request.
+                logger.debug("intent_cache write failed: %s", e)
             return response
 
         # For evidence-gathering intents, route through the knowledge pipeline
@@ -493,8 +497,9 @@ class OrchestratorNode:
                 from app.infrastructure.cache.redis_client import get_redis
                 r = await get_redis()
                 await r.setex(intent_cache_key, INTENT_CACHE_TTL, json.dumps(result))
-            except Exception:
-                pass
+            except Exception as e:
+                # Cache is optional: a write failure must not fail the request.
+                logger.debug("intent_cache write failed: %s", e)
             return result
 
         result = {
@@ -511,6 +516,7 @@ class OrchestratorNode:
             from app.infrastructure.cache.redis_client import get_redis
             r = await get_redis()
             await r.setex(intent_cache_key, INTENT_CACHE_TTL, json.dumps(result))
-        except Exception:
-            pass
+        except Exception as e:
+            # Cache is optional: a write failure must not fail the request.
+            logger.debug("intent_cache write failed: %s", e)
         return result

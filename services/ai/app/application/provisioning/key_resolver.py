@@ -188,7 +188,12 @@ async def resolve_provider_key(
             try:
                 decrypted = encrypter.decrypt(encrypted.encode())
                 return decrypted.decode(), fallback_provider, custom_url
-            except Exception:
+            except Exception as e:
+                # This provider's key cannot be decrypted — try the next
+                # fallback rather than failing the whole resolution.
+                logger.debug(
+                    "fallback_key_undecryptable provider=%s err=%s", fallback_provider, e
+                )
                 continue
 
     raise InsufficientQuotaError("No usable provider keys available")
@@ -227,8 +232,9 @@ class KeyResolver:
                 custom_url = data.get("custom_url")
                 decrypted = self.encrypter.decrypt(encrypted_key.encode()).decode()
                 return decrypted, provider, custom_url
-        except Exception:
-            pass
+        except Exception as e:
+            # Cache is optional: fall through to the database lookup.
+            logger.debug("key_cache_read_failed user=%s err=%s", user_id, e)
 
         from app.infrastructure.db.database import async_session_factory
 
@@ -249,8 +255,9 @@ class KeyResolver:
                 "provider": provider,
                 "custom_url": custom_url,
             }))
-        except Exception:
-            pass
+        except Exception as e:
+            # Cache is optional: the key already resolved successfully.
+            logger.debug("key_cache_write_failed user=%s err=%s", user_id, e)
 
         return api_key, provider, custom_url
 
@@ -259,5 +266,7 @@ class KeyResolver:
             from app.infrastructure.cache.redis_client import get_redis
             r = await get_redis()
             await r.delete(_key_cache_key(user_id, preferred_model))
-        except Exception:
-            pass
+        except Exception as e:
+            # Cache is optional: a failed invalidation only risks a stale
+            # cached key until the TTL expires.
+            logger.debug("key_cache_invalidation_failed user=%s err=%s", user_id, e)

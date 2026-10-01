@@ -104,8 +104,9 @@ class ChatService:
             cached = await r.get(f"history:{conversation_id}")
             if cached:
                 return json.loads(cached)
-        except Exception:
-            pass
+        except Exception as e:
+            # Cache is optional: fall through to the database.
+            logger.debug("history_cache read failed: %s", e)
 
         async with async_session_factory() as db:
             messages = await get_messages(db, conversation_id, limit=_HISTORY_LIMIT)
@@ -120,8 +121,9 @@ class ChatService:
             import json
             r = await get_redis()
             await r.setex(f"history:{conversation_id}", _HISTORY_CACHE_TTL, json.dumps(history))
-        except Exception:
-            pass
+        except Exception as e:
+            # Cache is optional: a write failure must not fail the request.
+            logger.debug("history_cache write failed: %s", e)
 
         return history
 
@@ -130,8 +132,9 @@ class ChatService:
             from app.infrastructure.cache.redis_client import get_redis
             r = await get_redis()
             await r.delete(f"history:{conversation_id}")
-        except Exception:
-            pass
+        except Exception as e:
+            # Cache is optional: a failed invalidation only risks a stale read.
+            logger.debug("history_cache invalidation failed: %s", e)
 
     async def chat(
         self,

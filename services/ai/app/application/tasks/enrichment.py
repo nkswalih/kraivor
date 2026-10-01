@@ -1,6 +1,9 @@
 import asyncio
+import logging
 
 from app.core.celery_app import celery_app
+
+logger = logging.getLogger(__name__)
 
 
 @celery_app.task(bind=True, queue="ai.indexing")
@@ -27,7 +30,9 @@ def enrich_codebase(
                         language=language,
                     )
                 except FileNotFoundError:
-                    pass
+                    # The file changed between listing and reading. Skip it
+                    # rather than failing the whole enrichment run.
+                    logger.debug("enrichment_file_vanished path=%s", file_path)
 
     asyncio.run(_run())
     return {"status": "completed", "repo_id": repo_id, "files": changed_files}

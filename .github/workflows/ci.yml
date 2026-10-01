@@ -138,13 +138,6 @@ jobs:
       # not carry, so `pip-audit` cannot resolve it and aborts with
       # "Dependency not found on PyPI" instead of reporting a result. Auditing
       # the rest of the lock is still worth doing.
-      #
-      # PYSEC-2026-3075 (stanza 1.10.1) is ignored explicitly rather than by
-      # dropping the whole check. argostranslate 1.11.0 hard-pins
-      # `stanza (==1.10.1)`, so the only way to clear it is to downgrade
-      # argostranslate two minor versions. That is a worse outcome than the
-      # advisory, and it is not ours to decide unilaterally. Remove this
-      # ignore once argostranslate relaxes its pin.
       - name: Dependency audit (pip-audit, torch excluded)
         if: matrix.service == 'ai'
         run: |
@@ -165,7 +158,6 @@ jobs:
           open(dst, "w", encoding="utf-8").writelines(kept)
           PY
           uv run pip-audit --strict --progress-spinner off --no-deps \
-            --ignore-vuln PYSEC-2026-3075 \
             -r /tmp/req-no-torch.txt
 
   unit-tests:

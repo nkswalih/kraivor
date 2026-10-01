@@ -393,3 +393,21 @@ FIREBASE_CREDENTIALS_PATH = env("FIREBASE_CREDENTIALS_PATH", default=None)
 INTERNAL_REQUEST_HEADER = env("INTERNAL_REQUEST_HEADER", default="X-Internal-Request")
 INTERNAL_REQUEST_SECRET = env("INTERNAL_REQUEST_TOKEN", default="")
 INTERNAL_REQUEST_TOKEN = INTERNAL_REQUEST_SECRET  # back-compat alias
+
+
+# ── Explicit export surface ──────────────────────────────────────────────────
+# development / production / test / test_postgres all do `from .base import *`.
+# Without __all__, that also re-exported this module's imports — environ,
+# env, Path, mimetypes — into every derived settings module, where a future
+# `env(...)` or `Path(...)` would silently resolve against base's bindings
+# rather than being an obvious NameError. CodeQL flags this as
+# py/polluting-import.
+#
+# Django reads settings by name from the settings module, so the public
+# surface is exactly the uppercase names. That is what this exports.
+#
+# Computed rather than hand-listed: a static list of ~95 names would silently
+# drop any setting added later, and a dropped setting fails as a confusing
+# AttributeError at first use rather than at import. test.py asserts the
+# expected names are present, so an accidental removal still fails loudly.
+__all__ = sorted(name for name in dir() if name.isupper())

@@ -102,7 +102,7 @@ jobs:
           TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
 
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ steps.tf-output.outputs.ec2_ip }}
           username: ec2-user

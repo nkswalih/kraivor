@@ -203,7 +203,8 @@ _key = settings.key_encryption_key
 if not _key:
     raise RuntimeError(
         "AI_KEY_ENCRYPTION_KEY must be set. "
-        "Generate with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        "Generate with: python -c \"from cryptography.fernet import Fernet; "
+        "print(Fernet.generate_key().decode())\""
     )
 _default_encrypter = Fernet(_key.encode() if isinstance(_key, str) else _key)
 

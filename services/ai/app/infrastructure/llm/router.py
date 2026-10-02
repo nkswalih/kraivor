@@ -75,12 +75,6 @@ MODEL_BACKEND_MAP = {
     **BYOK_MODELS,
 }
 
-# ── Intent → default route task name mapping ─────────────────
-_INTENT_ROUTE_MAP = {
-    "code_generation": "code_generation",
-    "documentation": "code_generation",
-    "writing": "code_generation",
-}
 
 
 class ModelRouter:

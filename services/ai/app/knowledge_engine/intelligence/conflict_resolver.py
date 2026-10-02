@@ -13,13 +13,11 @@ import logging
 import re
 from dataclasses import dataclass
 
-from app.infrastructure.rag.embedder import Embedder
 from app.infrastructure.db.database import async_session_factory
 from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
-_embedder = Embedder()
 
 # Negation patterns that flip meaning
 NEGATION_PATTERNS = [

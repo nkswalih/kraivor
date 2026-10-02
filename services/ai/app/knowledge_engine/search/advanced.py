@@ -15,11 +15,9 @@ from datetime import UTC, datetime
 
 from sqlalchemy import text
 from app.infrastructure.db.database import async_session_factory
-from app.infrastructure.rag.embedder import Embedder
 
 logger = logging.getLogger(__name__)
 
-_embedder = Embedder()
 
 
 class AdvancedSearch:

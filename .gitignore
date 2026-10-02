@@ -121,6 +121,12 @@ progress.md
 
 services/core/celerybeat-schedule
 
+# Local benchmarking scratch. These were tracked under services/ai/ and were
+# never imported by anything in the repo; they carried the last of the
+# py/empty-except findings. Kept on disk, out of version control.
+services/ai/stress_test.py
+services/ai/stress_test_v3.py
+
 
 docs/handbook
 docs/documents

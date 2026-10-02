@@ -5,37 +5,49 @@ defect and was fixed, and what was reviewed and dismissed with a reason.
 Dismissals here are documented rather than blanket-suppressed, so a future
 review can disagree with a specific call instead of re-triaging from zero.
 
-Alert counts are as of 2026-10-01: **416 open** — 341 CodeQL + 75 Scorecard
+Alert counts are as of 2026-10-02: **341 open** — 267 CodeQL + 74 Scorecard
 checks — plus **1 open Dependabot** and **0 open secret-scanning**.
 
-Those are the counts CodeQL reports for `dev`, i.e. the *baseline*. Fixes on
-this branch do not close alerts until the branch is pushed and CodeQL
-re-scans it, so treat every count below as "before".
+Those are the counts CodeQL reported for `dev`, i.e. the *baseline*. Two
+things move the number afterwards, and they are different in kind:
 
-The 341 CodeQL findings span 27 rules. The top of the list is dominated by
-lint-class rules with no security impact:
+- **Fixes do not close an alert.** An alert stays open until CodeQL re-scans
+  a branch containing the fix, so every count below is "before".
+- **Dismissals do.** 217 reviewed dismissals were filed from
+  `security/codeql-triage-r3`, which leaves 124 open. Of the 69
+  `PinnedDependenciesID` alerts, the 16 on Dockerfile `FROM` lines were
+  deliberately *not* dismissed; see *Not dismissed: Docker `FROM` pins*.
+
+The 267 CodeQL findings span 14 rules. The list is dominated by lint-class
+rules with no security impact:
 
 | Count | Rule | Class |
 | ---: | --- | --- |
 | 97 | `py/unused-global-variable` | lint |
-| 55 | `py/log-injection` | security |
-| 35 | `py/empty-except` | security |
-| 33 | `py/ineffectual-statement` | lint |
-| 26 | `py/stack-trace-exposure` | security |
-| 17 | `py/incomplete-url-substring-sanitization` | security |
-| 16 | `py/unused-import` | lint |
+| 62 | `py/log-injection` | security |
+| 34 | `py/ineffectual-statement` | lint |
+| 24 | `py/stack-trace-exposure` | security |
+| 15 | `py/unused-import` | lint |
 | 10 | `py/import-and-import-from` | lint |
 | 7 | `py/unnecessary-lambda` | lint |
-| 6 | `py/inheritance/signature-mismatch` | lint |
 | 5 | `py/undefined-export` | correctness |
-| 4 each | `py/mixed-returns`, `py/unused-local-variable`, `py/polluting-import`, `py/request-without-cert-validation` | mixed |
-| 3 | `py/partial-ssrf` | security |
-| 2 each | `py/regex/duplicate-in-character-class`, `py/bad-tag-filter`, `py/call/wrong-arguments`, `py/uninitialized-local-variable` | mixed |
-| 1 each | `py/illegal-raise`, `py/unreachable-except`, `py/imprecise-assert`, `py/call/wrong-named-argument`, `py/multiple-definition`, `py/full-ssrf`, `py/weak-sensitive-data-hashing` | mixed |
+| 3 each | `py/empty-except`, `py/mixed-returns`, `py/partial-ssrf` | mixed |
+| 2 | `py/call/wrong-arguments` | mixed |
+| 1 each | `py/full-ssrf`, `py/weak-sensitive-data-hashing` | mixed |
 
-The 75 Scorecard checks are 69 `PinnedDependenciesID` plus one each of
-`BranchProtectionID`, `CodeReviewID`, `CIIBestPracticesID`, `FuzzingID`,
-`TokenPermissionsID`, and `VulnerabilitiesID`.
+Thirteen further rules named in earlier revisions of this file now have **no
+open alerts** — they were resolved by the two merged PRs, not dismissed:
+`py/incomplete-url-substring-sanitization` (17),
+`py/request-without-cert-validation` (4), `py/polluting-import` (4),
+`py/inheritance/signature-mismatch` (6), and `py/unused-local-variable`,
+`py/regex/duplicate-in-character-class`, `py/bad-tag-filter`,
+`py/uninitialized-local-variable` (2 each), plus `py/illegal-raise`,
+`py/unreachable-except`, `py/imprecise-assert`,
+`py/call/wrong-named-argument`, `py/multiple-definition` (1 each).
+
+The 74 Scorecard checks are 69 `PinnedDependenciesID` plus one each of
+`BranchProtectionID`, `CodeReviewID`, `CIIBestPracticesID`, `FuzzingID`, and
+`TokenPermissionsID`.
 
 ## Fixed in `security/codeql-hardening`
 
@@ -283,6 +295,12 @@ exactly once and that the original `Exception("DB error")` propagates.
 
 ## Reviewed and dismissed
 
+The reviews recorded in this section were sound, but the corresponding API
+dismissals were never filed — so when `security/codeql-triage-r3` started,
+these alerts were still open. They were filed from that branch; see *Dismissed
+in `security/codeql-triage-r3`* for what actually took effect and for the
+Dockerfile pins that were deliberately left open.
+
 ### `weak-sensitive-data-hashing` (1)
 
 `services/ai/app/infrastructure/llm/client.py:66`
@@ -327,12 +345,20 @@ the repo already pins the Scorecard action itself
 would trade one check for another rather than improve security. Tracked as
 accepted, not suppressed.
 
+Superseded in part from `security/codeql-triage-r3`: the rationale above only
+covers the 53 alerts on GitHub Actions `uses:` pins. The 16 on Dockerfile
+`FROM` lines make a different claim and are left open — see *Not dismissed:
+Docker `FROM` pins*.
+
 ### Remaining lint-class noise
 
-`unused-global-variable` (97), `ineffectual-statement` (33),
-`unused-import` (16), and the smaller style rules are ruff/CodeQL lint
-findings with no security impact. They are a mechanical cleanup and are best
-done as their own change so the security diff stays reviewable.
+`unused-global-variable` (97), `ineffectual-statement` (34),
+`unused-import` (15), and the smaller style rules are ruff/CodeQL lint
+findings with no security impact. They were triaged in
+`security/codeql-triage-r3` rather than deferred to a separate change,
+because deferring them left the alert list looking worse than it was. Six of
+the 97 turned out to be real dead code and were deleted; the rest are
+dismissed with reasons under *Dismissed in `security/codeql-triage-r3`*.
 
 ## Fixed in `security/codeql-triage-r3`
 
@@ -435,13 +461,126 @@ Lockout is still keyed on a header the client controls, so rotating
 syntactically valid IPs bypasses the attempt counter. Closing that needs a
 proxy-trust list, which is a deployment decision rather than a code fix.
 
-## Still not triaged
+## Dismissed in `security/codeql-triage-r3`
 
-`py/polluting-import` (4), `py/inheritance/signature-mismatch` (6),
-`py/multiple-definition` (1), and the remaining lint class. These are
-correctness or style findings rather than security ones.
+217 alerts were dismissed, each group re-verified against the source before
+filing. A dismissal is a permanent public record asserting that the alert is
+wrong, so the reasoning is recorded rather than summarised. GitHub caps
+`dismissed_comment` at 280 characters, so each comment below is deliberately
+terse and points here for the detail.
 
-`py/undefined-export` (5) is a **proven false positive** and should be
-dismissed rather than fixed: those modules use the PEP 562 lazy `__all__`
-idiom. Reverting it breaks all 5 exports, which fault injection confirmed
-against the existing 21 tests that import them.
+**Earlier revisions of this file recorded dismissals that were never filed.**
+`stack-trace-exposure (25 of 26)` is the clearest case: 24
+`stack-trace-exposure` alerts were still open in the API when this branch
+started. The rationales were sound; the API calls had not been made.
+
+| Dismissed | Rule | Reason |
+| ---: | --- | --- |
+| 84 | `py/unused-global-variable` in `migrations/versions/*` | won't fix |
+| 7 | `py/unused-global-variable`, module state mutated via `global` | won't fix |
+| 10 | `py/unused-import` in `migrations/env.py` | false positive |
+| 3 | `py/unused-import`, `if TYPE_CHECKING:` + quoted annotations | false positive |
+| 1 | `py/unused-import`, Django migration autodiscovery | false positive |
+| 34 | `py/ineffectual-statement`, `...` bodies of `Protocol`/ABC stubs | false positive |
+| 9 | `py/import-and-import-from`, module object + symbol in tests | used in tests |
+| 5 | `py/undefined-export`, PEP 562 lazy `__all__` | false positive |
+| 3 | `py/partial-ssrf` in `key_validator.py` | false positive |
+| 3 | `py/stack-trace-exposure` in `knowledge/views/spaces.py` | false positive |
+| 1 | `py/stack-trace-exposure` in `api_keys/views.py` | false positive |
+| 1 | `py/mixed-returns` in `core/middleware/websocket_auth.py` | false positive |
+| 2 | `py/call/wrong-arguments`, heterogeneous `stage_args` dispatch | false positive |
+| 1 | `py/weak-sensitive-data-hashing`, in-process cache key | false positive |
+| 53 | `PinnedDependenciesID` on GitHub Actions `uses:` pins | won't fix |
+| **217** | **total** | |
+
+Three of these are worth stating in full, because the rule name alone
+misdescribes them.
+
+**`py/ineffectual-statement` is not a complaint about no-ops.** The flagged
+statement is the `...` body of an abstract method: 17 `Protocol` stubs in
+`app/domain/contracts/repository_provider.py`, 6 in `storage.py`, 5 in
+`apps/authentication/oauth/base.py`, 4 in
+`knowledge_engine/sources/base.py`, 1 in `application/tools/base.py`. A `def`
+requires a body and `...` is the correct body for one that must never
+execute, so there is no spelling that satisfies the rule. The 34th instance
+is `tests/test_package_exports.py:56`, which deliberately touches a
+non-existent attribute in order to assert that `AttributeError` is raised.
+
+**`py/stack-trace-exposure` in `spaces.py` is safe because of how narrow
+the catch is.** Each of the three handlers catches only
+`KnowledgePermissionError`, and all five raise sites of that exception —
+three in `apps/knowledge/services/space.py`, two in
+`apps/knowledge/services/asset.py` — pass a fixed string literal with no
+interpolation, so `str(e)` can only ever be one of five constant sentences.
+The `api_keys/views.py` case is the same shape but not quite as airtight: it
+echoes the caller's rejected scope strings and the valid-scope list, which
+is validation feedback rather than internal detail.
+
+**`py/mixed-returns` on `websocket_auth.py:38` is accurate and harmless.**
+The function really does mix a bare `return` with
+`return await super().__call__(...)`. It does not matter because every bare
+`return` is immediately preceded by `await send({"type":
+"websocket.close", ...})`, and channels invokes `BaseMiddleware.__call__`
+for its effect on `scope` and discards the return value. No caller can
+observe a `None` where it expected a value.
+
+### Not dismissed: Docker `FROM` pins
+
+16 of the 69 `PinnedDependenciesID` alerts are on Dockerfile `FROM` lines,
+not GitHub Actions `uses:` pins. The rationale above — pinning to a full
+commit SHA makes a build reproducible — is true of `uses:` and false of a
+floating base-image tag. Those 16 are left open, because a mutable `FROM` is
+a real supply-chain finding and the honest answer is to pin by digest, not
+to dismiss.
+
+### Two Dockerfiles cannot build
+
+`groupadd`/`useradd` come from `shadow-utils`. Debian-slim images ship it;
+**Alpine does not** — Alpine uses BusyBox's `addgroup`/`adduser`. Exactly two
+Dockerfiles here are Alpine-based, and both call the Debian binaries:
+
+| File | Base | Line | |
+| --- | --- | ---: | --- |
+| `frontend/Dockerfile` | `node:18-alpine` | 16 | `groupadd --gid 1001 appgroup` |
+| `services/realtime/Dockerfile` | `node:18-alpine` | 10 | `groupadd --gid 1001 appgroup` |
+
+On both, that `RUN` is expected to fail, which also means the following
+`USER appuser` is never reached and the image ships running as root — the
+exact opposite of what the line is for. This is recorded as
+expected-broken, not confirmed-broken: no Docker daemon was available in the
+environment where the triage ran, so the build was never executed. The fix is
+to switch to `addgroup`/`adduser`, or add `apk add --no-cache shadow`.
+
+The other six Dockerfiles (`core`, `auth`, `ai`, `analysis`, `notifications`)
+are `python:3.1x-slim` and use the same `groupadd`/`useradd` idiom correctly,
+because Debian-slim does provide it.
+
+Separately, `node:18-alpine` is end-of-life (since 2025-04-30) and floats.
+It appears at `frontend/Dockerfile:1` and `:9` and
+`services/realtime/Dockerfile:1` — three of the 16 unpinned-`FROM` alerts.
+Out of scope for a code-security change; these want a separate decision about
+moving both images to a supported Node and pinning by digest.
+
+## Not fixed, and why
+
+- **`failover_engine.py` documents a feature that does not exist.** The
+  docstring promises "Periodic rebalance every 5 min (success rate decay)"
+  and `__init__` still sets `self._last_rebalance`, but neither
+  `_REBALANCE_INTERVAL` nor `_last_rebalance` was ever read. The dead
+  constant was deleted; the docstring line and the instance field were left
+  in place as the visible marker, because implementing the cycle is a
+  feature decision rather than a security fix.
+- **`conflict_resolver.py` makes the same kind of claim.** Its docstring
+  says conflicts are detected by "embedding similarity + negation patterns",
+  and only negation, version and deprecated checks exist. The vestigial
+  `_embedder` was removed, but the docstring was deliberately *not*
+  rewritten to match it — narrowing a docstring so it agrees with missing
+  capability would hide the gap.
+- **`assert_safe_url` is open to DNS rebinding.** It resolves the hostname
+  and rejects non-public addresses, then the request re-resolves
+  independently. That window applies to all 9 of its callers, so it is
+  tracked here rather than patched one alert at a time.
+- **Lockout evasion via a rotating header.** Lockout is keyed on
+  `X-Forwarded-For`, which the client controls, so rotating syntactically
+  valid IPs bypasses the attempt counter. Closing that needs a proxy-trust
+  list, which is a deployment decision rather than a code fix.

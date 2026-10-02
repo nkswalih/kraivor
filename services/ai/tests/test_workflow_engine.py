@@ -460,7 +460,12 @@ class TestRunningWorkflowTracking:
         assert live.status == WorkflowStatus.RUNNING
 
         release.set()
-        await task
+        completed = await task
+
+        # Assert on the returned result instead of discarding it. Deregistration
+        # only proves execute() returned, not that the run succeeded -- a
+        # FAILED result deregisters just the same and used to satisfy this test.
+        assert completed.status == WorkflowStatus.COMPLETED
 
         assert engine.list_running() == []
         assert await engine.get_status("wf-a") is None

@@ -1,0 +1,19 @@
+# Shared lint config for first-party code that lives outside a service:
+# fuzzing/ and scripts/. Until this existed neither directory had a lint gate,
+# which is how a fuzz harness can drift into a syntax error and still be green.
+#
+# Each service carries its own [tool.ruff] inside its pyproject.toml and that
+# still wins for files beneath it -- ruff resolves configuration per file,
+# from the closest one upward, so adding this file does not change what
+# `ruff check .` reports inside services/.
+#
+# The rule set matches auth, core and ai. analysis is deliberately stricter
+# (it adds I and RUF); that is a per-service decision and is not imposed on
+# code that is not part of a service.
+line-length = 88
+target-version = "py314"
+
+[lint]
+select = ["E", "F", "N", "UP", "B", "SIM", "C4", "ISC", "ICN"]
+# Line length is not enforced anywhere in this repo; wrapping is advisory.
+ignore = ["E501"]

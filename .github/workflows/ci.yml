@@ -25,6 +25,10 @@ env:
   # fail_under), NOT here, so each service is held to its own honest number.
   # CI only supplies --cov, without which pytest-cov never activates and no
   # report is produced at all.
+  # Budget for the coverage-guided fuzzing run. Short on purpose: the gate
+  # below is the deterministic corpus check, and libFuzzer keeps its findings
+  # in the artifact upload, so this is extra search rather than the contract.
+  FUZZ_SECONDS: "60"
 
 jobs:
   format:
@@ -403,3 +407,54 @@ jobs:
         # digests current; this stops one being dropped or a tag being rolled
         # back.
         run: python scripts/check_base_images.py
+
+  fuzz:
+    name: Fuzz SSRF guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Lint first-party tooling (Ruff)
+        # fuzzing/ and scripts/ sit outside every service, so the per-service
+        # lint matrix cannot see them. Without this they are the only Python in
+        # the repo with no gate on it.
+        run: |
+          pip install ruff
+          ruff check fuzzing/ scripts/
+
+      - name: Check the invariants over the corpus
+        # This is the gate. It is deterministic and takes seconds, so a
+        # regression fails the build the same way every time. The fuzzing step
+        # below is time-limited by design and can only ever add findings.
+        run: python fuzzing/fuzz_url_guard.py --iterations 50000
+
+      - name: Install atheris
+        # atheris ships native libFuzzer binaries, so it exists only on Linux.
+        # That is also why this job cannot run on a Windows runner and why the
+        # target carries a pure-Python driver for local use.
+        run: pip install atheris
+
+      - name: Fuzz
+        # Seed arguments are expanded explicitly rather than passing the
+        # directory: libFuzzer takes files, and whether it also accepts a
+        # directory has varied between versions.
+        run: |
+          mkdir -p .fuzz-artifacts
+          python fuzzing/fuzz_url_guard.py \
+            -max_total_time="${{ env.FUZZ_SECONDS }}" \
+            -artifact_prefix=.fuzz-artifacts/ \
+            $(find fuzzing/corpus/url_guard -type f | sort)
+
+      - name: Upload any crashers
+        # Always runs: a found input is only useful if it survives the run.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashers
+          path: .fuzz-artifacts/
+          if-no-files-found: ignore

@@ -185,11 +185,18 @@ class KnowledgeGraph:
         workspace_id: str,
         item_id: str,
         text_content: str,
-    ):
-        """Extract and index entities from a knowledge item's content."""
+    ) -> list[dict]:
+        """Extract and index entities from a knowledge item's content.
+
+        Always returns a list, including when nothing was extracted. An
+        earlier version returned `None` on the empty path and the list
+        otherwise, so a caller that iterated the result got a `TypeError`
+        exactly when the item happened to contain no recognised names.
+        `knowledge_indexer` only ever did `if entities:`, which hid it.
+        """
         entities = extract_entities(text_content)
         if not entities:
-            return
+            return []
 
         async with async_session_factory() as session:
             for entity in entities:
@@ -219,11 +226,14 @@ class KnowledgeGraph:
         self,
         workspace_id: str,
         text_content: str,
-    ):
-        """Extract and index relationships from text content."""
+    ) -> list[dict]:
+        """Extract and index relationships from text content.
+
+        Always returns a list, for the same reason as `index_entities`.
+        """
         relationships = extract_relationships(text_content)
         if not relationships:
-            return
+            return []
 
         import hashlib
 

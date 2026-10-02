@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.14"
   APP_ENV: "test"
   SECRET_KEY: "ci-test-secret-key-not-for-production"
   FRONTEND_URL: "http://localhost:3000"
@@ -253,7 +253,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:17
+        image: postgres:18@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
         env:
           POSTGRES_USER: kraivor
           POSTGRES_PASSWORD: kraivor
@@ -340,7 +340,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -373,7 +373,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -385,3 +385,21 @@ jobs:
         # via next@15 and is only cleared by a next@16 major upgrade, which is
         # tracked as separate work rather than force-applied.
         run: npm audit --audit-level=high
+
+  base-images:
+    name: Base images pinned and consistent
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Check every base image is digest-pinned
+        # Guards the class of drift that let Python 3.11 images, a 3.12 CI
+        # interpreter and py311 linter targets coexist. Dependabot keeps the
+        # digests current; this stops one being dropped or a tag being rolled
+        # back.
+        run: python scripts/check_base_images.py

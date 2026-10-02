@@ -120,7 +120,7 @@ class KnowledgeEventPublisher:
     # ── Knowledge Space events (KRV-022) ──────────────────────────────────────
 
     def knowledge_created(
-        self, *, knowledge_space: "KnowledgeSpace", actor_id: uuid.UUID
+        self, *, knowledge_space: KnowledgeSpace, actor_id: uuid.UUID
     ) -> None:
         """
         Published after a knowledge space is created.
@@ -140,7 +140,7 @@ class KnowledgeEventPublisher:
         self._publish(TOPIC_KNOWLEDGE, event)
 
     def knowledge_updated(
-        self, *, knowledge_space: "KnowledgeSpace", actor_id: uuid.UUID
+        self, *, knowledge_space: KnowledgeSpace, actor_id: uuid.UUID
     ) -> None:
         """
         Published after a knowledge space's metadata or canvas_data is updated.
@@ -161,7 +161,7 @@ class KnowledgeEventPublisher:
         self._publish(TOPIC_KNOWLEDGE, event)
 
     def knowledge_deleted(
-        self, *, knowledge_space: "KnowledgeSpace", actor_id: uuid.UUID
+        self, *, knowledge_space: KnowledgeSpace, actor_id: uuid.UUID
     ) -> None:
         """
         Published after a knowledge space is soft-deleted.

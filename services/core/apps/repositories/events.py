@@ -123,7 +123,7 @@ class RepositoryEventPublisher:
     # ── Repository events (KRV-021) ───────────────────────────────────────────
 
     def repository_connected(
-        self, *, repository: "Repository", actor_id: uuid.UUID
+        self, *, repository: Repository, actor_id: uuid.UUID
     ) -> None:
         """
         Published after a repository is connected to a workspace.
@@ -146,7 +146,7 @@ class RepositoryEventPublisher:
         self._publish(TOPIC_REPOSITORY, event)
 
     def repository_disconnected(
-        self, *, repository: "Repository", actor_id: uuid.UUID
+        self, *, repository: Repository, actor_id: uuid.UUID
     ) -> None:
         """
         Published after a repository is disconnected from a workspace.

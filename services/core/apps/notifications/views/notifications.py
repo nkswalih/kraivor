@@ -60,7 +60,7 @@ class NotificationListView(APIView):
 class NotificationDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def _get_notification_or_404(self, pk: str, user_id: str) -> "Notification":
+    def _get_notification_or_404(self, pk: str, user_id: str) -> Notification:
         try:
             notif_id = uuid.UUID(str(pk))
         except (ValueError, AttributeError):

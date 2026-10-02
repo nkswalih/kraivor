@@ -95,7 +95,7 @@ class ModelHealth:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "ModelHealth":
+    def from_dict(cls, data: dict) -> ModelHealth:
         return cls(
             successes=data.get("s", 0),
             failures=data.get("f", 0),

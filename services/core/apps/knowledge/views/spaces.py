@@ -27,7 +27,7 @@ from ..services.base import KnowledgePermissionError
 logger = __import__("logging").getLogger(__name__)
 
 
-def _get_space_or_404(pk: str, user_id: str) -> "KnowledgeSpace":
+def _get_space_or_404(pk: str, user_id: str) -> KnowledgeSpace:
     try:
         ks_id = pk if isinstance(pk, uuid.UUID) else uuid.UUID(str(pk))
     except (ValueError, AttributeError) as exc:
@@ -42,7 +42,7 @@ class WorkspaceContextMixin:
     def _get_user_id(self) -> str:
         return self.request.user_id
 
-    def _get_workspace_or_404(self, workspace_pk: str) -> "Workspace":
+    def _get_workspace_or_404(self, workspace_pk: str) -> Workspace:
         from apps.workspaces.selectors import WorkspaceSelector
 
         workspace = WorkspaceSelector.get_workspace_for_user(

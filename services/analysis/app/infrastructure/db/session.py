@@ -31,7 +31,7 @@ async_session_factory = async_sessionmaker(
 )
 
 
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_db_session() -> AsyncGenerator[AsyncSession]:
     """FastAPI dependency that yields an async database session.
 
     Session is automatically closed when the request finishes.

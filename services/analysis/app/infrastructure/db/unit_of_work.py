@@ -60,7 +60,7 @@ class UnitOfWork:
         self.enterprise_guides: EnterpriseGuideRepository
         self.file_analyses: FileAnalysisRepository
 
-    async def __aenter__(self) -> "UnitOfWork":
+    async def __aenter__(self) -> UnitOfWork:
         if self._session is None:
             self._session = async_session_factory()
         if self._session is None:

@@ -291,7 +291,7 @@ class ChatService:
 
     async def stream_chat(
         self, user_id: str, message: str, **kwargs
-    ) -> AsyncGenerator[dict, None]:
+    ) -> AsyncGenerator[dict]:
         """True token-by-token streaming via LLM client.stream().
 
         Strategy:

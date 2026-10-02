@@ -124,7 +124,7 @@ class WorkspaceEventPublisher:
 
     # ── Workspace lifecycle events (KRV-019) ──────────────────────────────────
 
-    def workspace_created(self, *, workspace: "Workspace", actor_id: uuid.UUID) -> None:
+    def workspace_created(self, *, workspace: Workspace, actor_id: uuid.UUID) -> None:
         """Consumed by: Notifications (welcome email), Analytics."""
         event = _envelope(
             event_type="workspace.created",
@@ -140,7 +140,7 @@ class WorkspaceEventPublisher:
         )
         self._publish(TOPIC_WORKSPACE, event)
 
-    def workspace_deleted(self, *, workspace: "Workspace", actor_id: uuid.UUID) -> None:
+    def workspace_deleted(self, *, workspace: Workspace, actor_id: uuid.UUID) -> None:
         """Consumed by: Analysis (cancel jobs), AI (remove embeddings)."""
         event = _envelope(
             event_type="workspace.deleted",
@@ -155,8 +155,8 @@ class WorkspaceEventPublisher:
     def member_invited(
         self,
         *,
-        workspace: "Workspace",
-        invitation: "WorkspaceInvitation",
+        workspace: Workspace,
+        invitation: WorkspaceInvitation,
         actor_id: uuid.UUID,
     ) -> None:
         """
@@ -183,7 +183,7 @@ class WorkspaceEventPublisher:
         self._publish(TOPIC_WORKSPACE, event)
 
     def member_joined(
-        self, *, workspace: "Workspace", member: "WorkspaceMember", actor_id: uuid.UUID
+        self, *, workspace: Workspace, member: WorkspaceMember, actor_id: uuid.UUID
     ) -> None:
         """
         Published when an invitation is accepted and the member is created.
@@ -208,8 +208,8 @@ class WorkspaceEventPublisher:
     def member_role_changed(
         self,
         *,
-        workspace: "Workspace",
-        member: "WorkspaceMember",
+        workspace: Workspace,
+        member: WorkspaceMember,
         old_role: str,
         new_role: str,
         actor_id: uuid.UUID,
@@ -237,7 +237,7 @@ class WorkspaceEventPublisher:
     def member_removed(
         self,
         *,
-        workspace: "Workspace",
+        workspace: Workspace,
         user_id: uuid.UUID,
         actor_id: uuid.UUID,
         reason: str = "removed_by_admin",
@@ -263,7 +263,7 @@ class WorkspaceEventPublisher:
     # ── Backward compat alias (used in KRV-019 service) ──────────────────────
 
     def member_added(
-        self, *, workspace: "Workspace", member: "WorkspaceMember", actor_id: uuid.UUID
+        self, *, workspace: Workspace, member: WorkspaceMember, actor_id: uuid.UUID
     ) -> None:
         """Alias used by WorkspaceService.add_member() from KRV-019."""
         self.member_joined(workspace=workspace, member=member, actor_id=actor_id)

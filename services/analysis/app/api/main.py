@@ -80,7 +80,7 @@ async def run_migrations() -> None:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     get_settings()
     logger.info("starting", service="analysis-service", version="0.1.0")
     await run_migrations()

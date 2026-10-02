@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import ipaddress
 import logging
 import redis
 from django.conf import settings
@@ -170,14 +171,40 @@ def generate_device_id(request) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
 
+def _valid_ip(candidate: str) -> str | None:
+    """Return `candidate` as a normalised IP, or None if it is not one.
+
+    `X-Forwarded-For` is a request header, so it is attacker-controlled
+    text. It used to be trusted verbatim after `.strip()`, which is not
+    enough: `strip()` only trims the ends, so an embedded CR/LF survived,
+    as did a value containing `:`.
+    """
+    try:
+        return str(ipaddress.ip_address(candidate))
+    except ValueError:
+        return None
+
+
 def get_client_ip(request) -> str:
-    """Extract client IP from request, handling proxies."""
+    """Extract the client IP from a request, tolerating a reverse proxy.
+
+    An `X-Forwarded-For` value is only used when the first hop parses as an
+    IP address; anything else falls back to `REMOTE_ADDR`. This value is
+    interpolated into audit log lines and used to build the Redis keys that
+    `LoginLockoutManager` counts attempts against, so accepting arbitrary
+    header text let a caller forge log entries and inject key separators.
+    """
     x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
     if x_forwarded_for:
-        ip = x_forwarded_for.split(",")[0].strip()
-    else:
-        ip = request.META.get("REMOTE_ADDR", "127.0.0.1")
-    return ip
+        first_hop = x_forwarded_for.split(",")[0].strip()
+        forwarded = _valid_ip(first_hop)
+        if forwarded is not None:
+            return forwarded
+        logger.warning(
+            "auth.client_ip.invalid_x_forwarded_for", extra={"value": first_hop[:64]}
+        )
+
+    return _valid_ip(request.META.get("REMOTE_ADDR", "")) or "127.0.0.1"
 
 
 _lockout_manager: LoginLockoutManager | None = None

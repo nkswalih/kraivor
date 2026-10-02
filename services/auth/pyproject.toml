@@ -177,7 +177,8 @@ parallel = true
 precision = 2
 show_missing = true
 skip_covered = false
-fail_under = 87
+# Measured 88.57% (2026-10-03) across the full 382-test suite, raised from 87.
+fail_under = 88
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

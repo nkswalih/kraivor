@@ -11,8 +11,16 @@ checks — plus **1 open Dependabot** and **0 open secret-scanning**.
 Those are the counts CodeQL reported for `dev`, i.e. the *baseline*. Two
 things move the number afterwards, and they are different in kind:
 
-- **Fixes do not close an alert.** An alert stays open until CodeQL re-scans
-  a branch containing the fix, so every count below is "before".
+- **Fixes do not close an alert, and a pull-request scan does not either.**
+  This was measured on `security/codeql-triage-r3`, not assumed: all four
+  `Analyze` jobs succeeded against the branch head, and none of the 41 alerts
+  that branch resolves changed state — their `updated_at` still predated the
+  run. A `pull_request`-event analysis annotates the PR; the repository's
+  alert list is tracked against the default branch, so an alert only flips to
+  `fixed` once the branch is merged and the default branch is re-analysed.
+  That is precisely why those alerts were left open rather than dismissed: a
+  dismissal would have asserted the fixes work, whereas leaving them open lets
+  the merge prove it.
 - **Dismissals do.** 217 reviewed dismissals were filed from
   `security/codeql-triage-r3`, which leaves 124 open. Of the 69
   `PinnedDependenciesID` alerts, the 16 on Dockerfile `FROM` lines were

@@ -222,6 +222,17 @@ jobs:
             --cov-report=term-missing:skip-covered \
             --cov-report=xml --cov-report=html -q
 
+      - name: Verify the coverage report is real
+        # pytest-cov already enforces fail_under, but a percentage cannot tell
+        # 27% of a large package apart from 100% of an empty one -- and
+        # services/notifications sits at fail_under 90 with every module under
+        # app/ a 0-byte file, which passes on a report that measured nothing.
+        # This rejects a missing report, one that measured too little to be
+        # evidence, and a rate below the floor. It recomputes the percentage
+        # the way coverage.py does, branches included, so this number and the
+        # one pytest-cov gated on cannot drift apart.
+        run: python ../../scripts/check_coverage.py
+
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         if: always()
@@ -235,11 +246,12 @@ jobs:
         run: |
           echo "## ${{ matrix.service }} Unit Coverage" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          if [ -f coverage.xml ]; then
-            python -c "import xml.etree.ElementTree as ET, tomllib; rate = float(ET.parse('coverage.xml').getroot().attrib.get('line-rate', '0')) * 100; floor = tomllib.load(open('pyproject.toml','rb'))['tool']['coverage']['report']['fail_under']; print(f'Line coverage: {rate:.2f}%  (floor: {floor}%)'); print('✅ Meets floor' if rate >= floor else '❌ Below floor')" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "No coverage report generated" >> $GITHUB_STEP_SUMMARY
-          fi
+          # The gate's own output, so the number in this summary and the check
+          # that blocks the build are the same computation rather than two
+          # reimplementations of it that can disagree.
+          python ../../scripts/check_coverage.py >> $GITHUB_STEP_SUMMARY 2>&1 \
+            || echo "Coverage check did not pass -- see the job log." \
+               >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
   integration-tests:

@@ -20,15 +20,28 @@ controls a name that resolves to a public address during the check and a
 private one when the socket connects. Closing that requires pinning the
 resolved address and connecting to it directly, which this module does not
 do — see the accepted-risks section in ``DEPLOYMENT.md``.
+
+Neither check survives a redirect. A public host that answers ``302`` with
+``Location: http://169.254.169.254/`` puts the very next request on
+infrastructure the caller was just refused. Callers must therefore run with
+redirect following disabled and route each ``Location`` through
+:func:`resolve_redirect`, which re-applies both checks to every hop.
 """
 
 from __future__ import annotations
 
 import ipaddress
 import socket
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 ALLOWED_SCHEMES = frozenset({"http", "https"})
+
+# Statuses that carry a Location header worth following. 303 switches the
+# method to GET, which is already what these callers issue, so it needs no
+# special handling here.
+REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
+
+MAX_REDIRECT_HOPS = 5
 
 
 def host_matches(url: str, *domains: str) -> bool:
@@ -154,3 +167,30 @@ def assert_safe_url(url: str) -> str:
             )
 
     return url
+
+
+def resolve_redirect(current_url: str, location: str | None) -> str:
+    """Resolve a ``Location`` header against ``current_url`` and re-validate it.
+
+    Validating only the *initial* URL does not make a redirecting fetch
+    safe. A public host can answer ``302`` with a ``Location`` pointing at
+    ``169.254.169.254``, and a client that follows redirects will fetch it,
+    so the guard is consulted and then bypassed in the same request. Every
+    hop has to be checked, which is why no outbound client in this service
+    is allowed to follow redirects on its own.
+
+    Args:
+        current_url: The URL that produced the redirect.
+        location: The raw ``Location`` header value, which may be relative.
+
+    Returns:
+        The absolute, validated target URL.
+
+    Raises:
+        UnsafeURLError: If the resolved target is not safe to fetch.
+    """
+    if not location or not location.strip():
+        raise UnsafeURLError("Redirect response carried no Location header")
+    target = urljoin(current_url, location.strip())
+    assert_safe_url(target)
+    return target

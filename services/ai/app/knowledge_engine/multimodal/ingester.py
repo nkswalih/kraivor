@@ -14,7 +14,13 @@ import hashlib
 import logging
 import mimetypes
 
-from app.core.url_guard import UnsafeURLError, assert_safe_url
+from app.core.url_guard import (
+    MAX_REDIRECT_HOPS,
+    REDIRECT_STATUSES,
+    UnsafeURLError,
+    assert_safe_url,
+    resolve_redirect,
+)
 
 from ..config import KnowledgeEngineConfig
 from ..store.knowledge_indexer import KnowledgeIndexer
@@ -220,8 +226,36 @@ class MultiModalIngester:
                 error=f"URL not allowed: {e}",
             )
 
-        async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
+        # Redirects are followed by hand so every hop can be validated.
+        # With follow_redirects=True the guard above only covers the first
+        # request, and a public host answering 302 with Location:
+        # http://169.254.169.254/ reaches the metadata service unchecked.
+        async with httpx.AsyncClient(timeout=60.0, follow_redirects=False) as client:
             resp = await client.get(url)
+            hops = 0
+            while resp.status_code in REDIRECT_STATUSES:
+                if hops >= MAX_REDIRECT_HOPS:
+                    logger.warning(
+                        "Refused ingest after %d redirects, last URL %s", hops, url
+                    )
+                    return IngestionResult(
+                        success=False,
+                        source_type="url",
+                        content_type="unknown",
+                        error=f"Too many redirects (limit {MAX_REDIRECT_HOPS})",
+                    )
+                try:
+                    url = resolve_redirect(url, resp.headers.get("location"))
+                except UnsafeURLError as e:
+                    logger.warning("Refused unsafe ingest redirect %s: %s", url, e)
+                    return IngestionResult(
+                        success=False,
+                        source_type="url",
+                        content_type="unknown",
+                        error=f"Redirect not allowed: {e}",
+                    )
+                resp = await client.get(url)
+                hops += 1
             resp.raise_for_status()
 
         content_type_header = resp.headers.get("content-type", "")

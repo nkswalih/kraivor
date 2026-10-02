@@ -2,7 +2,7 @@
 name = "kraivor-analysis-service"
 version = "0.1.0"
 description = "Kraivor Analysis Service — code analysis, tree-sitter parsing, scoring, and production readiness intelligence"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
@@ -54,7 +54,7 @@ prod = [
 
 [tool.black]
 line-length = 88
-target-version = ["py312"]
+target-version = ["py314"]
 skip-magic-trailing-comma = true
 
 [tool.isort]
@@ -69,7 +69,7 @@ known_first_party = ["app", "workers", "tests"]
 
 [tool.mypy]
 strict = true
-python_version = "3.12"
+python_version = "3.14"
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
@@ -102,7 +102,7 @@ disallow_incomplete_defs = true
 
 [tool.ruff]
 line-length = 88
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "C4", "ISC", "ICN", "RUF"]

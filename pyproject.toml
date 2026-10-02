@@ -1,6 +1,6 @@
 [tool.black]
 line-length = 88
-target-version = ["py312"]
+target-version = ["py314"]
 skip-magic-trailing-comma = true
 
 [tool.isort]
@@ -14,7 +14,7 @@ ensure_newline_before_comments = true
 
 [tool.ruff]
 line-length = 88
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "N", "UP", "B", "SIM", "C4", "ISC", "ICN"]

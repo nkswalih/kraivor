@@ -2,7 +2,7 @@
 name = "notifications"
 version = "0.1.0"
 description = "Notifications service — email, push, and Slack notifications"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.100",
     "uvicorn[standard]>=0.23",
@@ -45,7 +45,7 @@ dev = [
 
 [tool.black]
 line-length = 88
-target-version = ["py311"]
+target-version = ["py314"]
 skip-magic-trailing-comma = true
 
 [tool.isort]
@@ -62,7 +62,7 @@ known_first_party = ["app"]
 
 [tool.mypy]
 strict = true
-python_version = "3.11"
+python_version = "3.14"
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
@@ -133,7 +133,7 @@ directory = "htmlcov"
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "ARG", "C4", "ISC", "ICN"]

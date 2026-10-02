@@ -129,6 +129,36 @@ pattern is `IGNORECASE` and whitespace-tolerant.
 
 Covered by `services/ai/tests/test_url_guard.py` (42 cases).
 
+#### The guard did not survive a redirect
+
+Fixed in `security/codeql-triage-r3`. Guarding the initial URL is not
+sufficient when the HTTP client follows redirects on its own, and three
+fetchers did:
+
+| Site | Client setting | Flagged? |
+| --- | --- | --- |
+| `knowledge_engine/multimodal/ingester.py` | `httpx` `follow_redirects=True` | yes — `py/full-ssrf` |
+| `application/tools/web_fetch_tool.py` (`WebFetchTool`) | `aiohttp` `allow_redirects=True` | no |
+| `application/tools/web_fetch_tool.py` (`NewsFetchTool`) | `aiohttp` `allow_redirects=True` | no |
+
+A public host answers `302` with `Location: http://169.254.169.254/` and
+the next request reaches the cloud metadata service unchecked. The
+response body was then returned as page text or ingested into the
+knowledge base, so this was a full SSRF with the contents read back —
+and two of the three sites were not flagged at all.
+
+`url_guard.resolve_redirect()` now resolves a `Location` against the
+current URL and re-applies both checks. Redirect following is disabled on
+every request and re-implemented in the callers so each hop is validated,
+bounded by `MAX_REDIRECT_HOPS`. Public redirects still work, including
+relative targets.
+
+The 3 × `py/partial-ssrf` in `key_validator.py` were never affected: its
+`httpx` clients leave `follow_redirects` at the `False` default, so the
+one `assert_safe_url` call covers the request that is actually made.
+
+Covered by `services/ai/tests/test_redirect_ssrf.py` (21 cases).
+
 ### Disabled TLS verification (4) — `request-without-cert-validation`
 
 `knowledge_engine/sources/{news,web_search,documentation,community}.py`
@@ -304,15 +334,114 @@ accepted, not suppressed.
 findings with no security impact. They are a mechanical cleanup and are best
 done as their own change so the security diff stays reviewable.
 
-## Not yet triaged
+## Fixed in `security/codeql-triage-r3`
 
-`log-injection` (55) is the largest remaining **security**-class category
-(`unused-global-variable` at 97 is larger but purely lint). `LOGGING` is
-configured in `services/core/core/settings/base.py`; the fix is a logging
-filter that strips CR/LF from untrusted values, applied once, rather than 55
-call-site rewrites. Left for a follow-up change.
+### Internal exception text reaching API responses — `stack-trace-exposure`
 
-Also unexamined: `py/polluting-import` (4), `py/undefined-export` (5),
-`py/inheritance/signature-mismatch` (6), and `py/multiple-definition` (1).
-These are correctness findings rather than security ones and have not been
-read yet.
+`core/exceptions.py` gains `log_and_raise()`. It logs the wrapped exception
+in full and raises with a stable, caller-safe message. Only exceptions that
+wrap third-party text get the generic treatment — the domain exceptions in
+`ERROR_TYPE_MAP` carry curated user-facing messages, and replacing those
+with generic text would remove the errors the API contract promises.
+
+Applied at the raise sites rather than in the views:
+
+- `repositories/workspaces/members/invitations/views.py` — 4 sites
+- `repositories/github_app/client.py` — 8 sites
+
+The GitHub App fix is at the raise site deliberately. Sanitising in the 5
+views would have left the taint live for every other consumer; cutting it
+where the exception is constructed makes `str(exc)` safe downstream by
+construction. The upstream detail still survives in the log `extra=` at
+`client.py` lines 136, 180, 205, 256, 275, 325, 341, 395.
+
+Covered by `services/core/tests/test_error_boundaries.py` (19 tests).
+
+### Redundant function-local import — `py/import-and-import-from` (1)
+
+`services/analysis/app/application/analysis/handler.py` imported `gather`
+inside the function that used it. Now uses the module-level
+`asyncio.gather`. The same commit added 6 tests for `get_job_statistics`,
+which had no coverage at all and accepted a `uow` it never used.
+
+### Inconsistent return type — `py/mixed-returns` (2)
+
+`services/ai/app/knowledge_engine/graph/knowledge_graph.py`:
+`index_entities` (line 183) and `index_relationships` (line 218) were
+annotated `-> list[dict]` but returned `None` on an empty path, so a caller
+iterating the result raised `TypeError`. Both now always return a list.
+Covered by `services/ai/tests/test_knowledge_graph_contract.py` (9 tests).
+
+### Lint cleanups
+
+`py/unnecessary-lambda` (7) — zero-argument lambdas in test factories
+replaced with direct references. `py/unnecessary-lambda` in the knowledge
+graph was deliberately not collapsed into a one-liner.
+
+## `log-injection` (62) — triaged in `security/codeql-triage-r3`
+
+This was the largest remaining **security**-class category. All 62 alerts
+were classified against what each service's formatter actually renders,
+because "a tainted value reaches a log call" is not the same as "a tainted
+value reaches a log line".
+
+Two things decide forgeability:
+
+| | Reaches the log line? | Forgeable? |
+| --- | --- | --- |
+| Value interpolated into the format string | yes | **yes**, if the formatter preserves CR/LF |
+| Value passed only through `extra={...}` | **no** | no — never rendered |
+
+`auth` uses the plain `verbose` formatter
+(`{levelname} {asctime} {module} {message}`, `auth/settings/base.py:443`),
+which renders `message` verbatim. `core` uses `JsonFormatter`, and `ai`
+configures structlog's `JSONRenderer`; both escape CR/LF, so a record
+cannot be split there even when the value is interpolated.
+
+| Service | Alerts | Interpolated into the format string | Verdict |
+| --- | ---: | ---: | --- |
+| `auth` | 12 | 2 | 2 forgeable, 10 not |
+| `core` | 25 | 0 | none forgeable |
+| `ai` | 25 | 25 | none forgeable — renderer escapes CR/LF |
+
+The two genuine findings, both fixed:
+
+- `auth/apps/authentication/oauth/google/views.py` — `error` is
+  `request.query_params.get("error")` on an **unauthenticated** endpoint, so
+  the value is entirely caller-chosen.
+- `auth/apps/api_keys/views.py` — `key_id` is matched by the `<str:key_id>`
+  converter, which accepts CR and LF.
+
+Both values are now escaped at the call site, which keeps them readable
+rather than dropping them and keeps the traceback on `logger.exception`.
+
+**A logging filter is not a fix here**, for two independent reasons. A
+`logging.Filter` cannot satisfy CodeQL at all: the rule's Python sanitizer
+is an inline `str.replace()` on the tainted value, which a filter cannot
+provide. And the `extra`-only sites do not need one — those values are
+never rendered, so there is nothing to strip. The measurements behind the
+table are in `auth/apps/authentication/tests/test_log_injection_sanitisation.py`,
+which pins both facts and fails if the `verbose` format string ever grows a
+field.
+
+`auth`'s `get_client_ip` was reached while reviewing this: it trusted the
+first `X-Forwarded-For` hop after `.strip()`, which leaves an embedded
+CR/LF intact and any other text too. That value is spliced into the Redis
+keys `LoginLockoutManager` counts failed logins against, so it could also
+inject key separators. Now validated with `ipaddress` and normalised.
+See `security/codeql-triage-r3` for the write-up.
+
+Lockout is still keyed on a header the client controls, so rotating
+syntactically valid IPs bypasses the attempt counter. Closing that needs a
+proxy-trust list, which is a deployment decision rather than a code fix.
+
+## Still not triaged
+
+`py/polluting-import` (4), `py/inheritance/signature-mismatch` (6),
+`py/multiple-definition` (1), and the remaining lint class. These are
+correctness or style findings rather than security ones.
+
+`py/undefined-export` (5) is a **proven false positive** and should be
+dismissed rather than fixed: those modules use the PEP 562 lazy `__all__`
+idiom. Reverting it breaks all 5 exports, which fault injection confirmed
+against the existing 21 tests that import them.

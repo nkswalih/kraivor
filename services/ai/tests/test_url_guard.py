@@ -170,3 +170,57 @@ class TestHostMatches:
     def test_returns_false_for_missing_host(self):
         assert host_matches("not-a-url", "github.com") is False
         assert host_matches("", "github.com") is False
+
+class TestMalformedPort:
+    """A malformed port must come back as UnsafeURLError, never as ValueError.
+
+    ``urlsplit`` defers port validation to attribute access, so ``.port``
+    raises a bare ``ValueError`` -- not ``UnsafeURLError`` -- for a port
+    outside 0-65535 or one that is not numeric. Nothing catches that: every
+    caller of this guard handles ``UnsafeURLError`` specifically, so a
+    malformed URL used to escape as an unhandled 500 rather than the clean
+    rejection it was meant to be. Attacker-chosen input, attacker-chosen
+    response status.
+
+    The CRLF cases are the same bug reached a different way. ``urlsplit``
+    keeps the raw authority, so text after an injected newline becomes the
+    port, and the last colon in ``"Host: evil"`` supplies it.
+
+    Found by ``fuzzing/fuzz_url_guard.py``, whose first invariant is that
+    this function returns its input or raises UnsafeURLError and nothing else.
+    """
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://example.com:99999/",
+            "http://example.com:65536/",
+            "http://example.com:-1/",
+            "http://example.com:+1/",
+            "http://example.com: 80/",
+            "http://example.com:80 0/",
+            "http://example.com\r\nHost: evil",
+            "http://example.com\nHost: evil",
+            "http://example.com\tHost: evil",
+        ],
+    )
+    def test_rejects_malformed_port_as_unsafe_url_error(self, url, monkeypatch):
+        def fake_getaddrinfo(host, port, *args, **kwargs):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port))]
+
+        monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+        with pytest.raises(UnsafeURLError):
+            assert_safe_url(url)
+
+    @pytest.mark.parametrize("port", [0, 1, 80, 443, 65535])
+    def test_accepts_ports_at_the_valid_boundaries(self, port, monkeypatch):
+        """0 and 65535 are legal ports; the fix must not over-reject them."""
+
+        def fake_getaddrinfo(host, resolved_port, *args, **kwargs):
+            return [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", resolved_port))
+            ]
+
+        monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+        url = f"http://example.com:{port}/"
+        assert assert_safe_url(url) == url

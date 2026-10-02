@@ -147,7 +147,17 @@ def assert_safe_url(url: str) -> str:
     if not host:
         raise UnsafeURLError("URL is missing a hostname")
 
-    port = parts.port or (443 if parts.scheme.lower() == "https" else 80)
+    # urlsplit defers port validation to attribute access, and `.port` raises a
+    # bare ValueError -- not UnsafeURLError -- for a port outside 0-65535 or a
+    # non-numeric one. Left unhandled it escapes the contract documented above
+    # and every caller's `except UnsafeURLError` misses it, turning a rejected
+    # URL into a 500. Found by the fuzz target in fuzzing/fuzz_url_guard.py,
+    # which asserts that this function either returns or raises
+    # UnsafeURLError and nothing else.
+    try:
+        port = parts.port or (443 if parts.scheme.lower() == "https" else 80)
+    except ValueError as exc:
+        raise UnsafeURLError(f"Malformed URL: {exc}") from exc
 
     # A literal IP in the URL can be checked without DNS.
     try:

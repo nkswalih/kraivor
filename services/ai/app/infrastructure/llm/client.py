@@ -10,11 +10,9 @@ from openai import AsyncOpenAI, APITimeoutError, APIConnectionError, RateLimitEr
 
 try:
     from google import genai as google_genai
-    from google.genai import types as google_types
     _HAS_GOOGLE_GENAI = True
 except ImportError:
     google_genai = None  # type: ignore[assignment]
-    google_types = None  # type: ignore[assignment]
     _HAS_GOOGLE_GENAI = False
 
 from app.infrastructure.llm.cost import estimate_cost

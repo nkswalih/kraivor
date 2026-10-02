@@ -17,6 +17,7 @@ from apps.workspaces.services import (
     InvitationService,
     WorkspacePermissionError,
 )
+from core.exceptions import log_and_raise
 
 from .workspaces import WorkspaceDetailView
 
@@ -69,9 +70,17 @@ class InvitationRevokeView(WorkspaceDetailView):
                 invitation=invitation, actor_id=request.user_id
             )
         except WorkspacePermissionError as exc:
-            raise PermissionDenied(str(exc)) from exc
+            log_and_raise(
+                exc,
+                str(exc),
+                PermissionDenied,
+                log_message="invitation.create_permission_denied",
+                log_extra={"actor_id": request.user_id},
+            )
         except InvitationError as exc:
-            raise ValidationError({"detail": str(exc)}) from exc
+            log_and_raise(
+                exc, str(exc), ValidationError, log_message="invitation.create_rejected"
+            )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -113,7 +122,9 @@ class InvitationAcceptView(APIView):
                 token=token, user_id=user_id, user_email=request.user_email
             )
         except InvitationError as exc:
-            raise ValidationError({"detail": str(exc)}) from exc
+            log_and_raise(
+                exc, str(exc), ValidationError, log_message="invitation.mutate_rejected"
+            )
         except Exception:
             logger = __import__("logging").getLogger(__name__)
             logger.exception(

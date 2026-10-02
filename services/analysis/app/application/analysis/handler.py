@@ -1475,8 +1475,6 @@ async def handle_delete_job(
 async def get_job_statistics(
     query: GetJobStatisticsQuery, uow: UnitOfWork
 ) -> dict[str, object]:
-    from asyncio import gather
-
     from app.infrastructure.db.repositories.dead_code import DeadCodeRepository
     from app.infrastructure.db.repositories.enterprise_guide import (
         EnterpriseGuideRepository,
@@ -1497,14 +1495,16 @@ async def get_job_statistics(
         async with async_session_factory() as s:
             return await getattr(repo_cls(s), method)(*args)
 
-    severity_counts, dc, err, perf, sim, guide_exists, cat_counts = await gather(
-        _with_session(FindingRepository, "count_by_severity", query.job_id),
-        _with_session(DeadCodeRepository, "count_by_job", query.job_id),
-        _with_session(ErrorFindingRepository, "count_by_job", query.job_id),
-        _with_session(PerformanceMetricRepository, "count_by_job", query.job_id),
-        _with_session(SimulationResultRepository, "count_by_job", query.job_id),
-        _with_session(EnterpriseGuideRepository, "exists_by_job", query.job_id),
-        _with_session(FindingRepository, "count_by_category", query.job_id),
+    severity_counts, dc, err, perf, sim, guide_exists, cat_counts = (
+        await asyncio.gather(
+            _with_session(FindingRepository, "count_by_severity", query.job_id),
+            _with_session(DeadCodeRepository, "count_by_job", query.job_id),
+            _with_session(ErrorFindingRepository, "count_by_job", query.job_id),
+            _with_session(PerformanceMetricRepository, "count_by_job", query.job_id),
+            _with_session(SimulationResultRepository, "count_by_job", query.job_id),
+            _with_session(EnterpriseGuideRepository, "exists_by_job", query.job_id),
+            _with_session(FindingRepository, "count_by_category", query.job_id),
+        )
     )
 
     findings_count = sum(severity_counts.values()) if severity_counts else 0

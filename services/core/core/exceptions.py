@@ -86,6 +86,47 @@ def _build_rfc_7807(
     }
 
 
+def log_and_raise(
+    exc: Exception,
+    public_detail: str,
+    exception_cls: type,
+    *,
+    log_message: str,
+    log_extra: dict | None = None,
+) -> None:
+    """Log ``exc`` with its real detail, then raise ``public_detail`` for the client.
+
+    An exception's ``str()`` is whatever the raising code put there. For
+    domain errors raised deliberately that is a curated sentence worth
+    returning, but errors that wrap a third-party call also carry the
+    upstream library's own text - including internal hostnames and, in
+    ``GitHubAppClient``, the first 200 characters of the upstream response
+    body. ``raise SomeError(str(exc))`` therefore leaks that into the API
+    response.
+
+    This logs the detail (message, type, traceback, plus any caller context)
+    so operators keep the diagnostic, and raises with ``public_detail``
+    only.
+
+    ``exception_cls`` must be a DRF exception (``ValidationError``,
+    ``PermissionDenied``, ``NotFound``).
+    """
+    logger.error(
+        log_message,
+        extra={
+            **(log_extra or {}),
+            "error": str(exc),
+            "error_type": type(exc).__name__,
+            "traceback": (
+                "".join(traceback.format_tb(exc.__traceback__))
+                if exc.__traceback__
+                else None
+            ),
+        },
+    )
+    raise exception_cls(public_detail) from exc
+
+
 def core_exception_handler(exc, context):
     response = drf_exception_handler(exc, context)
 

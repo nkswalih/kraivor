@@ -34,7 +34,6 @@ COOLDOWN_SCHEDULE = [30.0, 60.0, 300.0]  # seconds: 1st, 2nd, 3rd+ failure
 # ── Redis key prefix for model health ───────────────────────────────────
 _REDIS_HEALTH_PREFIX = "llm:health:"
 _REDIS_HEALTH_TTL = 3600  # 1 hour window for success rate calculation
-_REBALANCE_INTERVAL = 300  # 5 minutes between rebalance cycles
 
 
 class ProviderHealth:

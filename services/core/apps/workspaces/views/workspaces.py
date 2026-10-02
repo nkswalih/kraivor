@@ -19,6 +19,7 @@ from apps.workspaces.services import (
     WorkspacePermissionError,
     WorkspaceService,
 )
+from core.exceptions import log_and_raise
 from core.pagination import CursorPagination
 
 logger = __import__("logging").getLogger(__name__)
@@ -63,7 +64,13 @@ class WorkspaceListView(APIView):
                 settings=validated.get("settings", {}),
             )
         except WorkspaceLimitError as exc:
-            raise ValidationError({"detail": str(exc)}) from exc
+            log_and_raise(
+                exc,
+                str(exc),
+                ValidationError,
+                log_message="workspace.create_limit_reached",
+                log_extra={"actor_id": request.user_id},
+            )
 
         workspace = WorkspaceSelector.get_annotated_detail(workspace.id)
         return Response(
@@ -108,7 +115,13 @@ class WorkspaceDetailView(APIView):
                 updates=serializer.validated_data,
             )
         except WorkspacePermissionError as exc:
-            raise PermissionDenied(str(exc)) from exc
+            log_and_raise(
+                exc,
+                str(exc),
+                PermissionDenied,
+                log_message="workspace.mutate_permission_denied",
+                log_extra={"actor_id": request.user_id},
+            )
 
         return Response(
             WorkspaceDetailSerializer(updated, context={"request": request}).data
@@ -125,5 +138,11 @@ class WorkspaceDetailView(APIView):
                 workspace=workspace, actor_id=request.user_id
             )
         except WorkspacePermissionError as exc:
-            raise PermissionDenied(str(exc)) from exc
+            log_and_raise(
+                exc,
+                str(exc),
+                PermissionDenied,
+                log_message="workspace.mutate_permission_denied",
+                log_extra={"actor_id": request.user_id},
+            )
         return Response(status=status.HTTP_204_NO_CONTENT)

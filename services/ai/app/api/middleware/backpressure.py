@@ -1,13 +1,11 @@
 """Middleware that tracks concurrent requests and rejects with 503 when at capacity."""
 
-import time
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 MAX_CONCURRENT = 30
-_queue_start: float = time.monotonic()
 _active: int = 0
 
 

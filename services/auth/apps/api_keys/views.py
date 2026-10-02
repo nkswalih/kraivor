@@ -108,8 +108,13 @@ class APIKeyRevokeView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
         except Exception:
+            # `key_id` comes straight from the URL path. Auth's `verbose`
+            # formatter writes the message verbatim, so a CR/LF in the path
+            # would let a caller forge log entries; escape both.
             logger.exception(
-                "api_key_revoke_failed: user_id=%s key_id=%s", request.user.id, key_id
+                "api_key_revoke_failed: user_id=%s key_id=%s",
+                request.user.id,
+                key_id.replace("\r", "\\r").replace("\n", "\\n"),
             )
             return Response(
                 {"error": "Failed to revoke API key.", "error_code": "internal_error"},

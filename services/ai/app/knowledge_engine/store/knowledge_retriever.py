@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import logging
 
-from app.infrastructure.rag.embedder import Embedder
 from app.knowledge_engine.store.knowledge_store import KnowledgeStore
 
 logger = logging.getLogger(__name__)
 
-_embedder = Embedder()
 
 
 class KnowledgeRetriever:

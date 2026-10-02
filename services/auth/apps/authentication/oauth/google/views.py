@@ -146,7 +146,15 @@ class GoogleOAuthCallbackView(APIView):
 
         # ── 2. Handle user-denied / OAuth errors ─────────────────────────────
         if error:
-            logger.info("google_oauth_user_denied: ip=%s error=%s", ip, error)
+            # `error` is a raw query parameter on an unauthenticated endpoint,
+            # and auth's `verbose` formatter writes the message verbatim, so a
+            # CR/LF in the value would let a caller forge log entries. These
+            # escapes keep the record on a single line.
+            logger.info(
+                "google_oauth_user_denied: ip=%s error=%s",
+                ip,
+                error.replace("\r", "\\r").replace("\n", "\\n"),
+            )
             return Response(
                 {
                     "error": "Google OAuth was denied or cancelled.",

@@ -17,6 +17,7 @@ from django.http import HttpResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from core.logging_utils import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +70,9 @@ def github_app_webhook(request):
     logger.info(
         "github_app.webhook.received",
         extra={
-            "event": event_type,
-            "action": action,
-            "installation_id": installation_id,
+            "event": log_safe(event_type),
+            "action": log_safe(action),
+            "installation_id": log_safe(installation_id),
         },
     )
 
@@ -120,16 +121,16 @@ def _handle_installation_created(payload: dict, installation_id: int) -> None:
             logger.info(
                 "github_app.webhook.repos_synced",
                 extra={
-                    "installation_id": installation_id,
-                    "workspace_id": str(existing.workspace_id),
+                    "installation_id": log_safe(installation_id),
+                    "workspace_id": log_safe(str(existing.workspace_id)),
                 },
             )
         else:
             logger.info(
                 "github_app.webhook.no_workspace_yet",
                 extra={
-                    "installation_id": installation_id,
-                    "account": account.get("login", "unknown"),
+                    "installation_id": log_safe(installation_id),
+                    "account": log_safe(account.get("login", "unknown")),
                 },
             )
     except GitHubAppError as exc:
@@ -148,7 +149,7 @@ def _handle_installation_deleted(installation_id: int) -> None:
 
     logger.info(
         "github_app.webhook.installation_deleted",
-        extra={"installation_id": installation_id},
+        extra={"installation_id": log_safe(installation_id)},
     )
 
 
@@ -165,7 +166,7 @@ def _handle_repos_changed(installation_id: int) -> None:
             GitHubAppInstallationService()._sync_repos(installation)
             logger.info(
                 "github_app.webhook.repos_synced_on_change",
-                extra={"installation_id": installation_id},
+                extra={"installation_id": log_safe(installation_id)},
             )
         except Exception as exc:
             logger.error(

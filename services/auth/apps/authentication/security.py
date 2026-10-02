@@ -16,6 +16,7 @@ import logging
 import redis
 from django.conf import settings
 from django.contrib.auth.hashers import check_password as django_check_password
+from auth.logging_utils import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -201,7 +202,7 @@ def get_client_ip(request) -> str:
         if forwarded is not None:
             return forwarded
         logger.warning(
-            "auth.client_ip.invalid_x_forwarded_for", extra={"value": first_hop[:64]}
+            "auth.client_ip.invalid_x_forwarded_for", extra={"value": log_safe(first_hop[:64])}
         )
 
     return _valid_ip(request.META.get("REMOTE_ADDR", "")) or "127.0.0.1"

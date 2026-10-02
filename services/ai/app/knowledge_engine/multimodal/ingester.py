@@ -24,6 +24,7 @@ from app.core.url_guard import (
 
 from ..config import KnowledgeEngineConfig
 from ..store.knowledge_indexer import KnowledgeIndexer
+from app.core.logging import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -168,7 +169,12 @@ class MultiModalIngester:
                 error=f"Unsupported file type: {mime_type or filename}",
             )
 
-        logger.info("Ingesting %s file: %s (%d bytes)", content_type, filename, len(file_bytes))
+        logger.info(
+            "Ingesting %s file: %s (%d bytes)",
+            log_safe(content_type),
+            log_safe(filename),
+            len(file_bytes),
+        )
 
         try:
             if content_type == "pdf":
@@ -187,8 +193,8 @@ class MultiModalIngester:
                 logger.error(
                     "No ingestion handler for content type %r (mime=%r filename=%r)",
                     content_type,
-                    mime_type,
-                    filename,
+                    log_safe(mime_type),
+                    log_safe(filename),
                 )
                 return IngestionResult(
                     success=False,
@@ -197,7 +203,7 @@ class MultiModalIngester:
                     error=f"No handler for content type: {content_type}",
                 )
         except Exception as e:
-            logger.error("Ingestion failed for %s: %s", filename, e, exc_info=True)
+            logger.error("Ingestion failed for %s: %s", log_safe(filename), e, exc_info=True)
             return IngestionResult(
                 success=False,
                 source_type=content_type,
@@ -218,7 +224,7 @@ class MultiModalIngester:
         try:
             assert_safe_url(url)
         except UnsafeURLError as e:
-            logger.warning("Refused unsafe ingest URL %s: %s", url, e)
+            logger.warning("Refused unsafe ingest URL %s: %s", log_safe(url), e)
             return IngestionResult(
                 success=False,
                 source_type="url",
@@ -236,7 +242,9 @@ class MultiModalIngester:
             while resp.status_code in REDIRECT_STATUSES:
                 if hops >= MAX_REDIRECT_HOPS:
                     logger.warning(
-                        "Refused ingest after %d redirects, last URL %s", hops, url
+                        "Refused ingest after %d redirects, last URL %s",
+                        hops,
+                        log_safe(url),
                     )
                     return IngestionResult(
                         success=False,
@@ -247,7 +255,7 @@ class MultiModalIngester:
                 try:
                     url = resolve_redirect(url, resp.headers.get("location"))
                 except UnsafeURLError as e:
-                    logger.warning("Refused unsafe ingest redirect %s: %s", url, e)
+                    logger.warning("Refused unsafe ingest redirect %s: %s", log_safe(url), e)
                     return IngestionResult(
                         success=False,
                         source_type="url",

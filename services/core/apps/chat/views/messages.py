@@ -27,6 +27,7 @@ from apps.chat.services import ChatMessageService, ChatRoomService
 from apps.chat.signals import message_sent
 from apps.chat.views.exceptions import ServiceUnavailable
 from apps.workspaces.permissions import IsAuthenticated
+from core.logging_utils import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +105,7 @@ class MessageListSendView(APIView):
         except Exception as exc:
             logger.error(
                 "chat.messages.list_failed",
-                extra={"room_id": room_id, "error": str(exc)},
+                extra={"room_id": log_safe(room_id), "error": log_safe(str(exc))},
             )
             raise ServiceUnavailable(
                 "Message store is temporarily unavailable."
@@ -178,7 +179,7 @@ class MessageListSendView(APIView):
         )
         logger.info(
             "chat.message.sent_via_api",
-            extra={"message_id": message_id, "room_id": room_id, "sender_id": user_id},
+            extra={"message_id": log_safe(message_id), "room_id": log_safe(room_id), "sender_id": log_safe(user_id)},
         )
         output: MessageSerializer = MessageSerializer(item)
         return Response(output.data, status=status.HTTP_201_CREATED)
@@ -218,7 +219,7 @@ class MessageDetailView(APIView):
         except Exception as exc:
             logger.error(
                 "chat.message.get_failed",
-                extra={"message_id": str(pk), "error": str(exc)},
+                extra={"message_id": log_safe(str(pk)), "error": log_safe(str(exc))},
             )
             raise ServiceUnavailable(
                 "Message store is temporarily unavailable."
@@ -264,7 +265,7 @@ class MessageDetailView(APIView):
         except Exception as exc:
             logger.error(
                 "chat.message.edit_failed",
-                extra={"message_id": str(pk), "error": str(exc)},
+                extra={"message_id": log_safe(str(pk)), "error": log_safe(str(exc))},
             )
             raise ServiceUnavailable(
                 "Message store is temporarily unavailable."
@@ -305,7 +306,7 @@ class MessageDetailView(APIView):
         except Exception as exc:
             logger.error(
                 "chat.message.delete_failed",
-                extra={"message_id": str(pk), "error": str(exc)},
+                extra={"message_id": log_safe(str(pk)), "error": log_safe(str(exc))},
             )
             raise ServiceUnavailable(
                 "Message store is temporarily unavailable."
@@ -377,7 +378,7 @@ class MessageSearchView(APIView):
         except Exception as exc:
             logger.error(
                 "chat.messages.search_failed",
-                extra={"room_id": str(room_pk), "error": str(exc)},
+                extra={"room_id": log_safe(str(room_pk)), "error": log_safe(str(exc))},
             )
             raise ServiceUnavailable(
                 "Message store is temporarily unavailable."

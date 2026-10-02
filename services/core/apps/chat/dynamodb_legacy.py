@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from django.conf import settings
 
 from core.infrastructure.dynamodb import get_dynamodb
+from core.logging_utils import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -58,12 +59,12 @@ class ChatMessageRepository:
             self._table().put_item(Item=item)
             logger.debug(
                 "dynamodb.message.put",
-                extra={"room_id": room_id, "message_id": message_id},
+                extra={"room_id": log_safe(room_id), "message_id": log_safe(message_id)},
             )
         except ClientError as exc:
             logger.error(
                 "dynamodb.message.put_failed",
-                extra={"room_id": room_id, "error": str(exc)},
+                extra={"room_id": log_safe(room_id), "error": log_safe(str(exc))},
             )
             raise
         return item
@@ -85,13 +86,13 @@ class ChatMessageRepository:
             last_key: dict[str, Any] | None = response.get("LastEvaluatedKey")
             logger.debug(
                 "dynamodb.messages.query",
-                extra={"room_id": room_id, "count": len(items)},
+                extra={"room_id": log_safe(room_id), "count": len(items)},
             )
             return items, last_key
         except ClientError as exc:
             logger.error(
                 "dynamodb.messages.query_failed",
-                extra={"room_id": room_id, "error": str(exc)},
+                extra={"room_id": log_safe(room_id), "error": log_safe(str(exc))},
             )
             raise
 
@@ -105,12 +106,12 @@ class ChatMessageRepository:
             )
             logger.debug(
                 "dynamodb.message.deleted",
-                extra={"room_id": room_id, "message_id": message_id},
+                extra={"room_id": log_safe(room_id), "message_id": log_safe(message_id)},
             )
         except ClientError as exc:
             logger.error(
                 "dynamodb.message.delete_failed",
-                extra={"room_id": room_id, "message_id": message_id, "error": str(exc)},
+                extra={"room_id": log_safe(room_id), "message_id": log_safe(message_id), "error": log_safe(str(exc))},
             )
             raise
 
@@ -123,18 +124,18 @@ class ChatMessageRepository:
             if item:
                 logger.debug(
                     "dynamodb.message.get",
-                    extra={"room_id": room_id, "message_id": message_id},
+                    extra={"room_id": log_safe(room_id), "message_id": log_safe(message_id)},
                 )
                 return item
             logger.debug(
                 "dynamodb.message.not_found",
-                extra={"room_id": room_id, "message_id": message_id},
+                extra={"room_id": log_safe(room_id), "message_id": log_safe(message_id)},
             )
             return None
         except ClientError as exc:
             logger.error(
                 "dynamodb.message.get_failed",
-                extra={"room_id": room_id, "message_id": message_id, "error": str(exc)},
+                extra={"room_id": log_safe(room_id), "message_id": log_safe(message_id), "error": log_safe(str(exc))},
             )
             raise
 
@@ -152,13 +153,13 @@ class ChatMessageRepository:
             updated: dict[str, Any] = response.get("Attributes", {})
             logger.debug(
                 "dynamodb.message.updated",
-                extra={"room_id": room_id, "message_id": message_id},
+                extra={"room_id": log_safe(room_id), "message_id": log_safe(message_id)},
             )
             return updated
         except ClientError as exc:
             logger.error(
                 "dynamodb.message.update_failed",
-                extra={"room_id": room_id, "message_id": message_id, "error": str(exc)},
+                extra={"room_id": log_safe(room_id), "message_id": log_safe(message_id), "error": log_safe(str(exc))},
             )
             raise
 
@@ -210,13 +211,13 @@ class ChatMessageRepository:
             items: list[dict[str, Any]] = response.get("Items", [])
             logger.debug(
                 "dynamodb.messages.search",
-                extra={"room_id": room_id, "query": query, "count": len(items)},
+                extra={"room_id": log_safe(room_id), "query": log_safe(query), "count": len(items)},
             )
             return items
         except ClientError as exc:
             logger.error(
                 "dynamodb.messages.search_failed",
-                extra={"room_id": room_id, "query": query, "error": str(exc)},
+                extra={"room_id": log_safe(room_id), "query": log_safe(query), "error": log_safe(str(exc))},
             )
             raise
 

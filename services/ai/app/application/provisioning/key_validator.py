@@ -11,6 +11,7 @@ import httpx
 from app.api.schemas.byok import ValidateResult
 from app.application.provisioning.provider_models import DEFAULT_PROVIDER_URLS
 from app.core.url_guard import UnsafeURLError, assert_safe_url
+from app.core.logging import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ async def validate_key(
         assert_safe_url(base_url)
     except UnsafeURLError as e:
         logger.warning(
-            "key_validation_refused provider=%s url=%s reason=%s", provider, base_url, e
+            "key_validation_refused provider=%s url=%s reason=%s", log_safe(provider), log_safe(base_url), e
         )
         return ValidateResult(valid=False, error=f"Base URL not allowed: {e}")
 
@@ -55,7 +56,7 @@ async def validate_key(
     except httpx.ConnectError:
         return ValidateResult(valid=False, error=f"Could not connect to {base_url}")
     except Exception as e:
-        logger.warning("key_validation_error provider=%s error=%s", provider, e)
+        logger.warning("key_validation_error provider=%s error=%s", log_safe(provider), e)
         return ValidateResult(valid=False, error=str(e))
 
 

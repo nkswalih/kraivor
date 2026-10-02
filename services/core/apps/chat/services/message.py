@@ -5,6 +5,7 @@ import logging
 from apps.chat.dynamodb import get_repository
 
 from .room import ChatRoomService
+from core.logging_utils import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ class ChatMessageService:
         except Exception as exc:
             logger.warning(
                 "chat.room.last_message_update_failed",
-                extra={"room_id": room_id, "error": str(exc)},
+                extra={"room_id": log_safe(room_id), "error": log_safe(str(exc))},
             )
         return item
 

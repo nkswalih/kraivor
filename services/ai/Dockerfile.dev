@@ -37,7 +37,7 @@
 #
 # 4. Verify network health before blaming Dockerfile
 #    docker pull hello-world  (should complete in <5s)
-#    docker pull python:3.11-slim  (should complete in <30s)
+#    docker pull python:3.14-slim@sha256:0741d101873c12ab927e6f8653feb8862b9bd58771177acb1b885b95141f91b4  (should complete in <30s)
 #
 # 5. Confirm BuildKit cache wasn't cleared
 #    docker builder ls  (check status = running)
@@ -45,7 +45,7 @@
 #    Check: Docker Desktop → Images → check if layers show "CACHED"
 # =============================================================================
 
-FROM python:3.11-slim
+FROM python:3.14-slim@sha256:0741d101873c12ab927e6f8653feb8862b9bd58771177acb1b885b95141f91b4
 
 WORKDIR /app
 

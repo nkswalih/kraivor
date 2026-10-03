@@ -1,0 +1,13 @@
+# Linter for repo-level first-party tooling.
+#
+# fuzzing/ and scripts/ sit outside every service, so the per-service lint
+# matrix in ci.yml cannot see them. Without this they are the only Python in
+# the repo with no gate on it.
+#
+# Pinned to the version all four services/*/uv.lock files already resolve to,
+# so the lint result does not depend on which lockfile happens to run first.
+#
+# Regenerate the hashed lock with:
+#   uv pip compile --generate-hashes --python-version 3.14 \
+#     --output-file requirements/ci-ruff.txt requirements/ci-ruff.in
+ruff==0.16.9

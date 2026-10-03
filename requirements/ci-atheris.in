@@ -1,0 +1,13 @@
+# Coverage-guided fuzzer for the SSRF guard.
+#
+# atheris ships native libFuzzer binaries, so it exists only on Linux. That is
+# why the Fuzz job cannot run on a Windows runner, and why the target carries a
+# pure-Python driver for local use.
+#
+# 3.1.0 is the first release publishing a cp314 manylinux wheel, which this
+# repo's Python floor (>=3.14) requires.
+#
+# Regenerate the hashed lock with:
+#   uv pip compile --generate-hashes --python-version 3.14 \
+#     --output-file requirements/ci-atheris.txt requirements/ci-atheris.in
+atheris==3.1.0

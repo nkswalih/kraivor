@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.14"
   APP_ENV: "test"
   SECRET_KEY: "ci-test-secret-key-not-for-production"
   FRONTEND_URL: "http://localhost:3000"
@@ -25,6 +25,10 @@ env:
   # fail_under), NOT here, so each service is held to its own honest number.
   # CI only supplies --cov, without which pytest-cov never activates and no
   # report is produced at all.
+  # Budget for the coverage-guided fuzzing run. Short on purpose: the gate
+  # below is the deterministic corpus check, and libFuzzer keeps its findings
+  # in the artifact upload, so this is extra search rather than the contract.
+  FUZZ_SECONDS: "60"
 
 jobs:
   format:
@@ -218,6 +222,17 @@ jobs:
             --cov-report=term-missing:skip-covered \
             --cov-report=xml --cov-report=html -q
 
+      - name: Verify the coverage report is real
+        # pytest-cov already enforces fail_under, but a percentage cannot tell
+        # 27% of a large package apart from 100% of an empty one -- and
+        # services/notifications sits at fail_under 90 with every module under
+        # app/ a 0-byte file, which passes on a report that measured nothing.
+        # This rejects a missing report, one that measured too little to be
+        # evidence, and a rate below the floor. It recomputes the percentage
+        # the way coverage.py does, branches included, so this number and the
+        # one pytest-cov gated on cannot drift apart.
+        run: python ../../scripts/check_coverage.py
+
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         if: always()
@@ -231,11 +246,12 @@ jobs:
         run: |
           echo "## ${{ matrix.service }} Unit Coverage" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          if [ -f coverage.xml ]; then
-            python -c "import xml.etree.ElementTree as ET, tomllib; rate = float(ET.parse('coverage.xml').getroot().attrib.get('line-rate', '0')) * 100; floor = tomllib.load(open('pyproject.toml','rb'))['tool']['coverage']['report']['fail_under']; print(f'Line coverage: {rate:.2f}%  (floor: {floor}%)'); print('✅ Meets floor' if rate >= floor else '❌ Below floor')" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "No coverage report generated" >> $GITHUB_STEP_SUMMARY
-          fi
+          # The gate's own output, so the number in this summary and the check
+          # that blocks the build are the same computation rather than two
+          # reimplementations of it that can disagree.
+          python ../../scripts/check_coverage.py >> $GITHUB_STEP_SUMMARY 2>&1 \
+            || echo "Coverage check did not pass -- see the job log." \
+               >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
   integration-tests:
@@ -253,7 +269,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:17
+        image: postgres:18@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
         env:
           POSTGRES_USER: kraivor
           POSTGRES_PASSWORD: kraivor
@@ -340,7 +356,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -373,7 +389,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -385,3 +401,72 @@ jobs:
         # via next@15 and is only cleared by a next@16 major upgrade, which is
         # tracked as separate work rather than force-applied.
         run: npm audit --audit-level=high
+
+  base-images:
+    name: Base images pinned and consistent
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Check every base image is digest-pinned
+        # Guards the class of drift that let Python 3.11 images, a 3.12 CI
+        # interpreter and py311 linter targets coexist. Dependabot keeps the
+        # digests current; this stops one being dropped or a tag being rolled
+        # back.
+        run: python scripts/check_base_images.py
+
+  fuzz:
+    name: Fuzz SSRF guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Lint first-party tooling (Ruff)
+        # fuzzing/ and scripts/ sit outside every service, so the per-service
+        # lint matrix cannot see them. Without this they are the only Python in
+        # the repo with no gate on it.
+        run: |
+          pip install ruff
+          ruff check fuzzing/ scripts/
+
+      - name: Check the invariants over the corpus
+        # This is the gate. It is deterministic and takes seconds, so a
+        # regression fails the build the same way every time. The fuzzing step
+        # below is time-limited by design and can only ever add findings.
+        run: python fuzzing/fuzz_url_guard.py --iterations 50000
+
+      - name: Install atheris
+        # atheris ships native libFuzzer binaries, so it exists only on Linux.
+        # That is also why this job cannot run on a Windows runner and why the
+        # target carries a pure-Python driver for local use.
+        run: pip install atheris
+
+      - name: Fuzz
+        # Seed arguments are expanded explicitly rather than passing the
+        # directory: libFuzzer takes files, and whether it also accepts a
+        # directory has varied between versions.
+        run: |
+          mkdir -p .fuzz-artifacts
+          python fuzzing/fuzz_url_guard.py \
+            -max_total_time="${{ env.FUZZ_SECONDS }}" \
+            -artifact_prefix=.fuzz-artifacts/ \
+            $(find fuzzing/corpus/url_guard -type f | sort)
+
+      - name: Upload any crashers
+        # Always runs: a found input is only useful if it survives the run.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashers
+          path: .fuzz-artifacts/
+          if-no-files-found: ignore

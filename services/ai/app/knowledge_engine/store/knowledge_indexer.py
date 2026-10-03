@@ -6,6 +6,7 @@ import logging
 
 from app.infrastructure.rag.embedder import Embedder
 from app.knowledge_engine.store.knowledge_store import KnowledgeStore
+from app.core.logging import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +123,7 @@ class KnowledgeIndexer:
         try:
             embedding = await _embedder.embed(embedding_text)
         except Exception as e:
-            logger.warning("Failed to generate embedding for %s: %s", source_url, e)
+            logger.warning("Failed to generate embedding for %s: %s", log_safe(source_url), e)
             embedding = None
 
         # Snapshot existing version before upsert (non-blocking)
@@ -135,7 +136,7 @@ class KnowledgeIndexer:
             # A missing snapshot leaves a gap in version history, so this is
             # worth surfacing even though the upsert itself can proceed.
             logger.warning(
-                "knowledge_snapshot_before_update_failed source=%s err=%s", source_url, e
+                "knowledge_snapshot_before_update_failed source=%s err=%s", log_safe(source_url), e
             )
 
         # Store the full document
@@ -174,7 +175,7 @@ class KnowledgeIndexer:
         except Exception as e:
             logger.debug("Quality init failed for %s: %s", item_id, e)
 
-        logger.info("Indexed knowledge: %s → %s (%s)", title[:50], item_id, source_provider)
+        logger.info("Indexed knowledge: %s → %s (%s)", log_safe(title[:50]), item_id, log_safe(source_provider))
         return item_id
 
     async def index_research_result(

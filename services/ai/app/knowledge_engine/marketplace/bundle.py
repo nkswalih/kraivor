@@ -11,6 +11,7 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
+from app.core.logging import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,7 @@ class BundleManager:
 
         logger.info(
             "Exported bundle %s: %d items from workspace %s",
-            bundle.bundle_id, bundle.item_count, workspace_id,
+            log_safe(bundle.bundle_id), bundle.item_count, log_safe(workspace_id),
         )
         return bundle
 
@@ -157,7 +158,7 @@ class BundleManager:
 
         logger.info(
             "Imported bundle %s into %s: %d imported, %d skipped",
-            bundle.bundle_id, workspace_id, imported, skipped,
+            log_safe(bundle.bundle_id), log_safe(workspace_id), imported, skipped,
         )
         return result
 

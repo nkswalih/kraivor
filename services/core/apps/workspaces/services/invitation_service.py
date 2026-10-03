@@ -223,7 +223,7 @@ class InvitationService:
 
     def list_pending_invitations(
         self, *, workspace: Workspace
-    ) -> "QuerySet[WorkspaceInvitation]":
+    ) -> QuerySet[WorkspaceInvitation]:
         return (
             WorkspaceInvitation.objects.filter(
                 workspace=workspace,
@@ -236,7 +236,7 @@ class InvitationService:
 
     def list_my_pending_invitations(
         self, *, email: str
-    ) -> "QuerySet[WorkspaceInvitation]":
+    ) -> QuerySet[WorkspaceInvitation]:
         return (
             WorkspaceInvitation.objects.filter(
                 email=email, accepted_at__isnull=True, expires_at__gt=timezone.now()

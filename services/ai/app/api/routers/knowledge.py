@@ -91,6 +91,7 @@ from app.api.schemas.knowledge import (
     TemplateSummary,
     TemplateImportRequest,
 )
+from app.core.logging import log_safe
 
 CurrentUser = Annotated[JWTPayload, Depends(get_current_user)]
 RateLimit = Annotated[None, Depends(check_rate_limit)]
@@ -1658,7 +1659,7 @@ async def seed_project_docs(
         # as success: the previous shape returned 200 either way, and the
         # caller had no way to tell a queued seed from a failed one.
         logger.error(
-            "knowledge_seed_enqueue_failed workspace=%s error=%s", workspace_id, e
+            "knowledge_seed_enqueue_failed workspace=%s error=%s", log_safe(workspace_id), e
         )
         raise HTTPException(
             status_code=503,

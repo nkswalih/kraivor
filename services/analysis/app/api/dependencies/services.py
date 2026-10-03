@@ -12,7 +12,7 @@ from app.infrastructure.storage.s3 import S3Storage
 
 async def get_uow(
     session: AsyncSession = Depends(get_db),
-) -> AsyncGenerator[UnitOfWork, None]:
+) -> AsyncGenerator[UnitOfWork]:
     uow = UnitOfWork(session)
     await uow.__aenter__()
     try:

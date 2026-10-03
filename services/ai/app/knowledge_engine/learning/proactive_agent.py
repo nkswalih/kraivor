@@ -16,6 +16,7 @@ import re
 from sqlalchemy import text
 
 from app.infrastructure.db.database import async_session_factory
+from app.core.logging import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -239,7 +240,7 @@ class ProactiveLearningPipeline:
         # 1. Detect technologies
         techs = await self.release_monitor.check_workspace_technologies(workspace_id)
         results["technologies"] = techs
-        logger.info("Workspace %s uses: %s", workspace_id, techs)
+        logger.info("Workspace %s uses: %s", log_safe(workspace_id), techs)
 
         # 2. Check releases
         for tech in techs[:5]:
@@ -271,7 +272,7 @@ class ProactiveLearningPipeline:
 
         logger.info(
             "Learning cycle complete for %s: %d techs, %d releases, %d advisories, %d indexed",
-            workspace_id, len(techs), results["new_releases"],
+            log_safe(workspace_id), len(techs), results["new_releases"],
             results["security_advisories"], results["items_indexed"],
         )
 

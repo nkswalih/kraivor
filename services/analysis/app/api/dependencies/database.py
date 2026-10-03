@@ -8,7 +8,7 @@ from app.infrastructure.db.session import get_db_session
 
 async def get_db(
     session: AsyncSession = Depends(get_db_session),
-) -> AsyncGenerator[AsyncSession, None]:
+) -> AsyncGenerator[AsyncSession]:
     """FastAPI dependency that injects a database session.
 
     Usage:

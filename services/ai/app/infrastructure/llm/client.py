@@ -225,12 +225,12 @@ class LLMClient:
 
         return result, tool_calls, metrics
 
-    async def stream(self, messages: list, **kwargs) -> AsyncGenerator[str, None]:
+    async def stream(self, messages: list, **kwargs) -> AsyncGenerator[str]:
         """Stream tokens from the LLM. Strips thinking blocks from reasoning models."""
         in_thinking = False
         buf = ""
 
-        async def _emit_filtered(raw_token: str) -> AsyncGenerator[str, None]:
+        async def _emit_filtered(raw_token: str) -> AsyncGenerator[str]:
             nonlocal in_thinking, buf
             buf += raw_token
 

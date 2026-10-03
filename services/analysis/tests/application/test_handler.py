@@ -220,7 +220,7 @@ def _install(
     for target, name, results in specs:
         monkeypatch.setattr(target, _repo_factory(name, results, calls, gate))
     monkeypatch.setattr(
-        "app.infrastructure.db.session.async_session_factory", lambda: _FakeSession()
+        "app.infrastructure.db.session.async_session_factory", _FakeSession
     )
     return calls
 

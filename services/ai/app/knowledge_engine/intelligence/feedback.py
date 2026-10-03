@@ -10,6 +10,7 @@ import logging
 
 from sqlalchemy import text
 from app.infrastructure.db.database import async_session_factory
+from app.core.logging import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ class FeedbackTracker:
         # Adjust quality score based on feedback
         await self._adjust_quality_score(workspace_id, item_id, rating)
 
-        logger.info("Feedback recorded: item=%s, rating=%s", item_id, rating)
+        logger.info("Feedback recorded: item=%s, rating=%s", log_safe(item_id), log_safe(rating))
 
     async def _adjust_quality_score(
         self, workspace_id: str, item_id: str, rating: str

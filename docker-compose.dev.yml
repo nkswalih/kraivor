@@ -21,7 +21,7 @@ services:
   # ── Infrastructure ──────────────────────────────────────────────────────────
 
   postgres:
-    image: pgvector/pgvector:pg15
+    image: pgvector/pgvector:pg18@sha256:2358fcba361ed2233a5ed81b5fe4ca779ccb304120ce531a3bf51c0ed7e2bc11
     container_name: kraivor-postgres-dev
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-kraivor}
@@ -41,7 +41,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
     container_name: kraivor-redis-dev
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-kraivor_redis_2024}
     ports:
@@ -55,7 +55,7 @@ services:
     restart: unless-stopped
 
   mailhog:
-    image: mailhog/mailhog:latest
+    image: mailhog/mailhog:v1.0.1@sha256:8d76a3d4ffa32a3661311944007a415332c4bb855657f4f6c57996405c009bea
     container_name: kraivor-mailhog-dev
     ports:
       - "1025:1025"   # SMTP — Django EMAIL_HOST_PORT
@@ -65,7 +65,7 @@ services:
     restart: unless-stopped
 
   dynamodb-local:
-    image: amazon/dynamodb-local:latest
+    image: amazon/dynamodb-local:2.6.1@sha256:1856c05cc66a0e49dc1099e483ad2851477eeebe2135250ac11a1d1227db54b1
     container_name: kraivor-dynamodb-dev
     ports:
       - "8007:8000"
@@ -73,7 +73,7 @@ services:
     restart: unless-stopped
 
   kafka:
-    image: apache/kafka:3.9.0
+    image: apache/kafka:4.3.1@sha256:77e3df9054047a88b520d0cc46e16696d3b22022e1d580aeccd2632df6532837
     container_name: kraivor-kafka-dev
     ports:
       - "9092:9092"
@@ -103,7 +103,7 @@ services:
 
 # ────── Nginx ─────────────────────────────────────────────────
   nginx:
-    image: nginx:alpine
+    image: nginx:1.28-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236
     container_name: kraivor-nginx-dev
     ports:
     - "80:80"

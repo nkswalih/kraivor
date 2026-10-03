@@ -1,0 +1,16 @@
+# Fuzz corpus files are byte-exact test inputs, not text.
+#
+# Several seeds carry deliberate control bytes -- crlf_in_authority is
+# "http://example.com\r\nHost: evil", and its whole point is the CR. Under
+# core.autocrlf=true, which this repo relies on for normal source files, git
+# normalises CRLF to LF on commit. The CR is destroyed in the blob, and a Linux
+# CI runner checks the blob out verbatim, so the seed silently arrives without
+# the byte it was written to carry.
+#
+# It is worse than a no-op seed: the file still reads as a two-line host
+# injection, so it looks like coverage of a case it no longer exercises.
+#
+# `-text` turns off end-of-line conversion for these paths entirely, so the
+# blob holds exactly the bytes the harness was fuzzed against, on every
+# platform and in every checkout.
+fuzzing/corpus/** -text

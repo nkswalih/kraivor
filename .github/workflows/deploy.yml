@@ -16,6 +16,21 @@ env:
   AWS_REGION: us-east-1
   TF_VERSION: "1.7.0"
 
+# This workflow provisions AWS, then shells onto the host over SSH and rebuilds
+# the compose stack. None of that needs the GITHUB_TOKEN, so it gets the
+# narrowest grant that still lets actions/checkout fetch the repo. Without this
+# block the token inherits the repository's default permissions, which are
+# usually wider than write-all.
+permissions:
+  contents: read
+
+# Two overlapping runs would race on the same host: both would `docker-compose
+# down` the stack the other just started. Serialising per environment keeps a
+# queued run from tearing down a stack that a newer commit is still deploying.
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || 'dev' }}
+  cancel-in-progress: false
+
 jobs:
   # ── Terraform Plan ──────────────────────────────────────────
   terraform-plan:

@@ -2,7 +2,7 @@
 name = "ai"
 version = "0.1.0"
 description = "AI service — LLM integration, agents, and RAG pipeline"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.100",
     "uvicorn[standard]>=0.23",
@@ -111,7 +111,7 @@ dev = [
 
 [tool.black]
 line-length = 88
-target-version = ["py311"]
+target-version = ["py314"]
 skip-magic-trailing-comma = true
 
 [tool.isort]
@@ -128,7 +128,7 @@ known_first_party = ["app"]
 
 [tool.mypy]
 strict = true
-python_version = "3.11"
+python_version = "3.14"
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
@@ -183,11 +183,14 @@ parallel = true
 precision = 2
 show_missing = true
 skip_covered = false
-# Measured 13.70% (2026-09-30). Previously declared as 90 while the service sat
-# at 13%, so this gate could never have passed. Known gap: the AI service is
-# close to untested. This floor prevents further collapse, it does not endorse
-# the current number — see the coverage ratchet plan in docs/HANDOFF.md.
-fail_under = 13
+# Measured 27.48% (2026-10-03) across the full 315-test suite. History: 90
+# while the service sat at 13%, then corrected to 13, now ratcheted to 27 as
+# the workflow-engine, log-sanitisation and url-guard tests landed.
+#
+# This is still the weakest floor in the repo and it is honest about being so:
+# it prevents collapse, it does not endorse the number. See the coverage
+# ratchet plan in docs/HANDOFF.md.
+fail_under = 27
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
@@ -203,7 +206,7 @@ directory = "htmlcov"
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "N", "UP", "B", "SIM", "C4", "ISC", "ICN"]

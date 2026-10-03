@@ -31,7 +31,7 @@ class WorkspaceContextMixin:
     def _get_user_id(self) -> str:
         return self.request.user_id
 
-    def _get_workspace_or_404(self, workspace_pk: str) -> "Workspace":
+    def _get_workspace_or_404(self, workspace_pk: str) -> Workspace:
         from apps.workspaces.selectors import WorkspaceSelector
 
         user_id = self._get_user_id()

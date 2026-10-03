@@ -20,6 +20,7 @@ from rest_framework.views import APIView
 from authentication.internal_auth import require_internal_request
 from ..models import OAuthIdentity
 from .encryption import get_encryption_service
+from auth.logging_utils import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ class GitHubOAuthTokenView(APIView):
                 user_id=user_id, provider="github", deleted_at__isnull=True
             )
         except OAuthIdentity.DoesNotExist:
-            logger.info("github.token.not_found", extra={"user_id": user_id})
+            logger.info("github.token.not_found", extra={"user_id": log_safe(user_id)})
             return Response(
                 {"error": "No GitHub account connected"},
                 status=status.HTTP_404_NOT_FOUND,
@@ -75,7 +76,7 @@ class GitHubOAuthTokenView(APIView):
         if not encrypted_token:
             logger.error(
                 "github.token.missing_encrypted",
-                extra={"user_id": user_id, "oauth_id": str(oauth_identity.id)},
+                extra={"user_id": log_safe(user_id), "oauth_id": log_safe(str(oauth_identity.id))},
             )
             return Response(
                 {"error": "No stored token for this GitHub account"},
@@ -88,7 +89,7 @@ class GitHubOAuthTokenView(APIView):
         except Exception as exc:
             logger.error(
                 "github.token.decryption_failed",
-                extra={"user_id": user_id, "error": str(exc)},
+                extra={"user_id": log_safe(user_id), "error": log_safe(str(exc))},
             )
             return Response(
                 {"error": "Failed to retrieve GitHub token"},
@@ -98,7 +99,7 @@ class GitHubOAuthTokenView(APIView):
         if not token:
             logger.error(
                 "github.token.decryption_returned_none",
-                extra={"user_id": user_id, "oauth_id": str(oauth_identity.id)},
+                extra={"user_id": log_safe(user_id), "oauth_id": log_safe(str(oauth_identity.id))},
             )
             return Response(
                 {"error": "Failed to decrypt GitHub token"},

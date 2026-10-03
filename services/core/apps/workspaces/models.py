@@ -132,14 +132,14 @@ class Workspace(TimestampedModel):
     def __str__(self):
         return f"Workspace({self.slug})"
 
-    def get_member(self, user_id: uuid.UUID) -> "WorkspaceMember | None":
+    def get_member(self, user_id: uuid.UUID) -> WorkspaceMember | None:
         """Return the active WorkspaceMember for this user, or None."""
         try:
             return self.members.get(user_id=user_id)
         except WorkspaceMember.DoesNotExist:
             return None
 
-    def get_member_role(self, user_id: uuid.UUID) -> "str | None":
+    def get_member_role(self, user_id: uuid.UUID) -> str | None:
         member = self.get_member(user_id)
         return member.role if member else None
 

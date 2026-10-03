@@ -9,6 +9,7 @@ from datetime import datetime
 
 from sqlalchemy import text
 
+from app.core.logging import log_safe
 from app.infrastructure.db.database import async_session_factory
 
 logger = logging.getLogger(__name__)
@@ -86,7 +87,11 @@ class KnowledgeStore:
             )
             await session.commit()
 
-        logger.info("Stored knowledge item %s for workspace %s", item_id, workspace_id)
+        logger.info(
+            "Stored knowledge item %s for workspace %s",
+            item_id,
+            log_safe(workspace_id),
+        )
         return item_id
 
     async def store_batch(

@@ -28,6 +28,7 @@ from app.application.provisioning.provider_models import (
 from app.infrastructure.cache.redis_client import get_redis
 from app.infrastructure.db.database import async_session_factory
 from app.infrastructure.db.models.api_key import ApiKey
+from app.core.logging import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +69,7 @@ async def _set_user_provider_preference(user_id: str, model_id: str, provider: s
             ex=_ASSIGNMENT_CACHE_TTL,
         )
     except Exception:
-        logger.debug("redis_cache_skip model=%s provider=%s", model_id, provider)
+        logger.debug("redis_cache_skip model=%s provider=%s", log_safe(model_id), log_safe(provider))
 
 
 # ── GET /byok/models — all BYOK models with user's provider selection ──

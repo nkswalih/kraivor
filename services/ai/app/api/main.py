@@ -19,7 +19,7 @@ from app.monitoring.metrics import setup_metrics
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     setup_logging()
     setup_metrics(app)
     init_backpressure()

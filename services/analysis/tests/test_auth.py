@@ -19,7 +19,7 @@ def generate_test_jwt(
 
 
 @pytest.fixture
-def mock_settings() -> Generator[MagicMock, None, None]:
+def mock_settings() -> Generator[MagicMock]:
     with patch("app.dependencies.auth.settings") as mock:
         mock.jwt.jwks_url = "http://localhost/.well-known/jwks.json"
         mock.jwt.algorithm = "RS256"

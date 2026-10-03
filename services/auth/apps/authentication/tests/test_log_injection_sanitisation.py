@@ -1,22 +1,22 @@
-"""Why the other py/log-injection alerts need no code change.
+"""Why the extra={...} log-injection sites needed no behavioural change.
 
 Auth's `verbose` formatter is `{levelname} {asctime} {module} {message}`.
-Only `message` is rendered, so:
+Only `message` is rendered, so a value passed only through `extra={...}`
+never reaches the log line at all and cannot forge a record -- 10 auth and
+25 core alerts. Values interpolated into the format string *do* reach the
+line, which is what the view tests in `test_google_oauth_log_injection.py`
+and `test_views_log_injection.py` cover.
 
-  * a value interpolated into the format string reaches the log line, and a
-    CR/LF in it lets a caller forge a record - this is what the two view
-    tests in `test_google_oauth_log_injection.py` and
-    `test_views_log_injection.py` cover;
-  * a value passed only through `extra={...}` never reaches the log line at
-    all, so it cannot be forged - 10 auth alerts and 25 core alerts.
+Those extra-only sites have since been wrapped in `log_safe()` anyway, as
+defense in depth: correctness here currently rests on a formatter nobody
+reads when adding a field. Sanitising at the sink removes that dependency,
+and it is what lets the alerts close as fixed rather than as dismissed.
 
-ai's 25 do interpolate into the format string, but `app/core/logging.py`
-configures structlog's `JSONRenderer`, which escapes CR/LF, so the record
-cannot be split there either.
-
-This file pins the first of those two facts. If someone adds `%(error)s` to
-the `verbose` format string, this test is what makes it visible that 10 auth
-call sites just became forgeable.
+The behaviour asserted below is unchanged by that wrapping -- a sanitised
+value still never reaches the rendered line. These tests now pin the
+*precondition* the wrapping defends: if someone adds `%(error)s` to the
+verbose format string, this is what makes it visible that those call sites
+would have been forgeable but for the sanitiser.
 """
 
 import io

@@ -25,7 +25,7 @@ def app() -> FastAPI:
 
 
 @pytest.fixture
-def app_with_auth_override(app: FastAPI) -> Generator[FastAPI, None, None]:
+def app_with_auth_override(app: FastAPI) -> Generator[FastAPI]:
     async def mock_get_current_user() -> JWTPayload:
         return JWTPayload(
             sub="user-123", workspace_ids=["ws-123"], email="test@example.com"

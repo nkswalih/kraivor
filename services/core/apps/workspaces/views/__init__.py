@@ -23,7 +23,7 @@ class WorkspaceContextMixin:
     def _get_actor_name(self) -> str:
         return getattr(self.request, "user_name", "") or "A team member"
 
-    def _get_workspace_or_404(self, pk: str) -> "Workspace":
+    def _get_workspace_or_404(self, pk: str) -> Workspace:
         user_id = self._get_user_id()
         workspace = WorkspaceSelector.get_workspace_for_user(pk, user_id)
         if not workspace:

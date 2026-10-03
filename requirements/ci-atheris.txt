@@ -1,0 +1,5 @@
+atheris==3.1.0 \
+    --hash=sha256:315a0b5c819852b1ffe1ca72efc389c7724881f2c33e4aacb8c6bcec49bd5011 \
+    --hash=sha256:ec5e11f21a4c197fe91f7aea2b2de88e623c73a21fc07b105ac6329a1588457b \
+    --hash=sha256:f8a9f51ce8369026e8eb7b7174835e8c4c85a1a6db5d9add36c15100779d2a39
+    # via -r requirements/ci-atheris.in

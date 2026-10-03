@@ -446,8 +446,13 @@ jobs:
         # fuzzing/ and scripts/ sit outside every service, so the per-service
         # lint matrix cannot see them. Without this they are the only Python in
         # the repo with no gate on it.
+        #
+        # --require-hashes makes pip verify every download against a pinned
+        # digest rather than trusting the index. Scorecard's Pinned-Dependencies
+        # check looks for exactly this flag on the pip line; an `==` pin alone
+        # only scores 5/10, because the version can still be re-uploaded.
         run: |
-          pip install "ruff==0.16.9"
+          pip install --require-hashes -r requirements/ci-ruff.txt
           ruff check fuzzing/ scripts/
 
       - name: Check the invariants over the corpus
@@ -460,10 +465,9 @@ jobs:
         # atheris ships native libFuzzer binaries, so it exists only on Linux.
         # That is also why this job cannot run on a Windows runner and why the
         # target carries a pure-Python driver for local use.
-        # Pinned: 3.1.0 is the first release publishing a cp314 manylinux wheel,
-        # which this repo's Python floor requires. Unpinned here would also let
-        # a new major land mid-build and change the fuzzing engine silently.
-        run: pip install "atheris==3.1.0"
+        # The lock is hash-pinned for the same reason as ruff above. Regenerate
+        # with the command recorded in requirements/ci-atheris.in.
+        run: pip install --require-hashes -r requirements/ci-atheris.txt
 
       - name: Fuzz
         # Seed arguments are expanded explicitly rather than passing the

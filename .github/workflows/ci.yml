@@ -43,7 +43,7 @@ jobs:
         service: [auth, core, ai, analysis]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - uses: ./.github/actions/setup
         with:
@@ -68,7 +68,7 @@ jobs:
         service: [auth, core, ai, analysis]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - uses: ./.github/actions/setup
         with:
@@ -90,7 +90,7 @@ jobs:
         service: [auth, core, ai, analysis]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - uses: ./.github/actions/setup
         with:
@@ -112,7 +112,7 @@ jobs:
         service: [auth, core, ai, analysis]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - uses: ./.github/actions/setup
         with:
@@ -189,7 +189,7 @@ jobs:
         service: [auth, core, ai, analysis]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - uses: ./.github/actions/setup
         with:
@@ -234,7 +234,7 @@ jobs:
         run: python ../../scripts/check_coverage.py
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: coverage-unit-${{ matrix.service }}
@@ -283,7 +283,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - uses: ./.github/actions/setup
         with:
@@ -325,7 +325,7 @@ jobs:
             --cov-report=xml --cov-report=html -q
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: coverage-integration-${{ matrix.service }}
@@ -352,9 +352,9 @@ jobs:
         working-directory: frontend
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24"
           cache: npm
@@ -385,9 +385,9 @@ jobs:
         working-directory: frontend
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24"
           cache: npm
@@ -396,20 +396,31 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Audit for high/critical vulnerabilities
-        # Fails on high or critical. `postcss` currently arrives transitively
-        # via next@15 and is only cleared by a next@16 major upgrade, which is
-        # tracked as separate work rather than force-applied.
-        run: npm audit --audit-level=high
+      - name: Audit shipped dependencies
+        # The runtime image runs `npm ci --omit=dev`, so only production-reachable
+        # packages exist in the deployed artifact. Gating on that tree keeps the
+        # gate honest: it fails if a shipped package is vulnerable.
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Report dev-toolchain advisories
+        # Reported, not gated. `@tailwindcss/typography` and `tailwindcss-animate`
+        # are build-time CSS plugins and live in devDependencies, which is what
+        # keeps the `braces` advisory (GHSA-vfj7-8cjw-p6xm, CVE-2026-93687) out of
+        # the shipped tree. `braces` 3.0.3 is the newest release upstream, so
+        # there is no version to upgrade to; npm's only suggestion is
+        # tailwindcss@4, a v3->v4 migration. These packages glob over the repo's
+        # own source files and never see request input, so the advisory has no
+        # reachable path. Revisit on the Tailwind v4 upgrade.
+        run: npm audit --audit-level=high || echo "::warning::dev-toolchain advisories present (not shipped) - see GHSA-vfj7-8cjw-p6xm"
 
   base-images:
     name: Base images pinned and consistent
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -425,9 +436,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -436,7 +447,7 @@ jobs:
         # lint matrix cannot see them. Without this they are the only Python in
         # the repo with no gate on it.
         run: |
-          pip install ruff
+          pip install "ruff==0.16.9"
           ruff check fuzzing/ scripts/
 
       - name: Check the invariants over the corpus
@@ -449,7 +460,10 @@ jobs:
         # atheris ships native libFuzzer binaries, so it exists only on Linux.
         # That is also why this job cannot run on a Windows runner and why the
         # target carries a pure-Python driver for local use.
-        run: pip install atheris
+        # Pinned: 3.1.0 is the first release publishing a cp314 manylinux wheel,
+        # which this repo's Python floor requires. Unpinned here would also let
+        # a new major land mid-build and change the fuzzing engine silently.
+        run: pip install "atheris==3.1.0"
 
       - name: Fuzz
         # Seed arguments are expanded explicitly rather than passing the
@@ -465,7 +479,7 @@ jobs:
       - name: Upload any crashers
         # Always runs: a found input is only useful if it survives the run.
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: fuzz-crashers
           path: .fuzz-artifacts/

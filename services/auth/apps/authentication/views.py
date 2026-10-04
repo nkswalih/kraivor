@@ -31,6 +31,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from auth.logging_utils import log_safe
 from users.models import User
 
 from .cookie_utils import create_refresh_cookie
@@ -39,6 +40,7 @@ from .otp import (
     OTPExpiredError,
     OTPInvalidError,
     OTPRateLimitError,
+    OTPServiceUnavailableError,
     get_otp_sender,
     get_otp_service,
 )
@@ -352,7 +354,10 @@ class OTPSendView(APIView):
         description="Send a one-time passcode to the user's email for sign-in.",
         tags=["Authentication"],
         request=OTPSendSerializer,
-        responses={200: OpenApiResponse(description="OTP sent to email")},
+        responses={
+            200: OpenApiResponse(description="OTP sent to email"),
+            503: OpenApiResponse(description="OTP store unavailable"),
+        },
     )
     def post(self, request):
         serializer = OTPSendSerializer(data=request.data)
@@ -404,6 +409,15 @@ class OTPSendView(APIView):
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 extra={"retry_after": e.retry_after},
             ).to_response()
+        except OTPServiceUnavailableError:
+            # The code was never persisted, so nothing was sent. Tell the caller
+            # the sign-in path is down rather than confirming a delivery that
+            # cannot be completed.
+            return ErrorResponse(
+                error="Sign-in codes are temporarily unavailable. Please try again.",
+                error_code="otp_service_unavailable",
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            ).to_response()
 
         otp_sender = get_otp_sender()
         try:
@@ -434,7 +448,10 @@ class OTPVerifyView(APIView):
         description="Verify a one-time passcode and issue a token pair.",
         tags=["Authentication"],
         request=OTPVerifySerializer,
-        responses={200: OpenApiResponse(description="Token pair issued")},
+        responses={
+            200: OpenApiResponse(description="Token pair issued"),
+            503: OpenApiResponse(description="OTP store unavailable"),
+        },
     )
     def post(self, request):
         serializer = OTPVerifySerializer(data=request.data)
@@ -491,6 +508,19 @@ class OTPVerifyView(APIView):
                 error=str(e),
                 error_code="invalid_otp",
                 status_code=status.HTTP_401_UNAUTHORIZED,
+            ).to_response()
+        except OTPServiceUnavailableError:
+            # Deliberately no lockout_mgr.record_failure(): an infrastructure
+            # outage is not a failed attempt by this user, and counting it would
+            # lock out every legitimate sign-in attempt for the duration.
+            logger.error(
+                "auth.otp_verify_unavailable",
+                extra={"user_id": log_safe(str(user.id)), "email": log_safe(email)},
+            )
+            return ErrorResponse(
+                error="Sign-in verification is temporarily unavailable. Please try again.",
+                error_code="otp_service_unavailable",
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             ).to_response()
 
         lockout_mgr.clear_attempts(email, ip)

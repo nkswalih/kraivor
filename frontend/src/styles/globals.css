@@ -29,6 +29,14 @@
     --input: 240 5% 88%;
     --ring: var(--primary);
     --radius: 0.5rem;
+
+    /* Sonner toast surface. Declared once here rather than in both blocks:
+       `var()` inside a custom property is substituted at the point of use, so
+       these pick up the `.dark` values of --card/--foreground/--border below
+       without a second declaration. */
+    --normal-bg: hsl(var(--card));
+    --normal-text: hsl(var(--card-foreground));
+    --normal-border: hsl(var(--border));
   }
 
   .dark {

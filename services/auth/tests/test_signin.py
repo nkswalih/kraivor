@@ -10,6 +10,22 @@ from unittest.mock import MagicMock, patch
 from tests.factories import UserFactory
 
 
+@pytest.fixture(autouse=True)
+def unlocked_lockout_manager():
+    """Default every sign-in test in this module to "not locked out".
+
+    The real manager reads Redis, which CI does not provide. Since the lockout
+    now fails closed on an unreachable Redis, every sign-in test would 503
+    without this. Tests that exercise the locked path patch
+    `get_lockout_manager` inside the test body, which takes precedence over this
+    fixture. Outage behaviour is covered in test_lockout_redis_fail_closed.py.
+    """
+    mgr = MagicMock()
+    mgr.check_lockout.return_value = (False, 0)
+    with patch("authentication.views.get_lockout_manager", return_value=mgr):
+        yield mgr
+
+
 @pytest.mark.auth
 class TestSignInIdentify:
     def setup_method(self):

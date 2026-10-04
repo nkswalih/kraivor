@@ -30,6 +30,17 @@ class LoginLockoutError(Exception):
         super().__init__(f"Account locked. Try again in {retry_after} seconds.")
 
 
+class LoginLockoutUnavailableError(Exception):
+    """Raised when Redis cannot answer whether an identity is locked out.
+
+    The lockout counter is the only thing standing between an attacker and
+    unlimited password guessing, so an unreachable Redis is not permission to
+    guess. This is raised rather than swallowed: a "safe default" of "not
+    locked" is indistinguishable from "no lockout is in force", which is
+    precisely the state an attacker wants during an outage.
+    """
+
+
 class LoginLockoutManager:
     """
     Redis-based login lockout manager.
@@ -37,7 +48,14 @@ class LoginLockoutManager:
     Tracks failed login attempts per email+IP combination.
     After 5 failures, locks out for 15 minutes.
 
-    Gracefully handles Redis unavailability during tests by returning safe defaults.
+    The security-relevant operations -- `check_lockout` and `record_failure` --
+    raise `LoginLockoutUnavailableError` when Redis is unreachable, so an
+    outage denies sign-in rather than removing the throttle. `clear_attempts`
+    is the one exception and stays best-effort: it runs *after* credentials
+    have already been accepted, so failing there would reject a login that
+    genuinely succeeded. The worst case of skipping it is a stale attempt
+    count that locks a real user out slightly early, which is the safe
+    direction.
     """
 
     LOCKOUT_PREFIX = "login_lockout"
@@ -59,6 +77,11 @@ class LoginLockoutManager:
 
         Returns:
             (is_locked, retry_after_seconds)
+
+        Raises:
+            LoginLockoutUnavailableError: if Redis cannot be reached. Returning
+                `(False, 0)` here would read as "no lockout in force" and allow
+                unlimited password attempts for the duration of the outage.
         """
         try:
             lockout_key = self._get_lockout_key(email, ip)
@@ -67,12 +90,14 @@ class LoginLockoutManager:
             if ttl > 0:
                 return True, ttl
             return False, 0
-        except redis.exceptions.ConnectionError as e:
-            logger.warning(f"Redis unavailable in check_lockout: {e}. Allowing login.")
-            return False, 0
-        except redis.exceptions.TimeoutError as e:
-            logger.warning(f"Redis timeout in check_lockout: {e}. Allowing login.")
-            return False, 0
+        except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
+            logger.error(
+                "auth.lockout_check_unavailable",
+                extra={"email": log_safe(email.lower()), "error": log_safe(e)},
+            )
+            raise LoginLockoutUnavailableError(
+                "Could not verify whether this account is locked."
+            ) from e
 
     def record_failure(self, email: str, ip: str) -> int:
         """
@@ -80,6 +105,11 @@ class LoginLockoutManager:
 
         Returns:
             Number of failed attempts after this one.
+
+        Raises:
+            LoginLockoutUnavailableError: if Redis cannot be reached. Returning
+                0 would leave the counter where it was, so the next attempt
+                would also record 0 and the threshold would never be crossed.
         """
         try:
             attempts_key = self._get_attempts_key(email, ip)
@@ -101,19 +131,22 @@ class LoginLockoutManager:
                 pipe.execute()
 
             return failed_attempts
-        except redis.exceptions.ConnectionError as e:
-            logger.warning(
-                f"Redis unavailable in record_failure: {e}. Cannot track failures."
+        except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
+            logger.error(
+                "auth.lockout_record_failed",
+                extra={"email": log_safe(email.lower()), "error": log_safe(e)},
             )
-            return 0
-        except redis.exceptions.TimeoutError as e:
-            logger.warning(
-                f"Redis timeout in record_failure: {e}. Cannot track failures."
-            )
-            return 0
+            raise LoginLockoutUnavailableError(
+                "Could not record the failed attempt."
+            ) from e
 
     def clear_attempts(self, email: str, ip: str) -> None:
-        """Clear failed attempts after successful login."""
+        """Clear failed attempts after successful login.
+
+        Best-effort by design -- see the class docstring. Runs only after the
+        credentials have already been accepted, so an outage here must not turn
+        a successful login into a 503.
+        """
         try:
             attempts_key = self._get_attempts_key(email, ip)
             lockout_key = self._get_lockout_key(email, ip)
@@ -122,13 +155,10 @@ class LoginLockoutManager:
             pipe.delete(attempts_key)
             pipe.delete(lockout_key)
             pipe.execute()
-        except redis.exceptions.ConnectionError as e:
+        except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
             logger.warning(
-                f"Redis unavailable in clear_attempts: {e}. Cannot clear failures."
-            )
-        except redis.exceptions.TimeoutError as e:
-            logger.warning(
-                f"Redis timeout in clear_attempts: {e}. Cannot clear failures."
+                "auth.lockout_clear_failed",
+                extra={"email": log_safe(email.lower()), "error": log_safe(e)},
             )
 
     def is_allowed(self, email: str, ip: str) -> bool:

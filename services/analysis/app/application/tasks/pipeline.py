@@ -14,6 +14,7 @@ from uuid import UUID
 
 from app.application.analysis.commands import ProcessStageCommand, StartAnalysisCommand
 from app.application.analysis.handler import (
+    _push_engine_statuses,
     _push_progress,
     handle_analysis_failure,
     handle_save_analysis_metadata,
@@ -200,6 +201,28 @@ async def _push_stage_progress(state: dict[str, object], stage_name: str) -> Non
         logger.warning("publish_progress_failed", stage=stage_name)
 
 
+async def _persist_engine_statuses(state: dict[str, object]) -> None:
+    """Write engine_statuses to the job row immediately.
+
+    Without this the only write of `completed` was the *next* stage's
+    `_push_stage_progress`, so the API served every engine one stage stale: the
+    engine that had just finished still read `running`, and a completed engine
+    read `running` until an unrelated stage began. Progress is polled every 2s
+    against this column, so a stage that takes a minute shows a minute of stale
+    status.
+    """
+    if not state.get("job_id"):
+        return
+    job_id = cast(UUID, state["job_id"])
+    engine_statuses = cast(dict[str, str], state.get("engine_statuses") or {})
+    try:
+        await asyncio.wait_for(
+            _push_engine_statuses(job_id, engine_statuses), timeout=10
+        )
+    except Exception:
+        logger.warning("persist_engine_statuses_failed")
+
+
 async def run_full_analysis(cmd_dict: dict[str, object]) -> dict[str, object]:
     """Execute the complete analysis pipeline in the background.
 
@@ -305,8 +328,12 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
                 await stage_fn(state)  # type: ignore[call-arg]
             for eid in engine_ids:
                 cast(dict[str, str], state["engine_statuses"])[eid] = "completed"
+                state[f"_engine_end_{eid}"] = time.monotonic()
                 if job_id:
                     await _publish_engine_event(job_id, eid, "completed")
+            # Persist now rather than leaving it for the next stage's progress
+            # write. See _persist_engine_statuses.
+            await _persist_engine_statuses(state)
         except Exception:
             for eid in engine_ids:
                 cast(dict[str, str], state["engine_statuses"])[eid] = "failed"

@@ -276,6 +276,29 @@ async def _push_progress(
         await session.commit()
 
 
+async def _push_engine_statuses(job_id: UUID, engine_statuses: dict[str, str]) -> None:
+    """Persist engine status transitions on their own.
+
+    `_push_progress` rewrites status/progress_pct/progress_message too, and
+    those do not change when an engine finishes. Writing the whole row for every
+    transition risks clobbering a concurrent stage write, so engine transitions
+    get a narrow update of just the JSON column.
+    """
+    from sqlalchemy import update
+
+    from app.infrastructure.db.models.analysis_job import AnalysisJobModel
+    from app.infrastructure.db.session import async_session_factory
+
+    async with async_session_factory() as session:
+        stmt = (
+            update(AnalysisJobModel)
+            .where(AnalysisJobModel.id == job_id)
+            .values(engine_statuses=engine_statuses)
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+
 async def handle_stage_parse(
     cmd: ProcessStageCommand,
     parser: ChainedParser,

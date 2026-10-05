@@ -1,5 +1,6 @@
 import asyncio
 import json
+from collections.abc import Sequence
 from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import cast
@@ -175,13 +176,14 @@ async def handle_stage_clone(
         progress_message=f"Found {len(files)} files across {len(languages)} languages",
         total_files=len(files),
         total_lines=loc,
-        # `languages_detected` and `language_breakdown` are columns on the job row
-        # that nothing had ever written to. The breakdown was computed right
-        # above, to a tenth of a percent, and then thrown away: it survived only
-        # in this stage's return value, and reached the reports table at
-        # finalize, minutes to hours later depending on repository size. Writing
-        # it here means a reader watching a running job sees the real language
-        # mix from 15% instead of a placeholder.
+        # `languages_detected` and `language_breakdown` are columns on the job
+        # row that nothing had ever written to. The breakdown was computed right
+        # above, to a tenth of a percent, and then thrown away: it only lived in
+        # this stage's return value and reached the reports table at finalize,
+        # hours later for a slow repository. Writing it here means a reader
+        # watching a running job sees the real language mix from 15% instead of
+        # a placeholder. The reconstruction path in the report repository reads
+        # these same columns, and was therefore always returning empty lists.
         languages_detected=languages,
         language_breakdown=language_breakdown,
     )
@@ -349,10 +351,16 @@ async def handle_stage_parse(
     producer: EventProducer,
     repo_path: str,
     files: list[dict[str, object]],
+    languages: list[str],
+    frameworks: list[str],
 ) -> tuple[list[dict[str, object]], list[ParsedFile]]:
     parsed: list[ParsedFile] = []
     errors = 0
     total = len(files)
+    # Written every 10 points of progress rather than every tick, so a long
+    # repository does not turn each 5-file batch into an UPDATE. Ten writes over
+    # the stage is also more often than the frontend's 2s poll can notice.
+    last_checkpoint = -1
     for i, f in enumerate(files):
         try:
             pf = await parser.parse(cast(str, f["path"]), cast(str, f["content"]))
@@ -363,12 +371,41 @@ async def handle_stage_parse(
 
         if (i + 1) % 5 == 0 or i == total - 1:
             pct = 25 + int(35 * (i + 1) / total)
+            checkpoint = pct // 10
+            if checkpoint != last_checkpoint:
+                last_checkpoint = checkpoint
+                await handle_save_analysis_metadata(
+                    job_id=cmd.job_id,
+                    parsed=parsed,
+                    languages=languages,
+                    frameworks=frameworks,
+                    uow=uow,
+                )
+                # Committed here on purpose: the frontend polls this job through
+                # its own session, so holding the totals until parse finished
+                # would defeat the point of writing them early. Nothing else is
+                # pending on this transaction at this point in the stage.
+                await uow.commit()
             await _push_progress(
                 cmd.job_id,
                 JobStatus.PARSING,
                 pct,
                 f"Parsing files... ({i + 1}/{total})",
             )
+
+    if last_checkpoint < 0:
+        # No loop iteration ever reached a checkpoint: either the repository has
+        # no source files, or there were fewer than the tick interval. A job must
+        # end up with a metadata row either way, recording zeros rather than
+        # nothing, or the metadata endpoint has no answer to give for this run.
+        await handle_save_analysis_metadata(
+            job_id=cmd.job_id,
+            parsed=parsed,
+            languages=languages,
+            frameworks=frameworks,
+            uow=uow,
+        )
+        await uow.commit()
 
     if errors:
         logger.warning(
@@ -788,7 +825,8 @@ async def handle_stage_finalize(
         low_count=severity_counts.get(Severity.LOW, 0),
         # Written at clone too, so a completed job's row carries the same values
         # whether or not that earlier write landed. This is the authoritative
-        # point: whatever clone detected is what the report was built from.
+        # point: whatever clone detected, finalize is what the report was built
+        # from.
         languages_detected=languages,
         language_breakdown=language_breakdown,
         duration_seconds=duration_seconds,
@@ -1642,20 +1680,34 @@ async def get_enterprise_guide(
     return await uow.enterprise_guides.get_by_job(job_id)
 
 
+def _count_code_entities(parsed: Sequence[ParsedFile]) -> tuple[int, int, int]:
+    """Total (classes, functions, routes) across the files parsed so far.
+
+    One counting path for both the running total written during parse and the
+    final one, so the number a reader sees mid-run cannot drift from the number
+    they see afterwards.
+    """
+    return (
+        sum(len(p.classes) for p in parsed),
+        sum(len(p.functions) for p in parsed),
+        sum(len(p.routes) for p in parsed),
+    )
+
+
 async def handle_save_analysis_metadata(
     job_id: UUID,
-    parsed_files_metadata: list[dict[str, object]],
+    parsed: Sequence[ParsedFile],
     languages: list[str],
     frameworks: list[str],
     uow: UnitOfWork,
 ) -> None:
-    class_count = 0
-    function_count = 0
-    endpoint_count = 0
-    for meta in parsed_files_metadata:
-        class_count += cast(int, meta.get("classes", 0))
-        function_count += cast(int, meta.get("functions", 0))
-        endpoint_count += cast(int, meta.get("routes", 0))
+    """Persist the code-entity totals for a job, overwriting any earlier total.
+
+    Called repeatedly while parse is still running, so that a reader polling a
+    job in progress sees real counts from about 25% rather than skeletons until
+    the whole repository has been parsed.
+    """
+    class_count, function_count, endpoint_count = _count_code_entities(parsed)
 
     metadata = AnalysisMetadata(
         job_id=job_id,
@@ -1672,6 +1724,7 @@ async def handle_save_analysis_metadata(
         classes=class_count,
         functions=function_count,
         endpoints=endpoint_count,
+        files=len(parsed),
     )
 
 

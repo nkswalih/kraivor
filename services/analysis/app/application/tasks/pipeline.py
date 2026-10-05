@@ -17,7 +17,6 @@ from app.application.analysis.handler import (
     _push_engine_statuses,
     _push_progress,
     handle_analysis_failure,
-    handle_save_analysis_metadata,
     handle_save_findings,
     handle_stage_ai_enrich,
     handle_stage_churn,
@@ -474,16 +473,17 @@ async def _stage_parse(state: dict[str, object]) -> None:
     async with UnitOfWork() as uow:
         producer = EventProducer()
         metadata, parsed_files = await handle_stage_parse(
-            cmd, parser, uow, producer, repo_path, files
-        )
-        await handle_save_analysis_metadata(
-            job_id=job_id,
-            parsed_files_metadata=metadata,
+            cmd,
+            parser,
+            uow,
+            producer,
+            repo_path,
+            files,
             languages=cast(list[str], state.get("languages", [])),
             frameworks=cast(list[str], state.get("frameworks", [])),
-            uow=uow,
         )
-        await uow.commit()
+        # handle_stage_parse persisted the running totals itself, including a
+        # final checkpoint, so there is nothing left to save here.
 
         state["parsed_files_metadata"] = metadata
         state["_parsed_files"] = parsed_files

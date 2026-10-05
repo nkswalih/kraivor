@@ -98,8 +98,17 @@ async def task_parse(prev_result: dict[str, object]) -> dict[str, object]:
 
     async with UnitOfWork() as uow:
         producer = EventProducer()
-        metadata = await handle_stage_parse(
-            cmd, parser, uow, producer, repo_path, files
+        # Languages and frameworks come from the clone result, same source the
+        # pipeline reads them from.
+        metadata, _parsed_files = await handle_stage_parse(
+            cmd,
+            parser,
+            uow,
+            producer,
+            repo_path,
+            files,
+            languages=cast(list[str], prev_result.get("languages", [])),
+            frameworks=cast(list[str], prev_result.get("frameworks", [])),
         )
         await uow.commit()
 

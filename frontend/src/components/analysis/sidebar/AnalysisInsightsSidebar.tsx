@@ -3,7 +3,12 @@
 import { X, PanelRightClose } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { analysisInsightsBuilder, isJobInFlight } from '@/lib/analysis/insights-builder';
-import { useAnalysisMetadata, useEnterpriseGuide, useEngines } from '@/lib/hooks/use-analysis';
+import {
+  useAnalysisMetadata,
+  useEnterpriseGuide,
+  useEngines,
+  useReEnrich,
+} from '@/lib/hooks/use-analysis';
 import type { AnalysisJob, Report, FindingsSummary, Finding } from '@/types/domain/analysis';
 import { AIExecutiveSummaryCard } from './AIExecutiveSummaryCard';
 import { PriorityRecommendationCard } from './PriorityRecommendationCard';
@@ -59,8 +64,24 @@ export function AnalysisInsightsSidebar({
   // retry, so `data === undefined` means "asked, not answered", not "no summary".
   const guidePending = !isLoading && guideLoading;
 
+  // Retrying the summary in place. The sidebar did not previously have any way to
+  // ask for one, so a summary that failed to generate was a dead end from this
+  // page: the only regenerate button lived on the enterprise guide page, a
+  // different route, which a reader of a running analysis is not looking at.
+  //
+  // `onSuccess` is not wired to a toast here. The card's own state is the
+  // feedback: the hook invalidates `analysis-guide`, the sidebar re-reads, and a
+  // summary appears or the reason changes. A toast saying "regenerated" on a run
+  // that then renders the same error is the failure this whole task is about.
+  const reEnrich = useReEnrich();
+  const retrySummary = () => {
+    if (!jobId) return;
+    reEnrich.mutate(jobId);
+  };
+
   const aiExecutiveSummary = enterpriseGuide?.ai_executive_summary ?? null;
-  const insights = analysisInsightsBuilder(job, report, findingsSummary, findings, analysisMetadata, aiExecutiveSummary, enginesResponse?.engines);
+  const aiSummaryError = enterpriseGuide?.ai_summary_error ?? null;
+  const insights = analysisInsightsBuilder(job, report, findingsSummary, findings, analysisMetadata, aiExecutiveSummary, enginesResponse?.engines, aiSummaryError);
 
   if (collapsed) {
     return (
@@ -113,6 +134,8 @@ export function AnalysisInsightsSidebar({
             isLoading={isLoading}
             isRunning={running}
             guidePending={guidePending}
+            onRetry={retrySummary}
+            isRetrying={reEnrich.isPending}
           />
 
           <PriorityRecommendationCard

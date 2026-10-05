@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { analysisService } from '@/lib/api/analysis-service';
+import type { ReEnrichResponse } from '@/lib/api/analysis-service';
 import type {
   AnalysisJob,
   AnalysisMetadataResponse,
@@ -225,7 +226,7 @@ export function useSimulationResults(jobId: string | null) {
 
 export function useReEnrich() {
   const queryClient = useQueryClient();
-  return useMutation<{ status: string; enriched: boolean }, Error, string>({
+  return useMutation<ReEnrichResponse, Error, string>({
     mutationFn: (jobId) => analysisService.jobs.reEnrich(jobId),
     onSuccess: (_data, jobId) => {
       queryClient.invalidateQueries({ queryKey: ['analysis-guide', jobId] });

@@ -222,7 +222,33 @@ async def re_enrich_job(
     cmd = ProcessStageCommand(job_id=job_id, stage="ai_enrich")
     result = await handle_re_enrich(cmd, uow)
     await uow.commit()
-    return {"status": "ok", "enriched": result is not None}
+
+    # `{"status": "ok"}` unconditionally, with `enriched` as the only signal, and
+    # the client treating arrival as success. So a re-enrich that reached the AI
+    # service and was refused, or timed out, or returned no summary, produced a
+    # green "AI enrichment regenerated" toast on a run that had not been
+    # enriched. `enriched` could not carry it either: it is `result is not None`,
+    # and a failed summary is exactly the case where the stage still returns a
+    # result -- the findings enrichment succeeded.
+    #
+    # The reason is read back off the guide rather than returned from the handler:
+    # `handle_stage_ai_enrich` persists it, and re-reading is what makes this
+    # agree with what a reload of the page will show.
+    guide = await uow.enterprise_guides.get_by_job(job_id)
+    summary_error = (guide or {}).get("ai_summary_error")
+    has_summary = bool((guide or {}).get("ai_executive_summary"))
+
+    return {
+        # "degraded" rather than "ok" because the request did succeed -- findings
+        # were re-enriched and the reason was recorded -- and calling it a failure
+        # would tell the client to retry the whole thing when the retry would fail
+        # the same way. `enriched` keeps its old meaning so nothing that reads it
+        # changes behaviour.
+        "status": "ok" if has_summary else "degraded",
+        "enriched": result is not None,
+        "has_summary": has_summary,
+        "ai_summary_error": summary_error,
+    }
 
 
 def _engine_to_response(spec: EngineSpec) -> EngineInfo:

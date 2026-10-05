@@ -16,7 +16,25 @@ import type {
   ScoreHistoryListResponse,
   EnterpriseGuide,
   EngineListResponse,
+  AiSummaryError,
 } from '@/types/domain/analysis';
+
+/**
+ * What a re-enrich actually achieved.
+ *
+ * `status` is `"degraded"` when the findings were re-enriched but no summary
+ * came back. The request succeeded -- it returned 200 and it recorded why -- and
+ * the distinction from `"ok"` is what stops a client reporting success on a run
+ * that still has no summary. `enriched` alone cannot say this: it is
+ * `result is not None`, and a failed summary is precisely the case where the
+ * stage still returns a result.
+ */
+export interface ReEnrichResponse {
+  status: 'ok' | 'degraded';
+  enriched: boolean;
+  has_summary: boolean;
+  ai_summary_error: AiSummaryError | null;
+}
 
 const BASE = process.env.NEXT_PUBLIC_ANALYSIS_API_URL ?? 'http://localhost:8003';
 
@@ -124,10 +142,8 @@ export const analysisService = {
         API_ENDPOINTS.ANALYSIS.JOB_STATISTICS(jobId)
       );
     },
-    reEnrich(jobId: string): Promise<{ status: string; enriched: boolean }> {
-      return analysisPost<{ status: string; enriched: boolean }>(
-        `/api/v1/jobs/${jobId}/re-enrich`, null
-      );
+    reEnrich(jobId: string): Promise<ReEnrichResponse> {
+      return analysisPost<ReEnrichResponse>(`/api/v1/jobs/${jobId}/re-enrich`, null);
     },
     branches(repoUrl: string): Promise<string[]> {
       return analysisGet<string[]>(

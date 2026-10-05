@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import type { AiSummaryCard } from '@/types/domain/analysis';
 import { BotMessageSquare } from 'lucide-react';
 import { MarkdownRenderer } from '@/components/ui/markdown/markdown-renderer';
+import { AiSummaryErrorPanel } from '@/components/analysis/ai-summary/AiSummaryErrorPanel';
 
 function SummarySkeleton() {
   return (
@@ -24,6 +25,8 @@ export function AIExecutiveSummaryCard({
   isLoading,
   isRunning,
   guidePending = false,
+  onRetry,
+  isRetrying = false,
   className,
 }: {
   data: AiSummaryCard;
@@ -48,6 +51,16 @@ export function AIExecutiveSummaryCard({
    * way.
    */
   guidePending?: boolean;
+  /**
+   * Ask the service to generate the summary again.
+   *
+   * Optional, and passed straight through to the error panel, which is what
+   * decides whether to offer it at all. A card with no `onRetry` still shows the
+   * reason -- the reason is worth showing to someone who cannot act on it -- it
+   * just shows no button.
+   */
+  onRetry?: () => void;
+  isRetrying?: boolean;
   className?: string;
 }) {
   const summary = data.summary;
@@ -56,14 +69,27 @@ export function AIExecutiveSummaryCard({
   // render the same placeholder.
   const busy = isLoading || isRunning || guidePending === true;
 
+  // A recorded failure. Distinct from every other absent summary, and the reason
+  // the card has three separate props at all: a run that finished and produced no
+  // summary because one was never attempted is a different thing from one that
+  // tried and was refused, and this is the state that can say which.
+  //
+  // Only meaningful when the summary is genuinely absent. `insights-builder` drops
+  // the error when a summary exists, so this cannot be a summary plus an error
+  // here; the guard is because `data` is a plain object and nothing stops a
+  // caller handing one over.
+  const error = !isAiGenerated && !busy ? (data.error ?? null) : null;
+
   // While the run is going there is no summary and none is expected, so the
   // "Preview" badge would be labelling a card with nothing in it, and the
   // footer said the summary "will appear after analysis completes" on a job
   // where nothing is complete. Both claims are false until the run ends.
-  const showPreviewBadge = !isAiGenerated && !busy;
-  // Suppressed whenever a summary is still expected. On a finished run with no
-  // summary at all, the footer does appear -- see the note below.
-  const showFooter = !isAiGenerated && !busy;
+  const showPreviewBadge = !isAiGenerated && !busy && !error;
+  // Suppressed whenever a summary is still expected, and suppressed for a
+  // recorded failure -- "will appear after analysis completes" on a run that has
+  // completed and failed to produce one is the exact sentence this error state
+  // exists to replace.
+  const showFooter = !isAiGenerated && !busy && !error;
 
   return (
     <div className={cn('bg-card border border-border rounded-xl', className)}>
@@ -84,15 +110,13 @@ export function AIExecutiveSummaryCard({
       <div className="max-h-[360px] overflow-y-auto px-4 py-3 scrollbar-thin">
         {busy ? (
           <SummarySkeleton />
+        ) : error ? (
+          <AiSummaryErrorPanel error={error} onRetry={onRetry} isRetrying={isRetrying} />
         ) : (
           <MarkdownRenderer content={summary} compact />
         )}
       </div>
 
-      {/* Footer hint. Wording is deliberately not changed for a finished run
-          whose summary never arrived: that is a real gap rather than a pending
-          one, and giving it an honest message of its own belongs with the error
-          handling that will say which failure it was. */}
       {showFooter && (
         <p className="px-4 pb-3 pt-0 text-[10px] text-text-tertiary italic border-t border-border mt-0">
           Static preview — AI summary will appear after analysis completes.

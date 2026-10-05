@@ -477,6 +477,27 @@ export interface RawFinding {
   estimated_effort: number;
 }
 
+/**
+ * Why an AI summary is missing.
+ *
+ * Built by the AI service's `ClassifiedError` and narrowed again on the analysis
+ * side before storage, so `code` and `message` are always present when this
+ * object exists at all. There is no `provider`, `model` or `technical_message`
+ * field: the provider's verbatim response body contains, on an auth failure, the
+ * rejected key, and no field for it exists here to forget to remove.
+ */
+export interface AiSummaryError {
+  code: string;
+  message: string;
+  /**
+   * Omitted rather than null when the provider gave no hint. A client cannot tell
+   * "no hint" from "hint of zero" otherwise, and zero reads as "retry now" --
+   * the opposite of the advice a missing hint implies.
+   */
+  suggested_action?: string;
+  retry_after?: number;
+}
+
 export interface EnterpriseGuide {
   id: string;
   job_id: string;
@@ -484,6 +505,14 @@ export interface EnterpriseGuide {
   // Legacy fields
   executive_summary: string | null;
   ai_executive_summary: string | null;
+  /**
+   * Set only when `ai_executive_summary` is null *and* something failed.
+   *
+   * The difference between "no summary was produced" and "no summary was
+   * produced, here is why" -- a distinction that used to be invisible, because
+   * both arrived as null and the UI showed one fixed message for either.
+   */
+  ai_summary_error?: AiSummaryError | null;
   critical_issues: unknown[] | null;
   high_issues: unknown[] | null;
   medium_issues: unknown[] | null;
@@ -545,6 +574,16 @@ export interface AnalysisInsights {
 export interface AiSummaryCard {
   summary: string;
   isAiGenerated: boolean;
+  /**
+   * Why the summary is missing, when it is.
+   *
+   * Three states have to stay distinguishable here, and the previous type had
+   * room for one: a run still going, a run that finished with no summary at all,
+   * and a run that finished with a summary that could not be generated. Only the
+   * third has a `code`, and only it should offer a retry as though retrying were
+   * the thing to do.
+   */
+  error?: AiSummaryError | null;
 }
 
 export interface PriorityRecommendation {

@@ -6,6 +6,7 @@ import type {
   AnalysisJob,
   AnalysisMetadata,
   AnalysisMetadataResponse,
+  AiSummaryError,
   Report,
   RepositoryOverview,
   LanguageBar,
@@ -61,6 +62,7 @@ export function analysisInsightsBuilder(
   analysisMetadata?: AnalysisMetadataResponse | null | undefined,
   aiExecutiveSummary?: string | null | undefined,
   engines?: EngineInfo[] | null | undefined,
+  aiSummaryError?: AiSummaryError | null | undefined,
 ): AnalysisInsights {
   const performanceScore = report?.performance_score ?? job?.overall_score;
   const securityScore = report?.security_score;
@@ -126,6 +128,18 @@ export function analysisInsightsBuilder(
 
   const hasAiSummary = !!aiExecutiveSummary && aiExecutiveSummary.trim().length > 0;
 
+  // A summary and a reason are mutually exclusive on the wire, but the pair is
+  // normalised here rather than in the card because this is the one place that
+  // can see both: a re-enrich that failed keeps the previous summary (a paying
+  // user should not lose one because a regenerate failed) and records the new
+  // reason beside it. `error: null` in that case is load-bearing -- it is what
+  // tells the card the summary it is about to render is stale.
+  //
+  // A reason without a missing summary is dropped. It cannot arise from a
+  // correct write, and rendering it next to a summary would claim the summary is
+  // bad when the write that produced it was.
+  const summaryError = hasAiSummary ? null : (aiSummaryError ?? null);
+
   // Which sources are legitimate depends on whether the run has a report yet.
   //
   // A finished job is described by its report: the report is built at finalize
@@ -190,6 +204,7 @@ export function analysisInsightsBuilder(
     aiSummary: {
       summary: aiExecutiveSummary ?? '',
       isAiGenerated: hasAiSummary,
+      error: summaryError,
     },
     priorityRecommendation,
     repositoryOverview,

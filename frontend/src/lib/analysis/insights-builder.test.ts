@@ -8,6 +8,7 @@ import type {
   FindingsSummary,
   Finding,
   EngineInfo,
+  AiSummaryError,
 } from '@/types/domain/analysis';
 
 // ======================================================================
@@ -810,5 +811,67 @@ describe('engineStatus for the running progress panel', () => {
     // engine as waiting, which is the answer -- not an empty list.
     expect(insights.engineStatus).toHaveLength(4);
     expect(insights.engineStatus.every(e => e.status === 'pending')).toBe(true);
+  });
+});
+
+// ======================================================================
+// The summary's failure
+// ======================================================================
+
+describe('The summary failure', () => {
+  const FAILURE: AiSummaryError = {
+    code: 'provider_not_configured',
+    message: 'No provider key is configured.',
+    suggested_action: 'add_key',
+  };
+
+  /** A finished run with the eighth argument being `failure`. */
+  function withFailure(failure: AiSummaryError | null, summary: string | null = null) {
+    return analysisInsightsBuilder(
+      job({ status: JobStatus.COMPLETED, completed_at: '2026-01-01T00:01:40Z' }),
+      report({}),
+      NO_SUMMARY,
+      NO_FINDINGS,
+      meta({}),
+      summary,
+      null,
+      failure,
+    );
+  }
+
+  it('carries the reason through when there is no summary', () => {
+    // This is the whole point of the eighth argument. Before it, a finished run
+    // with no summary and a finished run whose summary could not be generated
+    // both arrived as `summary: ''` and rendered the same empty card.
+    expect(withFailure(FAILURE).aiSummary.error).toEqual(FAILURE);
+  });
+
+  it('drops the reason when a summary exists', () => {
+    // A summary and a reason together mean the summary is stale, which the guide
+    // section renders as such. The sidebar card cannot: it renders one body, and
+    // choosing between the summary and the reason here would either hide the work
+    // that succeeded or hide the reason. So the builder picks for that surface,
+    // and the section takes both props directly.
+    expect(withFailure(FAILURE, '## Assessment\n\nFine.').aiSummary.error).toBeNull();
+  });
+
+  it('reports no error for a run that never attempted one', () => {
+    // Distinguishable from the above, and the distinction is what lets the card
+    // say "not available, click regenerate" rather than naming a failure that did
+    // not happen.
+    const insights = withFailure(null);
+
+    expect(insights.aiSummary.error).toBeNull();
+    expect(insights.aiSummary.isAiGenerated).toBe(false);
+  });
+
+  it('treats a whitespace-only summary as absent', () => {
+    // The API can hand back a column that was written but is blank. Rendering
+    // that is rendering nothing, and pairing it with a reason would claim the
+    // summary is bad when there is not one.
+    const insights = withFailure(FAILURE, '   \n  ');
+
+    expect(insights.aiSummary.isAiGenerated).toBe(false);
+    expect(insights.aiSummary.error).toEqual(FAILURE);
   });
 });

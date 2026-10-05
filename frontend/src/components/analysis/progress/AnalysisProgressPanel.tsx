@@ -6,6 +6,7 @@ import { ProgressBar } from '@/components/analysis/progress-bar';
 import { elapsedBetween, formatDuration, useElapsedSeconds, usableTimestamp } from '@/lib/format/duration';
 import { EngineStep } from './EngineStep';
 import { normalizeEngineState } from '@/lib/analysis/engine-status';
+import { jobStatusLabel } from '@/components/analysis/job-status-badge';
 import { JobStatus } from '@/types/domain/analysis';
 import type { AnalysisJob, EngineStatusMap, EngineStatusItem } from '@/types/domain/analysis';
 
@@ -74,6 +75,27 @@ export function AnalysisProgressPanel({
     <div className={cn('space-y-6', className)}>
       <ProgressBar pct={job.progress_pct} message={job.progress_message} />
 
+      {/* Announces stage changes, and deliberately nothing else.
+
+          `job.progress_message` carried `aria-live="polite"` before. It is free
+          text that changes every few seconds -- "Scanning 120 of 480 files",
+          then 125, then 130 -- and a live region that updates faster than a
+          person can read is worse than no live region at all: the announcement
+          queue grows faster than it drains, so the reader falls further behind
+          with every poll and eventually hears numbers from a stage they have
+          left. Silence, and the value on the progressbar to read on demand, is
+          the honest trade.
+
+          The stage moves a dozen times across a run and each move is worth
+          hearing, so that is what gets its own region. Hidden from sight because
+          the visible stage indicator is the badge in the page header; this
+          exists to be heard, not read twice. `role="status"` implies a polite
+          live region, and initial content is not announced -- so arriving at a
+          running job does not recite the stage it was already in. */}
+      <span role="status" className="sr-only">
+        {jobStatusLabel(job.status)}
+      </span>
+
       {/* What is happening this second, and how long it has been happening. */}
       <div className="flex items-center justify-between gap-3 text-[12px] text-text-tertiary">
         <span className="flex items-center gap-1.5 min-w-0">
@@ -81,9 +103,7 @@ export function AnalysisProgressPanel({
             aria-hidden="true"
             className="w-3.5 h-3.5 text-venom-yellow animate-spin shrink-0"
           />
-          <span className="truncate" aria-live="polite">
-            {job.progress_message || 'Analysis in progress'}
-          </span>
+          <span className="truncate">{job.progress_message || 'Analysis in progress'}</span>
         </span>
 
         <span className="shrink-0 tabular-nums">

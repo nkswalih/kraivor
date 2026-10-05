@@ -410,3 +410,65 @@ describe('the retry action', () => {
     expect(summary.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
+
+describe('what gets announced', () => {
+  it('announces the reason once, when a failed job is opened', () => {
+    render(<JobFailurePanel job={job()} items={PART_WAY} />);
+
+    // The one piece of this surface that should be spoken rather than merely
+    // rendered: it mounts once, and the reason is the whole point of opening a
+    // failed job.
+    const status = screen.getByRole('status');
+
+    expect(status).toHaveTextContent('Analysis failed');
+    expect(status).toHaveTextContent('rules failed: SemgrepError - exit code 2');
+  });
+
+  it('announces the empty reason too, so silence does not read as working', () => {
+    render(<JobFailurePanel job={job({ error_message: null })} items={PART_WAY} />);
+
+    // If the region only covered the message, a run with no recorded reason
+    // would announce "Analysis failed" and stop -- which is indistinguishable
+    // from a region that failed to load.
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'No failure reason was recorded for this run.',
+    );
+  });
+
+  it('keeps the nine engine rows out of the announced region', () => {
+    render(<JobFailurePanel job={job()} items={PART_WAY} />);
+
+    // Nine rows of detail read aloud on arrival is noise, and it is the noise
+    // that makes people turn live regions off entirely. The rows stay readable
+    // on demand, which is where detail belongs.
+    //
+    // Matched on the engine's own wording -- "rules: SemgrepError" -- because
+    // the job-level message in the region contains "SemgrepError" as a
+    // substring and would make this assertion pass for the wrong reason.
+    const status = screen.getByRole('status');
+
+    expect(status.textContent).toContain('SemgrepError');
+    expect(status.textContent).not.toContain('rules: SemgrepError');
+    expect(screen.getAllByRole('listitem')).toHaveLength(9);
+  });
+
+  it('does not put the retry button inside the announced region', () => {
+    render(<JobFailurePanel job={job()} items={PART_WAY} onRetry={vi.fn()} />);
+
+    // A button inside a status region is announced as part of the status text
+    // and stops being findable as a button in a reader's control list.
+    expect(screen.getByRole('status').querySelector('button')).toBeNull();
+    expect(screen.getByRole('button', { name: /Retry/ })).toBeTruthy();
+  });
+
+  it('leaves the decorative cross out of the announcement', () => {
+    const { container } = render(<JobFailurePanel job={job()} items={PART_WAY} />);
+
+    // The word "failed" carries the meaning; an icon read as "graphic" on top of
+    // it is noise.
+    const status = screen.getByRole('status');
+    const svg = status.querySelector('svg');
+
+    expect(svg?.getAttribute('aria-hidden')).toBe('true');
+  });
+});

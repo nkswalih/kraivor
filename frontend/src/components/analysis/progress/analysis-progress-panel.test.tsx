@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { AnalysisProgressPanel } from './AnalysisProgressPanel';
+import { jobStatusLabel } from '@/components/analysis/job-status-badge';
 import { JobStatus } from '@/types/domain/analysis';
 import type { AnalysisJob, EngineStatusMap, EngineStatusItem } from '@/types/domain/analysis';
 
@@ -123,6 +124,84 @@ describe('AnalysisProgressPanel progress bar', () => {
     // message to label, so the fallback belongs only to the live line -- which is
     // where it answers the question the bar's label would have answered.
     expect(screen.getAllByText('Analysis in progress')).toHaveLength(1);
+  });
+});
+
+// ======================================================================
+// What gets announced
+// ======================================================================
+
+describe('AnalysisProgressPanel announcements', () => {
+  it('does not announce the progress message, which changes every few seconds', () => {
+    render(
+      <AnalysisProgressPanel
+        job={job({ progress_message: 'Scanning 120 of 480 files' })}
+        engineStatuses={{}}
+        items={[done]}
+      />,
+    );
+
+    // This line carried `aria-live="polite"`. It is free text that changes every
+    // few seconds -- 120 files, then 125, then 130 -- and the announcement queue
+    // grows faster than a reader drains it. So the reader ends up hearing file
+    // counts from a stage they have already left, which is worse than hearing
+    // nothing. It stays on screen and stays readable; it just is not an event.
+    //
+    // Both occurrences are checked: the bar labels itself with the same string,
+    // and that one must not have picked up a live region either.
+    for (const line of screen.getAllByText('Scanning 120 of 480 files')) {
+      expect(line.getAttribute('aria-live')).toBeNull();
+      expect(line.closest('[aria-live]')).toBeNull();
+    }
+  });
+
+  it('announces the stage instead, because a stage change is worth hearing', () => {
+    render(<AnalysisProgressPanel job={job()} engineStatuses={{}} items={[done]} />);
+
+    // A dozen moves across a whole run, each one meaningful, instead of hundreds
+    // of file counts. `role="status"` is what makes it a region at all -- the
+    // role carries politeness implicitly, so there is no `aria-live` attribute
+    // to assert on and nothing to keep in sync with one.
+    const status = screen.getByRole('status');
+
+    expect(status).toHaveTextContent(jobStatusLabel(JobStatus.PARSING));
+    expect(status.tagName).toBe('SPAN');
+  });
+
+  it('uses the same words for a stage as the status badge does', () => {
+    // One table, two consumers. If the panel said "parsing" and the badge said
+    // "Parsing files", a reader moving between them would have to learn that
+    // they were the same thing.
+    render(
+      <AnalysisProgressPanel job={job()} engineStatuses={{}} items={[done]} />,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent(jobStatusLabel(JobStatus.PARSING));
+    expect(jobStatusLabel(JobStatus.GUIDE_GEN)).toBe('Guide');
+    expect(jobStatusLabel(JobStatus.DEAD_CODE)).toBe('Dead Code');
+  });
+
+  it('hides the announced stage from sight, because the badge already shows it', () => {
+    // It exists to be heard. Rendering it a second time in the panel would put
+    // "Parsing" on the page twice and change the layout for a screen reader
+    // only.
+    const { container } = render(
+      <AnalysisProgressPanel job={job()} engineStatuses={{}} items={[done]} />,
+    );
+
+    const status = container.querySelector('[role="status"]');
+
+    expect(status?.className).toContain('sr-only');
+  });
+
+  it('has exactly one live region, so two things cannot talk over each other', () => {
+    render(
+      <AnalysisProgressPanel job={job()} engineStatuses={{}} items={[done, running]} />,
+    );
+
+    // The per-engine error text, the partial-failure line and the ticking timer
+    // are all outside this. One region, one voice.
+    expect(screen.getAllByRole('status')).toHaveLength(1);
   });
 });
 

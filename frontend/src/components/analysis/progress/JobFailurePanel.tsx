@@ -74,7 +74,17 @@ export function JobFailurePanel({
 
   return (
     <div className={cn('space-y-6', className)}>
-      <div className="flex items-start gap-3">
+      {/* `role="status"` because this is the one piece of the failure surface that
+          should be announced rather than merely rendered. It mounts once, when a
+          failed job's page is opened, and its content does not change while the
+          page stays there -- so it reads the reason out once and then stays
+          quiet. The per-engine rows below are deliberately outside it: nine
+          rows of detail announced on arrival is noise, and they are readable on
+          demand like the rest of the page.
+
+          The X is `aria-hidden` because the word "failed" beside it is what
+          carries the meaning; the icon is decoration on top of that. */}
+      <div className="flex items-start gap-3" role="status">
         <XCircle
           aria-hidden="true"
           className="w-[18px] h-[18px] shrink-0 text-red-400 mt-px"

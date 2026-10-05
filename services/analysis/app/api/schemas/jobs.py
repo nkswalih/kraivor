@@ -13,6 +13,18 @@ class StartAnalysisRequest(BaseModel):
     depth: int = Field(default=1, ge=1, le=10)
 
 
+class LanguageShare(BaseModel):
+    """One language's share of the repository's lines.
+
+    `percentage` is a share of lines attributed to a language, not of all lines:
+    blank and non-source files are excluded, so the entries do not necessarily
+    sum to 100.
+    """
+
+    name: str
+    percentage: float
+
+
 class EngineStatusEntry(BaseModel):
     engine: str
     status: str
@@ -75,6 +87,11 @@ class JobStatusResponse(BaseModel):
     created_at: datetime
     started_at: datetime | None = None
     completed_at: datetime | None = None
+    # Null until clone has detected them. Optional rather than defaulted to []
+    # because "not measured yet" and "measured, found none" are different answers
+    # and the sidebar has to be able to tell them apart to show a skeleton.
+    languages_detected: list[str] | None = None
+    language_breakdown: list[LanguageShare] | None = None
 
 
 class JobListResponse(BaseModel):

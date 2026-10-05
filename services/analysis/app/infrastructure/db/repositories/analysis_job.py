@@ -159,6 +159,14 @@ class JobRepository(AbstractJobRepository):
             AnalysisJobModel.started_at,
             AnalysisJobModel.completed_at,
             AnalysisJobModel.created_at,
+            # Carried in the list projection too, not just the detail one. Both
+            # endpoints answer with the same `JobStatusResponse`, so projecting
+            # these here only would make the field real on one route and null on
+            # the other for the very same completed job. The two columns are a
+            # few short strings and a handful of small objects per row, which is
+            # cheaper than a schema that lies about half its callers.
+            AnalysisJobModel.languages_detected,
+            AnalysisJobModel.language_breakdown,
         )
 
     @staticmethod
@@ -182,6 +190,8 @@ class JobRepository(AbstractJobRepository):
             "started_at": model.started_at,
             "completed_at": model.completed_at,
             "created_at": model.created_at,
+            "languages_detected": model.languages_detected,
+            "language_breakdown": model.language_breakdown,
         }
 
     @staticmethod
@@ -220,4 +230,6 @@ class JobRepository(AbstractJobRepository):
             "completed_at": model.completed_at,
             "duration_seconds": model.duration_seconds,
             "created_at": model.created_at,
+            "languages_detected": model.languages_detected,
+            "language_breakdown": model.language_breakdown,
         }

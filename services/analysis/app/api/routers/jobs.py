@@ -13,6 +13,7 @@ from app.api.schemas.jobs import (
     JobListResponse,
     JobStatisticsResponse,
     JobStatusResponse,
+    LanguageShare,
     StartAnalysisRequest,
 )
 from app.application.analysis.commands import (
@@ -256,4 +257,11 @@ def _job_to_response(job: dict[str, object]) -> JobStatusResponse:
         created_at=cast(datetime, job["created_at"]),
         started_at=cast(datetime | None, job.get("started_at")),
         completed_at=cast(datetime | None, job.get("completed_at")),
+        # Left as None when the job has not reached clone yet, rather than
+        # coerced to an empty list: the frontend needs the difference between
+        # "no measurement yet" and "measured, and there were none".
+        languages_detected=cast(list[str] | None, job.get("languages_detected")),
+        language_breakdown=cast(
+            list[LanguageShare] | None, job.get("language_breakdown")
+        ),
     )

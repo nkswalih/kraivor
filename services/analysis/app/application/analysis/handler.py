@@ -175,6 +175,15 @@ async def handle_stage_clone(
         progress_message=f"Found {len(files)} files across {len(languages)} languages",
         total_files=len(files),
         total_lines=loc,
+        # `languages_detected` and `language_breakdown` are columns on the job row
+        # that nothing had ever written to. The breakdown was computed right
+        # above, to a tenth of a percent, and then thrown away: it survived only
+        # in this stage's return value, and reached the reports table at
+        # finalize, minutes to hours later depending on repository size. Writing
+        # it here means a reader watching a running job sees the real language
+        # mix from 15% instead of a placeholder.
+        languages_detected=languages,
+        language_breakdown=language_breakdown,
     )
 
     result = {
@@ -777,6 +786,11 @@ async def handle_stage_finalize(
         high_count=severity_counts.get(Severity.HIGH, 0),
         medium_count=severity_counts.get(Severity.MEDIUM, 0),
         low_count=severity_counts.get(Severity.LOW, 0),
+        # Written at clone too, so a completed job's row carries the same values
+        # whether or not that earlier write landed. This is the authoritative
+        # point: whatever clone detected is what the report was built from.
+        languages_detected=languages,
+        language_breakdown=language_breakdown,
         duration_seconds=duration_seconds,
         completed_at=datetime.now(UTC).replace(tzinfo=None),
     )

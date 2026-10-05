@@ -129,6 +129,19 @@ export interface AnalysisJob {
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
+  /**
+   * Null until the clone stage has detected them. Distinct from an empty array:
+   * null means "not measured yet", `[]` would mean "measured, found none", and
+   * the running sidebar shows a skeleton for the former.
+   */
+  languages_detected: string[] | null;
+  language_breakdown: LanguageShare[] | null;
+}
+
+/** One language's share of the repository's lines. */
+export interface LanguageShare {
+  name: string;
+  percentage: number;
 }
 
 export interface ScoreHistoryEntry {

@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import {
   Files,
   Code2,
@@ -25,6 +24,12 @@ import {
   measure,
 } from '@/lib/analysis/run-context';
 import type { RunFact } from '@/lib/analysis/run-context';
+import {
+  elapsedBetween,
+  formatDuration,
+  useElapsedSeconds,
+  usableTimestamp,
+} from '@/lib/format/duration';
 import { JobStatus } from '@/types/domain/analysis';
 import type { AnalysisJob, AnalysisMetadataResponse } from '@/types/domain/analysis';
 
@@ -389,26 +394,17 @@ function ElapsedRow({ job }: { job: AnalysisJob }) {
   const startedAt = usableTimestamp(job.started_at);
   const endedAt = usableTimestamp(job.completed_at);
   const finished = job.status === JobStatus.COMPLETED || job.status === JobStatus.FAILED;
+  const live = useElapsedSeconds(startedAt, !finished);
 
-  const [live, setLive] = useState(() => elapsedSince(startedAt));
-
-  useEffect(() => {
-    setLive(elapsedSince(startedAt));
-    if (finished || !startedAt) return;
-
-    const timer = setInterval(() => setLive(elapsedSince(startedAt)), 1000);
-    return () => clearInterval(timer);
-  }, [startedAt, finished]);
-
-  const recorded = startedAt && endedAt ? elapsedBetween(startedAt, endedAt) : null;
+  const recorded = elapsedBetween(startedAt, endedAt);
 
   let shown: string;
   if (finished && recorded !== null) {
-    shown = formatElapsed(Math.max(0, recorded));
+    shown = formatDuration(Math.max(0, recorded)) ?? '0s';
   } else if (!startedAt) {
     shown = 'Once the run starts';
   } else {
-    shown = live === null ? 'Measuring' : formatElapsed(live);
+    shown = live === null ? 'Measuring' : (formatDuration(live) ?? '0s');
   }
 
   return (
@@ -425,40 +421,6 @@ function ElapsedRow({ job }: { job: AnalysisJob }) {
 }
 
 /**
- * A timestamp this panel can use, or null.
- *
- * Null covers three cases that mean the same thing here: no value, an empty
- * string, and a string that is not a date. The third matters -- `formatDate`
- * ends in `Intl.DateTimeFormat.format`, which throws `RangeError` on an invalid
- * `Date`, so an unparseable timestamp would take the whole panel down rather
- * than render one bad row. Guarding it here means every consumer below can treat
- * null as "not recorded".
- */
-function usableTimestamp(value: string | null | undefined): string | null {
-  if (!value) return null;
-  return Number.isNaN(Date.parse(value)) ? null : value;
-}
-
-/** Seconds since `startedAt`, or null when the clock cannot be trusted. */
-function elapsedSince(startedAt: string | null): number | null {
-  if (!startedAt) return null;
-  const start = Date.parse(startedAt);
-  if (Number.isNaN(start)) return null;
-  const seconds = Math.floor((Date.now() - start) / 1000);
-  // Negative means the browser's clock is behind the service's. Guessing there
-  // would put an absurd elapsed time on screen.
-  return seconds < 0 ? null : seconds;
-}
-
-/** Seconds from one recorded timestamp to another, or null if either is unusable. */
-function elapsedBetween(from: string, to: string): number | null {
-  const a = Date.parse(from);
-  const b = Date.parse(to);
-  if (Number.isNaN(a) || Number.isNaN(b)) return null;
-  return Math.floor((b - a) / 1000);
-}
-
-/**
  * `owner/repo` from a clone URL, or the host and path when it is not GitHub.
  *
  * A self-hosted or local URL still identifies the repository, so it is shown
@@ -470,12 +432,4 @@ function formatRepo(url: string | null | undefined): string | null {
   if (!url) return null;
   const bare = url.replace(/^https?:\/\//, '').replace(/\.git$/, '');
   return bare.replace(/^github\.com\//, '');
-}
-
-export function formatElapsed(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  return `${hours}h ${minutes}m`;
 }

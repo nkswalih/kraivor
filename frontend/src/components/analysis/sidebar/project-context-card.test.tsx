@@ -1,31 +1,14 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
-import { ProjectContextCard, formatElapsed } from './ProjectContextCard';
+import { ProjectContextCard } from './ProjectContextCard';
 import { JobStatus } from '@/types/domain/analysis';
 import type { AnalysisJob, AnalysisMetadataResponse } from '@/types/domain/analysis';
 
 // `measure` and the stage thresholds have their own tests in
-// `run-context.test.ts`. What matters here is that this card uses them to render
-// the right thing, and that it never invents a figure to fill a gap.
-
-// ======================================================================
-// formatElapsed
-// ======================================================================
-
-describe('formatElapsed', () => {
-  it.each([
-    [0, '0s'],
-    [9, '9s'],
-    [59, '59s'],
-    [60, '1m 0s'],
-    [95, '1m 35s'],
-    [3599, '59m 59s'],
-    [3600, '1h 0m'],
-    [3900, '1h 5m'],
-  ])('formats %i seconds as %s', (seconds, expected) => {
-    expect(formatElapsed(seconds)).toBe(expected);
-  });
-});
+// `run-context.test.ts`. The duration helpers moved to
+// `lib/format/duration.test.ts` when the progress steps needed them too. What
+// matters here is that this card uses them to render the right thing, and that it
+// never invents a figure to fill a gap.
 
 // ======================================================================
 // Builders

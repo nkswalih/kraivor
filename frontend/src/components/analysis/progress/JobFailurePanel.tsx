@@ -1,6 +1,6 @@
 'use client';
 
-import { XCircle } from 'lucide-react';
+import { RotateCcw, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProgressBar } from '@/components/analysis/progress-bar';
 import {
@@ -37,10 +37,22 @@ export interface JobFailurePanelProps {
   job: AnalysisJob;
   /** Per-engine rows, already normalised by the insights builder. */
   items: EngineStatusItem[];
+  /**
+   * Start a fresh run of the same repository. Optional, so the panel stays
+   * presentational; when it is absent the panel simply has no action.
+   */
+  onRetry?: () => void;
+  isRetrying?: boolean;
   className?: string;
 }
 
-export function JobFailurePanel({ job, items, className }: JobFailurePanelProps) {
+export function JobFailurePanel({
+  job,
+  items,
+  onRetry,
+  isRetrying = false,
+  className,
+}: JobFailurePanelProps) {
   const total = items.length;
   const completed = items.filter((i) => i.status === 'completed').length;
   const failed = items.filter((i) => i.status === 'failed').length;
@@ -96,6 +108,32 @@ export function JobFailurePanel({ job, items, className }: JobFailurePanelProps)
           {describeWhatFinished(settled, total, failed, waiting, unreported)}
           {elapsed ? ` · ran for ${elapsed}` : ''}
         </p>
+      )}
+
+      {/* Placed above the engine list on purpose: the action sits next to the
+          accounting that motivates it, and stays visible without scrolling past
+          nine rows. Its own styling is the header button's, so it reads as the
+          same action -- only the neighbour it has changed. */}
+      {onRetry && (
+        <div>
+          <button
+            onClick={onRetry}
+            disabled={isRetrying}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-card text-[12px] text-text-secondary hover:text-foreground hover:border-venom-yellow/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RotateCcw className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
+            {isRetrying ? 'Starting retry...' : 'Retry the whole analysis'}
+          </button>
+          {/* Two things a button label cannot carry. What it does -- every engine
+              again, not just the one that failed, because there is no per-engine
+              retry and a reader with six engines showing "never started" could
+              reasonably expect one. And what it leaves alone: a retry is a new
+              job, so this run's record stays exactly as it is. */}
+          <p className="text-[12px] text-text-tertiary mt-2">
+            Every engine runs again from the start, including the ones that
+            finished. This run is kept, and nothing from it carries over.
+          </p>
+        </div>
       )}
 
       {items.length === 0 ? (

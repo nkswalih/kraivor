@@ -23,6 +23,7 @@ import {
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/api';
 import { readEngineStatus } from '@/lib/analysis/engine-status';
 import { analysisInsightsBuilder } from '@/lib/analysis/insights-builder';
 import {
@@ -137,10 +138,27 @@ export default function JobDetailPage() {
       });
       toast.success('Reanalysis started');
       router.push(`/${workspaceSlug}/analysis/jobs/${newJob.job_id}`);
-    } catch {
-      toast.error('Failed to start reanalysis');
-    } finally {
+      // Deliberately no `setReanalyzing(false)` here. `router.push` returns
+      // before the new route's payload has been fetched, so this page stays
+      // mounted and interactive for as long as that takes -- and the `finally`
+      // that used to release the guard ran immediately, re-enabling the button
+      // inside that window. A second click then started a second run: two clones,
+      // two pipelines, two jobs on the repo, for one button. The button stays
+      // disabled until this page unmounts, which it does as soon as the new job's
+      // route renders.
+      //
+      // The accepted cost is that if the transition never completes the button
+      // stays disabled. That is the better of the two failure modes: a stuck
+      // button loses one click, a duplicate job burns a full clone and scan.
+    } catch (error) {
+      // Only here, because only here are we staying on the page.
       setReanalyzing(false);
+      // The same sentence for every cause -- a rate limit, an auth expiry, a
+      // service outage, a dropped connection all read "Failed to start
+      // reanalysis", so the toast told the reader nothing they could act on.
+      // `getErrorMessage` resolves the `ApiException` the api client built,
+      // which carries a distinct curated message per class.
+      toast.error(getErrorMessage(error));
     }
   };
 
@@ -206,6 +224,7 @@ export default function JobDetailPage() {
 
   const isRunning = !['completed', 'failed'].includes(job.status);
   const isComplete = job.status === 'completed';
+  const isFailed = job.status === 'failed';
 
   return (
     <div className="flex h-full animate-fade-up">
@@ -242,15 +261,20 @@ export default function JobDetailPage() {
                 <Trash2 className="w-3.5 h-3.5" />
                 {deleting ? 'Deleting...' : 'Delete'}
               </button>
-              <button
-                onClick={handleReanalyze}
-                disabled={reanalyzing}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-card text-[12px] text-text-secondary hover:text-foreground hover:border-venom-yellow/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Run analysis again on this repository"
-              >
-                <RotateCcw className={`w-3.5 h-3.5 ${reanalyzing ? 'animate-spin' : ''}`} />
-                {reanalyzing ? 'Reanalyzing...' : 'Reanalyze'}
-              </button>
+              {/* Not rendered for a failed job: the failure panel carries the
+                  retry instead, next to the reason that motivates it. Two buttons
+                  for one action is worse than one button slightly lower down. */}
+              {!isFailed && (
+                <button
+                  onClick={handleReanalyze}
+                  disabled={reanalyzing}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-card text-[12px] text-text-secondary hover:text-foreground hover:border-venom-yellow/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Run analysis again on this repository"
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${reanalyzing ? 'animate-spin' : ''}`} />
+                  {reanalyzing ? 'Reanalyzing...' : 'Reanalyze'}
+                </button>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-4 text-[12px] text-text-tertiary">
@@ -276,7 +300,12 @@ export default function JobDetailPage() {
 
           {job.status === 'failed' && (
             <div className="max-w-2xl mx-auto space-y-4">
-              <JobFailurePanel job={job} items={insights.engineStatus} />
+              <JobFailurePanel
+                job={job}
+                items={insights.engineStatus}
+                onRetry={handleReanalyze}
+                isRetrying={reanalyzing}
+              />
               {job.blocked_by.length > 0 && (
                 <BlockedOverall blockedBy={job.blocked_by} />
               )}

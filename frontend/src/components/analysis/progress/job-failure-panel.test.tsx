@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { JobFailurePanel } from './JobFailurePanel';
 import { JobStatus } from '@/types/domain/analysis';
 import type { AnalysisJob, EngineStatusItem } from '@/types/domain/analysis';
@@ -337,5 +338,75 @@ describe('a job that failed before any engine ran', () => {
 
     expect(screen.getByText('clone failed: RepositoryNotFoundError - 404')).not.toBeNull();
     expect(screen.getByText(/0 of 9 engines finished/)).not.toBeNull();
+  });
+});
+
+describe('the retry action', () => {
+  it('is absent when no handler was given', () => {
+    // The panel is presentational. A caller that does not supply the action gets
+    // a panel that reports the failure and offers nothing, rather than a dead
+    // button that quietly does nothing when pressed.
+    render(<JobFailurePanel job={job()} items={PART_WAY} />);
+
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByText(/Retry the whole analysis/)).toBeNull();
+  });
+
+  it('calls the handler when pressed', async () => {
+    const onRetry = vi.fn();
+    render(<JobFailurePanel job={job()} items={PART_WAY} onRetry={onRetry} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /Retry the whole analysis/ }));
+
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('says the whole analysis runs again, not just the engine that failed', () => {
+    // There is no per-engine retry, and a panel showing six engines as "never
+    // started" is exactly the situation where a reader would assume one. The
+    // label has to rule that out rather than leaving it to be discovered.
+    render(<JobFailurePanel job={job()} items={PART_WAY} onRetry={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: /whole analysis/ })).not.toBeNull();
+    expect(screen.getByText(/Every engine runs again from the start/)).not.toBeNull();
+  });
+
+  it('says the failed run is kept, because a retry creates a second job', () => {
+    // Nothing is overwritten -- the retry is a new job row. Worth saying, because
+    // "retry" reads like it might replace what is on screen.
+    render(<JobFailurePanel job={job()} items={PART_WAY} onRetry={vi.fn()} />);
+
+    expect(screen.getByText(/This run is kept/)).not.toBeNull();
+  });
+
+  it('is disabled and relabelled while the retry is being accepted', async () => {
+    // The label used to read "Reanalyzing..." from the header button, which
+    // describes a run that is under way. What is in flight here is the request
+    // that starts one.
+    const onRetry = vi.fn();
+    render(
+      <JobFailurePanel job={job()} items={PART_WAY} onRetry={onRetry} isRetrying />,
+    );
+
+    const button = screen.getByRole('button', { name: /Starting retry/ });
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+
+    // Disabled must actually prevent the call. The handler's own guard is the
+    // real protection, but a button that fires while it looks disabled is its
+    // own small lie.
+    await userEvent.click(button);
+    expect(onRetry).not.toHaveBeenCalled();
+  });
+
+  it('sits above the engine list, so the action is not below nine rows', () => {
+    render(<JobFailurePanel job={job()} items={PART_WAY} onRetry={vi.fn()} />);
+
+    // The accounting is what justifies retrying, so the button belongs next to
+    // it. Asserting DOM order rather than pixel position: this is a reading
+    // order question, and reading order is what a screen reader follows.
+    const summary = screen.getByText(/engines finished/);
+    const button = screen.getByRole('button', { name: /Retry/ });
+
+    expect(summary.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

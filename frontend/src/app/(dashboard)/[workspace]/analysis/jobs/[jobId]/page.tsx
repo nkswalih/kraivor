@@ -38,7 +38,7 @@ import {
 } from '@/lib/hooks/use-analysis';
 import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { JobStatusBadge } from '@/components/analysis/job-status-badge';
-import { AnalysisProgressPanel } from '@/components/analysis/progress';
+import { AnalysisProgressPanel, JobFailurePanel } from '@/components/analysis/progress';
 import { BlockedOverall } from '@/components/analysis/blocked-overall';
 import { HeroCard } from '@/components/analysis/hero-card';
 import { EngineCard } from '@/components/analysis/engine-card';
@@ -276,29 +276,10 @@ export default function JobDetailPage() {
 
           {job.status === 'failed' && (
             <div className="max-w-2xl mx-auto space-y-4">
-              <div className="p-4 border border-red-500/30 bg-red-500/10 rounded-lg flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-[13px] font-medium text-red-400">Analysis Failed</p>
-                  <p className="text-[12px] text-text-tertiary mt-1">{job.error_message || 'Unknown error'}</p>
-                </div>
-              </div>
+              <JobFailurePanel job={job} items={insights.engineStatus} />
               {job.blocked_by.length > 0 && (
                 <BlockedOverall blockedBy={job.blocked_by} />
               )}
-              <div className="space-y-3">
-                <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider">Engine Status</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {engineKeys.map(k => (
-                    <EngineCard
-                      key={k}
-                      engine={k}
-                      status={readEngineStatus(job.engine_statuses, k)}
-                      score={undefined}
-                    />
-                  ))}
-                </div>
-              </div>
             </div>
           )}
 

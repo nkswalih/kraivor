@@ -51,10 +51,28 @@ class JobRepository(AbstractJobRepository):
         `engine_statuses` is an explicit parameter rather than another `**kwargs`
         entry so that "leave it alone" is expressible. Passing it through kwargs
         could not distinguish "not supplied" from "set to None".
+
+        `progress_pct` is floored at whatever the row already holds. The pipeline
+        and the stage handlers each keep their own idea of how far along a stage
+        is, they are maintained by hand, and they disagree: the handler for
+        `errors` reported 86% while the pipeline's own table put that stage at
+        78%, so the next stage's write dropped the bar from 86 back to 80 in
+        front of the reader. Hand-aligning twelve literals against a table in
+        another module fixes today's numbers and leaves nothing stopping the next
+        edit from reintroducing it, so the invariant is enforced where every write
+        passes through instead.
+
+        `coalesce` is not optional. SQLite's two-argument `max` returns NULL if
+        any argument is NULL, so without it the very first write of a run would
+        store NULL and the bar would stay empty until the column happened to be
+        written again. Postgres ignores the NULL, so this is exactly the kind of
+        divergence that passes in one engine and fails in the other.
         """
         values: dict[str, object] = {"status": status}
         if progress_pct is not None:
-            values["progress_pct"] = progress_pct
+            values["progress_pct"] = func.max(
+                func.coalesce(AnalysisJobModel.progress_pct, 0), progress_pct
+            )
         if engine_statuses is not None:
             values["engine_statuses"] = engine_statuses
         values.update(kwargs)

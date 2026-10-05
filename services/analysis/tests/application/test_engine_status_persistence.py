@@ -83,6 +83,12 @@ class _WriteRecorder:
 
     def __init__(self) -> None:
         self.params: list[dict[str, object]] = []
+        # The compiled SQL alongside each param dict. `params` alone cannot show
+        # *how* a value is assigned: once a column is written through a SQL
+        # function rather than a plain bind param, the incoming value is still
+        # bound but under a generated name, and only the statement text says
+        # what the database will actually do with it.
+        self.sql: list[str] = []
         self.events: list[tuple[str, object]] = []
 
     def note(self, kind: str, payload: object) -> None:
@@ -111,7 +117,9 @@ class _FakeSession:
         return False
 
     async def execute(self, stmt: ClauseElement) -> None:
-        params = dict(stmt.compile().params)
+        compiled = stmt.compile()
+        params = dict(compiled.params)
+        self._recorder.sql.append(str(compiled))
         self._recorder.params.append(params)
         if "engine_statuses" in params:
             self._recorder.note("write", params["engine_statuses"])
@@ -492,8 +500,40 @@ class TestFailureCarriesEngineStatuses:
         )
 
         params = recorder.params[0]
-        assert params["progress_pct"] == 45
+        # The percentage is bound as an argument to the floor rather than as the
+        # column value, so it is asserted by value rather than by name. Asserting
+        # `params["progress_pct"] == 45` would have kept passing if the value
+        # were bound to the wrong column.
+        assert 45 in params.values(), f"progress 45 was not bound: {params!r}"
         assert params["progress_message"] == "halfway"
+
+    def test_the_repository_writes_progress_against_the_row_and_not_a_constant(
+        self,
+    ) -> None:
+        """The floor must be computed by the database, from the row's own value.
+
+        Written here rather than in the read-side tests because this is the write
+        that decides whether the bar can move backwards: if the assignment were
+        `max(0, :pct)` the statement would look right and every run would still
+        rewind.
+        """
+        recorder = _WriteRecorder()
+        repo = JobRepository(cast("AsyncSession", _FakeSession(recorder)))
+
+        asyncio.run(repo.update_status(uuid4(), "running", progress_pct=45))
+
+        sql = recorder.sql[0].lower()
+        assert "max(" in sql, f"no floor on progress_pct: {recorder.sql[0]}"
+        assert "coalesce(" in sql, (
+            "the floor would store NULL for a job whose progress_pct has never "
+            "been written -- SQLite's two-argument max returns NULL for a NULL "
+            f"argument, so the first write of every run would be lost: "
+            f"{recorder.sql[0]}"
+        )
+        # The column being compared has to be the one already on the row.
+        assert "analysis_jobs.progress_pct" in sql.replace(
+            '"', ""
+        ), f"the floor is not reading the stored value: {recorder.sql[0]}"
 
     def test_the_repository_writes_engines_when_given(self) -> None:
         """Same, for the engine map: omitted leaves it alone, supplied writes it."""

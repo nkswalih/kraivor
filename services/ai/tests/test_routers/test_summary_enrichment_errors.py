@@ -31,10 +31,12 @@ from app.application.analysis import enrichment as module
 from app.application.analysis.enrichment import (
     MAX_SUMMARY_MODEL_ATTEMPTS,
     MIN_SUMMARY_CHARS,
+    SUMMARY_TIMEOUT_SECONDS,
     EnrichmentService,
     _usable_summary,
     describe_summary_failure,
 )
+from app.infrastructure.llm.client import LLM_DEFAULT_TIMEOUT
 from app.infrastructure.llm.error_classifier import (
     ClassifiedError,
     ErrorCategory,
@@ -83,6 +85,12 @@ class StubProvider:
         self.category_calls: list[str] = []
         self.responses: dict[str, object] = {}
         self.master_key: str = "sk-or-test"
+        # Seconds each summary attempt sleeps when set. Used to make a model
+        # "slow" without a real 45s wait, so the deadline tests run in
+        # milliseconds. Applies to summary calls only -- a hanging category call
+        # would hang `asyncio.gather` before the summary is even reached, which is
+        # a different failure with a different fix.
+        self.summary_delay: float | None = None
 
     # ── what a test sets ──────────────────────────────────────────────
     def answer_with(self, content: object) -> None:
@@ -100,6 +108,11 @@ class StubProvider:
             self.responses[model] = _GOOD_SUMMARY
         self.responses.update(bad)
 
+    def hang(self, seconds: float) -> None:
+        """Every summary attempt takes `seconds` and then returns a summary."""
+        self.summary_delay = seconds
+        self.answer_with(_GOOD_SUMMARY)
+
     @property
     def models_attempted(self) -> list[str]:
         return self.summary_calls
@@ -109,6 +122,9 @@ class StubProvider:
         async def generate(**kwargs: object) -> dict[str, object]:
             is_summary = "response_format" not in kwargs
             (self.summary_calls if is_summary else self.category_calls).append(model)
+
+            if is_summary and self.summary_delay is not None:
+                await asyncio.sleep(self.summary_delay)
 
             if is_summary:
                 # An unconfigured model answers with an empty response rather than
@@ -141,6 +157,15 @@ def provider(monkeypatch: pytest.MonkeyPatch) -> StubProvider:
 # ======================================================================
 # Content
 # ======================================================================
+
+# The analysis service's configured timeout for this call, from
+# `services/analysis` `AiSettings.timeout`. Copied as a literal because the two
+# services do not share a package, and importing across the boundary to read a
+# config value would be worse than a number that can be checked by eye against
+# that service's settings. If the analysis service's timeout is ever raised, this
+# is the literal that has to move with it -- which is exactly the coupling the
+# `SUMMARY_TIMEOUT_SECONDS` ordering test exists to make visible.
+ANALYSIS_CLIENT_TIMEOUT_SECONDS = 120
 
 _CATEGORY_JSON = json.dumps(
     [{"index": 1, "ai_explanation": "explanation", "ai_recommendation": "fix it"}]
@@ -319,6 +344,105 @@ class TestTheLatencyIsBounded:
 
         assert result["ai_executive_summary"] == _GOOD_SUMMARY
         assert provider.summary_calls == models[:2]
+
+
+# ======================================================================
+# The deadline
+# ======================================================================
+
+
+class TestTheSummaryHasADeadline:
+    """A deadline on the summary, and not on the response.
+
+    `services/analysis` configures 120s for this call and treats a timeout as the
+    whole enrichment having failed -- findings included. Before this, the summary's
+    worst case was four models at three retries and a 45s client timeout, so the
+    caller's clock almost always expired first and the findings that had already
+    been computed were thrown away with it. That is the whole reason the deadline
+    is here rather than on the route.
+    """
+
+    def test_a_slow_model_costs_the_summary_and_not_the_findings(
+        self, provider: StubProvider, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(module, "SUMMARY_TIMEOUT_SECONDS", 0.05)
+        provider.hang(30)  # far past the deadline; cancelled, not waited out
+
+        result = _enrich()
+
+        assert result["ai_executive_summary"] is None
+        assert _error_of(result)["code"] == "timeout"
+        assert result["findings"], "the report went down with a slow summary"
+
+    def test_a_timeout_is_not_reported_as_an_unknown_error(
+        self, provider: StubProvider, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # This is why `TimeoutError` has its own `except` arm. `classify_error`
+        # reads `str(exc)`, and a bare `TimeoutError` stringifies to the empty
+        # string, so the generic arm would report "Something went wrong" with the
+        # code `unknown` -- the exact indistinguishability this whole change
+        # exists to remove, reintroduced one level down.
+        monkeypatch.setattr(module, "SUMMARY_TIMEOUT_SECONDS", 0.05)
+        provider.hang(30)
+
+        error = _error_of(_enrich())
+
+        assert error["code"] == "timeout"
+        assert "too long" in str(error["message"]).lower()
+
+    def test_a_timeout_carries_a_retry_hint(
+        self, provider: StubProvider, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # A model that was reachable and merely slow is worth retrying, which is
+        # not what a provider that is down is worth. The hint is what lets the UI
+        # say so, and it is the difference between "try again" and "give up".
+        monkeypatch.setattr(module, "SUMMARY_TIMEOUT_SECONDS", 0.05)
+        provider.hang(30)
+
+        error = _error_of(_enrich())
+
+        assert error["suggested_action"] == "retry"
+        assert error["retry_after"] == 30
+
+    def test_a_model_that_finishes_in_time_is_untouched(
+        self, provider: StubProvider, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The deadline must not fire on a merely slow-but-working provider, or the
+        # fix is a regression rather than a repair.
+        monkeypatch.setattr(module, "SUMMARY_TIMEOUT_SECONDS", 5.0)
+        provider.hang(0.01)
+
+        result = _enrich()
+
+        assert result["ai_executive_summary"] == _GOOD_SUMMARY
+        assert result["ai_summary_error"] is None
+
+    def test_the_deadline_is_below_the_callers_own_timeout(self) -> None:
+        # A deadline that races the caller's timeout is not a deadline: it is a
+        # coin toss decided by scheduling, and whoever loses reports a transport
+        # error for something that was only ever slow. `services/analysis` allows
+        # 120s for the entire enrich call, so the summary must finish well inside
+        # that, with room left for the findings work that already ran and for the
+        # response to be serialised.
+        #
+        # Deliberately not also asserted against the AI service's own 90s LLM chain
+        # budget. That belongs to a different route, importing it here cost this
+        # file 40 seconds of import time, and coupling the summary's deadline to
+        # another endpoint's constant would assert a relationship that is not the
+        # one that matters. The binding constraint is the caller 45 seconds away.
+        assert SUMMARY_TIMEOUT_SECONDS <= ANALYSIS_CLIENT_TIMEOUT_SECONDS - 30, (
+            "the deadline leaves less than 30s of the caller's budget for the "
+            "findings enrichment and the response, so a slow summary can still cost "
+            "the report"
+        )
+
+    def test_the_deadline_is_shorter_than_the_worst_case_it_replaces(self) -> None:
+        # Otherwise the cap, not the deadline, is what bounds the request, and the
+        # two constants are redundant in a way that is not obvious from either.
+        worst_case = MAX_SUMMARY_MODEL_ATTEMPTS * LLM_DEFAULT_TIMEOUT
+        assert (
+            worst_case > SUMMARY_TIMEOUT_SECONDS
+        ), "the deadline no longer binds before the model cap does"
 
 
 # ======================================================================

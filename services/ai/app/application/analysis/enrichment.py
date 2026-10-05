@@ -27,6 +27,20 @@ logger = logging.getLogger(__name__)
 # per-category path, so a summary that gives up costs one paragraph, not the report.
 MAX_SUMMARY_MODEL_ATTEMPTS = 4
 
+# Wall-clock budget for the whole summary attempt, across all models.
+#
+# Set below the 120s the analysis service allows for the entire enrich call, and
+# below the 90s the AI service uses as its own LLM chain budget, for the reason
+# given at the call site: a deadline that races the caller's own timeout is not a
+# deadline. 75s leaves room for the findings enrichment that has already run and
+# for the response to be serialised before the caller's clock expires.
+#
+# 75s is also comfortably more than the cap needs: four models at a 45s client
+# timeout is 180s, so in the worst case this is what stops the loop rather than
+# the loop stopping itself -- which is the point of having it, since a client
+# timeout is not a decision this code gets to make.
+SUMMARY_TIMEOUT_SECONDS = 75
+
 # A summary shorter than this is not a summary.
 #
 # `LLMClient.generate` already strips `<think>` blocks, so a reasoning model that
@@ -199,8 +213,51 @@ class EnrichmentService:
         ai_executive_summary: str | None = None
         ai_summary_error: dict[str, object] | None = None
         try:
-            ai_executive_summary = await self._generate_executive_summary(
-                enriched_findings, overall_score, tier, languages, frameworks
+            # A deadline on the summary, and specifically not on the response.
+            #
+            # `services/analysis` configures a 120s timeout on this call and
+            # treats a timeout as the whole enrichment having failed. Putting a
+            # deadline here rather than at the route means a slow *summary* costs
+            # the summary and nothing else, instead of costing the findings that
+            # were already computed and are sitting in memory a line below.
+            #
+            # The budget is deliberately below the client's, not equal to it. A
+            # deadline that fires at the same moment the client gives up is not a
+            # deadline; it is a coin toss decided by scheduling, and the losing
+            # side reports a transport error for something that was only ever
+            # slow. `MAX_SUMMARY_MODEL_ATTEMPTS` bounds the worst case at roughly
+            # 540s, so without this the client almost always times out first.
+            ai_executive_summary = await asyncio.wait_for(
+                self._generate_executive_summary(
+                    enriched_findings, overall_score, tier, languages, frameworks
+                ),
+                timeout=SUMMARY_TIMEOUT_SECONDS,
+            )
+        except TimeoutError:
+            # A distinct arm, not the generic `Exception` one below. The generic
+            # arm would classify this via `classify_error`, which reads
+            # `str(exc)`, and a bare `TimeoutError` stringifies to nothing useful
+            # -- so it would arrive as `unknown` with "Something went wrong".
+            # The truth is more specific and more actionable than that: the model
+            # was reachable and simply too slow, which is worth retrying and is
+            # not the same as a provider that is down.
+            ai_summary_error = describe_summary_failure(
+                ClassifiedError(
+                    category=ErrorCategory.TIMEOUT,
+                    provider="openrouter",
+                    model="unknown",
+                    user_message=(
+                        "The AI model took too long to write a summary. Your "
+                        "findings are unaffected -- try again for the summary."
+                    ),
+                    technical_message=f"summary exceeded {SUMMARY_TIMEOUT_SECONDS}s",
+                    suggested_action=SuggestedAction.RETRY,
+                    retry_after=30,
+                )
+            )
+            logger.warning(
+                "executive_summary_generation_timed_out",
+                extra={"timeout_seconds": SUMMARY_TIMEOUT_SECONDS},
             )
         except ClassifiedError as e:
             ai_summary_error = describe_summary_failure(e)

@@ -662,6 +662,7 @@ async def handle_stage_finalize(
     total_files: int,
     total_lines: int,
     duration_seconds: int,
+    engine_statuses: dict[str, str] | None = None,
 ) -> Report:
     get_settings()
 
@@ -718,7 +719,18 @@ async def handle_stage_finalize(
         progress_message="Analysis complete",
         overall_score=score.overall,
         blocked_by=score.blocked_by,
-        engine_statuses=score.engine_statuses,
+        # The pipeline's engine map, not score.engine_statuses.
+        #
+        # `score.engine_statuses` is the *scorer's* display view, built from
+        # CATEGORY_ORDER -- the five scoring categories (performance, security,
+        # reliability, maintainability, devops). Writing it over the pipeline's
+        # map silently deleted dead_code, error_detection and simulation, so a
+        # fully completed job reported 5 of its 8 engines and the other three
+        # vanished rather than showing as completed. A scoring view is not a
+        # record of which engines ran.
+        engine_statuses=(
+            engine_statuses if engine_statuses is not None else score.engine_statuses
+        ),
         performance_score=score.performance,
         security_score=score.security,
         reliability_score=score.reliability,

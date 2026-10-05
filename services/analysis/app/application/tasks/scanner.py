@@ -224,6 +224,14 @@ async def task_finalize(prev_result: dict[str, object]) -> dict[str, object]:
     score = cast(Score, score_raw) if score_raw is not None else Score(overall=0)
     findings = cast(list[Finding], prev_result.get("_findings", []))
     languages = cast(list[str], prev_result.get("languages", []))
+    # This call was missing language_breakdown, so total_files was bound to it
+    # and the call raised TypeError on every invocation. Nothing caught it
+    # because this module is not imported anywhere -- it is an unwired duplicate
+    # of pipeline.py. Fixed rather than left broken.
+    language_breakdown = cast(
+        list[dict[str, object]], prev_result.get("language_breakdown", [])
+    )
+    engine_statuses = cast(dict[str, str] | None, prev_result.get("engine_statuses"))
     total_files = cast(int, prev_result.get("total_files", 0))
     total_lines = cast(int, prev_result.get("total_lines", 0))
     duration_seconds = cast(int, prev_result.get("duration_seconds", 0))
@@ -244,9 +252,11 @@ async def task_finalize(prev_result: dict[str, object]) -> dict[str, object]:
             score,
             findings,
             languages,
+            language_breakdown,
             total_files,
             total_lines,
             duration_seconds,
+            engine_statuses,
         )
         await uow.commit()
 

@@ -859,6 +859,9 @@ async def _stage_finalize(state: dict[str, object]) -> None:
         time.monotonic() - cast(float, state.get("_pipeline_start", 0))
     )
     cmd = ProcessStageCommand(job_id=job_id, stage="finalize")
+    # Authoritative engine statuses. See handle_stage_finalize for why the
+    # scorer's map cannot be used here.
+    engine_statuses = cast(dict[str, str], state.get("engine_statuses") or {})
 
     async with UnitOfWork() as uow:
         job = await uow.jobs.get_by_id(cmd.job_id)
@@ -879,6 +882,7 @@ async def _stage_finalize(state: dict[str, object]) -> None:
             total_files,
             total_lines,
             duration_seconds,
+            engine_statuses,
         )
         await uow.commit()
         state["report"] = report.to_dict()

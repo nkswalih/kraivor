@@ -1,4 +1,5 @@
 import type { EngineState, EngineStatusMap } from '@/types/domain/analysis';
+import { formatDuration } from '@/lib/format/duration';
 
 /**
  * An `engine_statuses` entry reduced to one shape the UI can rely on.
@@ -60,6 +61,12 @@ export function readEngineError(
  *
  * Returns null while an engine is still running or when the job predates
  * per-engine timings, so callers render a placeholder rather than "0s".
+ *
+ * A second and above, this defers to the shared formatter. It used to carry its
+ * own copy of the same three branches, and the progress steps use the shared one
+ * -- so the sidebar and the running panel would have rendered the same recorded
+ * window two different ways. Only the sub-second case stays here, because a
+ * seconds-only format cannot express it without lying.
  */
 export function readEngineDuration(
   statuses: EngineStatusMap | null | undefined,
@@ -67,12 +74,13 @@ export function readEngineDuration(
 ): string | null {
   const { startedAt, endedAt } = normalizeEngineState(statuses?.[engineId]);
   if (!startedAt || !endedAt) return null;
-  const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
+  const ms = Date.parse(endedAt) - Date.parse(startedAt);
   if (!Number.isFinite(ms) || ms < 0) return null;
+  // An engine that finished inside a second would floor to "0s", claiming it took
+  // no time at all -- which is what a genuinely unrecorded duration looks like.
+  // `Date.parse` yields whole milliseconds, so this is never a fraction.
   if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  const minutes = Math.floor(ms / 60_000);
-  return `${minutes}m ${Math.round((ms % 60_000) / 1000)}s`;
+  return formatDuration(ms / 1000);
 }
 
 /** Completed and total engine counts for a progress summary. */

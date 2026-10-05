@@ -24,6 +24,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/utils';
 import { readEngineStatus } from '@/lib/analysis/engine-status';
+import { analysisInsightsBuilder } from '@/lib/analysis/insights-builder';
 import {
   useJob,
   useReport,
@@ -37,7 +38,7 @@ import {
 } from '@/lib/hooks/use-analysis';
 import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { JobStatusBadge } from '@/components/analysis/job-status-badge';
-import { ProgressBar } from '@/components/analysis/progress-bar';
+import { AnalysisProgressPanel } from '@/components/analysis/progress';
 import { BlockedOverall } from '@/components/analysis/blocked-overall';
 import { HeroCard } from '@/components/analysis/hero-card';
 import { EngineCard } from '@/components/analysis/engine-card';
@@ -90,11 +91,32 @@ export default function JobDetailPage() {
   // dead_code, error_detection and churn did real work and were never shown.
   // Until the catalogue loads, fall back to whatever this job actually reports
   // so the panel is never empty.
+  //
+  // Only the finished-run grid below needs bare keys. The running panel takes
+  // the builder's rows instead, so that what it says about an engine and what
+  // the sidebar says about it come from one place.
   const engineKeys = useMemo(() => {
     const fromService = enginesQuery.data?.engines;
     if (fromService?.length) return fromService.map(e => e.key);
     return Object.keys(job?.engine_statuses ?? {});
   }, [enginesQuery.data, job?.engine_statuses]);
+
+  // The same derived insights the sidebar builds, so the two cannot disagree
+  // about an engine's state, duration or score. Only `engineStatus` is read
+  // here; the rest of the object is unused on this page.
+  const insights = useMemo(
+    () =>
+      analysisInsightsBuilder(
+        job,
+        report,
+        summary,
+        findingsData?.findings ?? null,
+        undefined,
+        undefined,
+        enginesQuery.data?.engines,
+      ),
+    [job, report, summary, findingsData, enginesQuery.data],
+  );
 
   const filteredEntries = useMemo(() => {
     if (timeRange === 'all' || !scoreHistory?.entries) return scoreHistory?.entries ?? [];
@@ -243,25 +265,12 @@ export default function JobDetailPage() {
 
         <div className="flex-1 overflow-y-auto p-6">
           {isRunning && (
-            <div className="max-w-2xl mx-auto space-y-6">
-              <ProgressBar pct={job.progress_pct} message={job.progress_message} className="mb-4" />
-              <div className="space-y-3">
-                <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider">Engine Status</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {engineKeys.map(k => (
-                    <EngineCard
-                      key={k}
-                      engine={k}
-                      status={readEngineStatus(job.engine_statuses, k)}
-                      score={report?.[k === 'performance' ? 'performance_score' : `${k}_score` as keyof typeof report] as number | null | undefined}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-text-tertiary text-[12px]">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-venom-yellow" />
-                Analysis in progress — this page updates automatically
-              </div>
+            <div className="max-w-2xl mx-auto">
+              <AnalysisProgressPanel
+                job={job}
+                engineStatuses={job.engine_statuses}
+                items={insights.engineStatus}
+              />
             </div>
           )}
 

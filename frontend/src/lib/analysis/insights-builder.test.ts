@@ -623,3 +623,192 @@ describe('engine status still comes from the catalogue', () => {
     expect(insights.engineStatus.find(e => e.key === 'churn')?.score).toBeNull();
   });
 });
+
+// ======================================================================
+// The running progress panel's view of the same rows
+// ======================================================================
+
+/**
+ * The job detail page renders these rows as a *sequence* rather than a grid, so
+ * three properties of this output are load-bearing there and are not visible in
+ * the sidebar: the order the pipeline runs in, each engine's recorded duration,
+ * and the reason a failed engine failed. All three used to reach the running view
+ * from `engine-card.tsx`, which had neither the order nor the duration.
+ */
+describe('engineStatus for the running progress panel', () => {
+  // Deliberately not alphabetical, and not the order the engines appear in the
+  // job's status map below. If the builder sorted or fell back to map order, the
+  // step list would stop being a sequence.
+  const pipelineOrder: EngineInfo[] = [
+    { key: 'simulation', label: 'Simulation', description: 'Runtime behaviour.', stage: 'simulation', score_category: null },
+    { key: 'churn', label: 'Churn', description: 'Change hotspots.', stage: 'churn', score_category: null },
+    { key: 'security', label: 'Security', description: 'Injection and secrets.', stage: 'rules', score_category: 'security' },
+    { key: 'error_detection', label: 'Error detection', description: 'Linting and compile errors.', stage: 'errors', score_category: null },
+  ];
+
+  const runningJob = job({
+    status: JobStatus.ERRORS,
+    engine_statuses: {
+      // Written in yet another order, to catch anything that reads the map
+      // directly for its ordering.
+      security: {
+        status: 'running',
+        started_at: '2026-01-01T00:00:30Z',
+        ended_at: null,
+        error: '',
+      },
+      churn: {
+        status: 'completed',
+        started_at: '2026-01-01T00:00:10Z',
+        ended_at: '2026-01-01T00:00:14Z',
+        error: '',
+      },
+      simulation: {
+        status: 'skipped',
+        started_at: null,
+        ended_at: null,
+        error: '',
+      },
+      error_detection: {
+        status: 'failed',
+        started_at: '2026-01-01T00:00:20Z',
+        ended_at: '2026-01-01T00:00:22Z',
+        error: 'ruff exited 2: config file missing',
+      },
+    },
+  });
+
+  it('orders the rows as the pipeline does, not alphabetically and not by status map', () => {
+    const insights = analysisInsightsBuilder(
+      runningJob,
+      null,
+      NO_SUMMARY,
+      NO_FINDINGS,
+      null,
+      null,
+      pipelineOrder,
+    );
+
+    // Rendered as an ordered list with connectors between steps, so the order is
+    // the sequence a reader follows. Getting this wrong would show the run's
+    // steps in an order no pipeline produces.
+    expect(insights.engineStatus.map(e => e.key)).toEqual([
+      'simulation',
+      'churn',
+      'security',
+      'error_detection',
+    ]);
+  });
+
+  it('carries each engine duration through from the status map', () => {
+    const insights = analysisInsightsBuilder(
+      runningJob,
+      null,
+      NO_SUMMARY,
+      NO_FINDINGS,
+      null,
+      null,
+      pipelineOrder,
+    );
+
+    // The step component renders this and nothing else, so a builder that left
+    // it null would show a finished engine with no time beside it at all.
+    expect(insights.engineStatus.find(e => e.key === 'churn')?.duration).toBe('4s');
+    expect(insights.engineStatus.find(e => e.key === 'error_detection')?.duration).toBe('2s');
+  });
+
+  it('reports no duration for the engine that is still running', () => {
+    const insights = analysisInsightsBuilder(
+      runningJob,
+      null,
+      NO_SUMMARY,
+      NO_FINDINGS,
+      null,
+      null,
+      pipelineOrder,
+    );
+
+    // There is no end time yet. The step counts its own time from the start, and
+    // a stale `null` here would be shown as "Measuring" for a run that is 30
+    // seconds in.
+    expect(insights.engineStatus.find(e => e.key === 'security')?.duration).toBeNull();
+  });
+
+  it('carries a failed engine error through for display', () => {
+    const insights = analysisInsightsBuilder(
+      runningJob,
+      null,
+      NO_SUMMARY,
+      NO_FINDINGS,
+      null,
+      null,
+      pipelineOrder,
+    );
+
+    // The service recorded a specific reason. Dropping it here is what left the
+    // old card saying "Engine encountered errors during scan" for all five of its
+    // hardcoded engines.
+    expect(insights.engineStatus.find(e => e.key === 'error_detection')?.error).toBe(
+      'ruff exited 2: config file missing',
+    );
+  });
+
+  it('reports a skipped engine as skipped, with no error and no score', () => {
+    const insights = analysisInsightsBuilder(
+      runningJob,
+      null,
+      NO_SUMMARY,
+      NO_FINDINGS,
+      null,
+      null,
+      pipelineOrder,
+    );
+
+    const simulation = insights.engineStatus.find(e => e.key === 'simulation');
+    expect(simulation?.status).toBe('skipped');
+    expect(simulation?.error).toBeNull();
+    expect(simulation?.score).toBeNull();
+  });
+
+  it('falls back to the job\'s own engine keys when the catalogue has not loaded', () => {
+    // The catalogue request and the job request race. Showing nothing while they
+    // do would blank the panel on every page load, and listing a guessed set of
+    // engines would be the old defect wearing a new hat.
+    const insights = analysisInsightsBuilder(
+      runningJob,
+      null,
+      NO_SUMMARY,
+      NO_FINDINGS,
+      null,
+      null,
+      null,
+    );
+
+    expect(insights.engineStatus.map(e => e.key).sort()).toEqual([
+      'churn',
+      'error_detection',
+      'security',
+      'simulation',
+    ]);
+    // No catalogue, so no label and no description to show.
+    expect(insights.engineStatus.find(e => e.key === 'security')?.name).toBe('security');
+    expect(insights.engineStatus.find(e => e.key === 'security')?.description).toBe('');
+  });
+
+  it('still reports a status for every catalogue engine, not only the ones the job knows', () => {
+    const insights = analysisInsightsBuilder(
+      job({ status: JobStatus.PARSING, engine_statuses: {} }),
+      null,
+      NO_SUMMARY,
+      NO_FINDINGS,
+      null,
+      null,
+      pipelineOrder,
+    );
+
+    // A queued job has an empty status map. The panel must still show every
+    // engine as waiting, which is the answer -- not an empty list.
+    expect(insights.engineStatus).toHaveLength(4);
+    expect(insights.engineStatus.every(e => e.status === 'pending')).toBe(true);
+  });
+});

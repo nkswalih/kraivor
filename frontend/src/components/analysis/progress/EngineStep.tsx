@@ -130,7 +130,15 @@ export function EngineStep({
         className={cn(
           'relative z-10 w-[18px] h-[18px] shrink-0 bg-card rounded-full mt-px',
           style.iconClass,
-          style.spin && 'animate-spin',
+          // `motion-reduce:animate-none` rather than a `useReducedMotion()` hook,
+          // unlike the marketing components. This is a static class on a
+          // condition, so the media query answers it in CSS: no hook, no state,
+          // no re-render, and correct on the server-rendered markup too. A
+          // client-side hook would arrive one frame late and flicker the
+          // animation first. The plan called for the hook; this is better for
+          // this case and the reason is recorded here rather than left to be
+          // "corrected" back.
+          style.spin && 'animate-spin motion-reduce:animate-none',
         )}
       />
 

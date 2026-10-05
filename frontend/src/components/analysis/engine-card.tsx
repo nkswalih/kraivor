@@ -112,7 +112,13 @@ export function EngineCard({
   return (
     <div
       className={cn(
-        'bg-card border rounded-xl p-4 flex flex-col items-center gap-2 transition-all duration-500 ease-out',
+        // `transition-all` is a blanket promise to animate any property that
+        // changes, which includes ones nobody has written yet -- so it opts out
+        // of motion rather than trusting its current call sites to be only
+        // border-colour and shadow. Today those are the only two, and neither
+        // moves, but the safe reading of `all` is the one that costs nothing
+        // when the caller is wrong.
+        'bg-card border rounded-xl p-4 flex flex-col items-center gap-2 transition-all duration-500 ease-out motion-reduce:transition-none',
         'hover:border-venom-yellow/30 hover:shadow-venom',
         style.borderClass,
         item.status === 'running' && 'border-venom-yellow/40 shadow-[0_0_15px_-3px_hsl(var(--venom-yellow)/0.15)]',
@@ -122,8 +128,10 @@ export function EngineCard({
     >
       <div
         className={cn(
-          'transition-all duration-500 ease-out',
-          item.status === 'running' && 'animate-pulse-glow',
+          // The ring's arc has its own transition on the SVG; this one is here
+          // for the pulse. Opted out for the same reason as the card below.
+          'transition-all duration-500 ease-out motion-reduce:transition-none',
+          item.status === 'running' && 'animate-pulse-glow motion-reduce:animate-none',
         )}
       >
         <ProgressRing score={ringScore} size={56} strokeWidth={4} label={item.name} />
@@ -135,7 +143,7 @@ export function EngineCard({
           className={cn(
             'w-3.5 h-3.5 transition-colors duration-300',
             style.iconClass,
-            item.status === 'running' && 'animate-spin',
+            item.status === 'running' && 'animate-spin motion-reduce:animate-none',
           )}
         />
         <span

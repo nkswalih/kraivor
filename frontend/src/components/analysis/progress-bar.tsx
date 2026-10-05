@@ -46,7 +46,13 @@ export function ProgressBar({
         className="h-1.5 bg-krait-surface2 rounded-full overflow-hidden"
       >
         <div
-          className="h-full rounded-full transition-all duration-500 ease-out"
+          // The bar grows sideways every couple of seconds while a run is
+          // in flight. That is movement, and movement is the thing the
+          // reduced-motion setting is about -- so under it the fill jumps
+          // straight to its new width instead of easing across 500ms. The
+          // colour transition on the retry button is left alone: a hue change
+          // has no spatial component and is not what the setting is for.
+          className="h-full rounded-full transition-all duration-500 ease-out motion-reduce:transition-none"
           style={{
             width: `${clamped}%`,
             // The brand pair, previously the literal gradient `#eab308 → #f59e0b`.

@@ -131,7 +131,14 @@ export function JobFailurePanel({
             disabled={isRetrying}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-card text-[12px] text-text-secondary hover:text-foreground hover:border-venom-yellow/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <RotateCcw className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
+            {/* A decorative glyph beside a real label. The label changes and the
+                icon is a spinner only while the label says "Starting retry...",
+                so there is nothing for the icon to add -- and an unlabelled
+                graphic announced as "graphic" is noise. */}
+            <RotateCcw
+              aria-hidden="true"
+              className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin motion-reduce:animate-none' : ''}`}
+            />
             {isRetrying ? 'Starting retry...' : 'Retry the whole analysis'}
           </button>
           {/* Two things a button label cannot carry. What it does -- every engine

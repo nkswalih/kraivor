@@ -101,7 +101,7 @@ export function AnalysisProgressPanel({
         <span className="flex items-center gap-1.5 min-w-0">
           <Loader2
             aria-hidden="true"
-            className="w-3.5 h-3.5 text-venom-yellow animate-spin shrink-0"
+            className="w-3.5 h-3.5 text-venom-yellow animate-spin motion-reduce:animate-none shrink-0"
           />
           <span className="truncate">{job.progress_message || 'Analysis in progress'}</span>
         </span>

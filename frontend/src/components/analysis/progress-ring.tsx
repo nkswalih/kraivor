@@ -72,7 +72,10 @@ export function ProgressRing({
               strokeDasharray={circumference}
               strokeDashoffset={offset}
               strokeLinecap="round"
-              className="transition-all duration-1000 ease-out"
+              // The arc sweeps to its new length over a second. Same reasoning
+              // as the bar's fill: a drawn edge travelling around the circle is
+              // movement, so it arrives at once under reduced motion.
+              className="transition-all duration-1000 ease-out motion-reduce:transition-none"
             />
           )}
         </svg>

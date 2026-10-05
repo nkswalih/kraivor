@@ -1410,10 +1410,13 @@ async def handle_stage_ai_enrich(
             progress_pct=98,
             progress_message="AI enrichment skipped (no findings)",
         )
-        return {"findings": [], "ai_executive_summary": ""}
+        # `None`, not `""`: there was nothing to summarise, which is a different
+        # statement from "the summary failed", and this dict is the return value
+        # the pipeline puts in the shared run state.
+        return {"findings": [], "ai_executive_summary": None}
 
     client = AiEnrichmentClient()
-    result = await client.enrich_findings(
+    outcome = await client.enrich_findings(
         findings=cast(list[dict[str, object]], finding_dicts),
         overall_score=score.overall if score else None,
         tier=str(score.tier) if score and score.tier else None,
@@ -1421,12 +1424,25 @@ async def handle_stage_ai_enrich(
         frameworks=frameworks,
     )
 
-    if not result:
+    if outcome.result is None:
+        # A transport failure, not a generation failure, and now distinguishable
+        # from one. The reason is persisted rather than logged and dropped: the
+        # findings themselves were already computed and are about to be saved, so
+        # the one thing missing is the summary -- and the user will see a completed
+        # run with an empty card unless something says why.
+        reason = _readable_summary_error(outcome.error)
         logger.error(
             "ai_enrichment_unavailable",
             job_id=str(job_id),
-            message="AI enrichment client returned None — AI service is unreachable, timing out, or returning errors",
+            reason=reason.get("code") if reason else "not_reported",
+            message="AI service did not return an enrichment",
         )
+
+        guide = await uow.enterprise_guides.get_by_job(job_id)
+        if guide is not None:
+            guide["ai_summary_error"] = reason
+            await uow.enterprise_guides.save(guide)
+
         await uow.jobs.update_status(
             job_id,
             JobStatus.AI_ENRICH,
@@ -1434,6 +1450,8 @@ async def handle_stage_ai_enrich(
             progress_message="AI enrichment skipped (service unavailable)",
         )
         return None
+
+    result = outcome.result
 
     enriched_findings_map: dict[str, dict[str, object]] = {}
     enrich_data = result.get("findings", [])

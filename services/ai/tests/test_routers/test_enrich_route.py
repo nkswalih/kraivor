@@ -28,6 +28,7 @@ from typing import cast
 import asyncio
 import pytest
 from fastapi import HTTPException
+from starlette.requests import Request
 
 from app.api.dependencies.auth import JWTPayload
 from app.api.routers import analysis as router_module
@@ -180,15 +181,44 @@ _REQUEST_FINDING = EnrichFindingItem(
 )
 
 
-async def _call() -> EnrichResponse:
+def _http_request(request_id: str | None = None) -> Request:
+    """A `Request` with just the state the handler reads.
+
+    Built from an ASGI scope rather than a live connection, because the handler
+    reads `request.state.request_id` and nothing else off it. `request_id=None`
+    leaves the attribute unset, which is the case a test that bypasses
+    `RequestIDMiddleware` would be in -- and the handler has to survive it.
+    """
+    http_request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/v1/analysis/enrich",
+            "headers": [],
+            "query_string": b"",
+            "client": ("test", 1),
+            "server": ("test", 80),
+            "scheme": "http",
+        }
+    )
+    if request_id is not None:
+        http_request.state.request_id = request_id
+    return http_request
+
+
+async def _call(request_id: str | None = None) -> EnrichResponse:
     """Invoke the handler with one finding.
 
-    Parameterless on purpose: every test in this file sends the same request, and
-    an `**overrides` escape hatch would only have been used once per test to pass
-    that same request back in.
+    Parameterless apart from the request id on purpose: every test in this file
+    sends the same body, and a `**overrides` escape hatch would only have been used
+    once per test to pass that same body back in.
     """
-    request = EnrichRequest(findings=[_REQUEST_FINDING])
-    return await enrich_analysis(request=request, _user=_USER, _=None)
+    return await enrich_analysis(
+        request=EnrichRequest(findings=[_REQUEST_FINDING]),
+        http_request=_http_request(request_id),
+        _user=_USER,
+        _=None,
+    )
 
 
 def _detail(exc: HTTPException) -> dict[str, object]:
@@ -405,6 +435,111 @@ class TestTheRequestIsBounded:
         # Same reasoning one level up: a bound that fires after the caller has
         # given up is not a bound. The analysis service allows 120s.
         assert ENRICH_REQUEST_TIMEOUT_SECONDS < 120
+
+
+# ======================================================================
+# The request id
+# ======================================================================
+
+
+class TestTheCallCanBeFoundInTheLog:
+    """The caller sends `X-Request-ID`; this is what makes that worth sending.
+
+    Without a line in *this* service's log carrying the id, a user reporting a
+    missing summary traces as far as the analysis service's log entry and stops.
+    The header would still be set, still be echoed on the response, and still buy
+    nothing at exactly the moment it is needed.
+    """
+
+    async def test_the_received_line_carries_the_caller_supplied_id(
+        self,
+        service: _InstallService,
+        slot: _Recorder,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        service({"findings": [], "ai_executive_summary": None})
+
+        with caplog.at_level("INFO", logger=router_module.__name__):
+            await _call(request_id="abc123def456")
+
+        received = [r for r in caplog.records if "ai_enrich_received" in r.getMessage()]
+        assert len(received) == 1
+        assert "abc123def456" in received[0].getMessage()
+
+    async def test_the_completed_line_carries_the_same_id(
+        self,
+        service: _InstallService,
+        slot: _Recorder,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        # The pairing is the point: one id, two lines, one request. Logging the id
+        # on receipt but not on completion would leave the caller grepping for a
+        # half of the conversation.
+        service({"findings": [], "ai_executive_summary": None})
+
+        with caplog.at_level("INFO", logger=router_module.__name__):
+            await _call(request_id="abc123def456")
+
+        completed = [
+            r for r in caplog.records if "ai_enrich_completed" in r.getMessage()
+        ]
+        assert len(completed) == 1
+        assert "abc123def456" in completed[0].getMessage()
+
+    async def test_the_completed_line_says_whether_there_was_a_summary(
+        self,
+        service: _InstallService,
+        slot: _Recorder,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        # A success-only or failure-only completion line makes the caller infer the
+        # outcome from the absence of the other. This is a degraded 200, so both
+        # outcomes arrive as a 200 and the log is the only place that differs.
+        service(
+            {"findings": [], "ai_executive_summary": None, "ai_summary_error": _ERROR}
+        )
+
+        with caplog.at_level("INFO", logger=router_module.__name__):
+            await _call()
+
+        completed = next(
+            r for r in caplog.records if "ai_enrich_completed" in r.getMessage()
+        )
+        assert "has_summary=False" in completed.getMessage()
+        # And the code, so a log grep for one failure reason finds the others.
+        assert "error_code=rate_limited" in completed.getMessage()
+
+    async def test_a_successful_completion_says_so_and_names_no_error(
+        self,
+        service: _InstallService,
+        slot: _Recorder,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        service({"findings": [], "ai_executive_summary": "## Assessment\n\nReady."})
+
+        with caplog.at_level("INFO", logger=router_module.__name__):
+            await _call()
+
+        completed = next(
+            r for r in caplog.records if "ai_enrich_completed" in r.getMessage()
+        )
+        assert "has_summary=True" in completed.getMessage()
+        assert "error_code=None" in completed.getMessage()
+
+    async def test_the_handler_survives_a_request_with_no_id(
+        self, service: _InstallService, slot: _Recorder
+    ) -> None:
+        # `getattr(state, ..., None)` rather than `state.request_id`. A handler
+        # called without the middleware in front of it -- by a test today, by a
+        # mounted sub-app or a background caller tomorrow -- would otherwise raise
+        # an AttributeError inside a function whose job is not to serve the
+        # response. The id being unknown is not an error; the request failing
+        # because the id is unknown would be.
+        service({"findings": [], "ai_executive_summary": "## Assessment\n\nReady."})
+
+        response = await _call(request_id=None)
+
+        assert response.ai_executive_summary == "## Assessment\n\nReady."
 
 
 class TestTheSlotIsNotLeaked:

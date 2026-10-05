@@ -1,13 +1,20 @@
 from typing import Annotated
 
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException
+import logging
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.api.dependencies.auth import JWTPayload, get_current_user
 from app.api.dependencies.backpressure import acquire_llm_slot, release_llm_slot
 from app.api.dependencies.rate_limiter import check_rate_limit
 from app.application.analysis.enrichment import EnrichmentService
+
+# stdlib logging, matching every other module in this service. `services/analysis`
+# uses structlog's keyword form; the two services log in different styles and
+# matching the local one is what keeps a log line here readable next to the rest
+# of this service's output.
+logger = logging.getLogger(__name__)
 
 CurrentUser = Annotated[JWTPayload, Depends(get_current_user)]
 RateLimit = Annotated[None, Depends(check_rate_limit)]
@@ -137,8 +144,27 @@ class EnrichResponse(BaseModel):
 
 @router.post("/v1/analysis/enrich", response_model=EnrichResponse)
 async def enrich_analysis(
-    request: EnrichRequest, _user: CurrentUser, _: RateLimit = None
+    request: EnrichRequest,
+    http_request: Request,
+    _user: CurrentUser,
+    _: RateLimit = None,
 ) -> EnrichResponse:
+    # The caller sends `X-Request-ID` and `RequestIDMiddleware` has already put it
+    # on `http_request.state`. Logging it here is what makes the header worth
+    # sending: without a line carrying it in *this* service's log, a user reporting
+    # a missing summary can be traced to the caller-side log entry and nowhere
+    # further. Read from state rather than the header so the id logged is the one
+    # the middleware actually used, which is also the one echoed on the response.
+    #
+    # `getattr` with a default because a test that calls the handler directly
+    # bypasses the middleware, and a `request.state.request_id` would then be an
+    # AttributeError in a function whose job is not to serve the response.
+    request_id = getattr(http_request.state, "request_id", None)
+    logger.info(
+        "ai_enrich_received request_id=%s findings=%d",
+        request_id,
+        len(request.findings),
+    )
     # The route had neither a rate limit nor a backpressure slot, while the
     # sibling `/chat` had both. Enrichment is not a cheap endpoint: it fans out
     # across five finding categories and then runs the summary model loop, all on
@@ -174,7 +200,7 @@ async def enrich_analysis(
     # `.get(...)` rather than `result["..."]`: the service is a collaborator
     # across a process boundary, and a missing key should not be a 500 in the
     # middle of a successful enrichment.
-    return EnrichResponse(
+    response = EnrichResponse(
         findings=[EnrichedFindingItem(**f) for f in result.get("findings", [])],
         ai_executive_summary=result.get("ai_executive_summary"),
         ai_summary_error=(
@@ -183,3 +209,14 @@ async def enrich_analysis(
             else None
         ),
     )
+    # On the same id, and logged at the same weight whatever the outcome: a
+    # caller grepping for a request id needs the one line that tells them whether
+    # it produced a summary, and a success-only or failure-only line makes them
+    # infer it from the absence of the other.
+    logger.info(
+        "ai_enrich_completed request_id=%s has_summary=%s error_code=%s",
+        request_id,
+        response.ai_executive_summary is not None,
+        response.ai_summary_error.code if response.ai_summary_error else None,
+    )
+    return response

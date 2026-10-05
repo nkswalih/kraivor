@@ -46,6 +46,7 @@ import pytest
 from app.application.analysis import handler as handler_mod
 from app.application.analysis.commands import ProcessStageCommand
 from app.domain.entities.finding import Finding
+from app.infrastructure.ai.enrichment_client import EnrichOutcome
 from app.infrastructure.db.unit_of_work import UnitOfWork
 
 _ERROR = {
@@ -267,8 +268,8 @@ async def _run_enrich(
     """Run the real handler over a stubbed AI client that returns `response`."""
 
     class _Client:
-        async def enrich_findings(self, **kwargs: object) -> dict[str, object]:
-            return response
+        async def enrich_findings(self, **kwargs: object) -> object:
+            return EnrichOutcome(result=response)
 
     monkeypatch.setattr(
         "app.infrastructure.ai.enrichment_client.AiEnrichmentClient", _Client

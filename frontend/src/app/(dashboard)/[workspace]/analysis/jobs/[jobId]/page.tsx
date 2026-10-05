@@ -24,7 +24,6 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/api';
-import { readEngineStatus } from '@/lib/analysis/engine-status';
 import { analysisInsightsBuilder } from '@/lib/analysis/insights-builder';
 import {
   useJob,
@@ -86,21 +85,6 @@ export default function JobDetailPage() {
   const deleteJob = useDeleteJob();
   const queryClient = useQueryClient();
   const prevStatusRef = useRef<string | undefined>(undefined);
-
-  // Engines come from the service's catalogue, not a list kept in this file.
-  // The hardcoded copy had drifted to 5 keys while the pipeline ran 9, so
-  // dead_code, error_detection and churn did real work and were never shown.
-  // Until the catalogue loads, fall back to whatever this job actually reports
-  // so the panel is never empty.
-  //
-  // Only the finished-run grid below needs bare keys. The running panel takes
-  // the builder's rows instead, so that what it says about an engine and what
-  // the sidebar says about it come from one place.
-  const engineKeys = useMemo(() => {
-    const fromService = enginesQuery.data?.engines;
-    if (fromService?.length) return fromService.map(e => e.key);
-    return Object.keys(job?.engine_statuses ?? {});
-  }, [enginesQuery.data, job?.engine_statuses]);
 
   // The same derived insights the sidebar builds, so the two cannot disagree
   // about an engine's state, duration or score. Only `engineStatus` is read
@@ -327,22 +311,19 @@ export default function JobDetailPage() {
                 job={job}
               />
 
-              {/* Engine Status Cards */}
+              {/* Engine Status Cards. Fed by the builder's rows rather than a bare key list:
+                  each card needs a name, a description, a state and a score, and
+                  that is exactly one `EngineStatusItem`. The grid also used to
+                  look each score up itself with a `performance` special case,
+                  while the builder reads it from the catalogue's own
+                  `score_category` -- so the page and the sidebar could disagree
+                  about an engine's score. */}
               <div className="space-y-3">
                 <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider">Engine Status</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                  {engineKeys.map(k => {
-                    const scoreKey = k === 'performance' ? 'performance_score' : `${k}_score` as keyof typeof report;
-                    const engineScore = report?.[scoreKey] as number | null | undefined;
-                    return (
-                      <EngineCard
-                        key={k}
-                        engine={k}
-                        status={readEngineStatus(job.engine_statuses, k)}
-                        score={engineScore}
-                      />
-                    );
-                  })}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {insights.engineStatus.map(item => (
+                    <EngineCard key={item.key} item={item} />
+                  ))}
                 </div>
               </div>
 

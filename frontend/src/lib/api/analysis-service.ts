@@ -15,6 +15,7 @@ import type {
   SimulationResultListResponse,
   ScoreHistoryListResponse,
   EnterpriseGuide,
+  EngineListResponse,
 } from '@/types/domain/analysis';
 
 const BASE = process.env.NEXT_PUBLIC_ANALYSIS_API_URL ?? 'http://localhost:8003';
@@ -114,6 +115,9 @@ export const analysisService = {
     },
     delete(jobId: string): Promise<void> {
       return analysisDelete<void>(API_ENDPOINTS.ANALYSIS.JOB_DELETE(jobId));
+    },
+    engines(): Promise<EngineListResponse> {
+      return analysisGet<EngineListResponse>(API_ENDPOINTS.ANALYSIS.JOB_ENGINES);
     },
     statistics(jobId: string): Promise<JobStatistics> {
       return analysisGet<JobStatistics>(

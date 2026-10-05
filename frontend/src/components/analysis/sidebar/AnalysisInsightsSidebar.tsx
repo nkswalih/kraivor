@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, PanelRightClose } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { analysisInsightsBuilder } from '@/lib/analysis/insights-builder';
-import { useAnalysisMetadata, useEnterpriseGuide } from '@/lib/hooks/use-analysis';
+import { useAnalysisMetadata, useEnterpriseGuide, useEngines } from '@/lib/hooks/use-analysis';
 import type { AnalysisJob, Report, FindingsSummary, Finding } from '@/types/domain/analysis';
 import { AIExecutiveSummaryCard } from './AIExecutiveSummaryCard';
 import { PriorityRecommendationCard } from './PriorityRecommendationCard';
@@ -39,6 +39,7 @@ export function AnalysisInsightsSidebar({
   const jobId = job?.job_id ?? null;
   const { data: analysisMetadata } = useAnalysisMetadata(jobId);
   const { data: enterpriseGuide } = useEnterpriseGuide(jobId);
+  const { data: enginesResponse } = useEngines();
 
   useEffect(() => {
     setMounted(true);
@@ -47,7 +48,7 @@ export function AnalysisInsightsSidebar({
   const isLoading = externalLoading ?? !job;
 
   const aiExecutiveSummary = enterpriseGuide?.ai_executive_summary ?? null;
-  const insights = analysisInsightsBuilder(job, report, findingsSummary, findings, analysisMetadata, aiExecutiveSummary);
+  const insights = analysisInsightsBuilder(job, report, findingsSummary, findings, analysisMetadata, aiExecutiveSummary, enginesResponse?.engines);
 
   if (collapsed) {
     return (

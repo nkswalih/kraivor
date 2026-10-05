@@ -16,6 +16,7 @@ import type {
   SimulationResultListResponse,
   ScoreHistoryListResponse,
   EnterpriseGuide,
+  EngineListResponse,
 } from '@/types/domain/analysis';
 
 // ─── Job Polling ────────────────────────────────────────
@@ -34,6 +35,26 @@ export function useJob(jobId: string | null) {
       if (terminalStatuses.has(data.status)) return false;
       return 2000;
     },
+  });
+}
+
+// ─── Engine Catalogue ───────────────────────────────────
+
+/**
+ * The analysis service's canonical engine list.
+ *
+ * This is static for the life of a deployment, so it is cached hard and never
+ * refetched on a poll. Returns null while loading so callers can show the
+ * engines they already know about rather than an empty list.
+ */
+export function useEngines() {
+  return useQuery<EngineListResponse>({
+    queryKey: ['analysis-engines'],
+    queryFn: () => analysisService.jobs.engines(),
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 

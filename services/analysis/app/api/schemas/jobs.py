@@ -42,6 +42,20 @@ class EngineState(BaseModel):
         return value
 
 
+class EngineInfo(BaseModel):
+    """One engine from the canonical catalogue."""
+
+    key: str
+    label: str
+    description: str
+    stage: str
+    score_category: str | None = None
+
+
+class EngineListResponse(BaseModel):
+    engines: list[EngineInfo]
+
+
 class JobStatusResponse(BaseModel):
     job_id: str
     repo_id: UUID

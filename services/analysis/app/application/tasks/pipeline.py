@@ -37,6 +37,8 @@ from app.application.analysis.handler import (
     handle_start_analysis,
 )
 from app.core.constants import EngineStateMap
+from app.core.engines import ALL_ENGINES as CANONICAL_ALL_ENGINES
+from app.core.engines import stage_to_engine_keys
 from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
 from app.domain.entities.finding import Finding
@@ -98,38 +100,12 @@ _STAGE_STATUS: dict[str, str] = {
     "finalize": "finalize",
 }
 
-_STAGE_ENGINE: dict[str, str | None] = {
-    "start": None,
-    "clone": None,
-    "churn": None,
-    "parse": None,
-    "rules": None,
-    "save_findings": None,
-    "dead_code": "dead_code",
-    "errors": "error_detection",
-    "reliability": "reliability",
-    "maintainability": "maintainability",
-    "devops": "devops",
-    "perf": "performance",
-    "simulation": "simulation",
-    "score": None,
-    "guide_gen": None,
-    "ai_enrich": None,
-    "finalize": None,
-}
-
-_STAGE_ENGINES: dict[str, list[str]] = {"rules": ["security"]}
-
-ALL_ENGINES = {
-    "security",
-    "maintainability",
-    "reliability",
-    "devops",
-    "dead_code",
-    "error_detection",
-    "performance",
-    "simulation",
-}
+# Engine keys come from the canonical catalogue in app.core.engines, so the
+# tracked set, the stage->engine mapping and the set GET /jobs/engines
+# advertises are all the same data and cannot disagree. Stages absent from
+# STAGE_ENGINE_KEYS run no engine.
+STAGE_ENGINE_KEYS = stage_to_engine_keys()
+ALL_ENGINES = CANONICAL_ALL_ENGINES
 
 _STAGE_PROGRESS: dict[str, int] = {
     "start": 10,
@@ -358,9 +334,7 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
         ("finalize", _stage_finalize, ()),
     ):
         state["_last_stage"] = stage_name
-        engine_ids = _STAGE_ENGINES.get(stage_name, [])
-        single_engine_id = _STAGE_ENGINE.get(stage_name)
-        engine_ids = engine_ids + ([single_engine_id] if single_engine_id else [])
+        engine_ids = STAGE_ENGINE_KEYS.get(stage_name, [])
         job_id = cast(UUID, state.get("job_id"))
         for eid in engine_ids:
             cast(dict[str, str], state["engine_statuses"])[eid] = "running"

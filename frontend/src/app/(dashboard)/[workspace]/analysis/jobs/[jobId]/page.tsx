@@ -33,6 +33,7 @@ import {
   useDeleteJob,
   useStartAnalysis,
   useFindings,
+  useEngines,
 } from '@/lib/hooks/use-analysis';
 import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { JobStatusBadge } from '@/components/analysis/job-status-badge';
@@ -72,6 +73,7 @@ export default function JobDetailPage() {
   const { data: job, isLoading, error } = useJob(jobId);
   useDetailBreadcrumb(job ? `Analysis ${job.job_id.slice(0, 8)}` : null);
   const { data: report } = useReport(jobId);
+  const enginesQuery = useEngines();
   const { data: summary, isLoading: isSummaryLoading, error: summaryError } = useFindingsSummary(jobId);
   const { data: findingsData } = useFindings(jobId);
   const { data: stats, isLoading: isCountsLoading } = useJobStatistics(jobId);
@@ -82,6 +84,17 @@ export default function JobDetailPage() {
   const deleteJob = useDeleteJob();
   const queryClient = useQueryClient();
   const prevStatusRef = useRef<string | undefined>(undefined);
+
+  // Engines come from the service's catalogue, not a list kept in this file.
+  // The hardcoded copy had drifted to 5 keys while the pipeline ran 9, so
+  // dead_code, error_detection and churn did real work and were never shown.
+  // Until the catalogue loads, fall back to whatever this job actually reports
+  // so the panel is never empty.
+  const engineKeys = useMemo(() => {
+    const fromService = enginesQuery.data?.engines;
+    if (fromService?.length) return fromService.map(e => e.key);
+    return Object.keys(job?.engine_statuses ?? {});
+  }, [enginesQuery.data, job?.engine_statuses]);
 
   const filteredEntries = useMemo(() => {
     if (timeRange === 'all' || !scoreHistory?.entries) return scoreHistory?.entries ?? [];
@@ -171,7 +184,6 @@ export default function JobDetailPage() {
 
   const isRunning = !['completed', 'failed'].includes(job.status);
   const isComplete = job.status === 'completed';
-  const engineKeys = ['security', 'reliability', 'maintainability', 'devops', 'performance'];
 
   const sidebarLoading = isLoading || !job;
 

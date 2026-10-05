@@ -113,7 +113,10 @@ export function EngineStatusCard({
                 )}
               />
 
-              <span className="text-[12px] text-foreground flex-1 min-w-0 truncate">
+              <span
+                className="text-[12px] text-foreground flex-1 min-w-0 truncate"
+                title={item.description || item.name}
+              >
                 {item.name}
               </span>
 

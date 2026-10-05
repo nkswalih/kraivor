@@ -7,20 +7,10 @@ import type {
   Report,
   FindingsSummary,
   Finding,
+  EngineInfo,
   EngineStatusItem,
   PriorityRecommendation,
 } from '@/types/domain/analysis';
-
-const ENGINE_KEYS = ['security', 'reliability', 'maintainability', 'devops', 'performance', 'simulation'] as const;
-
-const ENGINE_LABELS: Record<string, string> = {
-  security: 'Security',
-  reliability: 'Reliability',
-  maintainability: 'Maintainability',
-  devops: 'DevOps',
-  performance: 'Performance',
-  simulation: 'Simulation',
-};
 
 const FALLBACK_LANGUAGES = [
   { name: 'Python', percentage: 60, color: '#3572A5' },
@@ -55,6 +45,7 @@ export function analysisInsightsBuilder(
   findings: Finding[] | null | undefined,
   analysisMetadata?: AnalysisMetadataResponse | null | undefined,
   aiExecutiveSummary?: string | null | undefined,
+  engines?: EngineInfo[] | null | undefined,
 ): AnalysisInsights {
   const performanceScore = report?.performance_score ?? job?.overall_score;
   const securityScore = report?.security_score;
@@ -69,18 +60,38 @@ export function analysisInsightsBuilder(
     findings,
   );
 
-  const engineStatus = ENGINE_KEYS.map((key) => {
+  // Engines come from the service's catalogue. This file used to keep its own
+// list of 6, which is how dead_code, error_detection and churn ended up
+// invisible while doing real work. Until the catalogue arrives, fall back to
+// whatever the job actually reports rather than a second hardcoded guess.
+const engineList: EngineInfo[] =
+  engines?.length
+    ? engines
+    : Object.keys(job?.engine_statuses ?? {}).map(key => ({
+        key,
+        label: key,
+        description: '',
+        stage: '',
+        score_category: null,
+      }));
+
+const engineStatus = engineList.map(engine => {
+    const key = engine.key;
     const status = parseEngineStatus(readEngineStatus(job?.engine_statuses, key));
-    let score: number | null = null;
-    if (key === 'performance') score = report?.performance_score ?? null;
-    if (key === 'security') score = report?.security_score ?? null;
-    if (key === 'reliability') score = report?.reliability_score ?? null;
-    if (key === 'maintainability') score = report?.maintainability_score ?? null;
-    if (key === 'devops') score = report?.devops_score ?? null;
+    // score_category is the engine's scoring dimension, so the score lookup is
+    // derived rather than a per-key table that could drift out of step.
+    const score =
+      engine.score_category != null
+        ? ((report?.[`${engine.score_category}_score` as keyof Report] as
+            | number
+            | null
+            | undefined) ?? null)
+        : null;
 
     return {
-      name: ENGINE_LABELS[key] ?? key,
+      name: engine.label,
       key,
+      description: engine.description,
       status,
       // Real timing now that the service records each engine's window. Was a
       // hardcoded null with a TODO waiting on exactly this.

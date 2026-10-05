@@ -91,6 +91,25 @@ export interface EngineState {
  */
 export type EngineStatusMap = Record<string, EngineState | string>;
 
+/**
+ * One engine from the analysis service's canonical catalogue.
+ *
+ * Served rather than hardcoded: the list had drifted into four disagreeing
+ * frontend/backend copies, and `dead_code` and `error_detection` were in none
+ * of the frontend ones despite running on every analysis.
+ */
+export interface EngineInfo {
+  key: string;
+  label: string;
+  description: string;
+  stage: string;
+  score_category: string | null;
+}
+
+export interface EngineListResponse {
+  engines: EngineInfo[];
+}
+
 export interface AnalysisJob {
   job_id: string;
   repo_id: string;
@@ -533,6 +552,8 @@ export interface RepositoryOverview {
 export interface EngineStatusItem {
   name: string;
   key: string;
+  /** What this engine checks, from the service catalogue. Empty if unknown. */
+  description: string;
   status: 'completed' | 'running' | 'failed' | 'skipped' | 'pending' | 'unavailable';
   duration: string | null;
   score: number | null;

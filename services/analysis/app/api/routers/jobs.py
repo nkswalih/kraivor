@@ -7,6 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.dependencies.services import get_storage, get_uow
 from app.api.schemas.jobs import (
+    EngineInfo,
+    EngineListResponse,
     EngineState,
     JobListResponse,
     JobStatisticsResponse,
@@ -33,6 +35,7 @@ from app.application.analysis.queries import (
 )
 from app.application.tasks.pipeline import run_full_analysis
 from app.core.constants import TriggerType
+from app.core.engines import ENGINE_SPECS, EngineSpec
 from app.core.logging import get_logger
 from app.dependencies.auth import JWTPayload, get_current_user
 from app.domain.contracts.storage import AbstractStorage
@@ -140,6 +143,21 @@ async def list_branches(
     return await fetcher.list_branches(url)
 
 
+@router.get("/engines", response_model=EngineListResponse)
+async def list_engines(
+    _user: JWTPayload = Depends(get_current_user),
+) -> EngineListResponse:
+    """The canonical engine catalogue.
+
+    The UI used to hardcode its own engine keys, and the four copies of that
+    list disagreed: the pipeline tracked 8 engines, the insights builder listed
+    6, the job page listed 5, and `dead_code` and `error_detection` were in none
+    of the frontend lists despite running on every analysis. Serving the
+    catalogue means adding an engine cannot leave the UI behind.
+    """
+    return EngineListResponse(engines=[_engine_to_response(s) for s in ENGINE_SPECS])
+
+
 @router.get("/{job_id}", response_model=JobStatusResponse)
 async def get_job(
     job_id: UUID,
@@ -204,6 +222,16 @@ async def re_enrich_job(
     result = await handle_re_enrich(cmd, uow)
     await uow.commit()
     return {"status": "ok", "enriched": result is not None}
+
+
+def _engine_to_response(spec: EngineSpec) -> EngineInfo:
+    return EngineInfo(
+        key=spec.key,
+        label=spec.label,
+        description=spec.description,
+        stage=spec.stage,
+        score_category=spec.score_category,
+    )
 
 
 def _job_to_response(job: dict[str, object]) -> JobStatusResponse:

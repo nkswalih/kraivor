@@ -23,6 +23,7 @@ export function AIExecutiveSummaryCard({
   data,
   isLoading,
   isRunning,
+  guidePending = false,
   className,
 }: {
   data: AiSummaryCard;
@@ -36,20 +37,33 @@ export function AIExecutiveSummaryCard({
    * yet and one coming, whereas a finished run without one has a real gap.
    */
   isRunning?: boolean;
+  /**
+   * Whether the guide request is still in flight.
+   *
+   * The third distinct cause of an absent summary, and the reason the other two
+   * props are not enough. A finished run with no summary may have none at all,
+   * or may simply not have been read yet -- and only the caller can tell those
+   * apart, because it owns the request. Without it, a completed page flashes an
+   * empty card labelled "Preview" promising a summary that was already on its
+   * way.
+   */
+  guidePending?: boolean;
   className?: string;
 }) {
   const summary = data.summary;
   const isAiGenerated = data.isAiGenerated;
-  const busy = isLoading || isRunning;
+  // A summary is expected but not here yet in all three cases, and all three
+  // render the same placeholder.
+  const busy = isLoading || isRunning || guidePending === true;
 
   // While the run is going there is no summary and none is expected, so the
   // "Preview" badge would be labelling a card with nothing in it, and the
   // footer said the summary "will appear after analysis completes" on a job
   // where nothing is complete. Both claims are false until the run ends.
-  const showPreviewBadge = !isAiGenerated && !isRunning;
-  // Suppressed in all three states where no summary exists yet: the job has not
-  // loaded, the run has not finished, or the summary was not generated.
-  const showFooter = !isAiGenerated && !isLoading && !isRunning;
+  const showPreviewBadge = !isAiGenerated && !busy;
+  // Suppressed whenever a summary is still expected. On a finished run with no
+  // summary at all, the footer does appear -- see the note below.
+  const showFooter = !isAiGenerated && !busy;
 
   return (
     <div className={cn('bg-card border border-border rounded-xl', className)}>

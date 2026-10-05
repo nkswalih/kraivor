@@ -185,8 +185,6 @@ export default function JobDetailPage() {
   const isRunning = !['completed', 'failed'].includes(job.status);
   const isComplete = job.status === 'completed';
 
-  const sidebarLoading = isLoading || !job;
-
   return (
     <div className="flex h-full animate-fade-up">
       {/* Main content column */}
@@ -519,7 +517,6 @@ export default function JobDetailPage() {
           report={report}
           findingsSummary={summary}
           findings={findingsData?.findings ?? null}
-          isLoading={sidebarLoading}
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
@@ -538,7 +535,6 @@ export default function JobDetailPage() {
               report={report}
               findingsSummary={summary}
               findings={findingsData?.findings ?? null}
-              isLoading={sidebarLoading}
               onClose={() => setSidebarOpen(false)}
             />
           </div>

@@ -120,6 +120,60 @@ describe('the AI summary card for a finished run', () => {
     // Loading and running both suppress the footer: neither has a summary yet.
     expect(screen.queryByText(/Static preview/)).not.toBeInTheDocument();
   });
+
+  it('waits for the guide request before claiming a summary is missing', () => {
+    // The case this exists for. The page finishes loading the job, but the
+    // guide request that carries the summary is still in flight, so `data` is
+    // undefined and the summary reads as absent. Showing the footer then said
+    // "AI summary will appear after analysis completes" for a job that had
+    // completed -- while the summary was on its way.
+    const { container } = render(
+      <AIExecutiveSummaryCard data={NO_SUMMARY} guidePending />,
+    );
+
+    expect(container.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Preview')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Static preview/)).not.toBeInTheDocument();
+  });
+
+  it('shows the footer once the guide request settles without a summary', () => {
+    // The other side of the boundary: pending has ended and there is genuinely
+    // no summary, which is the gap the error handling will report on.
+    render(<AIExecutiveSummaryCard data={NO_SUMMARY} guidePending={false} />);
+
+    expect(screen.getByText('Preview')).toBeInTheDocument();
+    expect(screen.getByText(/Static preview/)).toBeInTheDocument();
+  });
+
+  it('renders a summary that arrived with the guide', () => {
+    render(
+      <AIExecutiveSummaryCard data={GENERATED} guidePending={false} />,
+    );
+
+    expect(screen.getByText(GENERATED.summary)).toBeInTheDocument();
+    expect(screen.queryByText('Preview')).not.toBeInTheDocument();
+  });
+
+  it('treats the three pending causes identically', () => {
+    // One rendering for "a summary is expected but not here yet", whichever of
+    // the three reasons applies, so the caller cannot get them inconsistent.
+    for (const props of [{ isLoading: true }, { isRunning: true }, { guidePending: true }]) {
+      const { container, unmount } = render(
+        <AIExecutiveSummaryCard data={NO_SUMMARY} {...props} />,
+      );
+      expect(container.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0);
+      expect(screen.queryByText('Preview')).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it('shows the badge for a generated summary even while the guide loads', () => {
+    // Guard against over-suppression: `isAiGenerated` is settled data, so once
+    // it is true there is nothing pending about the badge.
+    render(<AIExecutiveSummaryCard data={GENERATED} guidePending />);
+
+    expect(screen.queryByText('Preview')).not.toBeInTheDocument();
+  });
 });
 
 // ======================================================================

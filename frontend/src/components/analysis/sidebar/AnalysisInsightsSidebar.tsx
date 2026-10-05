@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { X, PanelRightClose } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { analysisInsightsBuilder, isJobInFlight } from '@/lib/analysis/insights-builder';
@@ -36,15 +35,16 @@ export function AnalysisInsightsSidebar({
   collapsed,
   onToggleCollapse,
 }: AnalysisInsightsSidebarProps) {
-  const [mounted, setMounted] = useState(false);
   const jobId = job?.job_id ?? null;
+  // These requests outlive the page's own loading state, so the sidebar tracks
+  // the one it needs rather than being told. The page used to pass
+  // `isLoading || !job`, which was always false by the time it reached here --
+  // the page returns a full-page spinner on loading and a not-found screen on a
+  // missing job -- so every card's loading path was dead code.
   const { data: analysisMetadata } = useAnalysisMetadata(jobId);
-  const { data: enterpriseGuide } = useEnterpriseGuide(jobId);
+  const { data: enterpriseGuide, isLoading: guideLoading } =
+    useEnterpriseGuide(jobId);
   const { data: enginesResponse } = useEngines();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const isLoading = externalLoading ?? !job;
 
@@ -52,6 +52,12 @@ export function AnalysisInsightsSidebar({
   // builder branches on it and so does the summary card, and the two must not
   // disagree about whether the job is finished.
   const running = !isLoading && isJobInFlight(job?.status);
+
+  // A finished run whose guide request is still in flight is a third case, and
+  // the one that produced the false footer: the summary had not been read yet,
+  // rather than being absent or still being written. Both hooks settle without
+  // retry, so `data === undefined` means "asked, not answered", not "no summary".
+  const guidePending = !isLoading && guideLoading;
 
   const aiExecutiveSummary = enterpriseGuide?.ai_executive_summary ?? null;
   const insights = analysisInsightsBuilder(job, report, findingsSummary, findings, analysisMetadata, aiExecutiveSummary, enginesResponse?.engines);
@@ -106,6 +112,7 @@ export function AnalysisInsightsSidebar({
             data={insights.aiSummary}
             isLoading={isLoading}
             isRunning={running}
+            guidePending={guidePending}
           />
 
           <PriorityRecommendationCard

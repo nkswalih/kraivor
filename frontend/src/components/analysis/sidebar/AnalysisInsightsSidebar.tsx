@@ -48,6 +48,11 @@ export function AnalysisInsightsSidebar({
 
   const isLoading = externalLoading ?? !job;
 
+  // Whether the run still has stages ahead of it. Computed once here because the
+  // builder branches on it and so does the summary card, and the two must not
+  // disagree about whether the job is finished.
+  const running = !isLoading && isJobInFlight(job?.status);
+
   const aiExecutiveSummary = enterpriseGuide?.ai_executive_summary ?? null;
   const insights = analysisInsightsBuilder(job, report, findingsSummary, findings, analysisMetadata, aiExecutiveSummary, enginesResponse?.engines);
 
@@ -100,6 +105,7 @@ export function AnalysisInsightsSidebar({
           <AIExecutiveSummaryCard
             data={insights.aiSummary}
             isLoading={isLoading}
+            isRunning={running}
           />
 
           <PriorityRecommendationCard

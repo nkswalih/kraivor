@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { analysisInsightsBuilder, isJobInFlight } from './insights-builder';
-import { JobStatus } from '@/types/domain/analysis';
+import { JobStatus, Category, Severity } from '@/types/domain/analysis';
 import type {
   AnalysisJob,
   AnalysisMetadataResponse,
   Report,
   FindingsSummary,
+  Finding,
   EngineInfo,
 } from '@/types/domain/analysis';
 
@@ -80,6 +81,29 @@ function meta(overrides: Partial<AnalysisMetadataResponse> = {}): AnalysisMetada
 
 const NO_SUMMARY = null as FindingsSummary | null;
 const NO_FINDINGS = null;
+
+function finding(overrides: Partial<Finding> = {}): Finding {
+  return {
+    id: 'f-1',
+    job_id: 'job-1',
+    rule_id: 'PERF-001',
+    category: Category.QUALITY,
+    severity: Severity.HIGH,
+    title: 'Churn hotspot',
+    description: 'Changed by many authors in a short period.',
+    recommendation: 'Split the module.',
+    enterprise_pattern: 'Ownership spread',
+    file_path: 'src/hot.py',
+    line_start: 1,
+    line_end: 20,
+    status: 'active',
+    code_snippet: 'def hot(): ...',
+    score_impact: -3,
+    rpm_impact: 0,
+    is_ai_enriched: false,
+    ...overrides,
+  };
+}
 
 /** The in-flight case: a running job, no report yet. */
 function running(
@@ -368,6 +392,148 @@ describe('a completed job is unchanged', () => {
     expect(insights.repositoryOverview.languages).toEqual([
       { name: 'Elixir', percentage: 0, color: '#6366f1' },
     ]);
+  });
+});
+
+// ======================================================================
+// The priority recommendation
+// ======================================================================
+
+describe('no recommendation is invented for a run that has measured nothing', () => {
+  it('recommends nothing while the job is in flight', () => {
+    // The old builder always returned something. With no scores, no category
+    // counts and no findings, every branch fell through to the last one, and a
+    // repository nobody had scored was told to refactor for maintainability
+    // with a medium impact rating and a four-to-eight hour estimate.
+    const insights = running();
+
+    expect(insights.priorityRecommendation).toBeNull();
+  });
+
+  it('recommends nothing for a job that has not started', () => {
+    const insights = analysisInsightsBuilder(
+      job({ status: JobStatus.QUEUED }),
+      null,
+      NO_SUMMARY,
+      NO_FINDINGS,
+      null,
+      null,
+      null,
+    );
+
+    expect(insights.priorityRecommendation).toBeNull();
+  });
+
+  it('recommends nothing for a failed job', () => {
+    // A failed run has no scores, so the same fall-through would apply.
+    const insights = analysisInsightsBuilder(
+      job({ status: JobStatus.FAILED }),
+      null,
+      NO_SUMMARY,
+      NO_FINDINGS,
+      null,
+      null,
+      null,
+    );
+
+    expect(insights.priorityRecommendation).toBeNull();
+  });
+
+  it('stays silent even when the job row carries an overall score', () => {
+    // A single score is not enough. The card matches on three dimensions plus
+    // category counts, and the remaining inputs are absent mid-run, so any
+    // recommendation now would rest on one number.
+    const insights = running({ overall_score: 42 });
+
+    expect(insights.priorityRecommendation).toBeNull();
+  });
+
+  it('stays silent even when findings have arrived early', () => {
+    // Findings are written by the engine stages, so a job partway through can
+    // legitimately have some. Without scores there is still no ranking to place
+    // them in.
+    const insights = analysisInsightsBuilder(
+      job({ status: JobStatus.ERRORS }),
+      null,
+      { job_id: 'job-1', total: 1, by_severity: { high: 1 }, by_category: { quality: 9 } },
+      [finding()],
+      null,
+      null,
+      null,
+    );
+
+    expect(insights.priorityRecommendation).toBeNull();
+  });
+});
+
+describe('a completed job keeps its recommendation unchanged', () => {
+  it('recommends performance work for a low performance score', () => {
+    const insights = finished({ performance_score: 45 });
+
+    expect(insights.priorityRecommendation).toMatchObject({
+      title: 'Improve Performance',
+      impact: 'high',
+      difficulty: 'medium',
+      estimatedTime: '2-4 hours',
+      category: 'performance',
+    });
+  });
+
+  it('recommends security work for a low security score', () => {
+    const insights = finished({ performance_score: 90, security_score: 60 });
+
+    expect(insights.priorityRecommendation).toMatchObject({
+      title: 'Improve Security',
+      estimatedTime: '3-6 hours',
+      category: 'security',
+    });
+  });
+
+  it('recommends churn work when quality findings pile up', () => {
+    const insights = analysisInsightsBuilder(
+      job({ status: JobStatus.COMPLETED }),
+      report({ performance_score: 90, security_score: 90 }),
+      { job_id: 'job-1', total: 7, by_severity: {}, by_category: { quality: 7 } },
+      NO_FINDINGS,
+      null,
+      null,
+      null,
+    );
+
+    expect(insights.priorityRecommendation).toMatchObject({
+      title: 'Refactor Churn Hotspots',
+      category: 'quality',
+    });
+  });
+
+  it('falls through to maintainability when nothing else applies', () => {
+    // Kept deliberately. This is the card's only remaining advice and it is
+    // what every well-scoring run has always been told; changing it is a
+    // different task from removing the fabrications from a running job.
+    const insights = finished({ performance_score: 95, security_score: 95 });
+
+    expect(insights.priorityRecommendation).toMatchObject({
+      title: 'Improve Maintainability',
+      estimatedTime: '4-8 hours',
+    });
+  });
+
+  it('links the recommendation to a real finding when one matches', () => {
+    const insights = analysisInsightsBuilder(
+      job({ status: JobStatus.COMPLETED }),
+      report({ performance_score: 45 }),
+      NO_SUMMARY,
+      [finding({ id: 'f-99', category: Category.PERFORMANCE })],
+      null,
+      null,
+      null,
+    );
+
+    expect(insights.priorityRecommendation?.findingId).toBe('f-99');
+  });
+
+  it('leaves the finding link null when no finding matches', () => {
+    expect(finished({ performance_score: 45 }).priorityRecommendation?.findingId).toBeNull();
   });
 });
 

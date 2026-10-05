@@ -529,7 +529,14 @@ export interface JobStatistics {
 
 export interface AnalysisInsights {
   aiSummary: AiSummaryCard;
-  priorityRecommendation: PriorityRecommendation;
+  /**
+   * Null while a run is in flight.
+   *
+   * The card offers a recommendation by matching on the run's scores, so with no
+   * scores there is nothing to recommend and any advice shown would be a
+   * template rather than a conclusion.
+   */
+  priorityRecommendation: PriorityRecommendation | null;
   repositoryOverview: RepositoryOverview;
   engineStatus: EngineStatusItem[];
   metadata: AnalysisMetadata;

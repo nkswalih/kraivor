@@ -67,13 +67,21 @@ export function analysisInsightsBuilder(
   const maintenanceScore = report?.maintainability_score;
   const categories = findingsSummary?.by_category ?? {};
 
-  const priorityRecommendation = buildPriorityRecommendation(
-    performanceScore,
-    securityScore,
-    maintenanceScore,
-    categories,
-    findings,
-  );
+  // Every branch below is a guess about a repository the scores do not
+  // describe. On a running job all four inputs are absent, so the function fell
+  // through to its last branch and told the user to refactor for
+  // maintainability, with an impact rating and a time estimate, on the strength
+  // of having measured nothing. No recommendation is the honest answer until
+  // there is something to recommend.
+  const priorityRecommendation = isJobInFlight(job?.status)
+    ? null
+    : buildPriorityRecommendation(
+        performanceScore,
+        securityScore,
+        maintenanceScore,
+        categories,
+        findings,
+      );
 
   // Engines come from the service's catalogue. This file used to keep its own
 // list of 6, which is how dead_code, error_detection and churn ended up
@@ -226,7 +234,7 @@ function buildPriorityRecommendation(
   maintenanceScore: number | null | undefined,
   categories: Record<string, number>,
   findings: Finding[] | null | undefined,
-): PriorityRecommendation {
+): PriorityRecommendation | null {
   if (performanceScore != null && performanceScore < 60) {
     const perfFinding = findings?.find((f) => f.category === 'performance');
     return {
@@ -267,6 +275,10 @@ function buildPriorityRecommendation(
     };
   }
 
+  // Reached by every run that cleared the branches above -- including one with
+  // excellent scores and nothing to fix. Kept as-is for a completed job: it is
+  // the only advice this card has ever offered, and changing it belongs to the
+  // task that gives the card real data rather than a template.
   const maintFinding = findings?.find((f) => f.category === 'maintainability');
   return {
     title: 'Improve Maintainability',

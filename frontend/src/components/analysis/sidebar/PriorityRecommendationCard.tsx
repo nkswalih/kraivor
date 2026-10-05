@@ -28,13 +28,11 @@ export function PriorityRecommendationCard({
   className,
   onViewFinding,
 }: {
-  data: PriorityRecommendation;
+  data: PriorityRecommendation | null;
   isLoading?: boolean;
   className?: string;
   onViewFinding?: () => void;
 }) {
-  const Icon = categoryIcons[data.category] ?? Shield;
-
   if (isLoading) {
     return (
       <div className={cn('bg-card border border-border rounded-xl p-4', className)}>
@@ -50,6 +48,17 @@ export function PriorityRecommendationCard({
       </div>
     );
   }
+
+  // Checked after loading, because the two nulls mean opposite things. Once the
+  // job has loaded, `data === null` means the run has not reached a conclusion
+  // and none is coming for it -- so nothing is rendered. While it is still
+  // loading the answer is merely unknown, which is what the skeleton above is
+  // for.
+  if (!data) {
+    return null;
+  }
+
+  const Icon = categoryIcons[data.category] ?? Shield;
 
   return (
     <div className={cn('bg-card border border-border rounded-xl p-4', className)}>

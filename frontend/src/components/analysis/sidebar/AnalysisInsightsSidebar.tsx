@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, PanelRightClose } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { analysisInsightsBuilder } from '@/lib/analysis/insights-builder';
+import { analysisInsightsBuilder, isJobInFlight } from '@/lib/analysis/insights-builder';
 import { useAnalysisMetadata, useEnterpriseGuide, useEngines } from '@/lib/hooks/use-analysis';
 import type { AnalysisJob, Report, FindingsSummary, Finding } from '@/types/domain/analysis';
 import { AIExecutiveSummaryCard } from './AIExecutiveSummaryCard';
@@ -11,6 +11,7 @@ import { PriorityRecommendationCard } from './PriorityRecommendationCard';
 import { RepositoryOverviewCard } from './RepositoryOverviewCard';
 import { EngineStatusCard } from './EngineStatusCard';
 import { AnalysisMetadataCard } from './AnalysisMetadataCard';
+import { ProjectContextCard } from './ProjectContextCard';
 
 interface AnalysisInsightsSidebarProps {
   job: AnalysisJob | null | undefined;
@@ -90,6 +91,12 @@ export function AnalysisInsightsSidebar({
         )}
       >
         <div className="flex flex-col gap-4 p-4">
+          <ProjectContextCard
+            job={job}
+            metadata={analysisMetadata}
+            isLoading={isLoading}
+          />
+
           <AIExecutiveSummaryCard
             data={insights.aiSummary}
             isLoading={isLoading}
@@ -101,18 +108,29 @@ export function AnalysisInsightsSidebar({
             onViewFinding={onViewFinding}
           />
 
-          <RepositoryOverviewCard
-            data={insights.repositoryOverview}
-            isLoading={isLoading}
-          />
+          {/* These two cards describe a finished run, and every figure in them
+              comes from the report. While the job is still going, ProjectContext
+              above carries everything actually measured -- and a repository
+              overview with no languages beside an engine list with nothing scored
+              reads as a broken panel rather than an unfinished one. The engine
+              card stays: per-engine state is real from the moment each engine
+              starts, which is the point of it. */}
+          {!isJobInFlight(job?.status) && (
+            <>
+              <RepositoryOverviewCard
+                data={insights.repositoryOverview}
+                isLoading={isLoading}
+              />
+
+              <AnalysisMetadataCard
+                data={insights.metadata}
+                isLoading={isLoading}
+              />
+            </>
+          )}
 
           <EngineStatusCard
             items={insights.engineStatus}
-            isLoading={isLoading}
-          />
-
-          <AnalysisMetadataCard
-            data={insights.metadata}
             isLoading={isLoading}
           />
 

@@ -25,13 +25,6 @@ class LanguageShare(BaseModel):
     percentage: float
 
 
-class EngineStatusEntry(BaseModel):
-    engine: str
-    status: str
-    reason: str = ""
-    error_code: str = ""
-
-
 class EngineState(BaseModel):
     """Per-engine execution state for one job.
 

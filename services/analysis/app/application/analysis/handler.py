@@ -97,6 +97,78 @@ def describe_failure(stage: str, error_message: str | None) -> str:
     return f"{summary}: {detail}" if detail else summary
 
 
+# The only keys from the AI service's `ai_summary_error` envelope that may be
+# stored or served. Whitelist rather than blacklist: the envelope crosses a
+# network boundary from a service that deploys independently, and a blacklist
+# only protects against the leaks somebody already thought of. A field added to
+# the envelope upstream is ignored here until somebody adds it deliberately.
+_SUMMARY_ERROR_KEYS = ("code", "message", "suggested_action", "retry_after")
+
+
+def _carried_across_regeneration(existing: dict[str, object]) -> dict[str, object]:
+    """The AI summary fields a guide regeneration does not itself produce.
+
+    `EnterpriseGuide.to_dict()` knows nothing about `ai_executive_summary` or
+    `ai_summary_error`, so `handle_re_generate_guide` has to copy both across by
+    hand. Skip either and `save()` hands `merge()` an instance with that column
+    unset, which nulls the recorded value -- silently losing a summary the user
+    paid for, and silently losing the reason one is missing.
+
+    Both are returned together, and the error is checked with `is not None`
+    rather than truthiness: `{}` is a real if degenerate reason to keep, and
+    `None` is the only thing that means "no error". Treating the two the same is
+    how the error would come back as `{}` on a guide that had none.
+    """
+    carried: dict[str, object] = {}
+    summary = existing.get("ai_executive_summary")
+    if summary:
+        carried["ai_executive_summary"] = summary
+    error = existing.get("ai_summary_error")
+    if error is not None:
+        carried["ai_summary_error"] = error
+    return carried
+
+
+def _readable_summary_error(raw: object) -> dict[str, object] | None:
+    """Narrow the AI service's summary-error envelope to what is safe to serve.
+
+    The AI service already builds this from four named fields on
+    ``ClassifiedError`` rather than by copying the exception, so the provider
+    name, the model and the verbatim provider response body are not in it to
+    begin with. That is a real defence, but it is a defence in *that* service
+    about *that* object; this is a second boundary, and the guide endpoint serves
+    whatever lands in this column to browsers.
+
+    Returns ``None`` -- "no reason was reported" -- rather than a synthetic one
+    when the payload is unusable, because inventing a code here would put a
+    confident-sounding wrong answer in the place where the truth is missing. The
+    caller distinguishes the two.
+    """
+    if not isinstance(raw, dict):
+        return None
+    code = raw.get("code")
+    message = raw.get("message")
+    if not isinstance(code, str) or not code.strip():
+        return None
+    if not isinstance(message, str) or not message.strip():
+        return None
+
+    error: dict[str, object] = {"code": code, "message": message}
+
+    action = raw.get("suggested_action")
+    if isinstance(action, str) and action.strip():
+        error["suggested_action"] = action
+
+    # Omitted rather than stored as null, matching the envelope: a client cannot
+    # tell "no hint" from "hint of zero", and a zero hint reads as "retry now".
+    retry_after = raw.get("retry_after")
+    if isinstance(retry_after, int | float) and not isinstance(retry_after, bool):
+        error["retry_after"] = retry_after
+
+    assert set(error).issubset(_SUMMARY_ERROR_KEYS)
+    return error
+
+
 def _exception_detail(error_message: str | None) -> str:
     """The part of a failure message worth serving, bounded and single-line."""
     if not error_message:
@@ -1387,29 +1459,60 @@ async def handle_stage_ai_enrich(
             )
             updated_count += 1
 
-    ai_executive_summary = str(result.get("ai_executive_summary", ""))
-    if ai_executive_summary:
-        guide = await uow.enterprise_guides.get_by_job(job_id)
-        if guide:
-            guide["ai_executive_summary"] = ai_executive_summary
-            await uow.enterprise_guides.save(guide)
-            logger.info(
-                "ai_enrichment_summary_saved",
-                job_id=str(job_id),
-                summary_length=len(ai_executive_summary),
-            )
-        else:
-            logger.warning(
-                "ai_enrichment_guide_not_found",
-                job_id=str(job_id),
-                message="Enterprise guide not found — cannot save AI summary",
-            )
-    else:
+    # `ai_executive_summary` is `str | None` on the wire now, and this line was
+    # `str(result.get("ai_executive_summary", ""))` -- which turned the AI
+    # service's `None` back into `""`. The type change upstream is worth nothing
+    # if this coerces it away, and it did: a failed summary and a summary nobody
+    # asked for both became an empty string, and the `if` below treated them
+    # identically.
+    raw_summary = result.get("ai_executive_summary")
+    ai_executive_summary = raw_summary if isinstance(raw_summary, str) else None
+
+    # The AI service sends this only when the summary failed, and builds it from
+    # named fields on `ClassifiedError` -- so what arrives has already been
+    # reduced to code / message / suggested_action / retry_after. Re-validated
+    # here rather than trusted: this is a network boundary between two services
+    # that deploy independently, and the consequence of a widened envelope would
+    # be a leaked provider error body landing in a column the guide endpoint
+    # serves to browsers.
+    summary_error = _readable_summary_error(result.get("ai_summary_error"))
+
+    guide = await uow.enterprise_guides.get_by_job(job_id)
+    if guide is None:
+        # Unchanged behaviour, but no longer conditional on having a summary: a
+        # failed summary is worth logging just as a saved one is, and the old
+        # `if ai_executive_summary` nesting meant a failure logged a different
+        # message than a success logged nothing about.
         logger.warning(
-            "ai_enrichment_empty_summary",
+            "ai_enrichment_guide_not_found",
             job_id=str(job_id),
-            response_keys=list(result.keys()) if result else [],
-            message="AI service returned empty ai_executive_summary — LLM generation may have failed",
+            message="Enterprise guide not found — cannot save AI summary",
+        )
+    elif ai_executive_summary:
+        guide["ai_executive_summary"] = ai_executive_summary
+        # A successful summary clears any error left by an earlier attempt. Without
+        # this, a re-enrich that succeeds leaves the previous failure in place and
+        # the UI shows both a summary and the reason it could not be written.
+        guide["ai_summary_error"] = None
+        await uow.enterprise_guides.save(guide)
+        logger.info(
+            "ai_enrichment_summary_saved",
+            job_id=str(job_id),
+            summary_length=len(ai_executive_summary),
+        )
+    else:
+        guide["ai_summary_error"] = summary_error
+        await uow.enterprise_guides.save(guide)
+        logger.warning(
+            "ai_enrichment_summary_failed",
+            job_id=str(job_id),
+            # The code, not the provider's words: the log is where technical detail
+            # belongs, but the envelope is what crossed the boundary.
+            reason=summary_error.get("code") if summary_error else "not_reported",
+            # Distinguishes "the AI service said nothing" from "it said the summary
+            # was empty", which were the same event before and are not now.
+            reported=summary_error is not None,
+            message="No AI executive summary — see ai_summary_error",
         )
 
     await uow.jobs.update_status(
@@ -1549,12 +1652,10 @@ async def handle_re_generate_guide(
         guide_dict["workspace_id"] = job["workspace_id"]
 
         # Preserve existing guide ID so merge() doesn't create a duplicate row
-        # Also preserve ai_executive_summary — regeneration doesn't produce one
         existing = await uow.enterprise_guides.get_by_job(job_id)
         if existing and existing.get("id"):
             guide_dict["id"] = existing["id"]
-            if existing.get("ai_executive_summary"):
-                guide_dict["ai_executive_summary"] = existing["ai_executive_summary"]
+            guide_dict.update(_carried_across_regeneration(existing))
 
         await uow.enterprise_guides.save(guide_dict)
         logger.info("enterprise_guide_regenerated", job_id=str(job_id))

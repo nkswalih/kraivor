@@ -34,8 +34,11 @@ export function RepositoryOverviewCard({
     );
   }
 
+  // Three states, not two. `null` is "not measured yet", which shows a
+  // placeholder; `[]` is "measured, found none", which is a real answer and
+  // says so. A measured zero count still renders as 0.
   const languages = data.languages;
-  const hasLanguages = languages.length > 0;
+  const measuredLanguages = languages !== null && languages.length > 0;
 
   return (
     <div className={cn('bg-card border border-border rounded-xl p-4', className)}>
@@ -43,7 +46,7 @@ export function RepositoryOverviewCard({
         Repository Overview
       </h3>
 
-      {hasLanguages && (
+      {measuredLanguages && languages && (
         <div className="space-y-2 mb-4">
           <div className="flex h-1.5 rounded-full overflow-hidden bg-krait-surface2">
             {languages.map((lang) => (
@@ -74,28 +77,77 @@ export function RepositoryOverviewCard({
         </div>
       )}
 
-      {!hasLanguages && (
+      {languages === null && (
+        <div className="space-y-2 mb-4" aria-hidden>
+          <div className="h-1.5 rounded-full bg-krait-surface2 animate-shimmer w-full" />
+          <div className="space-y-1.5">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-sm bg-krait-surface2 animate-shimmer shrink-0" />
+                <div className="h-2.5 flex-1 rounded bg-krait-surface2 animate-shimmer" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {languages !== null && !measuredLanguages && (
         <div className="text-[11px] text-text-tertiary italic mb-4">
           No language data available yet.
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="bg-krait-surface1 rounded-lg p-3 text-center">
-          <Files className="w-4 h-4 text-blue-400 mx-auto mb-1" />
-          <p className="text-lg font-semibold text-foreground tabular-nums">
-            {data.totalFiles.toLocaleString()}
-          </p>
-          <p className="text-[10px] text-text-tertiary uppercase tracking-wider">Files</p>
-        </div>
-        <div className="bg-krait-surface1 rounded-lg p-3 text-center">
-          <Code2 className="w-4 h-4 text-green-400 mx-auto mb-1" />
-          <p className="text-lg font-semibold text-foreground tabular-nums">
-            {data.totalLines.toLocaleString()}
-          </p>
-          <p className="text-[10px] text-text-tertiary uppercase tracking-wider">Lines</p>
-        </div>
+        <StatTile
+          icon={Files}
+          iconClass="text-blue-400"
+          value={data.totalFiles}
+          label="Files"
+        />
+        <StatTile
+          icon={Code2}
+          iconClass="text-green-400"
+          value={data.totalLines}
+          label="Lines"
+        />
       </div>
+    </div>
+  );
+}
+
+/**
+ * One figure in the grid.
+ *
+ * Renders a shimmering block of the same height when the value is null, so the
+ * layout does not jump when the number arrives, and so an unmeasured figure is
+ * never confused with a measured zero.
+ */
+function StatTile({
+  icon: Icon,
+  iconClass,
+  value,
+  label,
+}: {
+  icon: typeof Files;
+  iconClass: string;
+  value: number | null;
+  label: string;
+}) {
+  return (
+    <div className="bg-krait-surface1 rounded-lg p-3 text-center">
+      <Icon className={cn('w-4 h-4 mx-auto mb-1', iconClass)} />
+      {value === null ? (
+        <div
+          className="h-7 my-0.5 rounded bg-krait-surface2 animate-shimmer w-2/3 mx-auto"
+          aria-label={`${label} not measured yet`}
+          role="status"
+        />
+      ) : (
+        <p className="text-lg font-semibold text-foreground tabular-nums">
+          {value.toLocaleString()}
+        </p>
+      )}
+      <p className="text-[10px] text-text-tertiary uppercase tracking-wider">{label}</p>
     </div>
   );
 }

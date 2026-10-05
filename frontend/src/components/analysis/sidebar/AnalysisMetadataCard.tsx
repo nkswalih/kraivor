@@ -13,7 +13,7 @@ import {
   Globe,
   Building2,
 } from 'lucide-react';
-import { cn, formatRelativeTime, formatDate } from '@/lib/utils';
+import { cn, formatRelativeTime } from '@/lib/utils';
 import type { AnalysisMetadata as Metadata } from '@/types/domain/analysis';
 
 interface MetaRow {
@@ -31,19 +31,27 @@ export function AnalysisMetadataCard({
   isLoading?: boolean;
   className?: string;
 }) {
+  // A count that has not been measured renders as an em-dash, not as 0. Every
+  // row below is nullable, and `row.value ?? '—'` is what draws the em-dash.
+  const count = (value: number | null) => (value === null ? null : value.toLocaleString());
+
   const rows: MetaRow[] = [
-    { icon: Files, label: 'Files', value: data.totalFiles.toLocaleString() },
-    { icon: Code2, label: 'LOC', value: data.totalLines.toLocaleString() },
-    { icon: Braces, label: 'Classes', value: data.classes.toLocaleString() },
-    { icon: FunctionSquare, label: 'Functions', value: data.functions.toLocaleString() },
-    { icon: Route, label: 'Endpoints', value: data.endpoints.toLocaleString() },
-    { icon: Languages, label: 'Languages', value: data.languages.length > 0 ? data.languages.join(', ') : '—' },
-    { icon: Clock, label: 'Duration', value: data.duration ?? '—' },
-    { icon: Calendar, label: 'Started', value: data.startedAt ? formatRelativeTime(data.startedAt) : '—' },
-    { icon: Calendar, label: 'Completed', value: data.completedAt ? formatRelativeTime(data.completedAt) : '—' },
+    { icon: Files, label: 'Files', value: count(data.totalFiles) },
+    { icon: Code2, label: 'LOC', value: count(data.totalLines) },
+    { icon: Braces, label: 'Classes', value: count(data.classes) },
+    { icon: FunctionSquare, label: 'Functions', value: count(data.functions) },
+    { icon: Route, label: 'Endpoints', value: count(data.endpoints) },
+    {
+      icon: Languages,
+      label: 'Languages',
+      value: data.languages === null ? null : data.languages.join(', ') || '—',
+    },
+    { icon: Clock, label: 'Duration', value: data.duration },
+    { icon: Calendar, label: 'Started', value: data.startedAt ? formatRelativeTime(data.startedAt) : null },
+    { icon: Calendar, label: 'Completed', value: data.completedAt ? formatRelativeTime(data.completedAt) : null },
     { icon: GitBranch, label: 'Branch', value: data.branch },
-    { icon: Globe, label: 'Repository', value: data.repoUrl ? data.repoUrl.replace('https://github.com/', '') : '—' },
-    { icon: Building2, label: 'Workspace', value: data.workspaceId ? data.workspaceId.slice(0, 8) : '—' },
+    { icon: Globe, label: 'Repository', value: data.repoUrl ? data.repoUrl.replace('https://github.com/', '') : null },
+    { icon: Building2, label: 'Workspace', value: data.workspaceId ? data.workspaceId.slice(0, 8) : null },
   ];
 
   if (isLoading) {

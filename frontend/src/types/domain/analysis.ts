@@ -557,9 +557,15 @@ export interface LanguageBar {
 }
 
 export interface RepositoryOverview {
-  languages: LanguageBar[];
-  totalFiles: number;
-  totalLines: number;
+  /**
+   * Null until something has measured the repository's languages. `[]` means
+   * measured, and found none -- a different answer, and the reason this is not
+   * simply defaulted to an empty array.
+   */
+  languages: LanguageBar[] | null;
+  /** Null until measured. A measured zero stays `0`; only absence is null. */
+  totalFiles: number | null;
+  totalLines: number | null;
 }
 
 export interface EngineStatusItem {
@@ -574,18 +580,23 @@ export interface EngineStatusItem {
 }
 
 export interface AnalysisMetadata {
-  totalFiles: number;
-  totalLines: number;
-  classes: number;
-  functions: number;
-  endpoints: number;
-  languages: string[];
+  /**
+   * Every count here is null until the stage that measures it has run. A
+   * running job has measured none of them, and rendering `0` for a class count
+   * that has not been counted yet is a claim the data does not support.
+   */
+  totalFiles: number | null;
+  totalLines: number | null;
+  classes: number | null;
+  functions: number | null;
+  endpoints: number | null;
+  languages: string[] | null;
   duration: string | null;
   startedAt: string | null;
   completedAt: string | null;
-  branch: string;
-  repoUrl: string;
-  workspaceId: string;
+  branch: string | null;
+  repoUrl: string | null;
+  workspaceId: string | null;
 }
 
 // ─── Job Start Request ──────────────────────────────────

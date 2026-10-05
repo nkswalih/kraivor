@@ -176,6 +176,67 @@ describe('The sidebar card', () => {
     expect(screen.queryByText('The AI service is busy')).not.toBeInTheDocument();
   });
 
+  it('says the request failed rather than blaming the summary', () => {
+    // A fourth cause, and the only one we caused. `useEnterpriseGuide` sets
+    // `retry: false`, so before this the sidebar rendered "AI summary will appear
+    // after analysis completes" for the rest of the page's life after a single
+    // failed request -- on a run that had already completed, so nothing would
+    // ever arrive to correct it.
+    render(<AIExecutiveSummaryCard data={card()} guideError={new Error('502')} />);
+
+    expect(screen.getByText(/couldn't load the summary/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/will appear after analysis completes/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not blame the provider for a request that never landed', () => {
+    // The failure envelope is for the service saying generation failed. A
+    // connection that dropped has no `code` and no classification, and rendering
+    // one would claim the service had assessed something it never saw.
+    render(<AIExecutiveSummaryCard data={card()} guideError={new Error('offline')} />);
+
+    expect(screen.queryByText('The AI service is busy')).not.toBeInTheDocument();
+    expect(screen.getByText(/nothing is known about the summary/i)).toBeInTheDocument();
+  });
+
+  it('offers to repeat the request when nothing came back', async () => {
+    const onRefetchGuide = vi.fn();
+    render(
+      <AIExecutiveSummaryCard
+        data={card()}
+        guideError={new Error('502')}
+        onRefetchGuide={onRefetchGuide}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /try again/i }));
+    expect(onRefetchGuide).toHaveBeenCalledOnce();
+  });
+
+  it('prefers the failed request over a recorded failure', () => {
+    // Both can be set: a guide row read from cache that carries a reason, and a
+    // refetch that then failed. The unreadable state wins because it is the one
+    // that is true right now -- the older reason is known but not current.
+    render(
+      <AIExecutiveSummaryCard data={card({ error: error() })} guideError={new Error('502')} />,
+    );
+
+    expect(screen.getByText(/couldn't load the summary/i)).toBeInTheDocument();
+    expect(screen.queryByText('The AI service is busy')).not.toBeInTheDocument();
+  });
+
+  it('does not blame the summary for a failure while the run is still going', () => {
+    // An in-flight run's guide request can fail -- nothing has been written yet,
+    // or the service restarted. That is still not a fact about the summary, and
+    // the skeleton is the honest state because the summary is genuinely coming.
+    render(
+      <AIExecutiveSummaryCard data={card()} guideError={new Error('502')} isRunning />,
+    );
+
+    expect(screen.queryByText(/couldn't load the summary/i)).not.toBeInTheDocument();
+  });
+
   it('shows a summary that exists even if a caller pairs it with an error', () => {
     // `insights-builder` drops the error when a summary is present, so this state
     // cannot arise from the app. The guard is here because `data` is a plain

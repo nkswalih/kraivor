@@ -25,6 +25,8 @@ export function AIExecutiveSummaryCard({
   isLoading,
   isRunning,
   guidePending = false,
+  guideError = null,
+  onRefetchGuide,
   onRetry,
   isRetrying = false,
   className,
@@ -52,6 +54,21 @@ export function AIExecutiveSummaryCard({
    */
   guidePending?: boolean;
   /**
+   * The guide request itself failed.
+   *
+   * A fourth cause of an absent summary, and the one that had no handling at
+   * all: `useEnterpriseGuide` sets `retry: false`, so a single failed request left
+   * this card claiming a summary was on its way for the rest of the page's life.
+   *
+   * Deliberately not the same as `data.error`. That one is the service reporting
+   * that generation failed, which is a fact about the run. This one is us failing
+   * to find out, which is a fact about the connection -- and it must never be
+   * rendered as though something is known about the summary.
+   */
+  guideError?: Error | null;
+  /** Re-run the guide request. Only offered where retrying could work. */
+  onRefetchGuide?: () => void;
+  /**
    * Ask the service to generate the summary again.
    *
    * Optional, and passed straight through to the error panel, which is what
@@ -69,6 +86,12 @@ export function AIExecutiveSummaryCard({
   // render the same placeholder.
   const busy = isLoading || isRunning || guidePending === true;
 
+  // Checked before everything else. With no answer there is nothing to say about
+  // the summary -- not that it failed, not that it is coming -- so this takes
+  // precedence over both `data.error` and the footer's promise. `guidePending`
+  // is in `busy`, so a failed request is only reached once loading has settled.
+  const unreadable = Boolean(guideError) && !busy;
+
   // A recorded failure. Distinct from every other absent summary, and the reason
   // the card has three separate props at all: a run that finished and produced no
   // summary because one was never attempted is a different thing from one that
@@ -78,18 +101,20 @@ export function AIExecutiveSummaryCard({
   // the error when a summary exists, so this cannot be a summary plus an error
   // here; the guard is because `data` is a plain object and nothing stops a
   // caller handing one over.
-  const error = !isAiGenerated && !busy ? (data.error ?? null) : null;
+  const error = !isAiGenerated && !busy && !unreadable ? (data.error ?? null) : null;
 
   // While the run is going there is no summary and none is expected, so the
   // "Preview" badge would be labelling a card with nothing in it, and the
   // footer said the summary "will appear after analysis completes" on a job
-  // where nothing is complete. Both claims are false until the run ends.
-  const showPreviewBadge = !isAiGenerated && !busy && !error;
-  // Suppressed whenever a summary is still expected, and suppressed for a
-  // recorded failure -- "will appear after analysis completes" on a run that has
-  // completed and failed to produce one is the exact sentence this error state
-  // exists to replace.
-  const showFooter = !isAiGenerated && !busy && !error;
+  // where nothing is complete. Both claims are false until the run ends -- and
+  // false for an unreadable guide as well, which is a third thing entirely.
+  const showPreviewBadge = !isAiGenerated && !busy && !error && !unreadable;
+  // Suppressed whenever a summary is still expected, suppressed for a recorded
+  // failure, and suppressed when we could not read the guide at all --
+  // "will appear after analysis completes" on a run that has completed and
+  // failed to produce one, or on a request that failed, is the exact sentence
+  // this component exists to stop saying.
+  const showFooter = !isAiGenerated && !busy && !error && !unreadable;
 
   return (
     <div className={cn('bg-card border border-border rounded-xl', className)}>
@@ -110,6 +135,28 @@ export function AIExecutiveSummaryCard({
       <div className="max-h-[360px] overflow-y-auto px-4 py-3 scrollbar-thin">
         {busy ? (
           <SummarySkeleton />
+        ) : unreadable ? (
+          /* Not `AiSummaryErrorPanel`. Nothing is known about the summary, so
+             there is no envelope to render and no `code` to map -- and passing a
+             synthesised one would claim the service had classified a failure it
+             never saw. */
+          <div role="status" className="text-[11px] text-text-secondary">
+            <p className="text-[12px] font-medium text-foreground">
+              Couldn&apos;t load the summary
+            </p>
+            <p className="text-text-tertiary mt-1">
+              The request for this run&apos;s report did not come back. Nothing is
+              known about the summary itself.
+            </p>
+            {onRefetchGuide && (
+              <button
+                onClick={onRefetchGuide}
+                className="mt-2 px-2 py-1 rounded-md border border-border bg-card text-[11px] text-text-secondary hover:text-foreground hover:border-venom-yellow/30 transition-colors"
+              >
+                Try again
+              </button>
+            )}
+          </div>
         ) : error ? (
           <AiSummaryErrorPanel error={error} onRetry={onRetry} isRetrying={isRetrying} />
         ) : (

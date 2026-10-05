@@ -47,8 +47,16 @@ export function AnalysisInsightsSidebar({
   // the page returns a full-page spinner on loading and a not-found screen on a
   // missing job -- so every card's loading path was dead code.
   const { data: analysisMetadata } = useAnalysisMetadata(jobId);
-  const { data: enterpriseGuide, isLoading: guideLoading } =
-    useEnterpriseGuide(jobId);
+  // The error was destructured away entirely, so a failed guide request left the
+  // summary card claiming a summary was on its way. With `retry: false` on the
+  // query that claim survived for the rest of the page's life -- and the run was
+  // finished, so nothing would ever arrive to correct it.
+  const {
+    data: enterpriseGuide,
+    isLoading: guideLoading,
+    error: guideError,
+    refetch: refetchGuide,
+  } = useEnterpriseGuide(jobId);
   const { data: enginesResponse } = useEngines();
 
   const isLoading = externalLoading ?? !job;
@@ -62,6 +70,11 @@ export function AnalysisInsightsSidebar({
   // the one that produced the false footer: the summary had not been read yet,
   // rather than being absent or still being written. Both hooks settle without
   // retry, so `data === undefined` means "asked, not answered", not "no summary".
+  //
+  // `guideError` makes a fourth, and it is the only one we caused: the request
+  // did not come back. Passing it through is the whole difference between "the
+  // summary is coming" -- which for a finished run is a promise nothing will keep
+  // -- and "we could not check".
   const guidePending = !isLoading && guideLoading;
 
   // Retrying the summary in place. The sidebar did not previously have any way to
@@ -134,6 +147,8 @@ export function AnalysisInsightsSidebar({
             isLoading={isLoading}
             isRunning={running}
             guidePending={guidePending}
+            guideError={guideError}
+            onRefetchGuide={() => void refetchGuide()}
             onRetry={retrySummary}
             isRetrying={reEnrich.isPending}
           />

@@ -25,7 +25,12 @@ export function ProgressBar({
           className="h-full rounded-full transition-all duration-500 ease-out"
           style={{
             width: `${clamped}%`,
-            background: 'linear-gradient(90deg, #eab308, #f59e0b)',
+            // The brand pair, previously the literal gradient `#eab308 → #f59e0b`.
+            // Neither value was a project colour: `#eab308` is Tailwind's
+            // `yellow-500` and `#f59e0b` only matched by coincidence. Naming the
+            // tokens is what lets the two themes restyle this bar.
+            background:
+              'linear-gradient(90deg, var(--venom-yellow), var(--venom-amber))',
           }}
         />
       </div>

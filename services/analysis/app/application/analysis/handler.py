@@ -762,6 +762,7 @@ async def handle_analysis_failure(
     error_message: str,
     uow: UnitOfWork,
     producer: EventProducer,
+    engine_statuses: dict[str, str] | None = None,
 ) -> None:
     try:
         job = await uow.jobs.get_by_id(job_id)
@@ -769,12 +770,21 @@ async def handle_analysis_failure(
         job = None
 
     if job:
+        # Without engine_statuses the failed engines were lost: the pipeline had
+        # already set them to "failed" in memory, but nothing carried that map
+        # through to the row, so every engine still read "running" or "pending"
+        # on a job that had already halted.
+        #
+        # progress_pct is deliberately omitted: the bar should stay where the
+        # run actually got to, not snap back to 0. It used to reset to 0 here,
+        # so a job that failed at 90% rendered as "0% - failed" and looked like
+        # it had never done any work. The failure message names the stage.
         await uow.jobs.update_status(
             job_id,
             JobStatus.FAILED,
-            progress_pct=0,
             progress_message=f"Failed at stage: {stage}",
             error_message=error_message,
+            engine_statuses=engine_statuses,
         )
 
     try:

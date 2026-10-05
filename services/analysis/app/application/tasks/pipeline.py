@@ -337,15 +337,21 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
         except Exception:
             for eid in engine_ids:
                 cast(dict[str, str], state["engine_statuses"])[eid] = "failed"
+                state[f"_engine_end_{eid}"] = time.monotonic()
                 if job_id:
                     await _publish_engine_event(
                         job_id, eid, "failed", traceback.format_exc()
                     )
+            # Carry the failed statuses to the failure handler, which is what
+            # writes the row. Without this the run halts with every engine
+            # still reading "running"/"pending" in the API.
+            await _persist_engine_statuses(state)
             if job_id:
                 await _handle_failure_async(
                     job_id=job_id,
                     stage=stage_name,
                     error_message=traceback.format_exc(),
+                    engine_statuses=cast(dict[str, str], state["engine_statuses"]),
                 )
             raise
 
@@ -880,8 +886,15 @@ async def _stage_finalize(state: dict[str, object]) -> None:
     logger.info("pipeline_stage_complete", stage="finalize", job_id=str(job_id))
 
 
-async def _handle_failure_async(job_id: UUID, stage: str, error_message: str) -> None:
+async def _handle_failure_async(
+    job_id: UUID,
+    stage: str,
+    error_message: str,
+    engine_statuses: dict[str, str] | None = None,
+) -> None:
     async with UnitOfWork() as uow:
         producer = EventProducer()
-        await handle_analysis_failure(job_id, stage, error_message, uow, producer)
+        await handle_analysis_failure(
+            job_id, stage, error_message, uow, producer, engine_statuses
+        )
         await uow.commit()

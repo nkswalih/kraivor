@@ -32,9 +32,31 @@ class JobRepository(AbstractJobRepository):
         return self._to_dict(model) if model else None
 
     async def update_status(
-        self, job_id: UUID, status: str, progress_pct: int = 0, **kwargs: object
+        self,
+        job_id: UUID,
+        status: str,
+        progress_pct: int | None = None,
+        engine_statuses: dict[str, str] | None = None,
+        **kwargs: object,
     ) -> None:
-        values = {"status": status, "progress_pct": progress_pct, **kwargs}
+        """Update a job's status.
+
+        `progress_pct=None` and `engine_statuses=None` leave those columns
+        untouched. The old `progress_pct=0` default meant any caller that forgot
+        the argument silently reset progress, which is what made a failed job's
+        bar snap from 90% back to 0. Every current caller passes it explicitly,
+        so nothing depended on that default.
+
+        `engine_statuses` is an explicit parameter rather than another `**kwargs`
+        entry so that "leave it alone" is expressible. Passing it through kwargs
+        could not distinguish "not supplied" from "set to None".
+        """
+        values: dict[str, object] = {"status": status}
+        if progress_pct is not None:
+            values["progress_pct"] = progress_pct
+        if engine_statuses is not None:
+            values["engine_statuses"] = engine_statuses
+        values.update(kwargs)
         stmt = (
             update(AnalysisJobModel)
             .where(AnalysisJobModel.id == job_id)

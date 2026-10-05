@@ -17,8 +17,19 @@ class AbstractJobRepository(ABC):
 
     @abstractmethod
     async def update_status(
-        self, job_id: UUID, status: str, progress_pct: int = 0, **kwargs: object
-    ) -> None: ...
+        self,
+        job_id: UUID,
+        status: str,
+        progress_pct: int | None = None,
+        engine_statuses: dict[str, str] | None = None,
+        **kwargs: object,
+    ) -> None:
+        """Update a job's status.
+
+        `progress_pct=None` and `engine_statuses=None` leave those columns
+        untouched rather than resetting them.
+        """
+        ...
 
     @abstractmethod
     async def list_by_repo(

@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory
 
 from apps.chat.views.rooms import DMCreateView
-from apps.workspaces.models import Workspace
+from apps.workspaces.models import Workspace, WorkspaceMember
 
 from .factories import WorkspaceFactory, WorkspaceMemberFactory
 
@@ -28,6 +28,19 @@ def workspace() -> Workspace:
     WorkspaceMemberFactory(workspace=ws, role="owner")
     WorkspaceMemberFactory(workspace=ws)
     return ws
+
+
+@pytest.fixture
+def pair(workspace: Workspace) -> tuple[uuid.UUID, uuid.UUID]:
+    """The two user ids in `workspace`.
+
+    The fixture always creates two members and their relative order is not
+    guaranteed, so these are two distinct members rather than a named "caller" and
+    "target". That matters only for `it_does_not_depend_on_who_asks`, which runs
+    both orders itself.
+    """
+    members = list(WorkspaceMember.objects.filter(workspace=workspace))
+    return members[0].user_id, members[1].user_id
 
 
 def post_dm(

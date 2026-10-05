@@ -28,19 +28,6 @@ from .factories import DmRoomFactory, WorkspaceFactory, WorkspaceMemberFactory
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
-def pair(workspace):
-    """The two user ids in `workspace`.
-
-    The fixture always creates two members and their relative order is not
-    guaranteed, so these are two distinct members rather than a named "caller" and
-    "target". That matters only for `it_does_not_depend_on_who_asks`, which runs
-    both orders itself.
-    """
-    members = list(WorkspaceMember.objects.filter(workspace=workspace))
-    return members[0].user_id, members[1].user_id
-
-
 def participant_ids(room_id):
     return {
         str(user_id)

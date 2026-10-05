@@ -63,6 +63,60 @@ from app.workers.reliability.models import ReliabilityFinding
 
 logger = get_logger(__name__)
 
+# How much of a failure detail to keep on the job. The exception's own message is
+# usually a sentence; anything past this is a driver's diagnostic that names
+# internals without saying anything a person can act on.
+_MAX_FAILURE_DETAIL = 400
+
+# A traceback line that points at a source frame, e.g.
+#   File "/srv/app/core/pipeline.py", line 214, in run_pipeline
+_TRACEBACK_FRAME = 'File "'
+
+
+def describe_failure(stage: str, error_message: str | None) -> str:
+    """A failure message fit to store on the job and read back over the API.
+
+    `error_message` arrives from three callers, and the pipeline one passes
+    ``traceback.format_exc()``. The job row is served by ``GET /jobs/{id}``, so a
+    traceback in this column put absolute server paths, internal module names and
+    whatever the exception happened to embed -- a connection string, a URL with a
+    token in it -- in front of anyone who could read the job. The engine column
+    was already guarded for exactly this; the job column next to it was not.
+
+    A traceback also tells the person reading it very little. It ends in the
+    deepest internal frame, not the cause. What answers "why did this fail?" is
+    the stage it failed in and the exception's own message, which is all this
+    keeps.
+
+    The traceback is not lost. ``run_full_analysis`` logs it with
+    ``logger.exception("pipeline_aborted")`` before re-raising, so it reaches the
+    logs on every path that produced one.
+    """
+    summary = f"{stage} failed"
+    detail = _exception_detail(error_message)
+    return f"{summary}: {detail}" if detail else summary
+
+
+def _exception_detail(error_message: str | None) -> str:
+    """The part of a failure message worth serving, bounded and single-line."""
+    if not error_message:
+        return ""
+    lines = [line.strip() for line in error_message.splitlines() if line.strip()]
+
+    # A traceback is a run of `File "..."` frames with the `SomeError: detail`
+    # line after the last one. Everything up to that point is machinery. A
+    # message that is not a traceback has no frames and is used as it stands.
+    last_frame = max(
+        (i for i, line in enumerate(lines) if line.startswith(_TRACEBACK_FRAME)),
+        default=None,
+    )
+    if last_frame is not None:
+        tail = lines[last_frame + 1 :]
+        if tail:
+            lines = tail
+
+    return " ".join(lines)[:_MAX_FAILURE_DETAIL].strip()
+
 
 async def handle_start_analysis(
     cmd: StartAnalysisCommand, uow: UnitOfWork, producer: EventProducer | None = None
@@ -864,6 +918,13 @@ async def handle_analysis_failure(
     producer: EventProducer,
     engine_statuses: EngineStateMap | None = None,
 ) -> None:
+    # Reduced once, here, at the single point every failure path passes through.
+    # Both the row and the event get the same string, so the page and any
+    # notification built from it cannot disagree about what went wrong -- and a
+    # fourth caller cannot forget, which is the failure mode that left the engine
+    # column's guard one line short of this one.
+    described = describe_failure(stage, error_message)
+
     try:
         job = await uow.jobs.get_by_id(job_id)
     except Exception:
@@ -879,21 +940,33 @@ async def handle_analysis_failure(
         # run actually got to, not snap back to 0. It used to reset to 0 here,
         # so a job that failed at 90% rendered as "0% - failed" and looked like
         # it had never done any work. The failure message names the stage.
+        #
+        # completed_at is written here because the run did end, and that column
+        # means when the run ended. Only finalize wrote it before, so every failed
+        # job was a terminal state with no terminal instant -- which left the
+        # frontend unable to say how long a failed run had been going and unable
+        # to distinguish "failed just now" from "failed three weeks ago" without
+        # measuring against the current time.
         await uow.jobs.update_status(
             job_id,
             JobStatus.FAILED,
             progress_message=f"Failed at stage: {stage}",
-            error_message=error_message,
+            error_message=described,
+            completed_at=datetime.now(UTC).replace(tzinfo=None),
             engine_statuses=_coerce_engine_statuses(engine_statuses),
         )
 
+    # The event goes to subscribers, which render it into notifications. It gets
+    # the described form for the same reason the column does: a notification is
+    # shown to people who did not run the pipeline, and the traceback is both
+    # unreadable at that size and a disclosure of server paths.
     try:
         await asyncio.wait_for(
             producer.publish(
                 AnalysisFailed(
                     job_id=job_id,
                     repo_id=cast(UUID, job["repo_id"]) if job else UUID(int=0),
-                    error_message=error_message,
+                    error_message=described,
                     stage=stage,
                 )
             ),
@@ -902,6 +975,8 @@ async def handle_analysis_failure(
     except Exception:
         logger.warning("analysis_failed_publish_failed", job_id=str(job_id))
 
+    # The raw exception stays here. This is the one line that gets the traceback,
+    # and it is the reason the column and the event above can safely do without.
     logger.error(
         "analysis_failed", job_id=str(job_id), stage=stage, error=error_message
     )

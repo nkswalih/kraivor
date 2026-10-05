@@ -360,14 +360,22 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
                 cast(dict[str, str], state["engine_statuses"])[eid] = "failed"
                 _mark_engine_ended(state, eid, engine_error)
                 if job_id:
-                    await _publish_engine_event(
-                        job_id, eid, "failed", traceback.format_exc()
-                    )
+                    # The described form, not the traceback. This event reaches
+                    # subscribers that render it into notifications, and it was the
+                    # last place a full traceback still went out over the wire --
+                    # the row it was written to had already been guarded.
+                    await _publish_engine_event(job_id, eid, "failed", engine_error)
             # Carry the failed statuses to the failure handler, which is what
             # writes the row. Without this the run halts with every engine
             # still reading "running"/"pending" in the API.
             await _persist_engine_statuses(state)
             if job_id:
+                # The traceback is safe to pass here and nowhere else:
+                # `handle_analysis_failure` reduces it before it reaches the job
+                # row or the failure event. Passing `engine_error` instead would
+                # work too, but then a caller that forgot would leak silently --
+                # the whole reason the reduction lives in the handler is that this
+                # is the only choke point every failure path goes through.
                 await _handle_failure_async(
                     job_id=job_id,
                     stage=stage_name,

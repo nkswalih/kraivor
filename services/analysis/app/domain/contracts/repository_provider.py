@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
+from app.core.constants import EngineStateMap
 from app.domain.entities.finding import Finding
 from app.domain.entities.report import Report
 from app.domain.entities.score import Score
@@ -21,7 +22,7 @@ class AbstractJobRepository(ABC):
         job_id: UUID,
         status: str,
         progress_pct: int | None = None,
-        engine_statuses: dict[str, str] | None = None,
+        engine_statuses: EngineStateMap | None = None,
         **kwargs: object,
     ) -> None:
         """Update a job's status.

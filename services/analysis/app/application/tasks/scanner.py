@@ -16,7 +16,7 @@ from app.application.analysis.handler import (
     handle_stage_simulation,
     handle_start_analysis,
 )
-from app.core.constants import Category, Severity
+from app.core.constants import Category, EngineStateMap, Severity
 from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
 from app.domain.entities.finding import Finding
@@ -231,7 +231,7 @@ async def task_finalize(prev_result: dict[str, object]) -> dict[str, object]:
     language_breakdown = cast(
         list[dict[str, object]], prev_result.get("language_breakdown", [])
     )
-    engine_statuses = cast(dict[str, str] | None, prev_result.get("engine_statuses"))
+    engine_statuses = cast(EngineStateMap | None, prev_result.get("engine_statuses"))
     total_files = cast(int, prev_result.get("total_files", 0))
     total_lines = cast(int, prev_result.get("total_lines", 0))
     duration_seconds = cast(int, prev_result.get("duration_seconds", 0))

@@ -5,6 +5,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
 
+from app.core.constants import EngineStateMap
 from app.domain.contracts.repository_provider import AbstractJobRepository
 from app.infrastructure.db.models.analysis_job import AnalysisJobModel
 from app.infrastructure.db.models.file_analysis import FileAnalysisModel
@@ -36,7 +37,7 @@ class JobRepository(AbstractJobRepository):
         job_id: UUID,
         status: str,
         progress_pct: int | None = None,
-        engine_statuses: dict[str, str] | None = None,
+        engine_statuses: EngineStateMap | None = None,
         **kwargs: object,
     ) -> None:
         """Update a job's status.

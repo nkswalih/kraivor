@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class StartAnalysisRequest(BaseModel):
@@ -20,6 +20,28 @@ class EngineStatusEntry(BaseModel):
     error_code: str = ""
 
 
+class EngineState(BaseModel):
+    """Per-engine execution state for one job.
+
+    Rows written before per-engine timings existed hold a bare status string.
+    `mode="before"` upgrades those on read, so historical and in-flight jobs
+    serialise in the same shape as new ones and no data migration is needed for
+    a column that is already JSON.
+    """
+
+    status: str
+    started_at: datetime | None = None
+    ended_at: datetime | None = None
+    error: str = ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_legacy_string(cls, value: object) -> object:
+        if isinstance(value, str):
+            return {"status": value}
+        return value
+
+
 class JobStatusResponse(BaseModel):
     job_id: str
     repo_id: UUID
@@ -34,7 +56,7 @@ class JobStatusResponse(BaseModel):
     total_lines: int | None = None
     overall_score: int | None = None
     blocked_by: list[str] = []
-    engine_statuses: dict[str, str] = {}
+    engine_statuses: dict[str, EngineState] = {}
     error_message: str | None = None
     created_at: datetime
     started_at: datetime | None = None

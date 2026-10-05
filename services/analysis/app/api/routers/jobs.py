@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.dependencies.services import get_storage, get_uow
 from app.api.schemas.jobs import (
+    EngineState,
     JobListResponse,
     JobStatisticsResponse,
     JobStatusResponse,
@@ -220,7 +221,9 @@ def _job_to_response(job: dict[str, object]) -> JobStatusResponse:
         total_lines=cast(int | None, job.get("total_lines")),
         overall_score=cast(int | None, job.get("overall_score")),
         blocked_by=cast(list[str], job.get("blocked_by") or []),
-        engine_statuses=cast(dict[str, str], job.get("engine_statuses") or {}),
+        # Not cast to dict[str, str]: the column holds the per-engine object
+        # shape now, and EngineState upgrades any legacy string rows on read.
+        engine_statuses=cast(dict[str, EngineState], job.get("engine_statuses") or {}),
         error_message=cast(str | None, job.get("error_message")),
         created_at=cast(datetime, job["created_at"]),
         started_at=cast(datetime | None, job.get("started_at")),

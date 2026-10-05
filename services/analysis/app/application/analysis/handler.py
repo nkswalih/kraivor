@@ -20,7 +20,13 @@ from app.application.analysis.queries import (
     ListJobsQuery,
 )
 from app.core.config import get_settings
-from app.core.constants import Category, JobStatus, Severity
+from app.core.constants import (
+    Category,
+    EngineStateMap,
+    EngineStatus,
+    JobStatus,
+    Severity,
+)
 from app.core.exceptions import NotFoundError
 from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
@@ -252,7 +258,7 @@ async def _push_progress(
     status: str,
     pct: int,
     message: str,
-    engine_statuses: dict[str, str] | None = None,
+    engine_statuses: EngineStateMap | None = None,
 ) -> None:
     from sqlalchemy import update
 
@@ -276,7 +282,7 @@ async def _push_progress(
         await session.commit()
 
 
-async def _push_engine_statuses(job_id: UUID, engine_statuses: dict[str, str]) -> None:
+async def _push_engine_statuses(job_id: UUID, engine_statuses: EngineStateMap) -> None:
     """Persist engine status transitions on their own.
 
     `_push_progress` rewrites status/progress_pct/progress_message too, and
@@ -297,6 +303,34 @@ async def _push_engine_statuses(job_id: UUID, engine_statuses: dict[str, str]) -
         )
         await session.execute(stmt)
         await session.commit()
+
+
+def _coerce_engine_statuses(statuses: object) -> EngineStateMap:
+    """Normalise any engine-status shape into the wire shape.
+
+    The pipeline builds this shape. The scorer's `display_statuses` is a plain
+    string map, and rows written before per-engine timings existed hold strings
+    too, so upgrade rather than writing a second shape into the same column.
+    """
+    if not isinstance(statuses, dict):
+        return {}
+    coerced: EngineStateMap = {}
+    for engine_id, value in statuses.items():
+        if isinstance(value, dict):
+            coerced[str(engine_id)] = {
+                "status": str(value.get("status", EngineStatus.PENDING)),
+                "started_at": value.get("started_at"),
+                "ended_at": value.get("ended_at"),
+                "error": str(value.get("error", "")),
+            }
+        else:
+            coerced[str(engine_id)] = {
+                "status": str(value),
+                "started_at": None,
+                "ended_at": None,
+                "error": "",
+            }
+    return coerced
 
 
 async def handle_stage_parse(
@@ -662,7 +696,7 @@ async def handle_stage_finalize(
     total_files: int,
     total_lines: int,
     duration_seconds: int,
-    engine_statuses: dict[str, str] | None = None,
+    engine_statuses: EngineStateMap | None = None,
 ) -> Report:
     get_settings()
 
@@ -729,7 +763,9 @@ async def handle_stage_finalize(
         # vanished rather than showing as completed. A scoring view is not a
         # record of which engines ran.
         engine_statuses=(
-            engine_statuses if engine_statuses is not None else score.engine_statuses
+            _coerce_engine_statuses(engine_statuses)
+            if engine_statuses is not None
+            else _coerce_engine_statuses(score.engine_statuses)
         ),
         performance_score=score.performance,
         security_score=score.security,
@@ -774,7 +810,7 @@ async def handle_analysis_failure(
     error_message: str,
     uow: UnitOfWork,
     producer: EventProducer,
-    engine_statuses: dict[str, str] | None = None,
+    engine_statuses: EngineStateMap | None = None,
 ) -> None:
     try:
         job = await uow.jobs.get_by_id(job_id)
@@ -796,7 +832,7 @@ async def handle_analysis_failure(
             JobStatus.FAILED,
             progress_message=f"Failed at stage: {stage}",
             error_message=error_message,
-            engine_statuses=engine_statuses,
+            engine_statuses=_coerce_engine_statuses(engine_statuses),
         )
 
     try:

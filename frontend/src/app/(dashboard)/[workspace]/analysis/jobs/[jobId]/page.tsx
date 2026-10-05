@@ -23,6 +23,7 @@ import {
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/utils';
+import { readEngineStatus } from '@/lib/analysis/engine-status';
 import {
   useJob,
   useReport,
@@ -241,7 +242,7 @@ export default function JobDetailPage() {
                     <EngineCard
                       key={k}
                       engine={k}
-                      status={job.engine_statuses[k]}
+                      status={readEngineStatus(job.engine_statuses, k)}
                       score={report?.[k === 'performance' ? 'performance_score' : `${k}_score` as keyof typeof report] as number | null | undefined}
                     />
                   ))}
@@ -273,7 +274,7 @@ export default function JobDetailPage() {
                     <EngineCard
                       key={k}
                       engine={k}
-                      status={job.engine_statuses[k]}
+                      status={readEngineStatus(job.engine_statuses, k)}
                       score={undefined}
                     />
                   ))}
@@ -308,7 +309,7 @@ export default function JobDetailPage() {
                       <EngineCard
                         key={k}
                         engine={k}
-                        status={job.engine_statuses[k]}
+                        status={readEngineStatus(job.engine_statuses, k)}
                         score={engineScore}
                       />
                     );

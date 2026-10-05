@@ -8,7 +8,7 @@ marked as failed immediately and the pipeline halts.
 import asyncio
 import time
 import traceback
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import cast
 from uuid import UUID
 
@@ -36,6 +36,7 @@ from app.application.analysis.handler import (
     handle_stage_simulation,
     handle_start_analysis,
 )
+from app.core.constants import EngineStateMap
 from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
 from app.domain.entities.finding import Finding
@@ -175,7 +176,6 @@ async def _push_stage_progress(state: dict[str, object], stage_name: str) -> Non
     job_id = cast(UUID, state["job_id"])
     pct = _STAGE_PROGRESS.get(stage_name, 50)
     status = _STAGE_STATUS.get(stage_name, stage_name)
-    engine_statuses = cast(dict[str, str] | None, state.get("engine_statuses"))
     try:
         await asyncio.wait_for(
             _push_progress(
@@ -183,7 +183,7 @@ async def _push_stage_progress(state: dict[str, object], stage_name: str) -> Non
                 status,
                 pct,
                 f"Running {stage_name}...",
-                engine_statuses=engine_statuses,
+                engine_statuses=_build_engine_payload(state),
             ),
             timeout=10,
         )
@@ -201,6 +201,53 @@ async def _push_stage_progress(state: dict[str, object], stage_name: str) -> Non
         logger.warning("publish_progress_failed", stage=stage_name)
 
 
+def _utc_now_iso() -> str:
+    return datetime.now(UTC).isoformat()
+
+
+def _describe_engine_error(stage_name: str, exc: BaseException) -> str:
+    """Short, user-safe description of why an engine failed.
+
+    The full traceback stays in the logs. It carries absolute source paths and
+    internal frames, and it is served back over the API to anyone who can read
+    the job, so it is not something to put in a response column.
+    """
+    detail = " ".join(str(exc).split())[:200]
+    summary = f"{stage_name}: {type(exc).__name__}"
+    return f"{summary} - {detail}" if detail else summary
+
+
+def _mark_engine_started(state: dict[str, object], engine_id: str) -> None:
+    meta = cast(dict[str, dict[str, object]], state.setdefault("_engine_meta", {}))
+    meta.setdefault(engine_id, {})["started_at"] = _utc_now_iso()
+
+
+def _mark_engine_ended(
+    state: dict[str, object], engine_id: str, error: str = ""
+) -> None:
+    meta = cast(dict[str, dict[str, object]], state.setdefault("_engine_meta", {}))
+    entry = meta.setdefault(engine_id, {})
+    entry["ended_at"] = _utc_now_iso()
+    if error:
+        entry["error"] = error
+
+
+def _build_engine_payload(state: dict[str, object]) -> EngineStateMap:
+    """Assemble the wire shape from the pipeline's status and timing maps."""
+    statuses = cast(dict[str, str], state.get("engine_statuses") or {})
+    meta = cast(dict[str, dict[str, object]], state.get("_engine_meta") or {})
+    payload: EngineStateMap = {}
+    for engine_id, status in statuses.items():
+        entry = meta.get(engine_id, {})
+        payload[engine_id] = {
+            "status": status,
+            "started_at": entry.get("started_at"),
+            "ended_at": entry.get("ended_at"),
+            "error": entry.get("error", ""),
+        }
+    return payload
+
+
 async def _persist_engine_statuses(state: dict[str, object]) -> None:
     """Write engine_statuses to the job row immediately.
 
@@ -214,10 +261,9 @@ async def _persist_engine_statuses(state: dict[str, object]) -> None:
     if not state.get("job_id"):
         return
     job_id = cast(UUID, state["job_id"])
-    engine_statuses = cast(dict[str, str], state.get("engine_statuses") or {})
     try:
         await asyncio.wait_for(
-            _push_engine_statuses(job_id, engine_statuses), timeout=10
+            _push_engine_statuses(job_id, _build_engine_payload(state)), timeout=10
         )
     except Exception:
         logger.warning("persist_engine_statuses_failed")
@@ -291,6 +337,7 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
     """
     state["_pipeline_start"] = time.monotonic()
     state["engine_statuses"] = dict.fromkeys(ALL_ENGINES, "pending")
+    state["_engine_meta"] = {}
     for stage_name, stage_fn, stage_args in (
         ("start", _stage_start, (cmd,)),
         ("clone", _stage_clone, ()),
@@ -317,7 +364,7 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
         job_id = cast(UUID, state.get("job_id"))
         for eid in engine_ids:
             cast(dict[str, str], state["engine_statuses"])[eid] = "running"
-            state[f"_engine_start_{eid}"] = time.monotonic()
+            _mark_engine_started(state, eid)
             if job_id:
                 await _publish_engine_event(job_id, eid, "running")
         await _push_stage_progress(state, stage_name)
@@ -328,16 +375,17 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
                 await stage_fn(state)  # type: ignore[call-arg]
             for eid in engine_ids:
                 cast(dict[str, str], state["engine_statuses"])[eid] = "completed"
-                state[f"_engine_end_{eid}"] = time.monotonic()
+                _mark_engine_ended(state, eid)
                 if job_id:
                     await _publish_engine_event(job_id, eid, "completed")
             # Persist now rather than leaving it for the next stage's progress
             # write. See _persist_engine_statuses.
             await _persist_engine_statuses(state)
-        except Exception:
+        except Exception as exc:
+            engine_error = _describe_engine_error(stage_name, exc)
             for eid in engine_ids:
                 cast(dict[str, str], state["engine_statuses"])[eid] = "failed"
-                state[f"_engine_end_{eid}"] = time.monotonic()
+                _mark_engine_ended(state, eid, engine_error)
                 if job_id:
                     await _publish_engine_event(
                         job_id, eid, "failed", traceback.format_exc()
@@ -351,7 +399,7 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
                     job_id=job_id,
                     stage=stage_name,
                     error_message=traceback.format_exc(),
-                    engine_statuses=cast(dict[str, str], state["engine_statuses"]),
+                    engine_statuses=_build_engine_payload(state),
                 )
             raise
 
@@ -861,7 +909,7 @@ async def _stage_finalize(state: dict[str, object]) -> None:
     cmd = ProcessStageCommand(job_id=job_id, stage="finalize")
     # Authoritative engine statuses. See handle_stage_finalize for why the
     # scorer's map cannot be used here.
-    engine_statuses = cast(dict[str, str], state.get("engine_statuses") or {})
+    engine_statuses = _build_engine_payload(state)
 
     async with UnitOfWork() as uow:
         job = await uow.jobs.get_by_id(cmd.job_id)
@@ -894,7 +942,7 @@ async def _handle_failure_async(
     job_id: UUID,
     stage: str,
     error_message: str,
-    engine_statuses: dict[str, str] | None = None,
+    engine_statuses: EngineStateMap | None = None,
 ) -> None:
     async with UnitOfWork() as uow:
         producer = EventProducer()

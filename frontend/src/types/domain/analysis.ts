@@ -73,6 +73,24 @@ export enum Tiers {
 
 // ─── Analysis Job ───────────────────────────────────────
 
+/** Per-engine execution state for one job. */
+export interface EngineState {
+  status: string;
+  started_at: string | null;
+  ended_at: string | null;
+  error: string;
+}
+
+/**
+ * Engine statuses keyed by engine id.
+ *
+ * The service serves the `EngineState` object shape and upgrades older rows
+ * server-side, but the bare-string shape stays assignable here so the UI does
+ * not depend on when a given job ran. Read it through
+ * `normalizeEngineState` rather than indexing it directly.
+ */
+export type EngineStatusMap = Record<string, EngineState | string>;
+
 export interface AnalysisJob {
   job_id: string;
   repo_id: string;
@@ -87,7 +105,7 @@ export interface AnalysisJob {
   total_lines: number | null;
   overall_score: number | null;
   blocked_by: string[];
-  engine_statuses: Record<string, string>;
+  engine_statuses: EngineStatusMap;
   error_message: string | null;
   created_at: string;
   started_at: string | null;

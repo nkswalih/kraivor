@@ -1,4 +1,5 @@
 import { getLanguageColor } from '@/lib/analysis/language-colors';
+import { readEngineDuration, readEngineError, readEngineStatus } from '@/lib/analysis/engine-status';
 import type {
   AnalysisInsights,
   AnalysisJob,
@@ -69,9 +70,7 @@ export function analysisInsightsBuilder(
   );
 
   const engineStatus = ENGINE_KEYS.map((key) => {
-    const rawStatus = job?.engine_statuses?.[key];
-    const status = parseEngineStatus(rawStatus);
-    // TODO: extract per-engine duration from API when available
+    const status = parseEngineStatus(readEngineStatus(job?.engine_statuses, key));
     let score: number | null = null;
     if (key === 'performance') score = report?.performance_score ?? null;
     if (key === 'security') score = report?.security_score ?? null;
@@ -83,9 +82,11 @@ export function analysisInsightsBuilder(
       name: ENGINE_LABELS[key] ?? key,
       key,
       status,
-      duration: null,
+      // Real timing now that the service records each engine's window. Was a
+      // hardcoded null with a TODO waiting on exactly this.
+      duration: readEngineDuration(job?.engine_statuses, key),
       score: status === 'completed' ? score : null,
-      error: status === 'failed' ? `${key} engine encountered an error` : null,
+      error: readEngineError(job?.engine_statuses, key),
     };
   });
 

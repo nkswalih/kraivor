@@ -59,6 +59,16 @@ class EngineStatus(StrEnum):
 # Engines whose failure blocks the overall score from being computed
 CORE_ENGINES: set[str] = {"security", "maintainability"}
 
+# Per-engine execution state, as persisted in analysis_jobs.engine_statuses and
+# served by GET /jobs/{job_id}. One entry per engine:
+#   {"status": EngineStatus, "started_at": ISO-8601 | None,
+#    "ended_at": ISO-8601 | None, "error": str}
+#
+# This column is JSON, so widening it from a bare status string needed no
+# migration. Rows written before timings existed still hold the string shape;
+# EngineState in api/schemas/jobs.py upgrades those on read.
+EngineStateMap = dict[str, dict[str, object]]
+
 
 class FindingStatus(StrEnum):
     ACTIVE = "active"

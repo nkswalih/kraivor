@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus, Clock, Cpu, Files } from 'lucide-react';
 import { ScoreGauge } from '@/components/analysis/score-gauge';
+import { countEngines } from '@/lib/analysis/engine-status';
 import type { Report, ScoreHistoryEntry, AnalysisJob } from '@/types/domain/analysis';
 
 function formatDuration(seconds: number | null | undefined): string {
@@ -48,9 +49,12 @@ export function HeroCard({
   const scoreChange = sorted && sorted.length >= 2 ? sorted[sorted.length - 1].overall_score - sorted[0].overall_score : null;
 
   const duration = report?.duration_seconds ?? null;
-  const enginesCompleted = Object.values(job.engine_statuses ?? {}).filter(s => s === 'completed').length;
-  const totalEngines = Object.keys(job.engine_statuses ?? {}).length || 5;
   const filesScanned = report?.total_files ?? job.total_files;
+  const { completed: enginesCompleted, total: reportedEngines } = countEngines(job.engine_statuses);
+  // Jobs analysed before dead_code/error_detection were reported carry only 5
+  // engines. Say what was actually counted rather than padding the denominator
+  // to match a newer run.
+  const totalEngines = reportedEngines || 5;
 
   return (
     <div className="bg-card border border-border rounded-xl p-6 grid grid-cols-1 md:grid-cols-[auto_1fr_auto] gap-6 items-center animate-fade-up">

@@ -262,7 +262,6 @@ async def handle_stage_clone(
         repo_path = repo_url.removeprefix("local://")
         languages = await fetcher.detect_languages(repo_path)
         files = await fetcher.get_source_files(repo_path)
-        loc = await fetcher.count_loc(repo_path)
         logger.info("local_repo_scan", path=repo_path, files=len(files))
     else:
         repo_path = await fetcher.clone(
@@ -273,22 +272,29 @@ async def handle_stage_clone(
         )
         languages = await fetcher.detect_languages(repo_path)
         files = await fetcher.get_source_files(repo_path)
-        loc = await fetcher.count_loc(repo_path)
 
-    language_lines: dict[str, int] = {}
-    for f in files:
-        lang = f.get("language", "unknown") or "unknown"
-        language_lines[lang] = language_lines.get(lang, 0) + (
-            f.get("lines_count", 0) or 0
-        )
-    total_lang_lines = sum(language_lines.values()) or 1
-    language_breakdown = sorted(
-        [
-            {"name": lang, "percentage": round(count / total_lang_lines * 100, 1)}
-            for lang, count in language_lines.items()
-        ],
-        key=lambda x: -x["percentage"],
-    )
+    # One walk answers both numbers. `total_lines` used to come from `count_loc`
+    # (every non-excluded file) while the breakdown was summed over
+    # `get_source_files` (only the files an entry maps, minus anything over the
+    # size cap), so the shares added up over a denominator that was a fraction
+    # of the LINES figure printed beside them -- and languages the table did not
+    # know at all, `.toml`, `.html`, `.css`, `.tf`, `.ini`, extensionless files,
+    # were in the denominator but in no bucket.
+    language_lines = await fetcher.language_line_counts(repo_path)
+    loc = sum(language_lines.values())
+    total_lang_lines = loc or 1
+    # Two decimals rather than one: a share that rounds to 0.0 at one decimal
+    # is a real share, not an absence, and "0%" for a language the repository
+    # demonstrably contains is the wrong answer. The renderer turns a
+    # non-zero share below 0.1 into "<0.1%".
+    _shares: list[tuple[str, float]] = [
+        (lang, count / total_lang_lines * 100)
+        for lang, count in language_lines.items()
+    ]
+    language_breakdown = [
+        {"name": lang, "percentage": round(share, 2)}
+        for lang, share in sorted(_shares, key=lambda item: (-item[1], item[0]))
+    ]
 
     from app.infrastructure.detection.detector import FrameworkDetector
 

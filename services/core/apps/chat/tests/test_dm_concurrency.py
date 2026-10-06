@@ -245,11 +245,17 @@ class TestTheRaceItself:
 
         barrier = threading.Barrier(count)
         results: list = []
+        failures: list[Exception] = []
         collect = threading.Lock()
 
         def run(index: int) -> None:
             barrier.wait()
-            outcome = ask(index)
+            try:
+                outcome = ask(index)
+            except Exception as exc:
+                with collect:
+                    failures.append(exc)
+                return
             with collect:
                 results.append(outcome)
 
@@ -258,6 +264,13 @@ class TestTheRaceItself:
             thread.start()
         for thread in threads:
             thread.join()
+
+        # A thread that dies takes its result with it, so the caller would
+        # otherwise assert `[] == [200, 200]` and report the shape of the
+        # absence instead of the error that caused it. Nothing changes for a
+        # test whose threads all succeed -- no exception, no re-raise.
+        if failures:
+            raise failures[0]
         return results
 
     @staticmethod
@@ -371,10 +384,15 @@ class TestTheLockDoesNotStarve:
 
         def ask(_index):
             with transaction.atomic():
-                return self._ask(
+                return TestTheRaceItself._ask(
                     api_factory, dm_view, workspace, caller.user_id, target.user_id
                 )
 
+        # Both helpers live on `TestTheRaceItself`, and both are reached for the
+        # same way. Written as `self._ask` this raised AttributeError in both
+        # threads, left `results` empty, and failed as `[] == [200, 200]` -- but
+        # only on Postgres, because `@requires_postgres` skips this class on the
+        # SQLite suite this file normally runs under. CI was the first run.
         responses = TestTheRaceItself._race(2, ask)
 
         assert sorted(r.status_code for r in responses) == [200, 200]

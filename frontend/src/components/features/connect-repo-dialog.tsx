@@ -262,13 +262,58 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
     popupRef.current = popup;
     setAwaitingPopup(true);
 
+    const finishPopup = () => {
+      clearInterval(pollIntervalRef.current);
+      setAwaitingPopup(false);
+      refetchInstallations();
+      refetchRepos();
+      queryClient.invalidateQueries({ queryKey: ['repos', workspaceId] });
+    };
+
+    // GitHub hands the popup back to this origin, but `window.opener` does not
+    // reliably survive that round trip. Without it `/oauth/success` skips its
+    // `postMessage` + `window.close()` and redirects into the workspace instead,
+    // so the window is left open forever -- nothing else in the app can close it.
+    // This dialog still holds the handle, so it watches for the return trip and
+    // closes the window itself.
+    //
+    // Every branch below is inert until `leftOrigin` is set, which happens only
+    // once the popup has been readable on another origin (or threw, which is what
+    // github.com does). That keeps `about:blank` and any same-origin hop on the
+    // way *out* from ever closing the window early.
+    let leftOrigin = false;
+
+    const returnedToApp = (): boolean => {
+      let href: string;
+      try {
+        href = popup.location.href;
+      } catch {
+        leftOrigin = true;
+        return false;
+      }
+      if (!href || href.startsWith('about:')) return false;
+      if (!href.startsWith(window.location.origin)) {
+        leftOrigin = true;
+        return false;
+      }
+      if (!leftOrigin) return false;
+
+      const path = new URL(href).pathname;
+      // Still our own handoff: the backend callback is mid-request, or
+      // `/oauth/success` is about to postMessage and close itself.
+      if (path.startsWith('/api/')) return false;
+      if (path === '/oauth/success') return false;
+      return true;
+    };
+
     pollIntervalRef.current = setInterval(() => {
       if (popup.closed) {
-        clearInterval(pollIntervalRef.current);
-        setAwaitingPopup(false);
-        refetchInstallations();
-        refetchRepos();
-        queryClient.invalidateQueries({ queryKey: ['repos', workspaceId] });
+        finishPopup();
+        return;
+      }
+      if (returnedToApp()) {
+        popup.close();
+        finishPopup();
       }
     }, 1000);
   };

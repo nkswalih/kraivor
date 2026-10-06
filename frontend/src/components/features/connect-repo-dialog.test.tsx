@@ -286,4 +286,58 @@ describe('GitHub App install popup', () => {
     await waitFor(() => expect(popup.location.href).toBe(CONFIGURE_URL));
     expect(installApp).toHaveBeenCalledWith(workspaceId, undefined);
   });
+
+  // ── The return trip ────────────────────────────────────────────────────────
+  //
+  // GitHub hands the popup back to this origin, but `window.opener` does not
+  // always survive that round trip. `/oauth/success` then skips its
+  // `postMessage` + `window.close()` and redirects into the workspace instead,
+  // so the window is left open forever -- nothing else in the app could close it.
+  // The dialog still holds the handle, so it watches for the return and closes
+  // the window itself.
+
+  it('closes the popup itself once it returns to the app without an opener', async () => {
+    installApp.mockResolvedValue({ installation_url: INSTALL_URL, configure_url: null });
+    const popup = makePopup();
+    vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window);
+
+    fireEvent.click(await showSetupScreen());
+    await screen.findAllByText(waitingText);
+
+    // Still on GitHub -- the poll must leave it alone through a whole tick.
+    popup.location.href = INSTALL_URL;
+    await new Promise(r => setTimeout(r, 1200));
+    expect(popup.close).not.toHaveBeenCalled();
+
+    // Back on our origin, but `/oauth/success` took its no-opener redirect branch
+    // instead of posting and closing, so this is the branch that used to hang.
+    popup.location.href = `${window.location.origin}/${workspaceId}/repositories`;
+    await waitFor(() => expect(popup.close).toHaveBeenCalled(), { timeout: 2500 });
+
+    // Exactly the cleanup a window the user closed by hand already got.
+    expect(screen.queryAllByText(waitingText)).toHaveLength(0);
+    expect(listInstallations.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(listGithubRepos.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('leaves the popup alone while GitHub or our own callback still has it', async () => {
+    installApp.mockResolvedValue({ installation_url: INSTALL_URL, configure_url: null });
+    const popup = makePopup();
+    vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window);
+
+    fireEvent.click(await showSetupScreen());
+    await screen.findAllByText(waitingText);
+
+    // Our backend is mid-request -- closing now would abort the installation.
+    popup.location.href = `${window.location.origin}/api/github-app/callback/?installation_id=1`;
+    await new Promise(r => setTimeout(r, 1200));
+    expect(popup.close).not.toHaveBeenCalled();
+
+    // `/oauth/success` posts to the opener and closes itself when it can, so the
+    // dialog must not race it. Only once it leaves for the workspace may we close.
+    popup.location.href = `${window.location.origin}/oauth/success?github_app_installed=1`;
+    await new Promise(r => setTimeout(r, 1200));
+    expect(popup.close).not.toHaveBeenCalled();
+    expect((await screen.findAllByText(waitingText)).length).toBeGreaterThan(0);
+  });
 });

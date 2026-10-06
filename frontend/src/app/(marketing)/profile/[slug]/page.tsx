@@ -6,7 +6,7 @@ import { useProfile, useFollowers, useFollowing } from '@/lib/hooks/use-profiles
 import { ProfileHeader } from '@/components/profiles/profile-header';
 import { UserDiscussionList } from '@/components/profiles/user-discussions-list';
 import { UserCommentList } from '@/components/profiles/user-comments-list';
-import { Avatar } from '@/components/profiles/avatar';
+import { UserRow } from '@/components/users/user-row';
 import { Skeleton } from '@/components/ui/shadcn';
 import { formatRelativeTime } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -101,27 +101,20 @@ export default function UserProfilePage() {
               </div>
             ) : (
               followers.map(f => (
-                <a
+                <UserRow
                   key={f.id}
+                  variant="detail"
                   href={`/profile/${f.username}`}
-                  className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors"
-                >
-                  <Avatar
-                    src={f.avatar_url}
-                    fallbackSrc={f.user_avatar_url}
-                    name={f.display_name}
-                    size="md"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-foreground truncate">
-                      {f.display_name}
-                    </p>
-                    <p className="text-[12px] text-muted-foreground truncate">@{f.username}</p>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground shrink-0">
-                    Followed {formatRelativeTime(f.followed_at)}
-                  </p>
-                </a>
+                  name={f.display_name}
+                  username={f.username}
+                  avatarUrl={f.avatar_url}
+                  fallbackAvatarUrl={f.user_avatar_url}
+                  trailing={
+                    <span className="text-[11px] text-muted-foreground">
+                      Followed {formatRelativeTime(f.followed_at)}
+                    </span>
+                  }
+                />
               ))
             )}
           </div>
@@ -141,27 +134,20 @@ export default function UserProfilePage() {
               </div>
             ) : (
               following.map(f => (
-                <a
+                <UserRow
                   key={f.id}
+                  variant="detail"
                   href={`/profile/${f.username}`}
-                  className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors"
-                >
-                  <Avatar
-                    src={f.avatar_url}
-                    fallbackSrc={f.user_avatar_url}
-                    name={f.display_name}
-                    size="md"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-foreground truncate">
-                      {f.display_name}
-                    </p>
-                    <p className="text-[12px] text-muted-foreground truncate">@{f.username}</p>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground shrink-0">
-                    Followed {formatRelativeTime(f.followed_at)}
-                  </p>
-                </a>
+                  name={f.display_name}
+                  username={f.username}
+                  avatarUrl={f.avatar_url}
+                  fallbackAvatarUrl={f.user_avatar_url}
+                  trailing={
+                    <span className="text-[11px] text-muted-foreground">
+                      Followed {formatRelativeTime(f.followed_at)}
+                    </span>
+                  }
+                />
               ))
             )}
           </div>

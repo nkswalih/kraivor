@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import type { AiSummaryCard } from '@/types/domain/analysis';
-import { BotMessageSquare } from 'lucide-react';
+import { BotMessageSquare, Sparkles } from 'lucide-react';
 import { MarkdownRenderer } from '@/components/ui/markdown/markdown-renderer';
 import { AiSummaryErrorPanel } from '@/components/analysis/ai-summary/AiSummaryErrorPanel';
 
@@ -71,10 +71,13 @@ export function AIExecutiveSummaryCard({
   /**
    * Ask the service to generate the summary again.
    *
-   * Optional, and passed straight through to the error panel, which is what
-   * decides whether to offer it at all. A card with no `onRetry` still shows the
-   * reason -- the reason is worth showing to someone who cannot act on it -- it
-   * just shows no button.
+   * Optional, and offered in the two places where it could work: a recorded
+   * failure, via the error panel, and an absent summary, via this card's own
+   * empty state. The error panel still decides for itself whether a retry is
+   * worth offering -- an `auth_failed` is not.
+   *
+   * A card with no `onRetry` still shows the reason -- the reason is worth
+   * showing to someone who cannot act on it -- it just shows no button.
    */
   onRetry?: () => void;
   isRetrying?: boolean;
@@ -103,18 +106,18 @@ export function AIExecutiveSummaryCard({
   // caller handing one over.
   const error = !isAiGenerated && !busy && !unreadable ? (data.error ?? null) : null;
 
-  // While the run is going there is no summary and none is expected, so the
-  // "Preview" badge would be labelling a card with nothing in it, and the
-  // footer said the summary "will appear after analysis completes" on a job
-  // where nothing is complete. Both claims are false until the run ends -- and
-  // false for an unreadable guide as well, which is a third thing entirely.
-  const showPreviewBadge = !isAiGenerated && !busy && !error && !unreadable;
-  // Suppressed whenever a summary is still expected, suppressed for a recorded
-  // failure, and suppressed when we could not read the guide at all --
-  // "will appear after analysis completes" on a run that has completed and
-  // failed to produce one, or on a request that failed, is the exact sentence
-  // this component exists to stop saying.
-  const showFooter = !isAiGenerated && !busy && !error && !unreadable;
+  // The run is finished, the guide has been read, and there is neither a
+  // summary nor a reason for its absence -- the stage simply never produced
+  // one. `insights-builder` hands over `summary: ''` for that, which used to
+  // fall through to `MarkdownRenderer` and render an empty body under a
+  // "Preview" badge and a footer promising the summary "will appear after
+  // analysis completes" -- on a job that had already completed. Nothing to
+  // read, with nothing offered to fix it, which is the worst possible shape
+  // for a card a reader opens expecting a summary.
+  //
+  // It is also the one absence here where something can actually be done:
+  // `onRetry` re-runs enrichment, which is the request that would produce one.
+  const missing = !isAiGenerated && !busy && !error && !unreadable;
 
   return (
     <div className={cn('bg-card border border-border rounded-xl', className)}>
@@ -124,11 +127,10 @@ export function AIExecutiveSummaryCard({
           <BotMessageSquare className="w-3.5 h-3.5 text-venom-yellow shrink-0" />
           AI Executive Summary
         </h3>
-        {showPreviewBadge && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-venom-yellow/10 text-venom-yellow font-medium uppercase tracking-wider shrink-0">
-            Preview
-          </span>
-        )}
+        {/* No badge. "Preview" only ever rendered alongside the empty body
+            below, where it labelled a card with nothing in it -- a header
+            promising a preview of an absent summary is the first thing that
+            read as broken. */}
       </div>
 
       {/* Body with independent scroll */}
@@ -159,16 +161,38 @@ export function AIExecutiveSummaryCard({
           </div>
         ) : error ? (
           <AiSummaryErrorPanel error={error} onRetry={onRetry} isRetrying={isRetrying} />
+        ) : missing ? (
+          /* No summary and no recorded reason: the stage never produced one.
+             Said rather than rendered as an empty box, and offered the one
+             action that could change it -- the guide page's section has had
+             this state from the start, and this card was the surface that
+             lacked it. */
+          <div role="status" className="text-[11px] text-text-secondary">
+            <p className="text-[12px] font-medium text-foreground">
+              No AI summary for this run
+            </p>
+            <p className="text-text-tertiary mt-1">
+              This run finished without producing one. Everything else in this
+              report is unaffected.
+            </p>
+            {onRetry && (
+              <button
+                onClick={onRetry}
+                disabled={isRetrying}
+                className="mt-2 flex items-center gap-1.5 px-2 py-1 rounded-md border border-border bg-card text-[11px] text-text-secondary hover:text-foreground hover:border-venom-yellow/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Sparkles
+                  aria-hidden="true"
+                  className={cn('w-3 h-3', isRetrying && 'animate-spin motion-reduce:animate-none')}
+                />
+                {isRetrying ? 'Generating...' : 'Generate AI summary'}
+              </button>
+            )}
+          </div>
         ) : (
           <MarkdownRenderer content={summary} compact />
         )}
       </div>
-
-      {showFooter && (
-        <p className="px-4 pb-3 pt-0 text-[10px] text-text-tertiary italic border-t border-border mt-0">
-          Static preview — AI summary will appear after analysis completes.
-        </p>
-      )}
     </div>
   );
 }

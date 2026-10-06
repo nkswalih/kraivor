@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { AIExecutiveSummaryCard } from './AIExecutiveSummaryCard';
 import { PriorityRecommendationCard } from './PriorityRecommendationCard';
 import type { AiSummaryCard, PriorityRecommendation } from '@/types/domain/analysis';
@@ -11,6 +12,11 @@ import type { AiSummaryCard, PriorityRecommendation } from '@/types/domain/analy
  * promising the summary "will appear after analysis completes" -- on a job where
  * nothing had completed. The recommendation card had no empty state at all, so
  * its caller could only be handed a fabricated recommendation or a skeleton.
+ *
+ * The same empty body was also wrong on a *finished* run, which is the state it
+ * was actually reached in: the badge and footer were the only things on screen,
+ * both promising a summary that would not arrive, with no way to ask for one.
+ * That gap now names itself and offers to generate.
  */
 
 const NO_SUMMARY: AiSummaryCard = { summary: '', isAiGenerated: false };
@@ -83,21 +89,58 @@ describe('the AI summary card while a run is in flight', () => {
 });
 
 describe('the AI summary card for a finished run', () => {
-  it('labels a non-generated summary as a preview', () => {
+  it('says the summary is absent rather than labelling it a preview', () => {
+    // "Preview" headed an empty body. There was nothing to preview, and it was
+    // the first thing on the card that read as broken.
     render(<AIExecutiveSummaryCard data={NO_SUMMARY} />);
 
-    expect(screen.getByText('Preview')).toBeInTheDocument();
+    expect(screen.queryByText('Preview')).not.toBeInTheDocument();
+    expect(screen.getByText(/no ai summary for this run/i)).toBeInTheDocument();
   });
 
-  it('keeps the footer wording for a finished run', () => {
-    // Unchanged on purpose. A finished run with no summary is a real gap, and
-    // the message that says which failure caused it belongs with the error
-    // handling rather than here.
+  it('makes no promise about a summary the run never wrote', () => {
+    // The footer's promise was already suppressed for loading, running and a
+    // failed guide request. What was left was the case it was worst in: a run
+    // that had finished, read as absent, and was told the summary "will appear
+    // after analysis completes" -- under an empty body, with nothing to do.
     render(<AIExecutiveSummaryCard data={NO_SUMMARY} />);
 
     expect(
-      screen.getByText(/Static preview — AI summary will appear after analysis completes/),
-    ).toBeInTheDocument();
+      screen.queryByText(/will appear after analysis completes/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('offers the one action that could produce a summary', async () => {
+    // The point of the state. A missing summary with no recorded reason is the
+    // absence that can still be fixed, and `onRetry` re-runs the enrichment
+    // request that would write one.
+    const onRetry = vi.fn();
+    render(<AIExecutiveSummaryCard data={NO_SUMMARY} onRetry={onRetry} />);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /generate ai summary/i }),
+    );
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it('says it is generating while the request is in flight', () => {
+    render(
+      <AIExecutiveSummaryCard data={NO_SUMMARY} onRetry={vi.fn()} isRetrying />,
+    );
+
+    const button = screen.getByRole('button', { name: /generating/i });
+    expect(button).toBeDisabled();
+  });
+
+  it('still explains the gap to a reader with nowhere to send it', () => {
+    // Same contract as the error panel: the reason is worth showing regardless,
+    // only the button depends on there being somewhere to go.
+    render(<AIExecutiveSummaryCard data={NO_SUMMARY} />);
+
+    expect(screen.getByText(/finished without producing one/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /generate ai summary/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('omits the badge for a generated summary', () => {
@@ -136,13 +179,20 @@ describe('the AI summary card for a finished run', () => {
     expect(screen.queryByText(/Static preview/)).not.toBeInTheDocument();
   });
 
-  it('shows the footer once the guide request settles without a summary', () => {
+  it('offers to generate one once the guide request settles without a summary', async () => {
     // The other side of the boundary: pending has ended and there is genuinely
-    // no summary, which is the gap the error handling will report on.
-    render(<AIExecutiveSummaryCard data={NO_SUMMARY} guidePending={false} />);
+    // no summary. That is a real gap, and a real gap gets an action instead of
+    // a footer promising something that is no longer coming.
+    const onRetry = vi.fn();
+    render(
+      <AIExecutiveSummaryCard data={NO_SUMMARY} guidePending={false} onRetry={onRetry} />,
+    );
 
-    expect(screen.getByText('Preview')).toBeInTheDocument();
-    expect(screen.getByText(/Static preview/)).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole('button', { name: /generate ai summary/i }),
+    );
+    expect(onRetry).toHaveBeenCalledOnce();
+    expect(screen.queryByText(/Static preview/)).not.toBeInTheDocument();
   });
 
   it('renders a summary that arrived with the guide', () => {
@@ -167,12 +217,17 @@ describe('the AI summary card for a finished run', () => {
     }
   });
 
-  it('shows the badge for a generated summary even while the guide loads', () => {
-    // Guard against over-suppression: `isAiGenerated` is settled data, so once
-    // it is true there is nothing pending about the badge.
-    render(<AIExecutiveSummaryCard data={GENERATED} guidePending />);
+  it('waits for the guide even with a generated summary already in hand', () => {
+    // `isAiGenerated` is settled data, but the request that carries it is still
+    // in flight -- so the body stays a skeleton rather than showing a summary
+    // that refetch may replace. The opposite failure would be flashing a
+    // summary and then swapping it out from under the reader.
+    const { container } = render(
+      <AIExecutiveSummaryCard data={GENERATED} guidePending />,
+    );
 
-    expect(screen.queryByText('Preview')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0);
+    expect(screen.queryByText(GENERATED.summary)).not.toBeInTheDocument();
   });
 });
 

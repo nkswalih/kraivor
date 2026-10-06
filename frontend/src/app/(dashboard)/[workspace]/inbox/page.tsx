@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bell, Mail, Building2, Users, Hash, Check, Loader2, X, ThumbsUp } from 'lucide-react';
 import { notificationEndpoints, workspaceEndpoints, chatEndpoints } from '@/lib/api/endpoints';
@@ -16,6 +18,12 @@ export default function InboxPage() {
   const user = useAuthStore(s => s.user);
   const workspaces = useAuthStore(s => s.workspaces);
   const workspaceId = useAuthStore(s => s.workspaceId);
+  // The `[workspace]` segment in the URL is the *slug*, not the UUID -- see
+  // `chat/page.tsx:10`, which reads it the same way. `workspaceId` is right for
+  // API paths and wrong for hrefs: `/${uuid}/chat/...` matches no route, so
+  // every DM link in the inbox 404'd while the identical link in the channel
+  // sidebar worked.
+  const workspaceSlug = useParams<{ workspace: string }>()?.workspace ?? '';
   const [activeTab, setActiveTab] = useState<InboxTab>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -175,9 +183,18 @@ export default function InboxPage() {
           />
         )}
         {activeTab === 'members' && (
-          <MembersPanel notifications={notifs} workspaceId={workspaceId ?? undefined} />
+          <MembersPanel
+            notifications={notifs}
+            workspaceId={workspaceId ?? undefined}
+            workspaceSlug={workspaceSlug}
+          />
         )}
-        {activeTab === 'channels' && <ChannelsPanel workspaceId={workspaceId ?? undefined} />}
+        {activeTab === 'channels' && (
+          <ChannelsPanel
+            workspaceId={workspaceId ?? undefined}
+            workspaceSlug={workspaceSlug}
+          />
+        )}
       </main>
     </div>
   );
@@ -580,9 +597,11 @@ function WorkspacesPanel({
 function MembersPanel({
   notifications,
   workspaceId,
+  workspaceSlug,
 }: {
   notifications: Notification[];
   workspaceId?: string;
+  workspaceSlug: string;
 }) {
   const memberNotifs = useMemo(
     () => notifications.filter(n => n.notification_type?.includes('member')),
@@ -643,9 +662,9 @@ function MembersPanel({
             </p>
             <div className="space-y-1">
               {dmRooms.map(room => (
-                <a
+                <Link
                   key={room.id}
-                  href={`/${workspaceId}/chat/${room.id}`}
+                  href={`/${workspaceSlug}/chat/${room.id}`}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#18181B] transition-colors"
                 >
                   <div className="w-8 h-8 rounded-full bg-[#27272A] flex items-center justify-center text-xs font-bold text-[#FAFAFA] shrink-0">
@@ -659,7 +678,7 @@ function MembersPanel({
                       </p>
                     )}
                   </div>
-                </a>
+                </Link>
               ))}
             </div>
           </div>
@@ -673,7 +692,13 @@ function MembersPanel({
    Channels — room list with recent message preview
    ═══════════════════════════════════════════════════════════════════ */
 
-function ChannelsPanel({ workspaceId }: { workspaceId?: string }) {
+function ChannelsPanel({
+  workspaceId,
+  workspaceSlug,
+}: {
+  workspaceId?: string;
+  workspaceSlug: string;
+}) {
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
 
   const { data: rooms, isLoading } = useQuery({
@@ -688,7 +713,10 @@ function ChannelsPanel({ workspaceId }: { workspaceId?: string }) {
     enabled: !!selectedRoom && !!workspaceId,
   });
 
-  if (!workspaceId) {
+  // Both are required: `workspaceId` for the API calls below, `workspaceSlug`
+  // for the one href this panel renders. Falling through with an empty slug
+  // would render `/chat/{room}`, which is a different route entirely.
+  if (!workspaceId || !workspaceSlug) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <p className="text-[13px] text-[#A1A1AA]">No workspace selected</p>
@@ -791,12 +819,12 @@ function ChannelsPanel({ workspaceId }: { workspaceId?: string }) {
                   </div>
                 </div>
               ))}
-              <a
-                href={`/${workspaceId}/chat/${selectedRoom}`}
+              <Link
+                href={`/${workspaceSlug}/chat/${selectedRoom}`}
                 className="block text-[12px] text-venom-yellow hover:text-venom-gold text-center py-2"
               >
                 Open channel →
-              </a>
+              </Link>
             </div>
           )
         ) : (

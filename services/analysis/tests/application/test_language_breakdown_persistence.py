@@ -26,6 +26,8 @@ from typing import cast
 from unittest.mock import patch
 from uuid import uuid4
 
+import pytest
+
 from app.api.routers.jobs import _job_to_response
 from app.api.schemas import jobs as jobs_schemas
 
@@ -118,8 +120,18 @@ class _StubFetcher:
     async def get_source_files(self, repo_path: str) -> list[dict[str, object]]:
         return self._files
 
-    async def count_loc(self, repo_path: str) -> int:
-        return sum(cast(int, f["lines_count"]) for f in self._files)
+    async def language_line_counts(self, repo_path: str) -> dict[str, int]:
+        """One bucket per language, so `total_lines` and the shares agree.
+
+        Mirrors the real fetcher's contract: the breakdown is derived from this
+        single mapping rather than from `get_source_files`, which is what made
+        the two totals incomparable before.
+        """
+        counts: dict[str, int] = {}
+        for f in self._files:
+            lang = cast(str, f["language"])
+            counts[lang] = counts.get(lang, 0) + cast(int, f["lines_count"])
+        return counts
 
 
 # ======================================================================
@@ -279,6 +291,101 @@ class TestTheBreakdownIsRealNotPlaceholder:
         kwargs = _write_containing(jobs, "language_breakdown")
 
         assert kwargs["language_breakdown"] == [{"name": "Markdown", "percentage": 0.0}]
+
+
+# ======================================================================
+# 2b. The shares are shares of the total printed beside them
+# ======================================================================
+#
+# `javascript 0.0, shell 0.0, sql 0.0` on a job whose language list named all
+# three was the reported defect. Three things produced it: an extension table
+# too small to bucket most files, a denominator drawn from a different file set
+# than the buckets, and rounding to a tenth of a percent. Each is pinned below,
+# because a test that only checked the ordering would pass on any of them.
+
+
+class TestTheSharesAreCorrect:
+    def test_the_shares_add_up_to_the_total_line_count(self) -> None:
+        """The denominator has to be the same population as the numerators.
+
+        Before, `total_lines` counted every non-excluded file while the buckets
+        counted only files an extension entry mapped, so the printed percentages
+        described a fraction of the LINES figure shown next to them.
+        """
+        jobs = _clone_now(
+            _files(("Python", 535), ("TypeScript", 269), ("JSON", 115))
+        )
+
+        kwargs = _write_containing(jobs, "language_breakdown")
+        breakdown = cast(list[dict[str, object]], kwargs["language_breakdown"])
+
+        assert sum(cast(float, b["percentage"]) for b in breakdown) == pytest.approx(
+            100.0, abs=0.05
+        )
+        assert kwargs["total_lines"] == 919
+
+    def test_a_share_below_a_tenth_of_a_percent_is_not_reported_as_zero(
+        self,
+    ) -> None:
+        """One line in a nine-thousand-line repository is 0.011%, not 0%.
+
+        Rounded to a single decimal -- which is what the code did -- it became
+        `0.0`, and the renderer printed "0%" for a language the repository
+        demonstrably contains. Two decimals keep it distinct from absence.
+        """
+        jobs = _clone_now(
+            _files(("Python", 8999), ("Shell", 1))
+        )
+
+        kwargs = _write_containing(jobs, "language_breakdown")
+        breakdown = cast(list[dict[str, object]], kwargs["language_breakdown"])
+        shell = next(b for b in breakdown if b["name"] == "Shell")
+
+        assert shell["percentage"] == 0.01
+        assert shell["percentage"] != 0.0
+
+    def test_every_bucket_the_fetcher_returns_becomes_a_share(self) -> None:
+        """The denominator is exactly the set of buckets, never a superset.
+
+        The old `total_lines` counted every non-excluded file while the buckets
+        came from files an extension entry mapped, so `.tf`, `.ini`, `.html`,
+        `.css` and extensionless files sat in the total and in no share -- the
+        shares then summed to less than 100 while the names listed beside them
+        looked complete. The extension table itself is pinned in
+        `test_repository_fetcher_language.py`.
+        """
+        jobs = _clone_now(
+            _files(("Python", 90), ("Terraform", 5), ("INI", 5))
+        )
+
+        kwargs = _write_containing(jobs, "language_breakdown")
+        breakdown = cast(list[dict[str, object]], kwargs["language_breakdown"])
+
+        assert sum(cast(float, b["percentage"]) for b in breakdown) == pytest.approx(
+            100.0, abs=0.05
+        )
+
+    def test_the_shares_are_ordered_by_lines_not_by_name(self) -> None:
+        jobs = _clone_now(_files(("Zsh", 99), ("Python", 1)))
+
+        kwargs = _write_containing(jobs, "language_breakdown")
+        breakdown = cast(list[dict[str, object]], kwargs["language_breakdown"])
+
+        assert [b["name"] for b in breakdown] == ["Zsh", "Python"]
+
+    def test_two_decimals_are_carried_to_the_row(self) -> None:
+        """Rounding happens where the value is computed, not in the renderer.
+
+        A test asserting only that shares sum to 100 would pass on values
+        already collapsed to a tenth, which is the shape that produced "0%".
+        """
+        jobs = _clone_now(_files(("Python", 7), ("Go", 3), ("Rust", 1)))
+
+        kwargs = _write_containing(jobs, "language_breakdown")
+        breakdown = cast(list[dict[str, object]], kwargs["language_breakdown"])
+        shares = [cast(float, b["percentage"]) for b in breakdown]
+
+        assert shares == [63.64, 27.27, 9.09]
 
 
 # ======================================================================

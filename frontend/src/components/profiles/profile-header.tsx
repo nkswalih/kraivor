@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { toast } from 'sonner';
 import { Avatar } from './avatar';
 import { FollowButton } from './follow-button';
+import { MessageButton } from './message-button';
 import type { Profile } from '@/types/domain/profiles';
 import {
   MapPin,
@@ -97,6 +98,11 @@ export function ProfileHeader({ profile, userAvatarUrl, workspaceSlug }: Profile
               <Share2 className="w-3.5 h-3.5" />
               Share
             </button>
+            <MessageButton
+              targetUserId={profile.user_id}
+              targetName={profile.display_name}
+              isOwner={profile.is_owner}
+            />
             <FollowButton
               username={profile.username}
               isFollowing={profile.is_following}

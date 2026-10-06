@@ -2,8 +2,10 @@
 `POST /dm/` validated nothing about who it was messaging.
 
 `DMCreateView.post` takes `target_user_id` and `target_user_name` from the client,
-hands them to `get_or_create_dm_room`, and returns whatever comes back. Five
-things follow, and every test here is one of them.
+hands them to `get_or_create_dm_room`, and returns whatever comes back. It
+validated nothing about either side of the conversation -- the caller's own
+membership arrived only incidentally, through `IsChatRoomMember` -- and every
+test here is one of the things that follows from that.
 
 The tests call the view with `user_id` set on the request rather than
 authenticating a Django user, because that is what `IsChatRoomMember` and the view
@@ -121,6 +123,68 @@ class TestTheTargetIsSomebodyYouCanMessage:
         assert unknown.data == gone.data == foreign.data
 
 
+class TestTheCallerIsCheckedToo:
+    """AUDIT case 6: "caller not a workspace member -> 403".
+
+    Every other test in this module draws its `caller` from `pair`, so the
+    caller was never anything but a member. `DMCreateView` has no `room_pk` in
+    its URL, which means `IsChatRoomMember` never reaches the DM-participant
+    branch and falls through to the workspace-membership query -- and that
+    fall-through is the only thing between a session and an endpoint that
+    writes rooms.
+    """
+
+    def test_a_caller_with_no_membership_anywhere_is_refused(
+        self, api_factory, dm_view, workspace, pair, stranger_id
+    ):
+        _, target = pair
+
+        response = post_dm(api_factory, dm_view, workspace, stranger_id, target)
+
+        assert response.status_code == 403
+        assert dm_room_count() == 0
+
+        # Nothing is asserted about the body, and that is deliberate. The two
+        # settings files disagree about how a request is authenticated:
+        # `core/settings/base.py` leaves `DEFAULT_AUTHENTICATION_CLASSES` empty,
+        # so in production DRF reaches `PermissionDenied(detail=...)` and the
+        # client reads IsChatRoomMember's "You are not a member of this chat
+        # room's workspace." `core/settings/test.py` adds `TestAuthentication`,
+        # which reads an `X-User-Id` header these view-level tests do not send --
+        # `user_id` is set directly on the request instead -- so
+        # `request.authenticators` is non-empty while
+        # `request.successful_authenticator` is not, and DRF's
+        # `permission_denied` raises `NotAuthenticated` *before* looking at the
+        # message. The status is 403 either way (there is no `WWW-Authenticate`
+        # header to promote it to 401), but the detail reads "not
+        # authenticated". Pinning either string would pin a settings difference
+        # that this test is not about, so the refusals that matter -- refused,
+        # and nothing written -- are what gets asserted.
+        #
+        # The contrast that makes this test non-vacuous is
+        # `test_a_workspace_member_can_be_messaged`, which runs the same call
+        # from a member of `workspace` and gets 200.
+
+    def test_a_caller_from_another_workspace_is_refused(
+        self, api_factory, dm_view, workspace, pair
+    ):
+        """Distinct from the case above in the way it matters here.
+
+        Membership is filtered on `workspace_id=workspace_pk` taken from the
+        *URL*, so a real member of a real workspace still fails it. A version of
+        this query written against the wrong table -- or keyed on the caller's
+        own workspace rather than the one in the path -- is exactly the bug
+        this is for.
+        """
+        _, target = pair
+        elsewhere = WorkspaceMemberFactory(workspace=WorkspaceFactory()).user_id
+
+        response = post_dm(api_factory, dm_view, workspace, elsewhere, target)
+
+        assert response.status_code == 403
+        assert dm_room_count() == 0
+
+
 class TestYouCannotMessageYourself:
     """
     The one case that was a 500.
@@ -230,6 +294,33 @@ class TestTheRoomName:
         response = post_dm(api_factory, dm_view, workspace, caller, target, name="jane")
 
         assert ChatRoom.objects.get(id=response.data["id"]).name == "jane"
+
+    def test_a_name_containing_markup_is_stored_verbatim(
+        self, api_factory, dm_view, workspace, pair
+    ):
+        """AUDIT case 7 asks for "stored escaped/sanitised". It is neither, and
+        must not be.
+
+        The column holds what the caller sent, and escaping belongs to whoever
+        renders it: React escapes `{room.name}` on the way out of the JSX, and
+        Django admin auto-escapes in its templates. Storing an escaped string
+        would put the literal `&lt;script&gt;` in both participants' sidebars,
+        which is a visible bug rather than a security fix -- the classic
+        double-escape.
+
+        Recorded as a deliberate deviation from the audit table, because the
+        invariant that actually matters is the opposite one: the API neither
+        sanitises nor corrupts the value. Any transformation applied here would
+        equally be applied to an ordinary name containing an ampersand or a
+        quote, and would then be applied again on the way out.
+        """
+        caller, target = pair
+        markup = '<script>alert(1)</script> **bold** & "quoted"'
+
+        response = post_dm(api_factory, dm_view, workspace, caller, target, name=markup)
+
+        assert response.status_code == 200
+        assert ChatRoom.objects.get(id=response.data["id"]).name == markup
 
 
 class TestReachingAnExistingConversation:

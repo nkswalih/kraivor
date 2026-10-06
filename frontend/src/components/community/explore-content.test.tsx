@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ExploreContent } from './explore-content';
 import { useCommunityStore } from '@/lib/stores/community-store';
 import { useAuthStore } from '@/lib/stores/auth-store';
 
 /**
- * Pins the two things 4.4 changed on this surface.
+ * Pins the two things 4.4 changed on this surface, and -- added for 4.6 -- the
+ * one thing AUDIT case 5 asks for that presence alone does not prove.
  *
  * Before, a People result was `<button onClick={router.push(...)}>`. A button
  * that navigates cannot be opened in a new tab, cannot be middle-clicked, and
@@ -16,6 +17,11 @@ import { useAuthStore } from '@/lib/stores/auth-store';
  * It also had no way to message anyone, which is one of Task 4's three stated
  * entry points ("from community, and from search"). The action that goes with
  * it must not live *inside* the link.
+ *
+ * The case 5 test exists because the other assertions only ever *find* the
+ * button. A row that rendered "Message Jane Doe" while passing an empty target
+ * would satisfy every one of them; only pressing it tells you whose
+ * conversation actually opens.
  */
 
 const PROFILE = {
@@ -28,11 +34,19 @@ const PROFILE = {
   is_owner: false,
 };
 
+const push = vi.fn();
+const createDm = vi.fn();
+
 vi.mock('next/navigation', () => ({
   useParams: () => ({ workspace: 'acme' }),
-  // `MessageButton` reads the router at render time, so this has to exist even
-  // though no test here presses it.
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+  // `MessageButton` reads the router at render time and navigates on success,
+  // so this has to be a stable spy rather than a fresh `vi.fn()` per call.
+  useRouter: () => ({ push, replace: vi.fn(), back: vi.fn() }),
+}));
+
+vi.mock('@/lib/api/endpoints', () => ({
+  chatEndpoints: { createDm: (...args: unknown[]) => createDm(...args) },
+  workspaceEndpoints: {},
 }));
 
 vi.mock('@/lib/hooks/use-community', () => ({
@@ -63,6 +77,8 @@ function renderExplore() {
 
 describe('ExploreContent People results', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+    createDm.mockResolvedValue({ id: 'room-42' });
     // Read straight from the store rather than mocked hooks: this component
     // debounces `searchQuery` through a 200ms timer before it will render a
     // result at all, and faking that timer would test the mock instead.
@@ -123,5 +139,27 @@ describe('ExploreContent People results', () => {
     expect(
       screen.queryByRole('button', { name: /message jane doe/i })
     ).not.toBeInTheDocument();
+  });
+
+  it('opens a conversation with the person on the row it was pressed on', async () => {
+    renderExplore();
+
+    const button = await screen.findByRole('button', { name: /message jane doe/i });
+    fireEvent.click(button);
+
+    // AUDIT case 5 asks for "present and works". Every test above stops at
+    // presence, and a row rendering the right label against a hardcoded or
+    // stale target would pass all of them -- the conversation would open with
+    // somebody else in it and nothing would have looked wrong on this screen.
+    await waitFor(() => {
+      expect(createDm).toHaveBeenCalledWith('ws-1', 'user-2', 'Jane Doe');
+    });
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith('/acme/chat/room-42');
+    });
+
+    // Pressing it stays on the list: the identity link is the way out of this
+    // surface, and swallowing the click would leave the user stranded.
+    expect(screen.getByRole('link', { name: /Jane Doe/i })).toBeInTheDocument();
   });
 });

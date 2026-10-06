@@ -153,6 +153,11 @@ export function analysisInsightsBuilder(
   // in from 25%). Anything neither has measured yet is null, not zero.
   const reportDescribesRun = !isJobInFlight(job?.status);
 
+  // The shape counts come from the same parse-stage row `metadata` reads below,
+  // and are deliberately the same four numbers: Repository Overview is where
+  // they are shown as figures, and the run record repeats them as rows. Both
+  // stay null until the stage that takes them has run -- a completed run whose
+  // parse never produced a row has no count, not a zero.
   const repositoryOverview: RepositoryOverview = reportDescribesRun
     ? {
         languages: report?.language_breakdown?.length
@@ -162,6 +167,10 @@ export function analysisInsightsBuilder(
             : null,
         totalFiles: report?.total_files ?? job?.total_files ?? null,
         totalLines: report?.total_lines_of_code ?? job?.total_lines ?? null,
+        classes: analysisMetadata?.class_count ?? null,
+        functions: analysisMetadata?.function_count ?? null,
+        endpoints: analysisMetadata?.endpoint_count ?? null,
+        frameworks: analysisMetadata?.frameworks?.length ?? null,
       }
     : {
         languages: job?.language_breakdown?.length
@@ -169,6 +178,10 @@ export function analysisInsightsBuilder(
           : null,
         totalFiles: job?.total_files ?? null,
         totalLines: job?.total_lines ?? null,
+        classes: null,
+        functions: null,
+        endpoints: null,
+        frameworks: null,
       };
 
   const metadata: AnalysisMetadata = {
@@ -238,9 +251,135 @@ function langToBar(lang: { name: string; percentage: number }): LanguageBar {
  * Only reachable on a completed report, where `languages_detected` is populated
  * and `language_breakdown` is not. The share is genuinely unknown, so it is
  * left at zero -- the bar renders as no width rather than inventing a figure.
+ *
+ * The colour used to be a hardcoded indigo for every one of them, so a report
+ * in this state drew a bar of identical segments and a legend of identical
+ * dots: every language indistinguishable from every other, which is the one
+ * thing a language legend must not be. `getLanguageColor` has the answer, and
+ * it already handles a name it has never heard of.
  */
 function nameToBar(name: string): LanguageBar {
-  return { name, percentage: 0, color: '#6366f1' };
+  return { name, percentage: 0, color: getLanguageColor(name) };
+}
+
+/**
+ * Which problem area a run should be told to work on first.
+ *
+ * The scores and the category counts choose the *area*; they say nothing about
+ * what in that area is wrong. Content comes from the finding picked below, and
+ * these templates are what the card says when the area has no finding behind it
+ * -- a low performance score with no performance findings is still a low score,
+ * and silence there would be a worse answer than the summary.
+ */
+const TEMPLATE_BY_CATEGORY: Record<string, PriorityRecommendation> = {
+  performance: {
+    title: 'Improve Performance',
+    description:
+      'Reduce synchronous database operations and optimize N+1 queries to improve response times under load.',
+    impact: 'high',
+    difficulty: 'medium',
+    estimatedTime: '2-4 hours',
+    findingId: null,
+    category: 'performance',
+  },
+  security: {
+    title: 'Improve Security',
+    description:
+      'Address security vulnerabilities including input validation, authentication checks, and dependency updates.',
+    impact: 'high',
+    difficulty: 'medium',
+    estimatedTime: '3-6 hours',
+    findingId: null,
+    category: 'security',
+  },
+  quality: {
+    title: 'Refactor Churn Hotspots',
+    description:
+      'Files with high change frequency and spread ownership are at risk of architectural decay. Consider refactoring hotspot files to improve maintainability.',
+    impact: 'medium',
+    difficulty: 'medium',
+    estimatedTime: '3-6 hours',
+    findingId: null,
+    category: 'quality',
+  },
+  maintainability: {
+    title: 'Improve Maintainability',
+    description:
+      'Refactor complex modules with high cyclomatic complexity and reduce code duplication for better long-term maintainability.',
+    impact: 'medium',
+    difficulty: 'medium',
+    estimatedTime: '4-8 hours',
+    findingId: null,
+    category: 'maintainability',
+  },
+};
+
+/** Worst first. An unrecognised severity sorts last rather than throwing. */
+const SEVERITY_RANK: Record<string, number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+  info: 4,
+};
+
+/**
+ * The three chips, as estimates keyed on how bad the finding is.
+ *
+ * A `Finding` records no effort data -- there is no hours field on it and no
+ * size estimate anywhere upstream -- so anything shown here is an estimate and
+ * is labelled as one on the card. Severity is the only ranking the finding does
+ * carry, and it is the one a reviewer already uses to decide what to open
+ * first, so the effort is keyed off it rather than invented per category.
+ *
+ * `impact` is the exception in spirit but not in mechanism: severity *is* the
+ * impact statement, so that chip stops being an estimate at all.
+ */
+const EFFORT_BY_SEVERITY: Record<
+  string,
+  Pick<PriorityRecommendation, 'impact' | 'difficulty' | 'estimatedTime'>
+> = {
+  critical: { impact: 'high', difficulty: 'high', estimatedTime: '1-2 days' },
+  high: { impact: 'high', difficulty: 'medium', estimatedTime: '3-6 hours' },
+  medium: { impact: 'medium', difficulty: 'medium', estimatedTime: '2-4 hours' },
+  low: { impact: 'low', difficulty: 'low', estimatedTime: '1-2 hours' },
+  info: { impact: 'low', difficulty: 'low', estimatedTime: 'Under 1 hour' },
+};
+
+/** Kept out of the table only so an unrecognised severity has something to read. */
+const MEDIUM_EFFORT = EFFORT_BY_SEVERITY.medium ?? {
+  impact: 'medium' as const,
+  difficulty: 'medium' as const,
+  estimatedTime: '2-4 hours',
+};
+
+/**
+ * The finding the card should describe, within an area already chosen.
+ *
+ * Active only: a dismissed finding was looked at and set aside by somebody, and
+ * recommending it back to them is the card arguing with a decision. Worst first,
+ * then by how much score it costs, then by id so two findings of equal weight
+ * always resolve the same way across renders.
+ */
+function worstFindingIn(
+  findings: Finding[] | null | undefined,
+  category: string,
+): Finding | null {
+  const candidates = (findings ?? []).filter(
+    (f) => f.status === 'active' && f.category === category,
+  );
+  if (candidates.length === 0) return null;
+
+  return candidates.reduce((worst, candidate) => {
+    const rankGap =
+      (SEVERITY_RANK[worst.severity] ?? Number.MAX_SAFE_INTEGER) -
+      (SEVERITY_RANK[candidate.severity] ?? Number.MAX_SAFE_INTEGER);
+    if (rankGap !== 0) return rankGap < 0 ? worst : candidate;
+    if (candidate.score_impact !== worst.score_impact) {
+      return candidate.score_impact < worst.score_impact ? candidate : worst;
+    }
+    return candidate.id < worst.id ? candidate : worst;
+  });
 }
 
 function buildPriorityRecommendation(
@@ -250,58 +389,49 @@ function buildPriorityRecommendation(
   categories: Record<string, number>,
   findings: Finding[] | null | undefined,
 ): PriorityRecommendation | null {
+  // The area. Unchanged from what the card has always chosen, and deliberately
+  // independent of the findings: a run whose performance score is 45 is a
+  // performance problem whether or not the performance engine filed a finding
+  // for it.
+  let category = 'maintainability';
   if (performanceScore != null && performanceScore < 60) {
-    const perfFinding = findings?.find((f) => f.category === 'performance');
-    return {
-      title: 'Improve Performance',
-      description: 'Reduce synchronous database operations and optimize N+1 queries to improve response times under load.',
-      impact: 'high',
-      difficulty: 'medium',
-      estimatedTime: '2-4 hours',
-      findingId: perfFinding?.id ?? null,
-      category: 'performance',
-    };
+    category = 'performance';
+  } else if (securityScore != null && securityScore < 80) {
+    category = 'security';
+  } else if ((categories['quality'] ?? 0) >= 5) {
+    category = 'quality';
   }
 
-  if (securityScore != null && securityScore < 80) {
-    const secFinding = findings?.find((f) => f.category === 'security');
-    return {
-      title: 'Improve Security',
-      description: 'Address security vulnerabilities including input validation, authentication checks, and dependency updates.',
-      impact: 'high',
-      difficulty: 'medium',
-      estimatedTime: '3-6 hours',
-      findingId: secFinding?.id ?? null,
-      category: 'security',
-    };
-  }
+  const template = TEMPLATE_BY_CATEGORY[category];
+  const worst = worstFindingIn(findings, category);
+  if (!worst) return { ...template };
 
-  const qualityCount = categories['quality'] ?? 0;
-  if (qualityCount >= 5) {
-    const qualityFinding = findings?.find((f) => f.category === 'quality');
-    return {
-      title: 'Refactor Churn Hotspots',
-      description: 'Files with high change frequency and spread ownership are at risk of architectural decay. Consider refactoring hotspot files to improve maintainability.',
-      impact: 'medium',
-      difficulty: 'medium',
-      estimatedTime: '3-6 hours',
-      findingId: qualityFinding?.id ?? null,
-      category: 'quality',
-    };
-  }
+  // Content from the finding: its own words about what is wrong and what to do,
+  // rather than the four sentences this card used to print whatever the
+  // repository actually contained. Fields missing fall through to the next, and
+  // only then to the template -- a finding with a title but no prose still
+  // beats the generic summary.
+  const title = firstNonEmpty(worst.recommendation, worst.title) ?? template.title;
+  const description =
+    firstNonEmpty(worst.description, worst.title) ?? template.description;
+  const effort = EFFORT_BY_SEVERITY[worst.severity] ?? MEDIUM_EFFORT;
 
-  // Reached by every run that cleared the branches above -- including one with
-  // excellent scores and nothing to fix. Kept as-is for a completed job: it is
-  // the only advice this card has ever offered, and changing it belongs to the
-  // task that gives the card real data rather than a template.
-  const maintFinding = findings?.find((f) => f.category === 'maintainability');
   return {
-    title: 'Improve Maintainability',
-    description: 'Refactor complex modules with high cyclomatic complexity and reduce code duplication for better long-term maintainability.',
-    impact: 'medium',
-    difficulty: 'medium',
-    estimatedTime: '4-8 hours',
-    findingId: maintFinding?.id ?? null,
-    category: 'maintainability',
+    title,
+    description,
+    impact: effort.impact,
+    difficulty: effort.difficulty,
+    estimatedTime: effort.estimatedTime,
+    findingId: worst.id,
+    category,
   };
+}
+
+/** First value that survives a trim, or null when none do. */
+function firstNonEmpty(...values: (string | null | undefined)[]): string | null {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) return trimmed;
+  }
+  return null;
 }

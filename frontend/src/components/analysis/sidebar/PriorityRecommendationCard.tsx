@@ -99,8 +99,6 @@ export function PriorityRecommendationCard({
           <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
         </button>
       )}
-
-      {/* TODO: Replace with AI-powered recommendation */}
     </div>
   );
 }

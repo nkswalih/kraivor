@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { analysisInsightsBuilder, isJobInFlight } from './insights-builder';
+import { getLanguageColor } from './language-colors';
 import { JobStatus, Category, Severity } from '@/types/domain/analysis';
 import type {
   AnalysisJob,
@@ -390,9 +391,33 @@ describe('a completed job is unchanged', () => {
       languages_detected: ['Elixir'],
     });
 
+    // The share is still unknown and stays at zero. The colour is not: this
+    // path used to hand every language the same indigo, so a name-only report
+    // drew a legend of identical dots -- all of them, which is the one thing a
+    // language legend must not be.
     expect(insights.repositoryOverview.languages).toEqual([
-      { name: 'Elixir', percentage: 0, color: '#6366f1' },
+      { name: 'Elixir', percentage: 0, color: getLanguageColor('Elixir') },
     ]);
+    expect(getLanguageColor('Elixir')).toBe('#6e4a7e');
+  });
+
+  it('tells two languages it has never heard of apart', () => {
+    const insights = finished({
+      language_breakdown: [],
+      languages_detected: ['Zilch', 'Quib'],
+    });
+
+    const [first, second] = insights.repositoryOverview.languages ?? [];
+    // The fallback still has to be stable across renders, which is what makes
+    // comparing two of them in one assertion the right test rather than a
+    // snapshot of a single one.
+    expect(first?.color).not.toBe(second?.color);
+    expect(first?.color).toBe(getLanguageColor('Zilch'));
+    expect(second?.color).toBe(getLanguageColor('Quib'));
+  });
+
+  it('gives the same language the same colour every time it is asked', () => {
+    expect(getLanguageColor('Zilch')).toBe(getLanguageColor('Zilch'));
   });
 });
 
@@ -535,6 +560,257 @@ describe('a completed job keeps its recommendation unchanged', () => {
 
   it('leaves the finding link null when no finding matches', () => {
     expect(finished({ performance_score: 45 }).priorityRecommendation?.findingId).toBeNull();
+  });
+});
+
+// ======================================================================
+// The recommendation is the repository's, not a template
+// ======================================================================
+//
+// Every branch used to return one of four fixed sentences whatever the run had
+// actually reported, with a TODO in the card saying so. The area still comes
+// from the scores -- a performance score of 45 is a performance problem -- but
+// the words, the finding link and the chips come from the finding that area
+// selected.
+
+describe('the recommendation quotes the worst finding in its area', () => {
+  it('uses the finding’s own recommendation and description', () => {
+    const insights = analysisInsightsBuilder(
+      job({ status: JobStatus.COMPLETED }),
+      report({ performance_score: 45 }),
+      NO_SUMMARY,
+      [
+        finding({
+          id: 'f-1',
+          category: Category.PERFORMANCE,
+          severity: Severity.HIGH,
+          title: 'N+1 query on Order listing',
+          description: 'Order.items is queried once per row across 400 rows.',
+          recommendation: 'Eager-load items with a single join.',
+        }),
+      ],
+      null,
+      null,
+      null,
+    );
+
+    expect(insights.priorityRecommendation).toMatchObject({
+      title: 'Eager-load items with a single join.',
+      description: 'Order.items is queried once per row across 400 rows.',
+      category: 'performance',
+      findingId: 'f-1',
+    });
+    // The generic sentence is gone -- it was the whole complaint.
+    expect(insights.priorityRecommendation?.description).not.toBe(
+      'Reduce synchronous database operations and optimize N+1 queries to improve response times under load.',
+    );
+  });
+
+  it('falls back to the finding title when the prose is missing', () => {
+    const insights = analysisInsightsBuilder(
+      job({ status: JobStatus.COMPLETED }),
+      report({ performance_score: 45 }),
+      NO_SUMMARY,
+      [
+        finding({
+          category: Category.PERFORMANCE,
+          title: 'Blocking call in request path',
+          description: '   ',
+          recommendation: '',
+        }),
+      ],
+      null,
+      null,
+      null,
+    );
+
+    expect(insights.priorityRecommendation?.title).toBe(
+      'Blocking call in request path',
+    );
+    expect(insights.priorityRecommendation?.description).toBe(
+      'Blocking call in request path',
+    );
+  });
+
+  it('keeps the template when the chosen area has no finding of its own', () => {
+    // A low performance score with only security findings filed. The area is
+    // still performance -- that is what the score says -- and inventing a
+    // security finding as its content would misattribute the finding instead.
+    const insights = analysisInsightsBuilder(
+      job({ status: JobStatus.COMPLETED }),
+      report({ performance_score: 45 }),
+      NO_SUMMARY,
+      [finding({ category: Category.SECURITY, severity: Severity.CRITICAL })],
+      null,
+      null,
+      null,
+    );
+
+    expect(insights.priorityRecommendation).toMatchObject({
+      title: 'Improve Performance',
+      category: 'performance',
+      findingId: null,
+    });
+  });
+
+  it('picks the worst severity, not the first finding in the list', () => {
+    const insights = analysisInsightsBuilder(
+      job({ status: JobStatus.COMPLETED }),
+      report({ security_score: 40 }),
+      NO_SUMMARY,
+      [
+        finding({
+          id: 'f-low',
+          category: Category.SECURITY,
+          severity: Severity.LOW,
+          title: 'Verbose error message',
+          recommendation: '',
+        }),
+        finding({
+          id: 'f-crit',
+          category: Category.SECURITY,
+          severity: Severity.CRITICAL,
+          title: 'SQL injection in search',
+          recommendation: '',
+        }),
+        finding({
+          id: 'f-high',
+          category: Category.SECURITY,
+          severity: Severity.HIGH,
+          title: 'Missing auth check',
+          recommendation: '',
+        }),
+      ],
+      null,
+      null,
+      null,
+    );
+
+    expect(insights.priorityRecommendation?.findingId).toBe('f-crit');
+    expect(insights.priorityRecommendation?.title).toBe('SQL injection in search');
+  });
+
+  it('orders an unrecognised severity last rather than first', () => {
+    const insights = analysisInsightsBuilder(
+      job({ status: JobStatus.COMPLETED }),
+      report({ security_score: 40 }),
+      NO_SUMMARY,
+      [
+        finding({ id: 'f-x', category: Category.SECURITY, severity: 'weird' as Severity }),
+        finding({
+          id: 'f-low',
+          category: Category.SECURITY,
+          severity: Severity.LOW,
+          title: 'Cookie missing a flag',
+        }),
+      ],
+      null,
+      null,
+      null,
+    );
+
+    expect(insights.priorityRecommendation?.findingId).toBe('f-low');
+  });
+
+  it('ignores findings that were dismissed', () => {
+    // Somebody read this one and set it aside. Recommending it back is the card
+    // arguing with that decision.
+    const insights = analysisInsightsBuilder(
+      job({ status: JobStatus.COMPLETED }),
+      report({ security_score: 40 }),
+      NO_SUMMARY,
+      [
+        finding({
+          id: 'f-gone',
+          category: Category.SECURITY,
+          severity: Severity.CRITICAL,
+          status: 'dismissed',
+        }),
+        finding({
+          id: 'f-live',
+          category: Category.SECURITY,
+          severity: Severity.MEDIUM,
+          title: 'Stale dependency',
+        }),
+      ],
+      null,
+      null,
+      null,
+    );
+
+    expect(insights.priorityRecommendation?.findingId).toBe('f-live');
+  });
+
+  it('breaks a tie on score impact, then on id', () => {
+    const ties = (ids: string[], impacts: number[]) =>
+      analysisInsightsBuilder(
+        job({ status: JobStatus.COMPLETED }),
+        report({ security_score: 40 }),
+        NO_SUMMARY,
+        ids.map((id, i) =>
+          finding({
+            id,
+            category: Category.SECURITY,
+            severity: Severity.HIGH,
+            score_impact: impacts[i],
+          }),
+        ),
+        null,
+        null,
+        null,
+      ).priorityRecommendation?.findingId;
+
+    // Same severity: the more damaging one wins.
+    expect(ties(['a', 'b'], [-2, -9])).toBe('b');
+    // Same severity and same damage: id decides, and the same way every render.
+    expect(ties(['b', 'a'], [-3, -3])).toBe('a');
+    expect(ties(['a', 'b'], [-3, -3])).toBe('a');
+  });
+});
+
+describe('the recommendation’s chips are keyed on severity', () => {
+  const rec = (severity: Severity) =>
+    analysisInsightsBuilder(
+      job({ status: JobStatus.COMPLETED }),
+      report({ security_score: 40 }),
+      NO_SUMMARY,
+      [finding({ category: Category.SECURITY, severity, title: 'x' })],
+      null,
+      null,
+      null,
+    ).priorityRecommendation;
+
+  it('rates a critical finding as a high-impact, high-difficulty day-plus job', () => {
+    expect(rec(Severity.CRITICAL)).toMatchObject({
+      impact: 'high',
+      difficulty: 'high',
+      estimatedTime: '1-2 days',
+    });
+  });
+
+  it('rates a low finding as low impact and low difficulty', () => {
+    expect(rec(Severity.LOW)).toMatchObject({
+      impact: 'low',
+      difficulty: 'low',
+      estimatedTime: '1-2 hours',
+    });
+  });
+
+  it('only ever emits chips the card has a colour for', () => {
+    // An unmapped chip would render with no background class and read as a
+    // label, not a status.
+    for (const severity of [
+      Severity.CRITICAL,
+      Severity.HIGH,
+      Severity.MEDIUM,
+      Severity.LOW,
+      Severity.INFO,
+    ]) {
+      const r = rec(severity);
+      expect(['high', 'medium', 'low']).toContain(r?.impact);
+      expect(['high', 'medium', 'low']).toContain(r?.difficulty);
+      expect(r?.estimatedTime).toBeTruthy();
+    }
   });
 });
 

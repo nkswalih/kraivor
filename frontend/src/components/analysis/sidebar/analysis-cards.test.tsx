@@ -11,7 +11,16 @@ import type { AnalysisMetadata, RepositoryOverview } from '@/types/domain/analys
  */
 
 function overview(overrides: Partial<RepositoryOverview> = {}): RepositoryOverview {
-  return { languages: [], totalFiles: 0, totalLines: 0, ...overrides };
+  return {
+    languages: [],
+    totalFiles: 0,
+    totalLines: 0,
+    classes: null,
+    functions: null,
+    endpoints: null,
+    frameworks: null,
+    ...overrides,
+  };
 }
 
 function metadata(overrides: Partial<AnalysisMetadata> = {}): AnalysisMetadata {
@@ -90,6 +99,127 @@ describe('RepositoryOverviewCard distinguishes unmeasured from zero', () => {
     expect(screen.getByText('29.5%')).toBeInTheDocument();
     expect(screen.queryByText('No language data available yet.')).not.toBeInTheDocument();
   });
+
+  // ---------------------------------------------------------------------
+  // The shares are shown as shares, not as raw two-decimal fractions
+  // ---------------------------------------------------------------------
+  //
+  // The service now reports two decimals so a real 0.011% survives the round
+  // trip instead of becoming `0.0` and rendering as "0%". Printing those two
+  // decimals back out would move the defect sideways rather than fix it: a
+  // column of 53.5% / 26.9% / 0.011% reads as broken. These three cases are
+  // the ones that can each be wrong in their own way.
+
+  it('never prints a real share as 0%', () => {
+    render(
+      <RepositoryOverviewCard
+        data={overview({
+          languages: [
+            { name: 'Python', percentage: 99.96, color: '#3572A5' },
+            { name: 'Shell', percentage: 0.04, color: '#89e051' },
+          ],
+        })}
+      />,
+    );
+
+    // 0.04% is a share this repository has. Rounding it to one decimal would
+    // produce "0.0", and printing that is the same lie as "0%" with an extra
+    // digit on the end.
+    expect(screen.getByText('Shell')).toBeInTheDocument();
+    expect(screen.getByText('<0.1%')).toBeInTheDocument();
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.0%')).not.toBeInTheDocument();
+  });
+
+  it('keeps the precision the service sent where one decimal is honest', () => {
+    render(
+      <RepositoryOverviewCard
+        data={overview({
+          languages: [
+            { name: 'Python', percentage: 99.9, color: '#3572A5' },
+            { name: 'Makefile', percentage: 0.1, color: '#427819' },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByText('99.9%')).toBeInTheDocument();
+    expect(screen.getByText('0.1%')).toBeInTheDocument();
+    // 0.1 is not below 0.1, so it is printed rather than elided.
+    expect(screen.queryByText('<0.1%')).not.toBeInTheDocument();
+  });
+
+  it('reports an exactly-zero share as 0%, because it was measured', () => {
+    render(
+      <RepositoryOverviewCard
+        data={overview({
+          languages: [
+            { name: 'Python', percentage: 100, color: '#3572A5' },
+            { name: 'Go', percentage: 0, color: '#00ADD8' },
+          ],
+        })}
+      />,
+    );
+
+    // The two are different answers and the card has to keep them apart: one
+    // says "measured, and none of these lines are Go", the other says nothing
+    // was measured at all.
+    expect(screen.getByText('100.0%')).toBeInTheDocument();
+    expect(screen.getByText('0%')).toBeInTheDocument();
+  });
+
+  it('states the same shares to a screen reader', () => {
+    // The visual label was rounded; the aria-label was not, so a screen reader
+    // used to announce "0%" for a language the eye could see was present.
+    render(
+      <RepositoryOverviewCard
+        data={overview({
+          languages: [{ name: 'Shell', percentage: 0.05, color: '#89e051' }],
+        })}
+      />,
+    );
+
+    expect(screen.getByRole('img', { name: /Shell <0\.1%/ })).toBeInTheDocument();
+  });
+
+  it('carries the whole measured shape of the repository, not just files and lines', () => {
+    render(
+      <RepositoryOverviewCard
+        data={overview({
+          totalFiles: 2090,
+          totalLines: 399055,
+          classes: 1393,
+          functions: 3890,
+          endpoints: 47,
+          frameworks: 3,
+        })}
+      />,
+    );
+
+    expect(screen.getByText('2,090')).toBeInTheDocument();
+    expect(screen.getByText('399,055')).toBeInTheDocument();
+    expect(screen.getByText('1,393')).toBeInTheDocument();
+    expect(screen.getByText('3,890')).toBeInTheDocument();
+    expect(screen.getByText('47')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+  });
+
+  it('withholds the shape counts the parse stage has not taken yet', () => {
+    render(
+      <RepositoryOverviewCard
+        data={overview({
+          totalFiles: null,
+          totalLines: null,
+          classes: null,
+          functions: null,
+        })}
+      />,
+    );
+
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Classes not measured yet')).toBeInTheDocument();
+    expect(screen.getByLabelText('Functions not measured yet')).toBeInTheDocument();
+  });
 });
 
 describe('AnalysisMetadataCard distinguishes unmeasured from zero', () => {
@@ -162,6 +292,43 @@ describe('AnalysisMetadataCard distinguishes unmeasured from zero', () => {
     );
 
     expect(screen.getByText('abcdef12')).toBeInTheDocument();
+  });
+
+  it('names the workspace rather than showing its id', () => {
+    // A job payload carries `workspace_id`, so the raw value used to reach the
+    // card: `eb6e03d3` on screen where the person reading it knows the thing as
+    // "Acme". The name is a better answer and the id is the fallback, not the
+    // other way round.
+    render(
+      <AnalysisMetadataCard
+        data={metadata({ workspaceId: 'abcdef12-3456-7890-abcd-ef1234567890' })}
+        workspaceName="Acme"
+      />,
+    );
+
+    expect(screen.getByText('Acme')).toBeInTheDocument();
+    expect(screen.queryByText('abcdef12')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the short id when no name is known yet', () => {
+    // A store that has not hydrated has no name, and an empty row would be a
+    // worse answer than the identifier it replaces.
+    render(
+      <AnalysisMetadataCard
+        data={metadata({ workspaceId: 'abcdef12-3456-7890-abcd-ef1234567890' })}
+        workspaceName={null}
+      />,
+    );
+
+    expect(screen.getByText('abcdef12')).toBeInTheDocument();
+  });
+
+  it('groups the twelve rows under their three sections', () => {
+    render(<AnalysisMetadataCard data={metadata()} />);
+
+    expect(screen.getByRole('region', { name: 'Source' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Code' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Run' })).toBeInTheDocument();
   });
 
   it('renders the whole-card skeleton when loading', () => {

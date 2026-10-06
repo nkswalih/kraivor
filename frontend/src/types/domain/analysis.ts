@@ -612,6 +612,17 @@ export interface RepositoryOverview {
   /** Null until measured. A measured zero stays `0`; only absence is null. */
   totalFiles: number | null;
   totalLines: number | null;
+  /**
+   * The rest of the repository's shape, measured by the same parse stage as
+   * `AnalysisMetadata`. They live here too because a card carrying only files
+   * and lines reads as an unfinished inventory -- these are the counts a
+   * reviewer actually scans for. Null until measured, for the same reason.
+   */
+  classes: number | null;
+  functions: number | null;
+  endpoints: number | null;
+  /** Count of distinct frameworks detected, not the list itself. */
+  frameworks: number | null;
 }
 
 export interface EngineStatusItem {

@@ -9,6 +9,7 @@ import {
   useEngines,
   useReEnrich,
 } from '@/lib/hooks/use-analysis';
+import { useWorkspaceStore } from '@/lib/stores';
 import type { AnalysisJob, Report, FindingsSummary, Finding } from '@/types/domain/analysis';
 import { AIExecutiveSummaryCard } from './AIExecutiveSummaryCard';
 import { PriorityRecommendationCard } from './PriorityRecommendationCard';
@@ -58,6 +59,17 @@ export function AnalysisInsightsSidebar({
     refetch: refetchGuide,
   } = useEnterpriseGuide(jobId);
   const { data: enginesResponse } = useEngines();
+
+  // A job payload names the workspace by id, and that id was what reached the
+  // metadata card: `eb6e03d3` where the reader knows the thing as "Acme". The
+  // store is the only place holding the display name, so it is read here rather
+  // than threaded down from the page -- and matched on id, so a store pointing
+  // at some other workspace cannot label this run with its name.
+  const currentWorkspace = useWorkspaceStore((s) => s.currentWorkspace);
+  const workspaceName =
+    currentWorkspace && job?.workspace_id && currentWorkspace.id === job.workspace_id
+      ? currentWorkspace.name
+      : null;
 
   const isLoading = externalLoading ?? !job;
 
@@ -183,6 +195,7 @@ export function AnalysisInsightsSidebar({
               <AnalysisMetadataCard
                 data={insights.metadata}
                 isLoading={isLoading}
+                workspaceName={workspaceName}
               />
             </>
           )}

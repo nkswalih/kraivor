@@ -136,11 +136,18 @@ export function AnalysisInsightsSidebar({
         )}
       >
         <div className="flex flex-col gap-4 p-4">
-          <ProjectContextCard
-            job={job}
-            metadata={analysisMetadata}
-            isLoading={isLoading}
-          />
+          {/* Project Context is the analysing view: repository, branch and the
+              live measured counts are what a run still in flight has to offer.
+              Once the job is finished the same facts reappear properly, and
+              measured, in Repository Overview and Analysis Metadata below --
+              so showing it here as well only pushed the real cards down. */}
+          {isJobInFlight(job?.status) && (
+            <ProjectContextCard
+              job={job}
+              metadata={analysisMetadata}
+              isLoading={isLoading}
+            />
+          )}
 
           <AIExecutiveSummaryCard
             data={insights.aiSummary}

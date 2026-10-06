@@ -320,7 +320,7 @@ export default function JobDetailPage() {
                   about an engine's score. */}
               <div className="space-y-3">
                 <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider">Engine Status</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                   {insights.engineStatus.map(item => (
                     <EngineCard key={item.key} item={item} />
                   ))}

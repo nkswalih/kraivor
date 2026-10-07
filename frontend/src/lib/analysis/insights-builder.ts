@@ -64,26 +64,17 @@ export function analysisInsightsBuilder(
   engines?: EngineInfo[] | null | undefined,
   aiSummaryError?: AiSummaryError | null | undefined,
 ): AnalysisInsights {
-  const performanceScore = report?.performance_score ?? job?.overall_score;
-  const securityScore = report?.security_score;
-  const maintenanceScore = report?.maintainability_score;
-  const categories = findingsSummary?.by_category ?? {};
-
-  // Every branch below is a guess about a repository the scores do not
-  // describe. On a running job all four inputs are absent, so the function fell
-  // through to its last branch and told the user to refactor for
-  // maintainability, with an impact rating and a time estimate, on the strength
-  // of having measured nothing. No recommendation is the honest answer until
-  // there is something to recommend.
+  // The card quotes one finding: this run's worst active one, fetched as a
+  // single row that the repository orders worst-first in SQL. This function
+  // used to pick a *problem area* from the scores -- performance under 60
+  // meant "performance" -- and print whichever template belonged to that
+  // area, on runs where no rule had ever filed a finding in it. A score can
+  // be low with no evidence behind it; the findings are the evidence, and
+  // with none there is nothing to recommend. Null is that answer, and the
+  // card renders it honestly rather than filling the space.
   const priorityRecommendation = isJobInFlight(job?.status)
     ? null
-    : buildPriorityRecommendation(
-        performanceScore,
-        securityScore,
-        maintenanceScore,
-        categories,
-        findings,
-      );
+    : buildPriorityRecommendation(findings);
 
   // Engines come from the service's catalogue. This file used to keep its own
 // list of 6, which is how dead_code, error_detection and churn ended up
@@ -262,58 +253,6 @@ function nameToBar(name: string): LanguageBar {
   return { name, percentage: 0, color: getLanguageColor(name) };
 }
 
-/**
- * Which problem area a run should be told to work on first.
- *
- * The scores and the category counts choose the *area*; they say nothing about
- * what in that area is wrong. Content comes from the finding picked below, and
- * these templates are what the card says when the area has no finding behind it
- * -- a low performance score with no performance findings is still a low score,
- * and silence there would be a worse answer than the summary.
- */
-const TEMPLATE_BY_CATEGORY: Record<string, PriorityRecommendation> = {
-  performance: {
-    title: 'Improve Performance',
-    description:
-      'Reduce synchronous database operations and optimize N+1 queries to improve response times under load.',
-    impact: 'high',
-    difficulty: 'medium',
-    estimatedTime: '2-4 hours',
-    findingId: null,
-    category: 'performance',
-  },
-  security: {
-    title: 'Improve Security',
-    description:
-      'Address security vulnerabilities including input validation, authentication checks, and dependency updates.',
-    impact: 'high',
-    difficulty: 'medium',
-    estimatedTime: '3-6 hours',
-    findingId: null,
-    category: 'security',
-  },
-  quality: {
-    title: 'Refactor Churn Hotspots',
-    description:
-      'Files with high change frequency and spread ownership are at risk of architectural decay. Consider refactoring hotspot files to improve maintainability.',
-    impact: 'medium',
-    difficulty: 'medium',
-    estimatedTime: '3-6 hours',
-    findingId: null,
-    category: 'quality',
-  },
-  maintainability: {
-    title: 'Improve Maintainability',
-    description:
-      'Refactor complex modules with high cyclomatic complexity and reduce code duplication for better long-term maintainability.',
-    impact: 'medium',
-    difficulty: 'medium',
-    estimatedTime: '4-8 hours',
-    findingId: null,
-    category: 'maintainability',
-  },
-};
-
 /** Worst first. An unrecognised severity sorts last rather than throwing. */
 const SEVERITY_RANK: Record<string, number> = {
   critical: 0,
@@ -354,20 +293,19 @@ const MEDIUM_EFFORT = EFFORT_BY_SEVERITY.medium ?? {
 };
 
 /**
- * The finding the card should describe, within an area already chosen.
+ * The finding the card should describe.
  *
  * Active only: a dismissed finding was looked at and set aside by somebody, and
- * recommending it back to them is the card arguing with a decision. Worst first,
- * then by how much score it costs, then by id so two findings of equal weight
- * always resolve the same way across renders.
+ * recommending it back to them is the card arguing with a decision.
+ *
+ * The repository now orders its rows worst-first, so the card's `page_size: 1`
+ * hands this exactly the answer it would compute. The ranking stays here as
+ * well -- severity, then how much score the finding costs, then id -- so a
+ * caller that passes several rows still gets the one the server would have put
+ * first, and so the two definitions of "worst" are visible side by side.
  */
-function worstFindingIn(
-  findings: Finding[] | null | undefined,
-  category: string,
-): Finding | null {
-  const candidates = (findings ?? []).filter(
-    (f) => f.status === 'active' && f.category === category,
-  );
+function worstFindingIn(findings: Finding[] | null | undefined): Finding | null {
+  const candidates = (findings ?? []).filter((f) => f.status === 'active');
   if (candidates.length === 0) return null;
 
   return candidates.reduce((worst, candidate) => {
@@ -383,37 +321,21 @@ function worstFindingIn(
 }
 
 function buildPriorityRecommendation(
-  performanceScore: number | null | undefined,
-  securityScore: number | null | undefined,
-  maintenanceScore: number | null | undefined,
-  categories: Record<string, number>,
   findings: Finding[] | null | undefined,
 ): PriorityRecommendation | null {
-  // The area. Unchanged from what the card has always chosen, and deliberately
-  // independent of the findings: a run whose performance score is 45 is a
-  // performance problem whether or not the performance engine filed a finding
-  // for it.
-  let category = 'maintainability';
-  if (performanceScore != null && performanceScore < 60) {
-    category = 'performance';
-  } else if (securityScore != null && securityScore < 80) {
-    category = 'security';
-  } else if ((categories['quality'] ?? 0) >= 5) {
-    category = 'quality';
-  }
+  const worst = worstFindingIn(findings);
+  // No active finding is a real result, not a gap to fill: the card shows the
+  // run's empty state instead of advice nobody measured.
+  if (!worst) return null;
 
-  const template = TEMPLATE_BY_CATEGORY[category];
-  const worst = worstFindingIn(findings, category);
-  if (!worst) return { ...template };
-
-  // Content from the finding: its own words about what is wrong and what to do,
-  // rather than the four sentences this card used to print whatever the
-  // repository actually contained. Fields missing fall through to the next, and
-  // only then to the template -- a finding with a title but no prose still
-  // beats the generic summary.
-  const title = firstNonEmpty(worst.recommendation, worst.title) ?? template.title;
-  const description =
-    firstNonEmpty(worst.description, worst.title) ?? template.description;
+  // Content from the finding: its own words about what is wrong and what to
+  // do, in the order the card has always quoted them. Fields missing fall
+  // through to the next, and the last resort is the rule id -- the finding
+  // addressing itself -- and then its area. Never a sentence invented here.
+  const title =
+    firstNonEmpty(worst.recommendation, worst.title, worst.rule_id) ??
+    worst.category;
+  const description = firstNonEmpty(worst.description, worst.title) ?? title;
   const effort = EFFORT_BY_SEVERITY[worst.severity] ?? MEDIUM_EFFORT;
 
   return {
@@ -423,7 +345,12 @@ function buildPriorityRecommendation(
     difficulty: effort.difficulty,
     estimatedTime: effort.estimatedTime,
     findingId: worst.id,
-    category,
+    // The finding's own area, so the icon on the card describes the advice it
+    // quotes.
+    category: worst.category,
+    severity: worst.severity,
+    filePath: worst.file_path,
+    lineStart: worst.line_start,
   };
 }
 

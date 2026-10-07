@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AIExecutiveSummaryCard } from './AIExecutiveSummaryCard';
 import { PriorityRecommendationCard } from './PriorityRecommendationCard';
+import { Severity } from '@/types/domain/analysis';
 import type { AiSummaryCard, PriorityRecommendation } from '@/types/domain/analysis';
 
 /**
@@ -17,6 +18,12 @@ import type { AiSummaryCard, PriorityRecommendation } from '@/types/domain/analy
  * was actually reached in: the badge and footer were the only things on screen,
  * both promising a summary that would not arrive, with no way to ask for one.
  * That gap now names itself and offers to generate.
+ *
+ * The recommendation card's null went the other way: it now stands for three
+ * different answers -- the run in flight (no conclusion yet), a fetch that
+ * failed (no conclusion knowable), and a finished run whose findings really are
+ * empty (the conclusion). Only the third has copy, because it is the only one
+ * the run actually said something.
  */
 
 const NO_SUMMARY: AiSummaryCard = { summary: '', isAiGenerated: false };
@@ -26,14 +33,20 @@ const GENERATED: AiSummaryCard = {
   isAiGenerated: true,
 };
 
+// The shape a card takes when it quotes a finding: every content field comes
+// from that finding, badge and location included. Nothing here is generic --
+// the old template strings this fixture used to hold are gone from the code.
 const RECOMMENDATION: PriorityRecommendation = {
-  title: 'Improve Performance',
-  description: 'Reduce synchronous database operations.',
+  title: 'Eager-load items with a single join.',
+  description: 'Order.items is queried once per row across 400 rows.',
   impact: 'high',
   difficulty: 'medium',
   estimatedTime: '2-4 hours',
-  findingId: null,
+  findingId: 'f-1',
   category: 'performance',
+  severity: Severity.HIGH,
+  filePath: 'src/api/orders.py',
+  lineStart: 87,
 };
 
 // ======================================================================
@@ -236,46 +249,86 @@ describe('the AI summary card for a finished run', () => {
 // ======================================================================
 
 describe('the recommendation card with no recommendation', () => {
-  it('renders nothing rather than an empty card', () => {
-    // An empty card would read as "nothing was found". A skeleton would read as
-    // "one is coming". Neither is true: the run has not reached a conclusion.
-    const { container } = render(<PriorityRecommendationCard data={null} />);
-
-    expect(container.firstChild).toBeNull();
-  });
-
-  it('shows its skeleton while the job is still loading', () => {
-    // Order matters. Loading is checked first, because there the recommendation
-    // is genuinely unknown -- once the job loads it may turn out to be a
-    // completed run with a recommendation. Skeleton is the honest answer for
-    // "not known yet", where `data === null` after loading means "none exists".
+  it('renders nothing while the run is still going', () => {
+    // An empty card would read as "nothing was found". A skeleton would read
+    // as "one is coming". Neither is true: the run has not reached a
+    // conclusion, and the analysing view has always shown neither.
     const { container } = render(
-      <PriorityRecommendationCard data={null} isLoading />,
+      <PriorityRecommendationCard data={null} isRunning />,
     );
 
-    expect(container.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0);
-  });
-
-  it('does not show the heading', () => {
-    render(<PriorityRecommendationCard data={null} />);
-
+    expect(container.firstChild).toBeNull();
     expect(
       screen.queryByText('Highest Priority Recommendation'),
     ).not.toBeInTheDocument();
   });
 
-  it('is distinct from a completed run that produced no recommendation', () => {
-    // Same null, opposite meaning: loaded-and-absent is silence, still-loading is
-    // a placeholder. Collapsing them would either promise a recommendation that
-    // is never coming, or flash an empty card on every page load.
-    const loaded = render(<PriorityRecommendationCard data={null} />);
-    expect(loaded.container.firstChild).toBeNull();
+  it('renders nothing when the findings fetch failed', () => {
+    // A request that never came back says nothing about the run. Claiming an
+    // empty one here would be a claim made from evidence never collected.
+    const { container } = render(<PriorityRecommendationCard data={null} isError />);
 
-    loaded.unmount();
+    expect(container.firstChild).toBeNull();
+    expect(
+      screen.queryByText('Highest Priority Recommendation'),
+    ).not.toBeInTheDocument();
+  });
 
-    const loading = render(<PriorityRecommendationCard data={null} isLoading />);
-    expect(loading.container.querySelectorAll('.animate-shimmer').length)
-      .toBeGreaterThan(0);
+  it('shows its skeleton while the answer is still unknown', () => {
+    // Order matters. Loading is checked first, because there the recommendation
+    // is genuinely unknown -- once loading settles it may turn out to be a
+    // finished run whose null *is* its answer, with copy for it below.
+    const { container } = render(
+      <PriorityRecommendationCard data={null} isLoading />,
+    );
+
+    expect(container.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0);
+    expect(
+      screen.queryByText('Highest Priority Recommendation'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('gives a finished run with no findings an honest answer', () => {
+    // The state this card was rebuilt for. The findings row loaded, and it is
+    // empty: that is information, and the card states it rather than staying
+    // silent or borrowing advice nobody measured.
+    render(<PriorityRecommendationCard data={null} />);
+
+    expect(
+      screen.getByText('Highest Priority Recommendation'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/no findings recorded for this run/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/nothing to prioritise/i)).toBeInTheDocument();
+  });
+
+  it('offers no action and no advice on an empty run', () => {
+    // The card used to fill this space with a template -- "Improve
+    // Performance", "Refactor Churn Hotspots" -- instructions measured against
+    // nothing. An empty state carries a status, not a suggestion.
+    render(<PriorityRecommendationCard data={null} />);
+
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByText(/improve/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/refactor/i)).not.toBeInTheDocument();
+  });
+
+  it('tells a running run apart from a finished empty one', () => {
+    // Same null, opposite meaning: in flight means the answer has not been
+    // reached, finished means the answer *is* "none". Collapsing them would
+    // either flash an empty card on every page load or promise a
+    // recommendation that is never coming.
+    const inFlight = render(<PriorityRecommendationCard data={null} isRunning />);
+    expect(inFlight.container.firstChild).toBeNull();
+    inFlight.unmount();
+
+    const empty = render(<PriorityRecommendationCard data={null} />);
+    expect(empty.container.firstChild).not.toBeNull();
+    expect(
+      screen.getByText(/no findings recorded for this run/i),
+    ).toBeInTheDocument();
+    empty.unmount();
   });
 });
 
@@ -283,30 +336,72 @@ describe('the recommendation card with a recommendation', () => {
   it('renders it unchanged', () => {
     render(<PriorityRecommendationCard data={RECOMMENDATION} />);
 
-    expect(screen.getByText('Improve Performance')).toBeInTheDocument();
     expect(
-      screen.getByText('Reduce synchronous database operations.'),
+      screen.getByText('Eager-load items with a single join.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Order.items is queried once per row across 400 rows.'),
     ).toBeInTheDocument();
     expect(screen.getByText('High Impact')).toBeInTheDocument();
     expect(screen.getByText('Medium Difficulty')).toBeInTheDocument();
     expect(screen.getByText('2-4 hours')).toBeInTheDocument();
   });
 
-  it('omits the view-finding button when there is no finding', () => {
+  it('badges the finding it is quoting', () => {
     render(<PriorityRecommendationCard data={RECOMMENDATION} />);
+
+    // The badge reads the severity of the finding on screen, so the ranking
+    // that chose it and the badge showing it cannot drift apart.
+    expect(screen.getByText('High')).toBeInTheDocument();
+  });
+
+  it('shows no badge when the recommendation names no severity', () => {
+    render(
+      <PriorityRecommendationCard
+        data={{ ...RECOMMENDATION, severity: null }}
+      />,
+    );
+
+    expect(screen.queryByText('High')).not.toBeInTheDocument();
+  });
+
+  it('names the file and line the finding points at', () => {
+    render(<PriorityRecommendationCard data={RECOMMENDATION} />);
+
+    expect(screen.getByText('src/api/orders.py:87')).toBeInTheDocument();
+  });
+
+  it('omits the location when the finding points at no file', () => {
+    render(
+      <PriorityRecommendationCard
+        data={{ ...RECOMMENDATION, filePath: null, lineStart: null }}
+      />,
+    );
+
+    expect(screen.queryByText(/orders\.py/)).not.toBeInTheDocument();
+  });
+
+  it('omits the view-finding button when there is no finding', () => {
+    render(
+      <PriorityRecommendationCard
+        data={{ ...RECOMMENDATION, findingId: null }}
+      />,
+    );
 
     expect(screen.queryByText('View Finding')).not.toBeInTheDocument();
   });
 
-  it('offers the view-finding button when there is one', () => {
+  it('offers the view-finding button when there is one', async () => {
+    const onViewFinding = vi.fn();
     render(
       <PriorityRecommendationCard
-        data={{ ...RECOMMENDATION, findingId: 'f-1' }}
-        onViewFinding={() => {}}
+        data={RECOMMENDATION}
+        onViewFinding={onViewFinding}
       />,
     );
 
-    expect(screen.getByText('View Finding')).toBeInTheDocument();
+    await userEvent.click(screen.getByText('View Finding'));
+    expect(onViewFinding).toHaveBeenCalledOnce();
   });
 
   it('shows its loading skeleton when asked, even with data present', () => {
@@ -315,6 +410,8 @@ describe('the recommendation card with a recommendation', () => {
     );
 
     expect(container.querySelectorAll('.animate-shimmer').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Improve Performance')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Eager-load items with a single join.'),
+    ).not.toBeInTheDocument();
   });
 });

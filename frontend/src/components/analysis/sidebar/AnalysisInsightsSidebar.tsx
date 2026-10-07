@@ -23,6 +23,14 @@ interface AnalysisInsightsSidebarProps {
   report: Report | null | undefined;
   findingsSummary: FindingsSummary | null | undefined;
   findings: Finding[] | null | undefined;
+  // The recommendation card's single-row fetch, tracked here because its
+  // null has three different meanings the card must tell apart: asked and
+  // not yet answered (no answer yet), a fetch that failed (no answer
+  // knowable), and a finished run whose findings really are empty (the
+  // answer). The page derives the first from the response itself so a
+  // paused request is never mistaken for the third.
+  findingsPending?: boolean;
+  findingsError?: Error | null;
   isLoading?: boolean;
   onViewFinding?: () => void;
   onClose?: () => void;
@@ -35,6 +43,8 @@ export function AnalysisInsightsSidebar({
   report,
   findingsSummary,
   findings,
+  findingsPending,
+  findingsError,
   isLoading: externalLoading,
   onViewFinding,
   onClose,
@@ -174,7 +184,15 @@ export function AnalysisInsightsSidebar({
 
           <PriorityRecommendationCard
             data={insights.priorityRecommendation}
-            isLoading={isLoading}
+            // Unknown while either the job or the card's own findings row is
+            // still being read. A running job is not a loading one for this
+            // card's purposes -- it has no conclusion yet by definition -- so
+            // the findings fetch is only allowed to show its skeleton on a run
+            // that could actually answer; on the analysing view the card stays
+            // out of the way exactly as it always did.
+            isLoading={isLoading || (findingsPending && !running)}
+            isRunning={running}
+            isError={Boolean(findingsError)}
             onViewFinding={onViewFinding}
           />
 

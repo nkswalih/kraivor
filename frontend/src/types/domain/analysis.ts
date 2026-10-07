@@ -594,6 +594,16 @@ export interface PriorityRecommendation {
   estimatedTime: string;
   findingId: string | null;
   category: string;
+  /**
+   * The severity of the finding the card is quoting, so the badge on screen
+   * is the one that finding was judged by. Null only when the card names no
+   * finding at all.
+   */
+  severity: Severity | null;
+  /** File the backing finding points at, or null when it names none. */
+  filePath: string | null;
+  /** First line of the backing finding, or null when it names none. */
+  lineStart: number | null;
 }
 
 export interface LanguageBar {

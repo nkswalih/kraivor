@@ -76,7 +76,21 @@ export default function JobDetailPage() {
   const { data: report } = useReport(jobId);
   const enginesQuery = useEngines();
   const { data: summary, isLoading: isSummaryLoading, error: summaryError } = useFindingsSummary(jobId);
-  const { data: findingsData } = useFindings(jobId);
+  // One row, not twenty. The repository orders findings worst-first, so row
+  // one is this run's worst active finding -- the only one the sidebar's
+  // recommendation card quotes. The old page_size of 20 made the card rank a
+  // twentieth of the run client-side, and it missed the worst finding whenever
+  // that one sat deeper than the first page (809 active findings did exactly
+  // that).
+  const { data: findingsData, error: findingsError } = useFindings(jobId, {
+    pageSize: 1,
+  });
+  // "Asked, not answered": the request is still out, or paused because the
+  // browser went offline. React Query's own `isLoading` is false in that
+  // paused state, so the flag is derived from the response instead -- an empty
+  // run answers with a defined payload whose `findings` array is simply short,
+  // which is the only shape allowed to reach the card as an empty run.
+  const findingsPending = !findingsData && !findingsError;
   const { data: stats, isLoading: isCountsLoading } = useJobStatistics(jobId);
   const { data: scoreHistory, isLoading: isScoreHistoryLoading, error: scoreHistoryError } = useScoreHistory(
     job?.repo_id ?? null,
@@ -144,6 +158,14 @@ export default function JobDetailPage() {
       // which carries a distinct curated message per class.
       toast.error(getErrorMessage(error));
     }
+  };
+
+  // What the recommendation card's button does. The findings list is ordered
+  // worst-first by the same repository, so the finding the card quotes is the
+  // first row of the page this opens on -- the button lands the reader on the
+  // one row it is describing, not on a search.
+  const handleViewFinding = () => {
+    router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/findings`);
   };
 
   const handleDelete = async () => {
@@ -517,6 +539,9 @@ export default function JobDetailPage() {
           report={report}
           findingsSummary={summary}
           findings={findingsData?.findings ?? null}
+          findingsPending={findingsPending}
+          findingsError={findingsError}
+          onViewFinding={handleViewFinding}
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
@@ -535,6 +560,9 @@ export default function JobDetailPage() {
               report={report}
               findingsSummary={summary}
               findings={findingsData?.findings ?? null}
+              findingsPending={findingsPending}
+              findingsError={findingsError}
+              onViewFinding={handleViewFinding}
               onClose={() => setSidebarOpen(false)}
             />
           </div>

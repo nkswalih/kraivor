@@ -466,9 +466,9 @@ describe('no recommendation is invented for a run that has measured nothing', ()
   });
 
   it('stays silent even when the job row carries an overall score', () => {
-    // A single score is not enough. The card matches on three dimensions plus
-    // category counts, and the remaining inputs are absent mid-run, so any
-    // recommendation now would rest on one number.
+    // A score is not a conclusion, and a run with stages ahead of it has none
+    // to draw: the builder stops at the job's status long before any number
+    // on the row could turn into advice.
     const insights = running({ overall_score: 42 });
 
     expect(insights.priorityRecommendation).toBeNull();
@@ -492,30 +492,26 @@ describe('no recommendation is invented for a run that has measured nothing', ()
   });
 });
 
-describe('a completed job keeps its recommendation unchanged', () => {
-  it('recommends performance work for a low performance score', () => {
+describe('a completed job with nothing filed recommends nothing', () => {
+  // The card's original failure, stated as tests. Each run below is the shape
+  // of the analysis that surfaced it: scores low enough to pick an area, no
+  // finding behind that area, and a card that used to answer with one of four
+  // fixed sentences anyway -- advice measured against nothing.
+  it('says nothing for a low performance score with no findings', () => {
     const insights = finished({ performance_score: 45 });
 
-    expect(insights.priorityRecommendation).toMatchObject({
-      title: 'Improve Performance',
-      impact: 'high',
-      difficulty: 'medium',
-      estimatedTime: '2-4 hours',
-      category: 'performance',
-    });
+    expect(insights.priorityRecommendation).toBeNull();
   });
 
-  it('recommends security work for a low security score', () => {
+  it('says nothing for a low security score with no findings', () => {
     const insights = finished({ performance_score: 90, security_score: 60 });
 
-    expect(insights.priorityRecommendation).toMatchObject({
-      title: 'Improve Security',
-      estimatedTime: '3-6 hours',
-      category: 'security',
-    });
+    expect(insights.priorityRecommendation).toBeNull();
   });
 
-  it('recommends churn work when quality findings pile up', () => {
+  it('says nothing when the category counts pile up with no finding behind them', () => {
+    // `by_category` is a tally of what engines filed, so a count with an empty
+    // findings list is stale -- not a reason to recommend anything.
     const insights = analysisInsightsBuilder(
       job({ status: JobStatus.COMPLETED }),
       report({ performance_score: 90, security_score: 90 }),
@@ -526,28 +522,19 @@ describe('a completed job keeps its recommendation unchanged', () => {
       null,
     );
 
-    expect(insights.priorityRecommendation).toMatchObject({
-      title: 'Refactor Churn Hotspots',
-      category: 'quality',
-    });
+    expect(insights.priorityRecommendation).toBeNull();
   });
 
-  it('falls through to maintainability when nothing else applies', () => {
-    // Kept deliberately. This is the card's only remaining advice and it is
-    // what every well-scoring run has always been told; changing it is a
-    // different task from removing the fabrications from a running job.
+  it('says nothing for a well-scoring run either', () => {
     const insights = finished({ performance_score: 95, security_score: 95 });
 
-    expect(insights.priorityRecommendation).toMatchObject({
-      title: 'Improve Maintainability',
-      estimatedTime: '4-8 hours',
-    });
+    expect(insights.priorityRecommendation).toBeNull();
   });
 
-  it('links the recommendation to a real finding when one matches', () => {
+  it('links the recommendation to the run’s real finding when there is one', () => {
     const insights = analysisInsightsBuilder(
       job({ status: JobStatus.COMPLETED }),
-      report({ performance_score: 45 }),
+      report(),
       NO_SUMMARY,
       [finding({ id: 'f-99', category: Category.PERFORMANCE })],
       null,
@@ -557,27 +544,24 @@ describe('a completed job keeps its recommendation unchanged', () => {
 
     expect(insights.priorityRecommendation?.findingId).toBe('f-99');
   });
-
-  it('leaves the finding link null when no finding matches', () => {
-    expect(finished({ performance_score: 45 }).priorityRecommendation?.findingId).toBeNull();
-  });
 });
 
 // ======================================================================
-// The recommendation is the repository's, not a template
+// The recommendation is the run's, not a template
 // ======================================================================
 //
-// Every branch used to return one of four fixed sentences whatever the run had
-// actually reported, with a TODO in the card saying so. The area still comes
-// from the scores -- a performance score of 45 is a performance problem -- but
-// the words, the finding link and the chips come from the finding that area
-// selected.
+// Every branch used to return one of four fixed sentences whatever the run
+// had actually reported, with a TODO in the card saying so. The area pick
+// that chose between those sentences went with them: scores and category
+// counts rank nothing now. The words, the finding link, the badge fields and
+// the chips all come from the worst active finding in the run -- which is
+// also what the repository hands the card as its single row.
 
-describe('the recommendation quotes the worst finding in its area', () => {
+describe('the recommendation quotes the run’s worst active finding', () => {
   it('uses the finding’s own recommendation and description', () => {
     const insights = analysisInsightsBuilder(
       job({ status: JobStatus.COMPLETED }),
-      report({ performance_score: 45 }),
+      report(),
       NO_SUMMARY,
       [
         finding({
@@ -600,16 +584,41 @@ describe('the recommendation quotes the worst finding in its area', () => {
       category: 'performance',
       findingId: 'f-1',
     });
-    // The generic sentence is gone -- it was the whole complaint.
-    expect(insights.priorityRecommendation?.description).not.toBe(
-      'Reduce synchronous database operations and optimize N+1 queries to improve response times under load.',
+  });
+
+  it('carries the finding’s badge and location through to the card', () => {
+    // The severity badge and the file:line line the card renders are read off
+    // this object; nothing downstream may invent them.
+    const insights = analysisInsightsBuilder(
+      job({ status: JobStatus.COMPLETED }),
+      report(),
+      NO_SUMMARY,
+      [
+        finding({
+          id: 'f-1',
+          category: Category.SECURITY,
+          severity: Severity.CRITICAL,
+          file_path: 'src/api/login.py',
+          line_start: 42,
+        }),
+      ],
+      null,
+      null,
+      null,
     );
+
+    expect(insights.priorityRecommendation).toMatchObject({
+      severity: Severity.CRITICAL,
+      filePath: 'src/api/login.py',
+      lineStart: 42,
+      category: 'security',
+    });
   });
 
   it('falls back to the finding title when the prose is missing', () => {
     const insights = analysisInsightsBuilder(
       job({ status: JobStatus.COMPLETED }),
-      report({ performance_score: 45 }),
+      report(),
       NO_SUMMARY,
       [
         finding({
@@ -632,31 +641,40 @@ describe('the recommendation quotes the worst finding in its area', () => {
     );
   });
 
-  it('keeps the template when the chosen area has no finding of its own', () => {
-    // A low performance score with only security findings filed. The area is
-    // still performance -- that is what the score says -- and inventing a
-    // security finding as its content would misattribute the finding instead.
+  it('quotes the finding even when the scores point at a different area', () => {
+    // The old area logic read this as a performance run with no performance
+    // finding of its own, and printed the performance template while a
+    // critical security finding sat in the list. A score is not evidence; a
+    // finding is, and it keeps its own area whatever the numbers said.
     const insights = analysisInsightsBuilder(
       job({ status: JobStatus.COMPLETED }),
       report({ performance_score: 45 }),
       NO_SUMMARY,
-      [finding({ category: Category.SECURITY, severity: Severity.CRITICAL })],
+      [
+        finding({
+          id: 'f-sec',
+          category: Category.SECURITY,
+          severity: Severity.CRITICAL,
+          title: 'SQL injection in search',
+          recommendation: 'Parameterise the query.',
+        }),
+      ],
       null,
       null,
       null,
     );
 
     expect(insights.priorityRecommendation).toMatchObject({
-      title: 'Improve Performance',
-      category: 'performance',
-      findingId: null,
+      title: 'Parameterise the query.',
+      category: 'security',
+      findingId: 'f-sec',
     });
   });
 
   it('picks the worst severity, not the first finding in the list', () => {
     const insights = analysisInsightsBuilder(
       job({ status: JobStatus.COMPLETED }),
-      report({ security_score: 40 }),
+      report(),
       NO_SUMMARY,
       [
         finding({
@@ -693,7 +711,7 @@ describe('the recommendation quotes the worst finding in its area', () => {
   it('orders an unrecognised severity last rather than first', () => {
     const insights = analysisInsightsBuilder(
       job({ status: JobStatus.COMPLETED }),
-      report({ security_score: 40 }),
+      report(),
       NO_SUMMARY,
       [
         finding({ id: 'f-x', category: Category.SECURITY, severity: 'weird' as Severity }),
@@ -717,7 +735,7 @@ describe('the recommendation quotes the worst finding in its area', () => {
     // arguing with that decision.
     const insights = analysisInsightsBuilder(
       job({ status: JobStatus.COMPLETED }),
-      report({ security_score: 40 }),
+      report(),
       NO_SUMMARY,
       [
         finding({
@@ -745,7 +763,7 @@ describe('the recommendation quotes the worst finding in its area', () => {
     const ties = (ids: string[], impacts: number[]) =>
       analysisInsightsBuilder(
         job({ status: JobStatus.COMPLETED }),
-        report({ security_score: 40 }),
+        report(),
         NO_SUMMARY,
         ids.map((id, i) =>
           finding({
@@ -772,7 +790,7 @@ describe('the recommendation’s chips are keyed on severity', () => {
   const rec = (severity: Severity) =>
     analysisInsightsBuilder(
       job({ status: JobStatus.COMPLETED }),
-      report({ security_score: 40 }),
+      report(),
       NO_SUMMARY,
       [finding({ category: Category.SECURITY, severity, title: 'x' })],
       null,

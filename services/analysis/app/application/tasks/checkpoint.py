@@ -90,7 +90,7 @@ def load_checkpoint(job_id: UUID) -> dict[str, object] | None:
     path = _checkpoint_path(job_id)
     try:
         with path.open("rb") as fh:
-            raw: object = pickle.load(fh)
+            raw: object = pickle.load(fh)  # nosec B301 - service-written checkpoint under the ephemeral dir, named by the job's UUID; nothing user-controlled is unpickled (module docstring)
     except FileNotFoundError:
         return None
     except Exception:

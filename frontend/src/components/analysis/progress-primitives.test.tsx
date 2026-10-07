@@ -213,11 +213,20 @@ describe('ProgressRing', () => {
   it('shows a result count in place of N/A when there is no score', () => {
     // Four engines report rows rather than a score dimension, so their rings
     // were N/A on every run however much the run produced. The count fills the
-    // same slot -- but as a fact, not a grade: no arc, no band.
-    const { container } = render(<ProgressRing score={null} count={9_914} />);
+    // same slot: the ring is drawn full circle in its accent -- the arc says
+    // the engine finished, while the number carries the fact, so no part of
+    // it claims to be a ratio like "9,914 out of 100".
+    const { container } = render(
+      <ProgressRing score={null} count={9_914} countClass="text-orange-400" />,
+    );
 
-    expect(container.querySelectorAll('circle')).toHaveLength(1);
-    expect(container.firstElementChild?.className).not.toContain('text-red-500');
+    expect(container.querySelectorAll('circle')).toHaveLength(2);
+    expect(container.firstElementChild?.className).toContain('text-orange-400');
+    const arc = container.querySelectorAll('circle')[1];
+    const circumference = Number(arc.getAttribute('stroke-dasharray'));
+    const offset = Number(arc.getAttribute('stroke-dashoffset'));
+    expect(offset).toBeCloseTo(0, 5);
+    expect(circumference).toBeGreaterThan(0);
     expect(screen.getByText('9,914')).toBeInTheDocument();
     expect(screen.queryByText('N/A')).toBeNull();
   });

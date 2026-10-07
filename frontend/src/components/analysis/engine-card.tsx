@@ -88,6 +88,21 @@ const STATUS_STYLES: Record<EngineStatusItem['status'], StatusStyle> = {
   },
 };
 
+/**
+ * The accent a count-reporting engine's ring is drawn in, matched to the
+ * metric tile of the same subject on this page (Dead Code orange, Error
+ * Patterns red, Performance blue, Code Churn pink) so the donut and its tile
+ * read as one engine. The -400 shades are deliberate: score bands are -500,
+ * so a count ring's colour can never be one of the grade colours.
+ */
+const COUNT_ACCENTS: Record<string, string> = {
+  churn: 'text-pink-400',
+  dead_code: 'text-orange-400',
+  error_detection: 'text-red-400',
+  performance: 'text-blue-400',
+  simulation: 'text-purple-400',
+};
+
 export function EngineCard({
   item,
   className,
@@ -109,6 +124,7 @@ export function EngineCard({
   // dimension, and their rings read N/A forever otherwise, no matter how much
   // the run produced. The count only fills an empty score slot (a score is the
   // richer value) and only for a finished engine, for the same reason as above.
+  // It draws a full ring in the engine's accent -- completion, not a ratio.
   const ringCount =
     item.status === 'completed' && ringScore == null ? item.count ?? null : null;
 
@@ -146,6 +162,7 @@ export function EngineCard({
         <ProgressRing
           score={ringScore}
           count={ringCount}
+          countClass={COUNT_ACCENTS[item.key] ?? 'text-venom-yellow'}
           size={56}
           strokeWidth={4}
           label={item.name}

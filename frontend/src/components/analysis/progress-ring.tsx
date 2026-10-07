@@ -30,6 +30,7 @@ function bandClass(score: number | null | undefined): string {
 export function ProgressRing({
   score,
   count,
+  countClass,
   size = 48,
   strokeWidth = 4,
   label,
@@ -39,25 +40,38 @@ export function ProgressRing({
   /**
    * The engine's result count, shown when there is no score.
    *
-   * A score is a grade, so it gets the coloured arc. A count is a fact, not a
-   * grade: it is drawn as the bare track with the number inside, so nothing
-   * about it can be misread as "9,914 out of 100". Absent, the ring keeps
-   * saying N/A -- which remains the honest answer when neither exists.
+   * A score is a grade, so it gets the coloured arc sized to the grade. A
+   * count is a fact, so its arc is drawn full circle -- the arc says "this
+   * engine finished with its results in hand", never a ratio, and the number
+   * in the centre carries the fact itself. Absent, the ring keeps saying N/A
+   * -- which remains the honest answer when neither exists.
    */
   count?: number | null;
+  /**
+   * The accent a count ring is drawn in, applied to both the arc and the
+   * number through `currentColor` -- the same mechanism the score bands use.
+   */
+  countClass?: string;
   size?: number;
   strokeWidth?: number;
   label?: string;
   className?: string;
 }) {
   const band = bandClass(score);
+  // A count wears its engine's accent; a score wears its band. The two are
+  // mutually exclusive (a score always wins the slot), so only one can colour
+  // the ring and the number inside it.
+  const accent = score == null && count != null ? countClass : '';
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const clamped = score != null ? Math.min(100, Math.max(0, score)) : 0;
-  const offset = circumference - (clamped / 100) * circumference;
+  const scoreOffset = circumference - (clamped / 100) * circumference;
+  // A count ring is a full circle: zero offset, the whole track coloured.
+  const arcOffset = score != null ? scoreOffset : 0;
+  const hasArc = score != null || count != null;
 
   return (
-    <div className={cn('flex flex-col items-center gap-1', band, className)}>
+    <div className={cn('flex flex-col items-center gap-1', band, accent, className)}>
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="-rotate-90">
           {/* The unfilled track. Previously `hsl(var(--krait-border))`, but
@@ -72,7 +86,7 @@ export function ProgressRing({
             stroke="var(--krait-border)"
             strokeWidth={strokeWidth}
           />
-          {score != null && (
+          {hasArc && (
             <circle
               cx={size / 2}
               cy={size / 2}
@@ -81,7 +95,7 @@ export function ProgressRing({
               stroke="currentColor"
               strokeWidth={strokeWidth}
               strokeDasharray={circumference}
-              strokeDashoffset={offset}
+              strokeDashoffset={arcOffset}
               strokeLinecap="round"
               // The arc sweeps to its new length over a second. Same reasoning
               // as the bar's fill: a drawn edge travelling around the circle is
@@ -96,7 +110,9 @@ export function ProgressRing({
               {score}
             </span>
           ) : count != null ? (
-            <span className="text-[11px] font-semibold tabular-nums text-text-secondary">
+            // Inherits the ring's accent: the number and its circle are one
+            // fact, coloured together the way a score and its band are.
+            <span className="text-[11px] font-semibold tabular-nums">
               {formatEngineCount(count)}
             </span>
           ) : (

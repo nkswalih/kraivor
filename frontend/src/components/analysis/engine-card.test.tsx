@@ -66,13 +66,15 @@ describe('what the card says about an engine', () => {
     // Four engines report rows rather than a score dimension -- dead-code
     // entries, error findings, hotspot files, load levels -- so their rings
     // read N/A forever however much the run produced. The count is the real
-    // number that belongs there.
-    render(
+    // number that belongs there, and it wears the engine's accent: Dead Code's
+    // tile is orange, so its donut is orange too.
+    const { container } = render(
       <EngineCard item={item({ key: 'dead_code', name: 'Dead Code', score: null, count: 9_914 })} />,
     );
 
     expect(screen.getByText('9,914')).toBeTruthy();
     expect(screen.queryByText('N/A')).toBeNull();
+    expect(container.querySelector('[class*="text-orange-400"]')).toBeTruthy();
   });
 
   it('prefers the score over a count when the engine has both', () => {

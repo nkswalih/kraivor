@@ -61,6 +61,42 @@ describe('what the card says about an engine', () => {
 
     expect(screen.getByText('82')).toBeTruthy();
   });
+
+  it('shows the engine result count when it has no score', () => {
+    // Four engines report rows rather than a score dimension -- dead-code
+    // entries, error findings, hotspot files, load levels -- so their rings
+    // read N/A forever however much the run produced. The count is the real
+    // number that belongs there.
+    render(
+      <EngineCard item={item({ key: 'dead_code', name: 'Dead Code', score: null, count: 9_914 })} />,
+    );
+
+    expect(screen.getByText('9,914')).toBeTruthy();
+    expect(screen.queryByText('N/A')).toBeNull();
+  });
+
+  it('prefers the score over a count when the engine has both', () => {
+    // The performance engine is scored; its metric count only exists to fill
+    // the slot on runs the scorer had no data for.
+    render(<EngineCard item={item({ score: 82, count: 5 })} />);
+
+    expect(screen.getByText('82')).toBeTruthy();
+    expect(screen.queryByText('5')).toBeNull();
+  });
+
+  it('shows N/A only when there is neither a score nor a count', () => {
+    render(<EngineCard item={item({ score: null, count: null })} />);
+
+    expect(screen.getByText('N/A')).toBeTruthy();
+  });
+
+  it('draws no count for an engine that has not finished', () => {
+    // A count after a failure would be as stale a claim as a score would be.
+    render(<EngineCard item={item({ status: 'failed', score: null, count: 9_914 })} />);
+
+    expect(screen.queryByText('9,914')).toBeNull();
+    expect(screen.getByText('N/A')).toBeTruthy();
+  });
 });
 
 describe('a failed engine', () => {

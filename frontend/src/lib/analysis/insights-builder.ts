@@ -14,6 +14,7 @@ import type {
   Finding,
   EngineInfo,
   EngineStatusItem,
+  JobStatistics,
   PriorityRecommendation,
 } from '@/types/domain/analysis';
 
@@ -54,6 +55,51 @@ function parseEngineStatus(raw: string | undefined): EngineStatusItem['status'] 
   return 'pending';
 }
 
+/**
+ * The real result count for an engine that has no score to show.
+ *
+ * Four engines contribute rows rather than a score dimension: the churn
+ * analyser files `churn/hotspot` findings (grouped under `quality`, which is
+ * what the run's own "Change Hotspots" tile already reads), the dead-code and
+ * error engines write their own tables, and the load simulator writes one row
+ * per simulated level. Their rings used to read N/A on every run however much
+ * they produced, because `score_category` is null for all four -- correct as a
+ * score, wrong as a display.
+ *
+ * `performance` is the one scored engine that can still come back empty: the
+ * scorer only scores it when capacity or performance data exists, so a run
+ * with neither has a null score but a real (possibly zero) metric count. The
+ * count is the fallback, never the replacement -- when a score exists it says
+ * more than the number of rows behind it.
+ *
+ * An absent `counts_by_category` key counts as zero, not unknown: the
+ * statistics endpoint groups the findings that exist, and a completed churn
+ * engine whose group is absent found no hotspots. Everything else -- the
+ * statistics not having arrived, an engine outside this list -- stays null,
+ * which is what the ring renders as N/A.
+ */
+function engineResultCount(
+  key: string,
+  score: number | null,
+  statistics?: JobStatistics | null,
+): number | null {
+  if (!statistics) return null;
+  switch (key) {
+    case 'churn':
+      return statistics.counts_by_category.quality ?? 0;
+    case 'dead_code':
+      return statistics.dead_code_count;
+    case 'error_detection':
+      return statistics.error_findings_count;
+    case 'simulation':
+      return statistics.simulation_results_count;
+    case 'performance':
+      return score == null ? statistics.performance_metrics_count : null;
+    default:
+      return null;
+  }
+}
+
 export function analysisInsightsBuilder(
   job: AnalysisJob | null | undefined,
   report: Report | null | undefined,
@@ -63,6 +109,7 @@ export function analysisInsightsBuilder(
   aiExecutiveSummary?: string | null | undefined,
   engines?: EngineInfo[] | null | undefined,
   aiSummaryError?: AiSummaryError | null | undefined,
+  statistics?: JobStatistics | null | undefined,
 ): AnalysisInsights {
   // The card quotes one finding: this run's worst active one, fetched as a
   // single row that the repository orders worst-first in SQL. This function
@@ -103,6 +150,9 @@ export function analysisInsightsBuilder(
             | null
             | undefined) ?? null)
         : null;
+    // The score stays what it was; the count only fills the engines the score
+    // cannot describe, from the same statistics row the run's count tiles read.
+    const count = engineResultCount(key, score, statistics);
 
     return {
       name: engine.label,
@@ -113,6 +163,7 @@ export function analysisInsightsBuilder(
       // hardcoded null with a TODO waiting on exactly this.
       duration: readEngineDuration(job?.engine_statuses, key),
       score: status === 'completed' ? score : null,
+      count: status === 'completed' ? count : null,
       error: readEngineError(job?.engine_statuses, key),
     };
   });

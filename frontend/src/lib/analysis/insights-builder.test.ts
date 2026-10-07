@@ -9,6 +9,7 @@ import type {
   FindingsSummary,
   Finding,
   EngineInfo,
+  JobStatistics,
   AiSummaryError,
 } from '@/types/domain/analysis';
 
@@ -916,6 +917,129 @@ describe('engine status still comes from the catalogue', () => {
     // `churn` has `score_category: null`, so there is no column to read even
     // though the job completed.
     expect(insights.engineStatus.find(e => e.key === 'churn')?.score).toBeNull();
+  });
+});
+
+describe('engine result counts for engines that score nothing', () => {
+  // The whole point of this block: four engines contribute rows to their own
+  // tables (hotspot findings, dead-code entries, error findings, simulated
+  // load levels) and have no score dimension, so a ring built only from
+  // `score_category` read N/A on every run however much they produced.
+  const engines: EngineInfo[] = [
+    { key: 'security', label: 'Security', description: 'Injection and secrets.', stage: 'rules', score_category: 'security' },
+    { key: 'churn', label: 'Change Hotspots', description: 'Frequently rewritten files.', stage: 'churn', score_category: null },
+    { key: 'dead_code', label: 'Dead Code', description: 'Unreachable declarations.', stage: 'dead_code', score_category: null },
+    { key: 'error_detection', label: 'Error Handling', description: 'Swallowed and bare errors.', stage: 'errors', score_category: null },
+    { key: 'performance', label: 'Performance', description: 'Latency and throughput.', stage: 'perf', score_category: 'performance' },
+    { key: 'simulation', label: 'Load Simulation', description: 'Behaviour under load.', stage: 'simulation', score_category: null },
+  ];
+
+  const allCompleted = Object.fromEntries(
+    engines.map(e => [e.key, { status: 'completed', started_at: null, ended_at: null, error: '' }]),
+  );
+
+  function statistics(overrides: Partial<JobStatistics> = {}): JobStatistics {
+    return {
+      findings_count: 1174,
+      dead_code_count: 9914,
+      error_findings_count: 84,
+      performance_metrics_count: 5,
+      simulation_results_count: 4,
+      enterprise_guide_exists: false,
+      counts_by_severity: { high: 30 },
+      counts_by_category: { quality: 20, security: 191, maintainability: 956 },
+      ...overrides,
+    };
+  }
+
+  function build(r: Report, stats?: JobStatistics) {
+    return analysisInsightsBuilder(
+      job({
+        status: JobStatus.COMPLETED,
+        completed_at: '2026-01-01T00:01:40Z',
+        engine_statuses: allCompleted,
+      }),
+      r,
+      NO_SUMMARY,
+      NO_FINDINGS,
+      null,
+      null,
+      engines,
+      undefined,
+      stats,
+    );
+  }
+
+  it('shows every report-only engine the count it actually produced', () => {
+    const insights = build(report({ performance_score: null }), statistics());
+    const byKey = Object.fromEntries(insights.engineStatus.map(e => [e.key, e]));
+
+    // Churn findings are grouped under `quality`, which is the same key the
+    // run's own "Change Hotspots" tile reads -- one source, not two.
+    expect(byKey.churn.count).toBe(20);
+    expect(byKey.dead_code.count).toBe(9914);
+    expect(byKey.error_detection.count).toBe(84);
+    expect(byKey.simulation.count).toBe(4);
+    // Performance is scored, but the scorer had no data to score it from, so
+    // its metric count is the real number left to show.
+    expect(byKey.performance.score).toBeNull();
+    expect(byKey.performance.count).toBe(5);
+  });
+
+  it('counts a hotspot group that is absent as zero, not unknown', () => {
+    // The statistics endpoint groups the findings that exist. A completed
+    // churn engine with no group found no hotspots -- a real zero, which is
+    // what the shallow-clone pipeline produces every run, not a data gap.
+    const insights = build(
+      report({ performance_score: null }),
+      statistics({ counts_by_category: { security: 191 } }),
+    );
+
+    expect(insights.engineStatus.find(e => e.key === 'churn')?.count).toBe(0);
+  });
+
+  it('prefers the performance score over its metric count', () => {
+    const insights = build(report(), statistics());
+    const performance = insights.engineStatus.find(e => e.key === 'performance');
+
+    expect(performance?.score).toBe(80);
+    expect(performance?.count).toBeNull();
+  });
+
+  it('gives a scored engine no count, even when its category has findings', () => {
+    const insights = build(report(), statistics());
+
+    expect(insights.engineStatus.find(e => e.key === 'security')?.count).toBeNull();
+  });
+
+  it('shows no count for an engine that has not finished', () => {
+    // A count after a failure or mid-run would be as stale as a score would be.
+    const insights = analysisInsightsBuilder(
+      job({
+        status: JobStatus.RULES,
+        engine_statuses: {
+          churn: { status: 'running', started_at: null, ended_at: null, error: '' },
+        },
+      }),
+      null,
+      NO_SUMMARY,
+      NO_FINDINGS,
+      null,
+      null,
+      engines,
+      undefined,
+      statistics(),
+    );
+
+    expect(insights.engineStatus.find(e => e.key === 'churn')?.count).toBeNull();
+  });
+
+  it('shows no count until the run statistics arrive', () => {
+    // Asked, not answered: without the statistics row there is no count to
+    // show, and inventing one from the report would be a different number.
+    const insights = build(report({ performance_score: null }));
+
+    expect(insights.engineStatus.find(e => e.key === 'dead_code')?.count).toBeNull();
   });
 });
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { formatEngineCount } from '@/lib/analysis/engine-count';
 
 /**
  * Score bands, as palette classes rather than hex values.
@@ -28,12 +29,22 @@ function bandClass(score: number | null | undefined): string {
 
 export function ProgressRing({
   score,
+  count,
   size = 48,
   strokeWidth = 4,
   label,
   className,
 }: {
   score: number | null | undefined;
+  /**
+   * The engine's result count, shown when there is no score.
+   *
+   * A score is a grade, so it gets the coloured arc. A count is a fact, not a
+   * grade: it is drawn as the bare track with the number inside, so nothing
+   * about it can be misread as "9,914 out of 100". Absent, the ring keeps
+   * saying N/A -- which remains the honest answer when neither exists.
+   */
+  count?: number | null;
   size?: number;
   strokeWidth?: number;
   label?: string;
@@ -83,6 +94,10 @@ export function ProgressRing({
           {score != null ? (
             <span className="text-[11px] font-semibold tabular-nums">
               {score}
+            </span>
+          ) : count != null ? (
+            <span className="text-[11px] font-semibold tabular-nums text-text-secondary">
+              {formatEngineCount(count)}
             </span>
           ) : (
             <span className="text-[9px] text-text-tertiary">N/A</span>

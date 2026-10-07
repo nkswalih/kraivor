@@ -643,6 +643,18 @@ export interface EngineStatusItem {
   status: 'completed' | 'running' | 'failed' | 'skipped' | 'pending' | 'unavailable';
   duration: string | null;
   score: number | null;
+  /**
+   * The engine's real result count, for engines that score nothing.
+   *
+   * Four engines report rows rather than a score dimension (hotspot files,
+   * dead-code entries, error findings, simulated load levels), so their score
+   * is null by design -- and a ring showing only null reads N/A on a run that
+   * produced thousands of rows. The count fills that slot with what the engine
+   * actually produced. Null whenever the score exists (the score says more),
+   * whenever the engine did not finish, or whenever the run's statistics have
+   * not arrived yet.
+   */
+  count?: number | null;
   error: string | null;
 }
 

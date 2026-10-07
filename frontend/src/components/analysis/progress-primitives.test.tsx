@@ -210,6 +210,27 @@ describe('ProgressRing', () => {
     expect(screen.getByText('N/A')).toBeInTheDocument();
   });
 
+  it('shows a result count in place of N/A when there is no score', () => {
+    // Four engines report rows rather than a score dimension, so their rings
+    // were N/A on every run however much the run produced. The count fills the
+    // same slot -- but as a fact, not a grade: no arc, no band.
+    const { container } = render(<ProgressRing score={null} count={9_914} />);
+
+    expect(container.querySelectorAll('circle')).toHaveLength(1);
+    expect(container.firstElementChild?.className).not.toContain('text-red-500');
+    expect(screen.getByText('9,914')).toBeInTheDocument();
+    expect(screen.queryByText('N/A')).toBeNull();
+  });
+
+  it('prefers the score over a count', () => {
+    // A score is the richer value; the count is the fallback for the engines
+    // that have none.
+    render(<ProgressRing score={82} count={9_914} />);
+
+    expect(screen.getByText('82')).toBeInTheDocument();
+    expect(screen.queryByText('9,914')).toBeNull();
+  });
+
   it('clamps a score above 100 to a full ring', () => {
     const { container } = render(<ProgressRing score={140} />);
     const arc = container.querySelectorAll('circle')[1];

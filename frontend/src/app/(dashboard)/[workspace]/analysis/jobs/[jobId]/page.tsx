@@ -105,7 +105,10 @@ export default function JobDetailPage() {
 
   // The same derived insights the sidebar builds, so the two cannot disagree
   // about an engine's state, duration or score. Only `engineStatus` is read
-  // here; the rest of the object is unused on this page.
+  // here; the rest of the object is unused on this page. `stats` is the run's
+  // statistics row, which is what fills the engines' result counts (dead-code
+  // entries, error findings, hotspots, load levels) for engines that score
+  // nothing.
   const insights = useMemo(
     () =>
       analysisInsightsBuilder(
@@ -116,8 +119,10 @@ export default function JobDetailPage() {
         undefined,
         undefined,
         enginesQuery.data?.engines,
+        undefined,
+        stats,
       ),
-    [job, report, summary, findingsData, enginesQuery.data],
+    [job, report, summary, findingsData, enginesQuery.data, stats],
   );
 
   const filteredEntries = useMemo(() => {

@@ -7,6 +7,7 @@ import {
   useAnalysisMetadata,
   useEnterpriseGuide,
   useEngines,
+  useJobStatistics,
   useReEnrich,
 } from '@/lib/hooks/use-analysis';
 import { useWorkspaceStore } from '@/lib/stores';
@@ -58,6 +59,11 @@ export function AnalysisInsightsSidebar({
   // the page returns a full-page spinner on loading and a not-found screen on a
   // missing job -- so every card's loading path was dead code.
   const { data: analysisMetadata } = useAnalysisMetadata(jobId);
+  // The same statistics query the detail page runs -- same key, so the two
+  // share one request. It carries the result counts behind the engines that
+  // report rows instead of scores, without which their rows would read N/A
+  // here while the page's tiles already show the real numbers.
+  const { data: statistics } = useJobStatistics(jobId);
   // The error was destructured away entirely, so a failed guide request left the
   // summary card claiming a summary was on its way. With `retry: false` on the
   // query that claim survived for the rest of the page's life -- and the run was
@@ -116,7 +122,7 @@ export function AnalysisInsightsSidebar({
 
   const aiExecutiveSummary = enterpriseGuide?.ai_executive_summary ?? null;
   const aiSummaryError = enterpriseGuide?.ai_summary_error ?? null;
-  const insights = analysisInsightsBuilder(job, report, findingsSummary, findings, analysisMetadata, aiExecutiveSummary, enginesResponse?.engines, aiSummaryError);
+  const insights = analysisInsightsBuilder(job, report, findingsSummary, findings, analysisMetadata, aiExecutiveSummary, enginesResponse?.engines, aiSummaryError, statistics);
 
   if (collapsed) {
     return (

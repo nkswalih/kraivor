@@ -103,6 +103,15 @@ export function EngineCard({
   // yet, and drawing the previous score after a failure would be a stale claim.
   const ringScore = item.status === 'completed' ? item.score : null;
 
+  // The ring's second state: a finished engine that scores nothing still has a
+  // real result count to show -- dead-code entries, error findings, hotspot
+  // files, simulated load levels. Four engines report rows rather than a score
+  // dimension, and their rings read N/A forever otherwise, no matter how much
+  // the run produced. The count only fills an empty score slot (a score is the
+  // richer value) and only for a finished engine, for the same reason as above.
+  const ringCount =
+    item.status === 'completed' && ringScore == null ? item.count ?? null : null;
+
   // A failed engine's recorded reason replaces the catalogue description in the
   // one slot the card has. "What this engine normally checks" is not the answer
   // to "why is this card red", and the old card answered it with the same
@@ -134,7 +143,13 @@ export function EngineCard({
           item.status === 'running' && 'animate-pulse-glow motion-reduce:animate-none',
         )}
       >
-        <ProgressRing score={ringScore} size={56} strokeWidth={4} label={item.name} />
+        <ProgressRing
+          score={ringScore}
+          count={ringCount}
+          size={56}
+          strokeWidth={4}
+          label={item.name}
+        />
       </div>
 
       <div className="flex items-center gap-1.5">

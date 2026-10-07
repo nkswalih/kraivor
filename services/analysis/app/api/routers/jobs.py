@@ -34,8 +34,8 @@ from app.application.analysis.queries import (
     GetJobStatusQuery,
     ListJobsQuery,
 )
-from app.application.tasks.pipeline import run_full_analysis
-from app.core.constants import TriggerType
+from app.application.tasks.pipeline import plan_resume, run_full_analysis
+from app.core.constants import JobStatus, TriggerType
 from app.core.engines import ENGINE_SPECS, EngineSpec
 from app.core.logging import get_logger
 from app.dependencies.auth import JWTPayload, get_current_user
@@ -249,6 +249,75 @@ async def re_enrich_job(
         "has_summary": has_summary,
         "ai_summary_error": summary_error,
     }
+
+
+@router.post("/{job_id}/retry", response_model=JobStatusResponse)
+async def retry_analysis(
+    job_id: UUID,
+    uow: UnitOfWork = Depends(get_uow),
+    _user: JWTPayload = Depends(get_current_user),
+) -> JobStatusResponse:
+    """Resume a failed run from the stage that failed.
+
+    The pipeline saves its position -- parsed files, finished engines' results,
+    the score -- after every stage, so a run that died at 80% continues at 80%
+    rather than cloning and re-parsing from zero. Three refusals, each with a
+    machine-readable detail the client acts on differently: an unknown job, a
+    job that is not failed (the page's poll is about to say so), and a job
+    whose saved position is gone -- for which the client starts a fresh
+    analysis, which is what a retry did before resuming existed.
+    """
+    job = await uow.jobs.get_by_id(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if cast(str, job["status"]) != JobStatus.FAILED:
+        raise HTTPException(status_code=409, detail="not_failed")
+
+    depth = cast(int, job.get("depth", 1))
+    resume_from = plan_resume(job_id, depth=depth)
+    if resume_from is None:
+        raise HTTPException(status_code=409, detail="no_checkpoint")
+
+    # Claimed atomically: the UPDATE matches only a row still `failed`, so of
+    # two concurrent retries exactly one launches a pipeline. Losing means
+    # another retry already owns this run -- same story as `not_failed`.
+    claimed = await uow.jobs.queue_if_failed(
+        job_id, progress_message=f"Resuming from {resume_from}..."
+    )
+    if not claimed:
+        raise HTTPException(status_code=409, detail="already_queued")
+    await uow.commit()
+
+    cmd_dict: dict[str, object] = {
+        "job_id": str(job_id),
+        "repo_id": str(job["repo_id"]),
+        "workspace_id": str(job["workspace_id"]),
+        "triggered_by": str(job["triggered_by"]),
+        "trigger_type": TriggerType.API,
+        "repo_url": job["repo_url"] or "",
+        "branch": job["branch"],
+        "deep_scan": job["deep_scan"],
+        "depth": job["depth"],
+        # Not part of StartAnalysisCommand; run_full_analysis pops it and
+        # continues from the checkpoint instead of stage one.
+        "resume": True,
+    }
+    background_task = asyncio.create_task(_run_analysis_safe(cmd_dict))
+    _background_tasks.add(background_task)
+    background_task.add_done_callback(lambda t: _background_tasks.discard(t))
+
+    # Built from the claim this transaction just wrote rather than re-read:
+    # `expire_on_commit` is False, so a second `get_by_id` would hand back the
+    # identity map's pre-claim copy and the response would still say `failed`.
+    return _job_to_response(
+        {
+            **job,
+            "status": JobStatus.QUEUED,
+            "progress_message": f"Resuming from {resume_from}...",
+            "error_message": None,
+            "completed_at": None,
+        }
+    )
 
 
 def _engine_to_response(spec: EngineSpec) -> EngineInfo:

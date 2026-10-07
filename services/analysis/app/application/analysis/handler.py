@@ -1789,6 +1789,16 @@ async def handle_delete_job(
     if not job:
         raise NotFoundError(f"Job {cmd.job_id} not found")
 
+    # The saved resume position holds a copy of this run's parsed contents.
+    # The row is gone, so the position is unreachable anyway -- dropping it
+    # here rather than leaving an unreadable file describing a job that no
+    # longer exists. Imported here, not at module scope: the tasks package's
+    # __init__ imports the pipeline, and the pipeline imports this module --
+    # a top-level import would have the two loading each other.
+    from app.application.tasks.checkpoint import delete_checkpoint
+
+    delete_checkpoint(cmd.job_id)
+
     # Clean up S3 artifacts for this job
     if storage:
         s3_prefix = f"reports/{cmd.workspace_id}/{cmd.job_id}"

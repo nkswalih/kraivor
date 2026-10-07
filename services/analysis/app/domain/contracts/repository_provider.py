@@ -33,6 +33,15 @@ class AbstractJobRepository(ABC):
         ...
 
     @abstractmethod
+    async def queue_if_failed(self, job_id: UUID, progress_message: str) -> bool:
+        """Claim a failed job for a retry: flip it to `queued`, clearing the
+        failure's traces. Returns False when the job was not failed -- which
+        is also what a second, concurrent retry gets, so only one of them
+        can launch a pipeline.
+        """
+        ...
+
+    @abstractmethod
     async def list_by_repo(
         self, repo_id: UUID, limit: int = 10, offset: int = 0
     ) -> tuple[list[dict[str, object]], int]: ...

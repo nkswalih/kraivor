@@ -8,8 +8,10 @@ marked as failed immediately and the pipeline halts.
 import asyncio
 import time
 import traceback
+from collections.abc import Awaitable, Mapping
 from datetime import UTC, datetime
-from typing import cast
+from pathlib import Path
+from typing import Protocol, cast
 from uuid import UUID
 
 from app.application.analysis.commands import ProcessStageCommand, StartAnalysisCommand
@@ -34,6 +36,11 @@ from app.application.analysis.handler import (
     handle_stage_score,
     handle_stage_simulation,
     handle_start_analysis,
+)
+from app.application.tasks.checkpoint import (
+    delete_checkpoint,
+    load_checkpoint,
+    save_checkpoint,
 )
 from app.core.constants import EngineStateMap
 from app.core.engines import ALL_ENGINES as CANONICAL_ALL_ENGINES
@@ -244,6 +251,131 @@ async def _persist_engine_statuses(state: dict[str, object]) -> None:
         logger.warning("persist_engine_statuses_failed")
 
 
+class _StageFn(Protocol):
+    """One pipeline stage: the shared state, plus that stage's own arguments.
+
+    Only `start` takes anything today (the command); every other stage reads
+    what it needs straight out of the state dict. The `*args` shape is what
+    lets one tuple hold both kinds -- and why `_stages` casts its literal:
+    the concrete functions have fixed arities that a variadic signature
+    cannot promise, only accept.
+    """
+
+    def __call__(
+        self, state: dict[str, object], *args: object
+    ) -> Awaitable[None]: ...
+
+
+def _stages(cmd: StartAnalysisCommand) -> tuple[tuple[str, _StageFn, tuple[object, ...]], ...]:
+    """The pipeline's stages, in order.
+
+    Built from module globals when called, so a test that patches a `_stage_*`
+    attribute takes over the whole loop. The order is the order
+    `_STAGE_PROGRESS` lists as well -- `plan_resume` reads positions from that
+    table, and a test pins the two together so an edit to one cannot silently
+    leave the other behind.
+    """
+    return cast(
+        tuple[tuple[str, _StageFn, tuple[object, ...]], ...],
+        (
+            ("start", _stage_start, (cmd,)),
+            ("clone", _stage_clone, ()),
+            ("churn", _stage_churn, ()),
+            ("parse", _stage_parse, ()),
+            ("rules", _stage_rules, ()),
+            ("save_findings", _stage_save_findings, ()),
+            ("dead_code", _stage_dead_code, ()),
+            ("errors", _stage_errors, ()),
+            ("reliability", _stage_reliability, ()),
+            ("maintainability", _stage_maintainability, ()),
+            ("devops", _stage_devops, ()),
+            ("perf", _stage_perf, ()),
+            ("simulation", _stage_simulation, ()),
+            ("score", _stage_score, ()),
+            ("guide_gen", _stage_guide_gen, ()),
+            ("ai_enrich", _stage_ai_enrich, ()),
+            ("finalize", _stage_finalize, ()),
+        ),
+    )
+
+
+def _save_checkpoint_quiet(state: dict[str, object], stage_name: str) -> None:
+    """Save the run's position after a finished stage. Never raises.
+
+    Losing a checkpoint costs only the *next* retry's ability to resume; it
+    must never cost the run that is succeeding right now, which is why every
+    failure -- a full disk, a state object something upstream made
+    unpicklable -- is a logged warning here and nothing else. The clone stage
+    leaves `job_id` as a string behind (its result dict carries the str form),
+    so both spellings are accepted rather than trusting one shape.
+    """
+    raw = state.get("job_id")
+    if raw is None:
+        return
+    try:
+        job_id = raw if isinstance(raw, UUID) else UUID(str(raw))
+    except (ValueError, TypeError):
+        return
+    try:
+        save_checkpoint(job_id, state)
+    except Exception:
+        logger.warning("checkpoint_save_failed", stage=stage_name, job_id=str(job_id))
+
+
+def _plan_from_state(state: Mapping[str, object], depth: int = 1) -> str | None:
+    """The stage a retry should start at, or None if this state cannot resume.
+
+    The checkpoint records the last stage that *finished* (`_last_stage` is
+    written at stage start and the file is only saved after stage success, so
+    the newest file always describes a completed stage). The resume point is
+    therefore the stage after it -- the one that failed.
+
+    `depth` matters for one case: churn reads the cloned repository's git
+    history from disk, so a deep analysis whose container has since been
+    recreated (taking /tmp with it) cannot run it. Every other stage past
+    clone works from what the checkpoint holds in memory -- parse reads the
+    file contents the clone stage collected, not the disk -- so only churn is
+    handed the question of whether the workspace is still there.
+    """
+    last = state.get("_last_stage")
+    if not isinstance(last, str) or last not in _STAGE_PROGRESS:
+        logger.warning("resume_stage_unknown", last_stage=repr(last))
+        return None
+    order = list(_STAGE_PROGRESS)
+    next_index = order.index(last) + 1
+    if next_index >= len(order):
+        # The checkpoint describes a pipeline that ran to completion while the
+        # job row says failed. There is no stage left to resume *at*, and
+        # re-running earlier ones against rows they already wrote is exactly
+        # how duplicate findings happen.
+        return None
+    next_stage = order[next_index]
+    if next_stage == "churn" and depth > 1:
+        repo_path = state.get("repo_path")
+        if not (isinstance(repo_path, str) and Path(repo_path).is_dir()):
+            logger.info(
+                "resume_unusable",
+                reason="workspace_gone",
+                next_stage=next_stage,
+                repo_path=repr(repo_path),
+            )
+            return None
+    return next_stage
+
+
+def plan_resume(job_id: UUID, depth: int = 1) -> str | None:
+    """The stage a retry of this job would start at, or None if it cannot resume.
+
+    Read by the retry endpoint before it claims the job, and again by the
+    retried run when it starts -- one planner, so the stage the endpoint
+    promised and the stage the pipeline keeps are the same value.
+    """
+    state = load_checkpoint(job_id)
+    if state is None:
+        return None
+    return _plan_from_state(state, depth=depth)
+
+
 async def run_full_analysis(cmd_dict: dict[str, object]) -> dict[str, object]:
     """Execute the complete analysis pipeline in the background.
 
@@ -255,24 +387,66 @@ async def run_full_analysis(cmd_dict: dict[str, object]) -> dict[str, object]:
     Args:
         cmd_dict: Serialized StartAnalysisCommand fields.
                    May include 'job_id' if the job was already created
-                   by the API router.
+                   by the API router, and 'resume' when the job is a failed
+                   run being retried from its saved position.
 
     Returns:
         Dict with job_id and report summary.
     """
     job_id_str = cmd_dict.pop("job_id", None)
+    resume = bool(cmd_dict.pop("resume", False))
     cmd = StartAnalysisCommand(**cmd_dict)  # type: ignore[arg-type]
+    job_id = UUID(cast(str, job_id_str)) if job_id_str else None
     state: dict[str, object] = {}
-    if job_id_str:
-        state["job_id"] = UUID(cast(str, job_id_str))
+    if job_id:
+        state["job_id"] = job_id
+
+    resume_from: str | None = None
+    if resume:
+        if job_id is None:
+            # Defensive: a resume with no identity has nowhere to read a
+            # position from, and starting over as a fresh job would write a
+            # second set of rows beside the ones the failed attempt left.
+            logger.error("resume_without_job_id")
+            return {"status": "failed", "reason": "resume_requires_job_id"}
+        restored = load_checkpoint(job_id)
+        if restored:
+            state.update(restored)
+            # The checkpoint's copy is the same job, but the identity this run
+            # was launched with is the one every stage must keep seeing -- the
+            # clone stage stores it as a string, and downstream casts assume
+            # the UUID form until it does.
+            state["job_id"] = job_id
+        resume_from = _plan_from_state(state, depth=cmd.depth)
+        if resume_from is None:
+            # The endpoint checked this before launching, so arriving here
+            # means the file vanished or changed in between -- the container
+            # restarted, or the state was written by code this one cannot
+            # read. Refusing is the honest outcome: re-running from stage one
+            # would duplicate every row the attempt already wrote.
+            await _handle_failure_async(
+                job_id=job_id,
+                stage="resume",
+                error_message=(
+                    "This run's saved position is no longer readable, so it "
+                    "cannot resume. Start a new analysis instead."
+                ),
+            )
+            return {"job_id": str(job_id), "status": "failed"}
 
     try:
-        await _run_pipeline(cmd, state)
+        await _run_pipeline(cmd, state, resume_from=resume_from)
     except Exception:
         # Stage-level handlers already called _handle_failure_async;
         # just log and re-raise so asyncio doesn't swallow it silently.
         logger.exception("pipeline_aborted")
         raise
+
+    if job_id:
+        # The run finished; there is nothing left to resume from. A completed
+        # job's checkpoint is dead weight holding a copy of the repository's
+        # parsed contents in ephemeral storage.
+        delete_checkpoint(job_id)
 
     score_raw = state.get("score")
     overall_score = score_raw.overall if isinstance(score_raw, Score) else None
@@ -304,34 +478,50 @@ async def _publish_engine_event(
         logger.warning("publish_engine_event_failed", engine=engine_name)
 
 
-async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> None:
+async def _run_pipeline(
+    cmd: StartAnalysisCommand,
+    state: dict[str, object],
+    *,
+    resume_from: str | None = None,
+) -> None:
     """Execute all pipeline stages sequentially with per-stage error handling.
 
     Each stage is wrapped in try/except so a failure marks the job as failed
     immediately with a clear message and halts the pipeline.
+
+    `resume_from` names the stage to start at: every stage before it already
+    finished in a previous attempt, and their outputs arrive in `state` from
+    the checkpoint instead of being produced again. A fresh run passes None
+    and starts at `start`.
     """
     state["_pipeline_start"] = time.monotonic()
-    state["engine_statuses"] = dict.fromkeys(ALL_ENGINES, "pending")
-    state["_engine_meta"] = {}
-    for stage_name, stage_fn, stage_args in (
-        ("start", _stage_start, (cmd,)),
-        ("clone", _stage_clone, ()),
-        ("churn", _stage_churn, ()),
-        ("parse", _stage_parse, ()),
-        ("rules", _stage_rules, ()),
-        ("save_findings", _stage_save_findings, ()),
-        ("dead_code", _stage_dead_code, ()),
-        ("errors", _stage_errors, ()),
-        ("reliability", _stage_reliability, ()),
-        ("maintainability", _stage_maintainability, ()),
-        ("devops", _stage_devops, ()),
-        ("perf", _stage_perf, ()),
-        ("simulation", _stage_simulation, ()),
-        ("score", _stage_score, ()),
-        ("guide_gen", _stage_guide_gen, ()),
-        ("ai_enrich", _stage_ai_enrich, ()),
-        ("finalize", _stage_finalize, ()),
-    ):
+    # `setdefault`, because a resumed run arrives holding the checkpoint's
+    # maps: engines that finished must stay finished -- the score reads that
+    # map -- and their recorded timings are history, not something to blank.
+    # A fresh run has neither key and gets the all-pending pair it always had.
+    state.setdefault("engine_statuses", dict.fromkeys(ALL_ENGINES, "pending"))
+    state.setdefault("_engine_meta", {})
+
+    stages = _stages(cmd)
+    if resume_from is not None:
+        for index, (name, _, _) in enumerate(stages):
+            if name == resume_from:
+                stages = stages[index:]
+                logger.info(
+                    "pipeline_resuming",
+                    stage=resume_from,
+                    job_id=str(state.get("job_id")),
+                )
+                break
+        else:
+            # `plan_resume` reads positions from `_STAGE_PROGRESS`, which a
+            # test pins to this list, so disagreement means the process
+            # changed underneath itself. Refusing beats guessing an index: a
+            # wrong slice either re-runs completed stages or skips unfinished
+            # ones, and both are worse than a failed job that says why.
+            raise ValueError(f"cannot resume at unknown stage {resume_from!r}")
+
+    for stage_name, stage_fn, stage_args in stages:
         state["_last_stage"] = stage_name
         engine_ids = STAGE_ENGINE_KEYS.get(stage_name, [])
         job_id = cast(UUID, state.get("job_id"))
@@ -342,10 +532,7 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
                 await _publish_engine_event(job_id, eid, "running")
         await _push_stage_progress(state, stage_name)
         try:
-            if stage_args:
-                await stage_fn(state, *stage_args)  # type: ignore[call-arg]
-            else:
-                await stage_fn(state)  # type: ignore[call-arg]
+            await stage_fn(state, *stage_args)
             for eid in engine_ids:
                 cast(dict[str, str], state["engine_statuses"])[eid] = "completed"
                 _mark_engine_ended(state, eid)
@@ -354,6 +541,11 @@ async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> 
             # Persist now rather than leaving it for the next stage's progress
             # write. See _persist_engine_statuses.
             await _persist_engine_statuses(state)
+            # The position of a finished stage, saved while it is still true.
+            # Reached only on the success path: when a stage raises, the newest
+            # file on disk is the last stage that *did* finish, which is
+            # exactly where a retry resumes from.
+            await asyncio.to_thread(_save_checkpoint_quiet, state, stage_name)
         except Exception as exc:
             engine_error = _describe_engine_error(stage_name, exc)
             for eid in engine_ids:

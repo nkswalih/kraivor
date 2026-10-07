@@ -1,13 +1,15 @@
+from typing import cast
 from uuid import UUID
 
 from sqlalchemy import case, func, select, update
 from sqlalchemy import delete as sa_delete
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.sql.expression import SQLColumnExpression
 
-from app.core.constants import EngineStateMap
+from app.core.constants import EngineStateMap, JobStatus
 from app.domain.contracts.repository_provider import AbstractJobRepository
 from app.infrastructure.db.models.analysis_job import AnalysisJobModel
 from app.infrastructure.db.models.file_analysis import FileAnalysisModel
@@ -109,6 +111,38 @@ class JobRepository(AbstractJobRepository):
             .values(**values)
         )
         await self._session.execute(stmt)
+
+    async def queue_if_failed(self, job_id: UUID, progress_message: str) -> bool:
+        """Claim a failed job for a retry. True only for the caller that won.
+
+        The status guard is what makes two concurrent retries safe: the first
+        UPDATE flips `failed` to `queued`, the second matches no row and
+        reports False. Without it, two clicks would launch two pipelines
+        writing two interleaved sets of findings into one job's tables.
+
+        The failure's traces are cleared on the way through: `error_message`
+        and `completed_at` describe a run that has ended, and a run being
+        revived must not still be carrying them. `progress_pct` is left
+        alone -- it holds the percentage the run reached, which is where the
+        resumed run continues from, and the floor in `update_status` keeps it
+        from moving backwards while it does.
+        """
+        stmt = (
+            update(AnalysisJobModel)
+            .where(
+                AnalysisJobModel.id == job_id,
+                AnalysisJobModel.status == JobStatus.FAILED,
+                AnalysisJobModel.deleted_at.is_(None),
+            )
+            .values(
+                status=JobStatus.QUEUED,
+                progress_message=progress_message,
+                error_message=None,
+                completed_at=None,
+            )
+        )
+        result = await self._session.execute(stmt)
+        return bool(cast(CursorResult[()], result).rowcount)
 
     async def list_by_repo(
         self, repo_id: UUID, limit: int = 10, offset: int = 0

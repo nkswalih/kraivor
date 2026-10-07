@@ -1,36 +1,49 @@
-"""Why the progress floor in `JobRepository.update_status` is wrapped in `coalesce`.
+"""Why `JobRepository.update_status` writes its progress floor as a CASE.
 
-The floor is `max(coalesce(progress_pct, 0), incoming)`. The `coalesce` looks
-redundant -- `progress_pct` defaults to 0 in effect, because it is a percentage --
-and a reader is invited to delete it as noise.
+The floor is `floored_progress`, imported from the repository above. The tests
+drive the real expression rather than a local copy of it -- which they did not
+do while the expression was wrong twice, in opposite directions.
 
-It is not redundant. It is the only thing making progress record at all on SQLite.
+1. `max(column, incoming)`: SQLite's two-argument max returns NULL when any
+   argument is NULL, and a run's first write is always against a NULL column,
+   so the write stored NULL, the next write read NULL, and every write of the
+   whole run was discarded -- the bar sat empty from clone to finalize. The
+   predecessor of this file caught it by expecting `[None, 20, 30]` and
+   getting `[None, None, None]`.
 
-These tests do not use the job model, because the claim is about SQLite's scalar
-`max` and nothing else. Driving the real `analysis_jobs` table would need every
-one of its not-null columns populated to prove an arithmetic rule, which would
-test the fixture rather than the rule.
+2. `max(coalesce(column, 0), incoming)`: correct on SQLite, fatal on Postgres,
+   which has no two-argument max at all. Every status write of every run died
+   there with `function max(integer, integer) does not exist` and no analysis
+   could start. As the file was written, nothing in it could have caught this:
+   the form compiles without complaint, SQLite executes it happily, and only a
+   Postgres server refuses it.
 
-Every assertion here is one that fails if the `coalesce` is removed. The first two
-exist purely to demonstrate the trap: without them the remaining tests would
-still pass on Postgres, and the breakage would only appear in the engine the test
-suite runs on.
+So the file is now two halves. The behavior half below runs the real
+expression on a probe table -- still not the job model, because the claim
+there is arithmetic on one nullable column and driving `analysis_jobs` would
+need every not-null column populated to prove it, which would test the fixture
+instead of the rule. The portability half compiles the statement
+`update_status` actually builds, for the Postgres dialect, and pins the shape
+that survives both engines: a CASE, whose NULL column falls into the else
+branch on its own -- the outcome mistake 1 needed its coalesce for.
 
-Worth recording, because it is the opposite of what I first assumed and the
-assertion below caught it: the unguarded form does not merely lose a run's first
-write. It stores NULL, so the next write reads NULL and stores NULL, and every
-write of the entire run is discarded. The bar would sit empty from clone to
-finalize. Two of these tests were written expecting `[None, 20, 30]` and got
-`[None, None, None]`.
+Worth recording, because it is how mistake 2 shipped: half-and-half was the
+arrangement then too. Every assertion in the predecessor of this file passed
+while `func.max(coalesce(...), ...)` sat in the repository, because none of
+them asked the engine production uses.
 """
 
 import asyncio
 from collections.abc import Callable, Sequence
-from typing import cast
+from uuid import uuid4
 
-from sqlalchemy import Column, Integer, MetaData, Table, func, select, update
+from sqlalchemy import Column, Integer, MetaData, Table, select, update
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.sql.elements import ColumnElement
+
+from app.infrastructure.db.models.analysis_job import AnalysisJobModel
+from app.infrastructure.db.repositories.analysis_job import floored_progress
 
 _METADATA = MetaData()
 _PCT = Table(
@@ -40,8 +53,9 @@ _PCT = Table(
     Column("progress_pct", Integer, nullable=True),
 )
 
-# How a test builds the value written into the column: either `update_status`'s
-# floored expression, or the unguarded version being demonstrated as broken.
+# How a test builds the value written into the column: `update_status`'s own
+# `floored_progress`, imported rather than reproduced. The old local copy is
+# why mistake 2 above could sit in the repository through a green suite.
 _Assignment = Callable[[ColumnElement[int], int], ColumnElement[int]]
 
 
@@ -86,59 +100,58 @@ async def _scenario(assignment: _Assignment, values: Sequence[int]) -> list[int 
         await engine.dispose()
 
 
-def _floor(column: ColumnElement[int], incoming: int) -> ColumnElement[int]:
-    """`update_status`'s expression: the stored value, floored against the incoming one."""
-    return cast("ColumnElement[int]", func.max(func.coalesce(column, 0), incoming))
-
-
-def _floor_without_coalesce(
-    column: ColumnElement[int], incoming: int
-) -> ColumnElement[int]:
-    """The same floor with the `coalesce` removed -- the tempting simplification."""
-    return cast("ColumnElement[int]", func.max(column, incoming))
-
-
 # ======================================================================
 # The trap
 # ======================================================================
 
 
 class TestTheTrap:
-    def test_a_run_that_never_wrote_progress_before(self) -> None:
-        # Every run's first progress write happens against a NULL column.
-        result = asyncio.run(_scenario(_floor, [10]))
+    def test_the_real_statement_compiles_to_a_case_on_postgres(self) -> None:
+        # Mistake 2, pinned at the only level a SQLite suite can reach. The
+        # `max(coalesce(...), ...)` form compiled without complaint and
+        # executed perfectly here; Postgres refused it server-side on the
+        # first status write of every run. Compiling `update_status`'s own
+        # statement for the Postgres dialect and pinning the shape is what a
+        # revert has to get past.
+        stmt = (
+            update(AnalysisJobModel)
+            .where(AnalysisJobModel.id == uuid4())
+            .values(
+                status="running",
+                progress_pct=floored_progress(AnalysisJobModel.progress_pct, 10),
+            )
+        )
+        sql = str(stmt.compile(dialect=postgresql.dialect()))
 
-        assert (
-            result[0] == 10
-        ), f"the first write of a run stored {result[0]!r} instead of 10"
-
-    def test_sqlite_max_of_null_is_null_so_coalesce_is_load_bearing(self) -> None:
-        # The reason, isolated. SQLite's two-argument `max` returns NULL if any
-        # argument is NULL; Postgres treats the same call as `greatest` and skips
-        # the NULL.
-        #
-        # The consequence is worse than losing the first write. The unguarded
-        # write stores NULL, so the *next* one reads NULL again and stores NULL
-        # again -- every write of the whole run is discarded, and the bar sits
-        # empty until something outside this path sets the column. Which means the
-        # unguarded form works perfectly in production Postgres and silently does
-        # nothing in the SQLite the test suite and local dev run on, which is the
-        # easiest possible shape for a regression to survive review.
-        result = asyncio.run(_scenario(_floor_without_coalesce, [10, 20, 30]))
-
-        assert result == [None, None, None], (
-            "expected SQLite to discard every write while the column is NULL; "
-            f"got {result!r}. If this now fails, the database this suite runs "
-            "against has changed and the portability claim above needs rechecking."
+        assert "CASE WHEN" in sql, (
+            "the progress floor must compile to a CASE on Postgres; max(a, b) "
+            "and greatest(a, b) each die on one of the two engines. Compiled "
+            f"to:\n{sql}"
+        )
+        assert "max(" not in sql.lower(), (
+            "Postgres has no two-argument max -- this is the exact shape that "
+            f"stopped every analysis from starting:\n{sql}"
         )
 
-    def test_the_coalesced_form_records_every_write_from_the_first(self) -> None:
-        # The other half of the same claim, stated positively, so the guarantee
-        # is pinned by something that would fail if the floor were removed rather
-        # than by something that would fail if it were removed *badly*.
-        result = asyncio.run(_scenario(_floor, [10, 20, 30]))
 
-        assert result == [10, 20, 30]
+# ======================================================================
+# The first write
+# ======================================================================
+
+
+class TestTheFirstWrite:
+    def test_a_run_that_never_wrote_progress_before(self) -> None:
+        # Every run's first progress write happens against a NULL column. The
+        # CASE takes its else branch there -- `column > incoming` is UNKNOWN,
+        # never TRUE -- so the incoming value lands instead of a NULL, and
+        # every write after it keeps recording. The `max` form of mistake 1
+        # failed exactly here: `[None, None, None]`.
+        result = asyncio.run(_scenario(floored_progress, [10, 20, 30]))
+
+        assert result == [10, 20, 30], (
+            "every write of a run must record from the first; "
+            f"got {result!r}"
+        )
 
 
 # ======================================================================
@@ -151,7 +164,7 @@ class TestTheGuarantee:
         # The defect being fixed. The `errors` stage handler reported 86% while
         # the pipeline's own table put that stage at 78%, so the next stage's
         # write pulled the bar from 86 back to 80 in front of the reader.
-        result = asyncio.run(_scenario(_floor, [86, 80]))
+        result = asyncio.run(_scenario(floored_progress, [86, 80]))
 
         assert result == [86, 86], (
             f"the bar rewound to {result[1]!r}; a reader watching a 2s poll saw "
@@ -161,7 +174,7 @@ class TestTheGuarantee:
     def test_a_higher_value_still_gets_through(self) -> None:
         # The floor must not become a ceiling -- that would freeze every run at
         # its first write.
-        result = asyncio.run(_scenario(_floor, [10, 25, 40, 100]))
+        result = asyncio.run(_scenario(floored_progress, [10, 25, 40, 100]))
 
         assert result == [10, 25, 40, 100]
 
@@ -169,7 +182,7 @@ class TestTheGuarantee:
         # The pipeline writes the same stage percentage twice in a row -- once
         # when the stage starts and once when it finishes with its results
         # counted. `perf` and `simulation` and `ai_enrich` all do this.
-        result = asyncio.run(_scenario(_floor, [87, 87, 90]))
+        result = asyncio.run(_scenario(floored_progress, [87, 87, 90]))
 
         assert result == [87, 87, 90]
 
@@ -203,7 +216,7 @@ class TestTheGuarantee:
             98,
             100,
         ]
-        result = asyncio.run(_scenario(_floor, stages))
+        result = asyncio.run(_scenario(floored_progress, stages))
 
         assert result == [
             max(stages[: i + 1]) for i in range(len(stages))

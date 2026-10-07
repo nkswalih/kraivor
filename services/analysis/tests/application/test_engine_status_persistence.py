@@ -513,9 +513,13 @@ class TestFailureCarriesEngineStatuses:
         """The floor must be computed by the database, from the row's own value.
 
         Written here rather than in the read-side tests because this is the write
-        that decides whether the bar can move backwards: if the assignment were
-        `max(0, :pct)` the statement would look right and every run would still
-        rewind.
+        that decides whether the bar can move backwards: an assignment whose
+        condition compares a constant rather than the stored column would look
+        right and every run would still rewind. The CASE shape is asserted too,
+        because the alternative this replaced -- `max(a, b)` -- compiles and runs
+        on SQLite and dies on Postgres with `function max(integer, integer) does
+        not exist`, which took every run down at start. `test_progress_floor.py`
+        carries the other half of that pin.
         """
         recorder = _WriteRecorder()
         repo = JobRepository(cast("AsyncSession", _FakeSession(recorder)))
@@ -523,12 +527,11 @@ class TestFailureCarriesEngineStatuses:
         asyncio.run(repo.update_status(uuid4(), "running", progress_pct=45))
 
         sql = recorder.sql[0].lower()
-        assert "max(" in sql, f"no floor on progress_pct: {recorder.sql[0]}"
-        assert "coalesce(" in sql, (
-            "the floor would store NULL for a job whose progress_pct has never "
-            "been written -- SQLite's two-argument max returns NULL for a NULL "
-            f"argument, so the first write of every run would be lost: "
-            f"{recorder.sql[0]}"
+        assert "case when" in sql, f"no floor on progress_pct: {recorder.sql[0]}"
+        assert "max(" not in sql, (
+            "a two-argument max runs on SQLite and dies on Postgres with "
+            "`function max(integer, integer) does not exist` "
+            f"(the error that stopped every analysis from starting): {recorder.sql[0]}"
         )
         # The column being compared has to be the one already on the row.
         assert "analysis_jobs.progress_pct" in sql.replace(

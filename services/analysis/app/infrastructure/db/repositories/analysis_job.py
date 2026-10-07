@@ -1,15 +1,41 @@
 from uuid import UUID
 
+from sqlalchemy import case, func, select, update
 from sqlalchemy import delete as sa_delete
-from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
+from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.sql.expression import SQLColumnExpression
 
 from app.core.constants import EngineStateMap
 from app.domain.contracts.repository_provider import AbstractJobRepository
 from app.infrastructure.db.models.analysis_job import AnalysisJobModel
 from app.infrastructure.db.models.file_analysis import FileAnalysisModel
 from app.infrastructure.db.models.score_history import ScoreHistoryModel
+
+
+def floored_progress(
+    column: SQLColumnExpression[int], incoming: int
+) -> ColumnElement[int]:
+    """The value written into `progress_pct`: the stored percentage, floored.
+
+    Spelled as a CASE rather than `max(a, b)` or `greatest(a, b)` because no
+    scalar "larger of two numbers" exists on both engines: SQLite has `max` and
+    no `greatest`; Postgres has `greatest` and -- this is what took every run
+    down at start -- no two-argument `max` at all, rejecting the statement with
+    `function max(integer, integer) does not exist`. The expression before this
+    one was chosen while the only engine under test was SQLite, passed every
+    test in `test_progress_floor.py`, compiled without complaint, and could not
+    execute a single statement on the engine production uses. The CASE compiles
+    to plain SQL on both.
+
+    A NULL column -- a run's first write, before anything has been recorded --
+    takes the `else` branch: `column > incoming` is UNKNOWN, never TRUE, so the
+    incoming value is stored rather than a NULL propagating. That is the
+    outcome the previous form needed its `coalesce` for, without a function
+    name either engine could disagree about.
+    """
+    return case((column > incoming, column), else_=incoming)
 
 
 class JobRepository(AbstractJobRepository):
@@ -62,16 +88,17 @@ class JobRepository(AbstractJobRepository):
         edit from reintroducing it, so the invariant is enforced where every write
         passes through instead.
 
-        `coalesce` is not optional. SQLite's two-argument `max` returns NULL if
-        any argument is NULL, so without it the very first write of a run would
-        store NULL and the bar would stay empty until the column happened to be
-        written again. Postgres ignores the NULL, so this is exactly the kind of
-        divergence that passes in one engine and fails in the other.
+        The floor lives in `floored_progress`, and its spelling is load-bearing.
+        The expression this replaced was `max(coalesce(...), ...)`: correct on
+        the SQLite the suite runs on, fatal on Postgres, which has no
+        two-argument `max` -- the first status write of every run died there
+        with `function max(integer, integer) does not exist`, and no analysis
+        could start.
         """
         values: dict[str, object] = {"status": status}
         if progress_pct is not None:
-            values["progress_pct"] = func.max(
-                func.coalesce(AnalysisJobModel.progress_pct, 0), progress_pct
+            values["progress_pct"] = floored_progress(
+                AnalysisJobModel.progress_pct, progress_pct
             )
         if engine_statuses is not None:
             values["engine_statuses"] = engine_statuses

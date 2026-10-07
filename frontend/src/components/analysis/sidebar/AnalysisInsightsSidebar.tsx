@@ -10,7 +10,7 @@ import {
   useJobStatistics,
   useReEnrich,
 } from '@/lib/hooks/use-analysis';
-import { useWorkspaceStore } from '@/lib/stores';
+import { useAuthStore } from '@/lib/stores/auth-store';
 import type { AnalysisJob, Report, FindingsSummary, Finding } from '@/types/domain/analysis';
 import { AIExecutiveSummaryCard } from './AIExecutiveSummaryCard';
 import { PriorityRecommendationCard } from './PriorityRecommendationCard';
@@ -76,15 +76,17 @@ export function AnalysisInsightsSidebar({
   } = useEnterpriseGuide(jobId);
   const { data: enginesResponse } = useEngines();
 
-  // A job payload names the workspace by id, and that id was what reached these
-  // cards: `eb6e03d3` where the reader knows the thing as "Acme". The store is
-  // the only place holding the display name, so it is read here rather than
-  // threaded down from the page -- and matched on id, so a store pointing at
-  // some other workspace cannot label this run with its name.
-  const currentWorkspace = useWorkspaceStore((s) => s.currentWorkspace);
+  // A job payload names its workspace by id, and the reader knows it by name.
+  // The id-matched lookup that used to live here read the zustand workspace
+  // store -- whose `fetchWorkspaces` has no callers anywhere in the app, so
+  // it was always empty and the row always rendered "—". The auth store holds
+  // the same list the topbar renders, loaded at sign-in, so that is the source
+  // here; still matched on id, so a run from another workspace cannot borrow
+  // this one's name.
+  const workspaces = useAuthStore((s) => s.workspaces);
   const workspaceName =
-    currentWorkspace && job?.workspace_id && currentWorkspace.id === job.workspace_id
-      ? currentWorkspace.name
+    job?.workspace_id
+      ? workspaces.find((w) => w.id === job.workspace_id)?.name ?? null
       : null;
 
   const isLoading = externalLoading ?? !job;

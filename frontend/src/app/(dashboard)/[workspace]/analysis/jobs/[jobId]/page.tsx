@@ -74,7 +74,11 @@ export default function JobDetailPage() {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'all'>('all');
 
   const { data: job, isLoading, error } = useJob(jobId);
-  useDetailBreadcrumb(job ? `Analysis ${job.job_id.slice(0, 8)}` : null);
+  // The repository's short name -- what this run is actually known by. The
+  // header and the topbar path used to read `Analysis 63c45aae`: a job id
+  // prefix, which named nothing the reader could act on.
+  const repoName = job?.repo_url?.split('/').pop() || 'Analysis';
+  useDetailBreadcrumb(job ? repoName : null);
   const { data: report } = useReport(jobId);
   const enginesQuery = useEngines();
   const { data: summary, isLoading: isSummaryLoading, error: summaryError } = useFindingsSummary(jobId);
@@ -313,7 +317,7 @@ export default function JobDetailPage() {
             </Link>
             <h1 className="text-lg font-medium text-foreground flex items-center gap-2">
               <Activity className="w-5 h-5 text-primary" />
-              Analysis {job.job_id.slice(0, 8)}
+              {repoName}
             </h1>
             <JobStatusBadge status={job.status} />
             <div className="ml-auto flex items-center gap-2">

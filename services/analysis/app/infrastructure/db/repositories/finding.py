@@ -1,9 +1,9 @@
 from uuid import UUID
 
-from sqlalchemy import func, insert, select, update
+from sqlalchemy import case, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import FindingStatus
+from app.core.constants import FindingStatus, Severity
 from app.domain.contracts.repository_provider import AbstractFindingRepository
 from app.domain.entities.finding import Finding
 from app.infrastructure.db.models.finding import FindingModel
@@ -58,8 +58,36 @@ class FindingRepository(AbstractFindingRepository):
         count_result = await self._session.execute(count_stmt)
         total = count_result.scalar() or 0
 
+        # Worst first, not alphabetically. `severity` is a VARCHAR, and a plain
+        # `asc()` on it ranks a run's findings critical, high, info, low,
+        # medium -- string order, which is not the ranking the badge prints.
+        # The recommendation card fetches row one of this list and calls it the
+        # run's worst active finding, so the ranking *is* the contract.
+        #
+        # The tiebreak after severity mirrors what the card used to compute on
+        # its own: score damage next (rules emit negative `score_impact`, so
+        # ascending is most damaging first, and the coalesce keeps NULLs from
+        # sorting differently on SQLite and Postgres), then source line so a
+        # run's findings read in file order, then id so equal rows always
+        # resolve the same way on the next request.
+        severity_rank = case(
+            {
+                Severity.CRITICAL: 0,
+                Severity.HIGH: 1,
+                Severity.MEDIUM: 2,
+                Severity.LOW: 3,
+                Severity.INFO: 4,
+            },
+            value=FindingModel.severity,
+            else_=5,
+        )
         stmt = (
-            stmt.order_by(FindingModel.severity.asc(), FindingModel.line_start.asc())
+            stmt.order_by(
+                severity_rank,
+                func.coalesce(FindingModel.score_impact, 0.0).asc(),
+                FindingModel.line_start.asc(),
+                FindingModel.id.asc(),
+            )
             .offset(offset)
             .limit(limit)
         )

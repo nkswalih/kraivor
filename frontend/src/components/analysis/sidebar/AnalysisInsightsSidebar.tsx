@@ -70,11 +70,11 @@ export function AnalysisInsightsSidebar({
   } = useEnterpriseGuide(jobId);
   const { data: enginesResponse } = useEngines();
 
-  // A job payload names the workspace by id, and that id was what reached the
-  // metadata card: `eb6e03d3` where the reader knows the thing as "Acme". The
-  // store is the only place holding the display name, so it is read here rather
-  // than threaded down from the page -- and matched on id, so a store pointing
-  // at some other workspace cannot label this run with its name.
+  // A job payload names the workspace by id, and that id was what reached these
+  // cards: `eb6e03d3` where the reader knows the thing as "Acme". The store is
+  // the only place holding the display name, so it is read here rather than
+  // threaded down from the page -- and matched on id, so a store pointing at
+  // some other workspace cannot label this run with its name.
   const currentWorkspace = useWorkspaceStore((s) => s.currentWorkspace);
   const workspaceName =
     currentWorkspace && job?.workspace_id && currentWorkspace.id === job.workspace_id
@@ -167,6 +167,7 @@ export function AnalysisInsightsSidebar({
             <ProjectContextCard
               job={job}
               metadata={analysisMetadata}
+              workspaceName={workspaceName}
               isLoading={isLoading}
             />
           )}

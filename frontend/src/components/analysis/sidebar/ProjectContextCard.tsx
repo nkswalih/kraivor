@@ -37,6 +37,12 @@ export interface ProjectContextCardProps {
   job: AnalysisJob | null | undefined;
   /** The parse-stage metadata row, while a run is still producing one. */
   metadata?: AnalysisMetadataResponse | null;
+  /**
+   * The workspace's human name, supplied by the caller because the job payload
+   * carries only `workspace_id`. An id prefix is not a name anyone knows the
+   * workspace by, so the row waits instead of printing it.
+   */
+  workspaceName?: string | null;
   isLoading?: boolean;
   className?: string;
 }
@@ -66,6 +72,7 @@ const STATUS_LABEL: Record<JobStatus, string> = {
 export function ProjectContextCard({
   job,
   metadata,
+  workspaceName,
   isLoading,
   className,
 }: ProjectContextCardProps) {
@@ -132,8 +139,8 @@ export function ProjectContextCard({
           <Row
             icon={Building2}
             label="Workspace"
-            value={job.workspace_id ? job.workspace_id.slice(0, 8) : null}
-            pendingText="Unknown until the job loads"
+            value={workspaceName ?? null}
+            pendingText="Unknown"
           />
         </div>
       </section>
@@ -144,8 +151,8 @@ export function ProjectContextCard({
           <Row
             icon={Hash}
             label="Run"
-            value={job.job_id ? job.job_id.slice(0, 8) : null}
-            pendingText="Unknown until the job loads"
+            value={shortRepoName(job.repo_url)}
+            pendingText="Waiting for the clone"
           />
           <Row
             icon={Activity}
@@ -432,4 +439,19 @@ function formatRepo(url: string | null | undefined): string | null {
   if (!url) return null;
   const bare = url.replace(/^https?:\/\//, '').replace(/\.git$/, '');
   return bare.replace(/^github\.com\//, '');
+}
+
+/**
+ * `widget` from a clone URL -- the repository's own name, without the owner.
+ *
+ * The run row uses it because a run has no name of its own: in the runs list
+ * each row is identified by its repository, and this is the same answer. The
+ * Repository row above keeps the full `owner/repo` path, so the short form
+ * here names the run without printing the same string twice.
+ */
+function shortRepoName(url: string | null | undefined): string | null {
+  const full = formatRepo(url);
+  if (!full) return null;
+  const segments = full.replace(/\/+$/, '').split('/').filter(Boolean);
+  return segments.length > 0 ? segments[segments.length - 1] : null;
 }

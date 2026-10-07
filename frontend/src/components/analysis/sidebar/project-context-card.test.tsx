@@ -92,14 +92,29 @@ describe('a queued job shows no invented figures', () => {
     expect(screen.getByText('Waiting for the clone')).toBeInTheDocument();
   });
 
-  it('shows the run identity the job already has', () => {
-    render(<ProjectContextCard job={job({ progress_pct: 0 })} metadata={null} />);
+  it('shows names where the job only carries ids', () => {
+    render(
+      <ProjectContextCard
+        job={job({ progress_pct: 0 })}
+        metadata={null}
+        workspaceName="Acme"
+      />,
+    );
 
     expect(screen.getByText('acme/widget')).toBeInTheDocument();
     expect(screen.getByText('feature/x')).toBeInTheDocument();
-    expect(screen.getByText('abcdef12')).toBeInTheDocument();
-    // First eight characters, matching how the workspace id is shown elsewhere.
-    expect(screen.getByText('ws-98765')).toBeInTheDocument();
+    // The run names the repository it is a run of, not the job's id.
+    expect(screen.getByText('widget')).toBeInTheDocument();
+    expect(screen.getByText('Acme')).toBeInTheDocument();
+    expect(screen.queryByText('abcdef12')).not.toBeInTheDocument();
+    expect(screen.queryByText('ws-98765')).not.toBeInTheDocument();
+  });
+
+  it('waits for the workspace name rather than printing its id', () => {
+    render(<ProjectContextCard job={job({ progress_pct: 0 })} metadata={null} />);
+
+    expect(screen.queryByText('ws-98765')).not.toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
   });
 
   it('shows the queued status in words', () => {

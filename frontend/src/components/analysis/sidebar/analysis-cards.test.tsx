@@ -286,19 +286,24 @@ describe('AnalysisMetadataCard distinguishes unmeasured from zero', () => {
     expect(screen.getByText('acme/widget')).toBeInTheDocument();
   });
 
-  it('shortens the workspace id', () => {
+  it('never falls back to the workspace id', () => {
+    // The id prefix is not a name anyone knows the workspace by, so a store
+    // that has not hydrated leaves the row as the em-dash any other unknown
+    // here gets -- the identifier is not the second-best answer, it is not an
+    // answer.
     render(
-      <AnalysisMetadataCard data={metadata({ workspaceId: 'abcdef12-3456-7890-abcd-ef1234567890' })} />,
+      <AnalysisMetadataCard
+        data={metadata({ workspaceId: 'abcdef12-3456-7890-abcd-ef1234567890' })}
+      />,
     );
 
-    expect(screen.getByText('abcdef12')).toBeInTheDocument();
+    expect(screen.queryByText('abcdef12')).not.toBeInTheDocument();
   });
 
   it('names the workspace rather than showing its id', () => {
     // A job payload carries `workspace_id`, so the raw value used to reach the
     // card: `eb6e03d3` on screen where the person reading it knows the thing as
-    // "Acme". The name is a better answer and the id is the fallback, not the
-    // other way round.
+    // "Acme". The name is the only answer; the id never reaches the row.
     render(
       <AnalysisMetadataCard
         data={metadata({ workspaceId: 'abcdef12-3456-7890-abcd-ef1234567890' })}
@@ -308,19 +313,6 @@ describe('AnalysisMetadataCard distinguishes unmeasured from zero', () => {
 
     expect(screen.getByText('Acme')).toBeInTheDocument();
     expect(screen.queryByText('abcdef12')).not.toBeInTheDocument();
-  });
-
-  it('falls back to the short id when no name is known yet', () => {
-    // A store that has not hydrated has no name, and an empty row would be a
-    // worse answer than the identifier it replaces.
-    render(
-      <AnalysisMetadataCard
-        data={metadata({ workspaceId: 'abcdef12-3456-7890-abcd-ef1234567890' })}
-        workspaceName={null}
-      />,
-    );
-
-    expect(screen.getByText('abcdef12')).toBeInTheDocument();
   });
 
   it('groups the twelve rows under their three sections', () => {

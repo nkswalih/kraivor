@@ -40,8 +40,9 @@ export function AnalysisMetadataCard({
    * The workspace's human name, supplied by the caller because the job payload
    * only carries `workspace_id`.
    *
-   * Falls through to the short id when absent, so an unhydrated store degrades
-   * to the previous behaviour instead of an empty row.
+   * No id fallback: an id prefix is not a name anyone knows the workspace by,
+   * so an unhydrated store leaves the row as an em-dash -- the same answer any
+   * other unknown here gets -- instead of reprinting the identifier.
    */
   workspaceName?: string | null;
   className?: string;
@@ -50,8 +51,7 @@ export function AnalysisMetadataCard({
   // row below is nullable, and `row.value ?? '—'` is what draws the em-dash.
   const count = (value: number | null) => (value === null ? null : value.toLocaleString());
 
-  const workspaceValue =
-    workspaceName ?? (data.workspaceId ? data.workspaceId.slice(0, 8) : null);
+  const workspaceValue = workspaceName ?? null;
 
   // Grouped rather than a flat run of twelve: what the run was built from, what
   // it measured, and when it happened. The flat list answered all three in the

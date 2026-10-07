@@ -38,8 +38,11 @@ export interface JobFailurePanelProps {
   /** Per-engine rows, already normalised by the insights builder. */
   items: EngineStatusItem[];
   /**
-   * Start a fresh run of the same repository. Optional, so the panel stays
-   * presentational; when it is absent the panel simply has no action.
+   * Retry this run: resume it from the stage that failed, or -- when the
+   * service finds no saved position to resume from -- start a fresh run of
+   * the same repository. Which of the two happens is the page's call; the
+   * panel only carries the action. Optional, so it stays presentational;
+   * when it is absent the panel simply has no action.
    */
   onRetry?: () => void;
   isRetrying?: boolean;
@@ -139,16 +142,19 @@ export function JobFailurePanel({
               aria-hidden="true"
               className={`w-3.5 h-3.5 ${isRetrying ? 'animate-spin motion-reduce:animate-none' : ''}`}
             />
-            {isRetrying ? 'Starting retry...' : 'Retry the whole analysis'}
+            {isRetrying ? 'Starting retry...' : resumeLabel(job.progress_message)}
           </button>
-          {/* Two things a button label cannot carry. What it does -- every engine
-              again, not just the one that failed, because there is no per-engine
-              retry and a reader with six engines showing "never started" could
-              reasonably expect one. And what it leaves alone: a retry is a new
-              job, so this run's record stays exactly as it is. */}
+          {/* Two things a button label cannot carry. What it does -- picks up
+              at the stage that failed, so everything already finished is kept
+              rather than cloned and parsed a second time; and what happens
+              when there is nothing to pick up from. The saved position can
+              genuinely be gone (a failure from before resumes existed, a
+              recreated container), and the fresh analysis that follows should
+              not arrive as a surprise. */}
           <p className="text-[12px] text-text-tertiary mt-2">
-            Every engine runs again from the start, including the ones that
-            finished. This run is kept, and nothing from it carries over.
+            Picks up where the run stopped — what already finished is kept and does
+            not run again. If there is no saved position left for this run, a fresh
+            analysis starts instead.
           </p>
         </div>
       )}
@@ -166,6 +172,23 @@ export function JobFailurePanel({
       )}
     </div>
   );
+}
+
+/**
+ * What the retry button calls itself.
+ *
+ * The stage a run died in is in `progress_message` -- "Failed at stage: rules"
+ * -- written by the same failure handler that set the reason above, and it is
+ * also what the progress bar shows. Naming it makes the button's promise
+ * specific: the run continues *at rules*, not from a clone. Without the line
+ * (an older row, a failure before the first stage recorded one) the label
+ * falls back to a plain retry; the stage's absence costs the label its
+ * specificity and nothing else -- whether a resume is possible is the
+ * service's answer to give, not this component's guess.
+ */
+function resumeLabel(progressMessage: string | null | undefined): string {
+  const stage = /^Failed at stage:\s*(\S+)/.exec(progressMessage ?? '')?.[1];
+  return stage ? `Resume from ${stage}` : 'Retry analysis';
 }
 
 /**

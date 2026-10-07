@@ -113,6 +113,29 @@ export function useStartAnalysis() {
   });
 }
 
+// ─── Retry Failed Job (resume) ──────────────────────────
+
+/**
+ * Claim a failed run and continue it from the stage that failed.
+ *
+ * The invalidation of this job's own query is the load-bearing part:
+ * `useJob` stops polling while the cached status is terminal, so without it
+ * the page would keep showing the failure panel for a run the service has
+ * already queued -- the retry would be invisible until a manual refresh.
+ * `['analysis-jobs']` follows, so the list's status column does not lag
+ * behind either.
+ */
+export function useRetryJob() {
+  const queryClient = useQueryClient();
+  return useMutation<AnalysisJob, Error, string>({
+    mutationFn: (jobId) => analysisService.jobs.retry(jobId),
+    onSuccess: (_data, jobId) => {
+      queryClient.invalidateQueries({ queryKey: ['analysis-job', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['analysis-jobs'] });
+    },
+  });
+}
+
 // ─── Findings ───────────────────────────────────────────
 
 export function useFindings(

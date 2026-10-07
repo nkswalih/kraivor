@@ -349,34 +349,64 @@ describe('the retry action', () => {
     render(<JobFailurePanel job={job()} items={PART_WAY} />);
 
     expect(screen.queryByRole('button')).toBeNull();
-    expect(screen.queryByText(/Retry the whole analysis/)).toBeNull();
+    expect(screen.queryByText(/Resume from/)).toBeNull();
+    expect(screen.queryByText(/Retry analysis/)).toBeNull();
+  });
+
+  it('names the stage the run will resume at', () => {
+    // Resuming is the whole point: a run that died at rules continues at
+    // rules, not at clone. The stage is in the progress line the failure
+    // handler wrote, and naming it makes the button's promise specific
+    // instead of an anonymous "try again".
+    render(<JobFailurePanel job={job()} items={PART_WAY} onRetry={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Resume from rules' })).not.toBeNull();
+  });
+
+  it('falls back to a plain label when the run recorded no stage', () => {
+    // The stage lives in the progress line, and that line is not guaranteed
+    // -- an older row, or a failure before the first stage recorded one.
+    // The button still has to say what it does; only the specificity goes.
+    render(
+      <JobFailurePanel
+        job={job({ progress_message: 'Something else entirely' })}
+        items={PART_WAY}
+        onRetry={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Retry analysis' })).not.toBeNull();
   });
 
   it('calls the handler when pressed', async () => {
     const onRetry = vi.fn();
     render(<JobFailurePanel job={job()} items={PART_WAY} onRetry={onRetry} />);
 
-    await userEvent.click(screen.getByRole('button', { name: /Retry the whole analysis/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Resume from/ }));
 
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('says the whole analysis runs again, not just the engine that failed', () => {
-    // There is no per-engine retry, and a panel showing six engines as "never
-    // started" is exactly the situation where a reader would assume one. The
-    // label has to rule that out rather than leaving it to be discovered.
+  it('says finished work is kept, not run again', () => {
+    // "Retry" alone reads like starting over, and the whole feature is the
+    // opposite: everything already finished is kept and the run continues
+    // where it stopped. The helper has to promise that plainly rather than
+    // leaving it to be discovered after the fact.
     render(<JobFailurePanel job={job()} items={PART_WAY} onRetry={vi.fn()} />);
 
-    expect(screen.getByRole('button', { name: /whole analysis/ })).not.toBeNull();
-    expect(screen.getByText(/Every engine runs again from the start/)).not.toBeNull();
+    expect(
+      screen.getByText(/what already finished is kept and does not run again/),
+    ).not.toBeNull();
   });
 
-  it('says the failed run is kept, because a retry creates a second job', () => {
-    // Nothing is overwritten -- the retry is a new job row. Worth saying, because
-    // "retry" reads like it might replace what is on screen.
+  it('says what happens when there is nothing to resume from', () => {
+    // The saved position can genuinely be gone -- a failure from before
+    // resumes existed, a recreated container. The retry then starts a fresh
+    // analysis, and a reader should learn that here rather than by noticing
+    // a second job appear.
     render(<JobFailurePanel job={job()} items={PART_WAY} onRetry={vi.fn()} />);
 
-    expect(screen.getByText(/This run is kept/)).not.toBeNull();
+    expect(screen.getByText(/fresh analysis starts instead/)).not.toBeNull();
   });
 
   it('is disabled and relabelled while the retry is being accepted', async () => {
@@ -405,7 +435,7 @@ describe('the retry action', () => {
     // it. Asserting DOM order rather than pixel position: this is a reading
     // order question, and reading order is what a screen reader follows.
     const summary = screen.getByText(/engines finished/);
-    const button = screen.getByRole('button', { name: /Retry/ });
+    const button = screen.getByRole('button', { name: /Resume/ });
 
     expect(summary.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
@@ -458,7 +488,7 @@ describe('what gets announced', () => {
     // A button inside a status region is announced as part of the status text
     // and stops being findable as a button in a reader's control list.
     expect(screen.getByRole('status').querySelector('button')).toBeNull();
-    expect(screen.getByRole('button', { name: /Retry/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Resume/ })).toBeTruthy();
   });
 
   it('leaves the decorative cross out of the announcement', () => {

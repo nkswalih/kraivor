@@ -24,6 +24,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/utils';
 import { getErrorMessage } from '@/lib/api';
+import { AnalysisApiError } from '@/lib/api/analysis-service';
 import { analysisInsightsBuilder } from '@/lib/analysis/insights-builder';
 import {
   useJob,
@@ -33,6 +34,7 @@ import {
   useScoreHistory,
   useDeleteJob,
   useStartAnalysis,
+  useRetryJob,
   useFindings,
   useEngines,
 } from '@/lib/hooks/use-analysis';
@@ -96,6 +98,7 @@ export default function JobDetailPage() {
     job?.repo_id ?? null,
   );
   const startAnalysis = useStartAnalysis();
+  const retryJob = useRetryJob();
   const deleteJob = useDeleteJob();
   const queryClient = useQueryClient();
   const prevStatusRef = useRef<string | undefined>(undefined);
@@ -124,8 +127,17 @@ export default function JobDetailPage() {
     return scoreHistory.entries.filter(e => new Date(e.time) >= cutoff);
   }, [timeRange, scoreHistory?.entries]);
 
-  const handleReanalyze = async () => {
-    if (!job || reanalyzing) return;
+  /**
+   * The fresh-run path, without the in-flight guard.
+   *
+   * `handleReanalyze` is the guarded entry the header button uses;
+   * `handleRetry` reaches this from *inside* its own in-flight request (the
+   * no-checkpoint fallback), and React state does not update within a
+   * handler's tick -- calling the guarded version after
+   * `setReanalyzing(false)` would still read `true` and silently do nothing.
+   */
+  const startFreshAnalysis = async () => {
+    if (!job) return;
     setReanalyzing(true);
     try {
       const newJob = await startAnalysis.mutateAsync({
@@ -156,6 +168,55 @@ export default function JobDetailPage() {
       // reanalysis", so the toast told the reader nothing they could act on.
       // `getErrorMessage` resolves the `ApiException` the api client built,
       // which carries a distinct curated message per class.
+      toast.error(getErrorMessage(error));
+    }
+  };
+
+  const handleReanalyze = () => {
+    if (reanalyzing) return;
+    return startFreshAnalysis();
+  };
+
+  /**
+   * Retry a failed run: ask the service to resume it where it stopped, and
+   * sort its three refusals into the right next step.
+   *
+   * On success this page does not navigate -- the mutation invalidates the
+   * job's query, polling resumes, and the failure panel is replaced by the
+   * running one in place. That is the point: the run continues at the
+   * percentage it reached, on the page that is already showing it.
+   */
+  const handleRetry = async () => {
+    if (!job || reanalyzing) return;
+    setReanalyzing(true);
+    try {
+      await retryJob.mutateAsync(jobId);
+      toast.success('Resuming where the run stopped');
+    } catch (error) {
+      if (error instanceof AnalysisApiError && error.status === 409) {
+        if (error.message === 'no_checkpoint') {
+          // No saved position to resume from: a failure from before resumes
+          // existed, or this run's container was recreated. The service
+          // refuses rather than restarting in place (the failed attempt's
+          // rows are still there, and a second copy would not be an
+          // improvement), so the honest retry is a fresh job -- what a retry
+          // did before resuming existed. Saying so before it happens keeps
+          // the second job from being a surprise.
+          setReanalyzing(false);
+          toast('No saved position to resume from — starting a fresh analysis instead');
+          await startFreshAnalysis();
+          return;
+        }
+        // `not_failed` or `already_queued`: another click, another tab, or
+        // the service itself already has this run going. Refetch and let the
+        // poll tell the truth -- starting a second pipeline here would be
+        // exactly what the service just refused.
+        setReanalyzing(false);
+        queryClient.invalidateQueries({ queryKey: ['analysis-job', jobId] });
+        toast('This run is already going again');
+        return;
+      }
+      setReanalyzing(false);
       toast.error(getErrorMessage(error));
     }
   };
@@ -309,7 +370,7 @@ export default function JobDetailPage() {
               <JobFailurePanel
                 job={job}
                 items={insights.engineStatus}
-                onRetry={handleReanalyze}
+                onRetry={handleRetry}
                 isRetrying={reanalyzing}
               />
               {job.blocked_by.length > 0 && (

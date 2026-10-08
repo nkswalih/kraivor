@@ -3,8 +3,11 @@
 import { useParams } from 'next/navigation';
 import { useTopContributors } from '@/lib/hooks/use-profiles';
 import { UserRow } from '@/components/users/user-row';
-import { MessageButton } from '@/components/profiles/message-button';
 import { Skeleton } from '@/components/ui/shadcn';
+
+// No MessageButton here on purpose: direct messages start from the member's
+// own profile, so the list stays a list -- rank, name, discussion count --
+// instead of offering a second way to DM somebody from a ranking widget.
 
 export function TopContributors() {
   const params = useParams();
@@ -54,13 +57,6 @@ export function TopContributors() {
                     ? `${(user.reputation_score / 1000).toFixed(1)}k`
                     : user.reputation_score}
                 </span>
-              }
-              actions={
-                <MessageButton
-                  compact
-                  targetUserId={user.user_id}
-                  targetName={user.display_name}
-                />
               }
             />
           ))}

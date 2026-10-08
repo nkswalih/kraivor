@@ -1,22 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TopContributors } from './top-contributors';
 import { useAuthStore } from '@/lib/stores/auth-store';
 
 /**
- * AUDIT case 4: "community member row -- Message action present and works".
- *
- * The standalone `MessageButton` has its own suite, and `UserRow` has its own;
- * neither covers the join between them. What can go wrong here is in the
- * wiring: the row must pass *its own* person's id and name into the button, and
- * the button must be reachable at all -- this row is the one call site that
- * supplies no `is_owner`, so it leans entirely on the button's derived self
- * check to decide whether to render.
+ * AUDIT case 4 used to require a working Message action on each contributor
+ * row -- and this file tested exactly that wiring. The requirement has
+ * changed: direct messages start from the member's own profile, so the
+ * ranking list must not carry a message button of its own. What stays true
+ * is the row's other job: it must link to the profile where that button
+ * lives, and it must keep showing the discussion count it ranks on.
  */
 
 const push = vi.fn();
-const createDm = vi.fn();
 
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -28,7 +25,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/lib/api/endpoints', () => ({
-  chatEndpoints: { createDm: (...args: unknown[]) => createDm(...args) },
+  chatEndpoints: { createDm: vi.fn() },
   workspaceEndpoints: {},
 }));
 
@@ -66,10 +63,9 @@ function signedIn(userId: string | null = 'user-1') {
   });
 }
 
-describe('TopContributors Message action', () => {
+describe('TopContributors rows', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    createDm.mockResolvedValue({ id: 'room-42' });
     signedIn();
   });
 
@@ -83,48 +79,27 @@ describe('TopContributors Message action', () => {
     });
   });
 
-  it('DMs the person named on the row, not some other person', async () => {
+  it('links the row to that member’s profile, where the DM button lives', async () => {
     renderContributors();
 
-    const button = await screen.findByRole('button', { name: /message jane doe/i });
-    fireEvent.click(button);
-
-    // The failure this catches is a hardcoded or stale target: the button
-    // exists, the toast says "sent", and the conversation opens with somebody
-    // else in it.
-    await waitFor(() => {
-      expect(createDm).toHaveBeenCalledWith('ws-1', 'user-2', 'Jane Doe');
-    });
-    await waitFor(() => {
-      expect(push).toHaveBeenCalledWith('/acme/chat/room-42');
-    });
+    const link = await screen.findByRole('link', { name: /jane doe/i });
+    expect(link).toHaveAttribute('href', '/acme/profile/jane');
   });
 
-  it('does not offer to message yourself, though this row has no is_owner', async () => {
-    // `TopContributor` carries no `is_owner`, so the only thing that can hide
-    // the button is the button comparing the session's id against the row's.
-    // Either signal works, and this is the one that has to.
-    signedIn('user-2');
-
+  it('offers no direct-message action in the list, even when signed in', async () => {
+    // The button this suite used to drive was the only message affordance
+    // here; now none may appear -- the profile page owns that action.
     renderContributors();
 
     await screen.findByText('Jane Doe');
     expect(
-      screen.queryByRole('button', { name: /message jane doe/i })
+      screen.queryByRole('button', { name: /message/i })
     ).not.toBeInTheDocument();
-    // The row itself is still there -- otherwise this would pass by rendering
-    // nothing at all.
-    expect(screen.getByRole('link', { name: /jane doe/i })).toBeInTheDocument();
   });
 
-  it('does not render for a visitor with no session', async () => {
-    useAuthStore.setState({ accessToken: null, user: null });
-
+  it('keeps showing the discussion count the ranking is based on', async () => {
     renderContributors();
 
-    await screen.findByText('Jane Doe');
-    expect(
-      screen.queryByRole('button', { name: /message jane doe/i })
-    ).not.toBeInTheDocument();
+    expect(await screen.findByText('4 discussions')).toBeInTheDocument();
   });
 });

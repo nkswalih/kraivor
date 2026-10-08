@@ -1,5 +1,5 @@
 import math
-from django.db.models import Count, F, Prefetch, QuerySet
+from django.db.models import Count, F, Prefetch, Q, QuerySet
 from django.utils.text import slugify
 
 from ..models import Comment, Discussion, Tag, Vote
@@ -110,8 +110,21 @@ class DiscussionService:
     def get_trending(limit: int = 10) -> list[dict]:
         reddit_epoch = 1134028003
 
-        qs = Discussion.objects.filter(deleted_at__isnull=True).annotate(
-            net_score=F("upvote_count") - F("downvote_count")
+        # Minimum one "impression" -- some member actually engaged with the
+        # discussion. There is no view/impression counter on Discussion, so
+        # engagement means any vote (up or down) or at least one comment.
+        # Without this the hot-rank still floats brand-new zero-activity posts
+        # to the top (its time term dominates at score 0), and the sidebar
+        # listed discussions nothing had touched.
+        engaged = (
+            Q(upvote_count__gte=1)
+            | Q(downvote_count__gte=1)
+            | Q(comment_count__gte=1)
+        )
+        qs = (
+            Discussion.objects.filter(deleted_at__isnull=True)
+            .filter(engaged)
+            .annotate(net_score=F("upvote_count") - F("downvote_count"))
         )
 
         discussions = []

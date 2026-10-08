@@ -53,9 +53,23 @@ class TestDiscussionService:
         assert Discussion.all_objects.filter(id=d.id, deleted_at__isnull=False).exists()
 
     def test_get_trending(self, user_id):
-        DiscussionFactory.create_batch(3, author_id=uuid.UUID(user_id))
+        DiscussionFactory.create_batch(
+            3, author_id=uuid.UUID(user_id), upvote_count=1
+        )
         trending = DiscussionService.get_trending(limit=10)
         assert len(trending) >= 3
+
+    def test_get_trending_requires_at_least_one_engagement(self, user_id):
+        # "Trending" must not float a discussion nobody has touched: the
+        # hot-rank's time term puts fresh zero-activity posts at the top of
+        # the sidebar otherwise. One vote is enough to earn the slot.
+        engaged = DiscussionFactory(author_id=uuid.UUID(user_id), upvote_count=1)
+        ignored = DiscussionFactory(author_id=uuid.UUID(user_id))
+
+        trending = DiscussionService.get_trending(limit=10)
+
+        assert [t["id"] for t in trending] == [str(engaged.id)]
+        assert str(ignored.id) not in [t["id"] for t in trending]
 
 
 @pytest.mark.django_db

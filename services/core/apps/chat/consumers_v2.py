@@ -15,6 +15,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from datetime import UTC, datetime
 from django.db import transaction
 
+from apps.chat.consumers import select_ws_subprotocol
 from apps.chat.dynamodb.repository import ChatV2Repository
 from apps.chat.models import Room, RoomMember
 from core.infrastructure.redis import get_redis
@@ -49,7 +50,7 @@ class ChatV2Consumer(AsyncWebsocketConsumer):
         self.user_group = f"user_{self.user_id}"
         await self.channel_layer.group_add(self.user_group, self.channel_name)
         await self._set_presence("ONLINE")
-        await self.accept()
+        await self.accept(subprotocol=select_ws_subprotocol(self.scope))
 
         # Send CONNECTED event with room list
         rooms_data = await self._get_user_rooms()

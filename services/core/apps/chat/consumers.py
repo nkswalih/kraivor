@@ -22,6 +22,22 @@ from core.infrastructure.redis import get_redis
 logger = logging.getLogger(__name__)
 
 
+def select_ws_subprotocol(scope: dict) -> str | None:
+    """Echo the web client's ``auth`` subprotocol, when it offered one.
+
+    The client passes the JWT as a WebSocket subprotocol (``['auth', token]``)
+    to keep it out of the URL. RFC 6455 requires the server to *select* one of
+    the offered protocols — when it selects none, the browser treats the
+    handshake as failed and closes the socket milliseconds after ``accept()``.
+    That is exactly what happened here: every connection was accepted and
+    immediately dropped, the client retried ten times and gave up, and no
+    presence broadcast ever survived. Clients that offer no subprotocol
+    (server-to-server, tests) are unaffected.
+    """
+    offered = scope.get("subprotocols") or []
+    return "auth" if "auth" in offered else None
+
+
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self) -> None:
         self.room_id: str = self.scope["url_route"]["kwargs"]["room_id"]
@@ -38,7 +54,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await database_sync_to_async(ChatRoomService.mark_room_read)(
             room_id=self.room_id, user_id=self.user_id
         )
-        await self.accept()
+        await self.accept(subprotocol=select_ws_subprotocol(self.scope))
         logger.info(
             "chat.connect.accepted",
             extra={"room_id": self.room_id, "user_id": self.user_id},
@@ -278,7 +294,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
         self.notification_group: str = f"notify_user_{self.user_id}"
         await self.channel_layer.group_add(self.notification_group, self.channel_name)
-        await self.accept()
+        await self.accept(subprotocol=select_ws_subprotocol(self.scope))
         logger.info("notif.connect.accepted", extra={"user_id": self.user_id})
 
     async def disconnect(self, close_code: int) -> None:
@@ -342,32 +358,122 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
 
 class PresenceConsumer(AsyncWebsocketConsumer):
+    """App-level presence: one live socket marks the user online.
+
+    This replaces the room-scoped broadcast that used to feed the members
+    rail: a workspace member sitting in another room (or on any other page)
+    read as offline. Online now means "has a session open somewhere in the
+    dashboard", which is what a workspace members list should show.
+
+    Two guarantees the old flow lacked:
+
+    * **Roster on connect** — presence used to broadcast transitions only,
+      so anyone who connected before you stayed invisible until they
+      happened to reconnect. The joiner now receives the current online set
+      as a ``presence.sync`` frame.
+    * **Sticky across tabs** — online-ness is a per-user connection counter
+      with a TTL, so a second tab does not flip the user offline when the
+      first one closes, and a crashed session expires on its own instead of
+      haunting the rail.
+
+    Keys (all self-expiring; the client heartbeats every 30s):
+        presence:conn:{user_id} -> open socket count (integer)
+    """
+
+    GROUP = "ws_presence"
+    PRESENCE_TTL = 60  # seconds; client heartbeat interval is half this
+
     async def connect(self) -> None:
         self.user_id: str | None = self.scope.get("user_id")
         if not self.user_id:
             await self.close(code=4001)
             return
 
-        self.presence_key: str = f"presence:user:{self.user_id}"
+        self.conn_key: str = f"presence:conn:{self.user_id}"
+        await self.channel_layer.group_add(self.GROUP, self.channel_name)
+
+        first_connection = False
         redis = get_redis()
         if redis:
-            redis.setex(self.presence_key, 60, "online")
+            connections = redis.incr(self.conn_key)
+            redis.expire(self.conn_key, self.PRESENCE_TTL)
+            first_connection = connections == 1
 
-        await self.accept()
-        logger.debug("presence.connect", extra={"user_id": self.user_id})
+        await self.accept(subprotocol=select_ws_subprotocol(self.scope))
+
+        # Roster first: tell the joiner who is *already* online.
+        await self.send(
+            text_data=json.dumps(
+                {"type": "presence.sync", "user_ids": self._current_online(redis)}
+            )
+        )
+
+        if first_connection:
+            await self.channel_layer.group_send(
+                self.GROUP,
+                {
+                    "type": "presence_event",
+                    "user_id": self.user_id,
+                    "status": "online",
+                },
+            )
+        logger.info("presence.connect", extra={"user_id": self.user_id})
 
     async def disconnect(self, close_code: int) -> None:
+        await self.channel_layer.group_discard(self.GROUP, self.channel_name)
+
         redis = get_redis()
+        went_offline = False
         if redis:
-            redis.delete(self.presence_key)
+            remaining = redis.decr(self.conn_key)
+            if remaining <= 0:
+                redis.delete(self.conn_key)
+                went_offline = True
+
+        if went_offline:
+            await self.channel_layer.group_send(
+                self.GROUP,
+                {
+                    "type": "presence_event",
+                    "user_id": self.user_id,
+                    "status": "offline",
+                },
+            )
+        logger.info(
+            "presence.disconnect", extra={"user_id": self.user_id, "code": close_code}
+        )
 
     async def receive(self, text_data: str) -> None:
         try:
-            data: dict = json.loads(text_data)
+            data = json.loads(text_data)
         except json.JSONDecodeError:
             return
 
         if data.get("action") == "heartbeat":
             redis = get_redis()
             if redis:
-                redis.expire(self.presence_key, 60)
+                redis.expire(self.conn_key, self.PRESENCE_TTL)
+
+    @staticmethod
+    def _current_online(redis) -> list[str]:
+        if not redis:
+            return []
+        prefix = "presence:conn:"
+        online: list[str] = []
+        for key in redis.scan_iter(match=f"{prefix}*"):
+            uid = key.decode() if isinstance(key, bytes) else key
+            uid = uid.removeprefix(prefix)
+            if uid:
+                online.append(uid)
+        return online
+
+    async def presence_event(self, event: dict) -> None:
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "presence",
+                    "user_id": event["user_id"],
+                    "status": event["status"],
+                }
+            )
+        )

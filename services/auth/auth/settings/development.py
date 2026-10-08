@@ -189,11 +189,21 @@ CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
 # =============================================================================
-# STORAGE - Development (S3 via real AWS)
+# STORAGE - Development (local filesystem)
 # =============================================================================
-DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+# Development stores media on disk (MEDIA_ROOT, bind-mounted to
+# services/auth/media), served by nginx -> /media/ -> this service -- see
+# infra/docker/nginx/nginx.dev.conf and the `static()` route in auth/urls.py.
+#
+# This used to point at real S3 with the credentials from .env. The key was
+# later rotated on AWS's side, so every avatar/banner upload failed with
+# InvalidAccessKeyId (HTTP 500) and the already-stored object URLs 403'd.
+# Local files keep the whole upload -> serve path working with no external
+# credentials. Production is unaffected: production.py falls through to
+# base.py, which reads DEFAULT_FILE_STORAGE from the environment (S3).
+DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 
 STORAGES = {
-    "default": {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"},
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
 }

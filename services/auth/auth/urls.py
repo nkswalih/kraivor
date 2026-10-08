@@ -1,5 +1,7 @@
 from authentication.jwks import JWKSView
 from authentication.oauth.token import GitHubOAuthTokenView
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
@@ -37,3 +39,8 @@ urlpatterns = [
     ),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
 ]
+
+# Local media files in development: `static()` no-ops unless DEBUG, so this
+# route only exists in dev, where nginx proxies /media/ here (see
+# infra/docker/nginx/nginx.dev.conf). Production reads media off S3.
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

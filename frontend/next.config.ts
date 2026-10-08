@@ -17,6 +17,10 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'kraivor-uploads.s3.amazonaws.com' },
       { protocol: 'https', hostname: 'avatars.githubusercontent.com' },
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+      // Dev only: profile media is served by nginx -> identity from local
+      // disk (see services/auth/auth/settings/development.py), so banner and
+      // avatar URLs come back as http://localhost/media/...
+      { protocol: 'http', hostname: 'localhost' },
     ],
   },
   logging: {

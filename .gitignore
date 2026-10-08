@@ -92,6 +92,10 @@ frontend/coverage/
 *.sqlite
 *.sqlite3
 
+# Local media uploads — dev stores avatar/banner on disk
+# (services/auth/auth/settings/development.py; served via /media/)
+media/
+
 # OS
 .DS_Store
 Thumbs.db

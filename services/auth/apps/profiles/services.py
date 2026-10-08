@@ -97,8 +97,12 @@ class ProfileService:
 class ReputationService:
     @staticmethod
     def get_top_contributors(limit: int = 10):
+        # Minimum one discussion: a member with none is not a contributor, and
+        # the sidebar was ranking people by reputation alone and listing them
+        # as "0 discussions". Filtered before the limit so the page still
+        # fills with members who have actually posted.
         profiles = (
-            Profile.objects.filter(is_public=True)
+            Profile.objects.filter(is_public=True, discussion_count__gte=1)
             .select_related("user")
             .order_by("-reputation_score")[:limit]
         )

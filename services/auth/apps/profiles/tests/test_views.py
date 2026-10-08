@@ -1,6 +1,7 @@
 import pytest
 from django.urls import reverse
 from profiles.models import UserFollow
+from profiles.tests.factories import ProfileFactory
 from rest_framework import status
 
 
@@ -123,3 +124,16 @@ class TestTopContributorsView:
         resp = client.get(url)
         assert resp.status_code == status.HTTP_200_OK
         assert "results" in resp.json()
+
+    def test_top_contributors_lists_only_members_with_a_discussion(
+        self, client, profile
+    ):
+        # The fixture member has zero discussions and must not appear; the
+        # one who has posted must. This is the row the sidebar renders as
+        # "N discussions", so the API is where the cutoff belongs.
+        posted = ProfileFactory(discussion_count=1)
+
+        resp = client.get(reverse("top-contributors"))
+
+        results = resp.json()["results"]
+        assert [r["username"] for r in results] == [posted.username]

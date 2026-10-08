@@ -5,12 +5,12 @@ import { Users } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { workspaceEndpoints, profileEndpoints } from '@/lib/api/endpoints';
 import { useAuthStore } from '@/lib/stores/auth-store';
+import { usePresence } from '@/lib/hooks/use-presence';
 import { avatarUrl } from '@/lib/utils';
 import type { WorkspaceMember } from '@/types/api';
 
 interface MembersPanelProps {
   workspaceId: string;
-  onlineUserIds: Set<string>;
 }
 
 type MemberProfile = {
@@ -79,8 +79,11 @@ function MemberRow({
   );
 }
 
-export function MembersPanel({ workspaceId, onlineUserIds }: MembersPanelProps) {
+export function MembersPanel({ workspaceId }: MembersPanelProps) {
   const currentUser = useAuthStore(s => s.user);
+  // App-level presence (DashboardPresence feeds the store): a member sitting
+  // in another room or on another page still reads as online.
+  const onlineUserIds = usePresence();
 
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ['members', workspaceId],

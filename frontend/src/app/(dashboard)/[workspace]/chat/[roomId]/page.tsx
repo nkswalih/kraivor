@@ -2,15 +2,18 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Hash, Send, Loader2, ChevronDown, Trash2, Edit3, X, Check } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useChatStore } from '@/lib/stores/chat-store';
 import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
+import { usePresence } from '@/lib/hooks/use-presence';
 import { chatEndpoints, profileEndpoints } from '@/lib/api/endpoints';
 import { ChatSocket } from '@/lib/ws/chat-socket';
 import { ChannelSidebar } from '@/components/chat/chat-channel-sidebar';
 import { MembersPanel } from '@/components/chat/chat-members-panel';
+import { PresenceAvatar } from '@/components/chat/presence-avatar';
 import { formatRelativeTime, avatarUrl } from '@/lib/utils';
 import {
   SkeletonMessage,
@@ -62,14 +65,15 @@ export default function ChatRoomPage() {
     staleTime: 60_000,
   });
 
-  const senderProfileMap: Record<string, { avatar_url?: string; user_avatar_url?: string }> =
-    useMemo(() => senderProfiles?.profiles ?? {}, [senderProfiles]);
+  const senderProfileMap: Record<
+    string,
+    { avatar_url?: string; user_avatar_url?: string; username?: string }
+  > = useMemo(() => senderProfiles?.profiles ?? {}, [senderProfiles]);
 
   const [input, setInput] = useState('');
   const [loadingMore, setLoadingMore] = useState(false);
   const [editingMsg, setEditingMsg] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
-  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const socketRef = useRef<ChatSocket | null>(null);
@@ -83,6 +87,31 @@ export default function ChatRoomPage() {
     enabled: !!workspaceId && !!roomId,
   });
   useDetailBreadcrumb(room?.name);
+
+  /* ─── DM identity: who is on the other end, and are they here ─ */
+  const isDm = room?.room_type === 'dm';
+  const dmUserId = isDm ? (room.participant_user_ids ?? []).find(id => id !== userId) : undefined;
+  const onlineUserIds = usePresence();
+
+  const { data: dmProfiles } = useQuery({
+    queryKey: ['profiles-by-ids', dmUserId ? [dmUserId] : []],
+    queryFn: () => profileEndpoints.getProfilesByIds([dmUserId!]),
+    enabled: !!dmUserId,
+    staleTime: 60_000,
+  });
+  const dmProfile = dmUserId ? dmProfiles?.profiles?.[dmUserId] : undefined;
+  const dmName = dmProfile?.display_name ?? room?.name ?? '';
+  const dmUsername = dmProfile?.username;
+  const dmAvatar = avatarUrl(dmProfile?.avatar_url, dmProfile?.user_avatar_url);
+  const dmProfileHref = dmUsername ? `/${workspaceSlug}/profile/${dmUsername}` : null;
+  const dmOnline = !!dmUserId && onlineUserIds.has(dmUserId);
+  const messagePlaceholder = isDm
+    ? dmUsername
+      ? `Message @${dmUsername}`
+      : dmName
+        ? `Message ${dmName}`
+        : 'Message'
+    : `Message #${room?.name ?? 'channel'}`;
 
   /* ─── Messages fetch ──────────────────────────────────────── */
   const { isLoading: msgsLoading } = useQuery({
@@ -176,14 +205,8 @@ export default function ChatRoomPage() {
       if (event.type === 'message' && event.message_id) {
         addMessage(roomId, event as unknown as ChatMessage);
       }
-      if (event.type === 'presence') {
-        setOnlineUserIds(prev => {
-          const next = new Set(prev);
-          if (event.status === 'online') next.add(event.user_id);
-          else next.delete(event.user_id);
-          return next;
-        });
-      }
+      // Presence is handled app-wide by DashboardPresence — the room socket
+      // no longer feeds the members rail.
     };
     socket.connect(roomId);
     return () => socket.disconnect();
@@ -224,17 +247,58 @@ export default function ChatRoomPage() {
       <div className="flex-1 flex flex-col min-w-0 bg-krait-void">
         {/* Chat Header */}
         <div className="h-[49px] border-b border-krait-border flex items-center px-4 shrink-0 bg-krait-void gap-2">
-          <button
-            onClick={() => router.push(`/${workspaceSlug}/chat`)}
-            className="p-1 -ml-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-krait-surface3 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <Hash className="w-5 h-5 text-text-tertiary shrink-0" />
-          <h2 className="font-semibold text-[15px] text-text-primary truncate">
-            {room?.name ?? '...'}
-          </h2>
-          {room?.topic && (
+          {isDm ? (
+            /* DMs read as a person, not a channel: avatar + presence badge +
+               name, the whole thing leading to their profile. Hovering the
+               name surfaces the @username behind the display name. */
+            dmProfileHref ? (
+              <Link
+                href={dmProfileHref}
+                title={dmUsername || undefined}
+                className="group flex items-center gap-2 min-w-0 rounded-md py-1 -my-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              >
+                <PresenceAvatar
+                  src={dmAvatar}
+                  name={dmName || '?'}
+                  online={dmOnline}
+                  size="sm"
+                  ringClassName="border-krait-void"
+                />
+                <span className="font-semibold text-[15px] text-text-primary truncate group-hover:underline decoration-1 underline-offset-2">
+                  {dmName || '...'}
+                </span>
+              </Link>
+            ) : (
+              <div className="flex items-center gap-2 min-w-0">
+                <PresenceAvatar
+                  src={dmAvatar}
+                  name={dmName || '?'}
+                  online={dmOnline}
+                  size="sm"
+                  ringClassName="border-krait-void"
+                />
+                <h2 className="font-semibold text-[15px] text-text-primary truncate">
+                  {dmName || '...'}
+                </h2>
+              </div>
+            )
+          ) : (
+            <>
+              {room && (
+                <button
+                  onClick={() => router.push(`/${workspaceSlug}/chat`)}
+                  className="p-1 -ml-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-krait-surface3 transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+              )}
+              <Hash className="w-5 h-5 text-text-tertiary shrink-0" />
+              <h2 className="font-semibold text-[15px] text-text-primary truncate">
+                {room?.name ?? '...'}
+              </h2>
+            </>
+          )}
+          {!isDm && room?.topic && (
             <span className="text-[13px] text-text-tertiary ml-3 pl-3 border-l border-krait-border truncate hidden lg:inline">
               {room.topic}
             </span>
@@ -243,6 +307,54 @@ export default function ChatRoomPage() {
 
         {/* Messages Area */}
         <div ref={listRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
+          {/* DM conversation head — who this thread is with, their handle, and
+              the standard opening line, all from the profile the API returns. */}
+          {isDm && (
+            <div className="px-4 pt-6 pb-4">
+              {dmProfileHref ? (
+                <Link
+                  href={dmProfileHref}
+                  className="inline-block rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                >
+                  <PresenceAvatar
+                    src={dmAvatar}
+                    name={dmName || '?'}
+                    online={dmOnline}
+                    size="lg"
+                    ringClassName="border-krait-void"
+                  />
+                </Link>
+              ) : (
+                <PresenceAvatar
+                  src={dmAvatar}
+                  name={dmName || '?'}
+                  online={dmOnline}
+                  size="lg"
+                  ringClassName="border-krait-void"
+                />
+              )}
+              <h3 className="mt-3 text-[22px] font-bold text-text-primary">
+                {dmProfileHref ? (
+                  <Link
+                    href={dmProfileHref}
+                    className="hover:underline decoration-1 underline-offset-2"
+                  >
+                    {dmName || '?'}
+                  </Link>
+                ) : (
+                  dmName || '?'
+                )}
+              </h3>
+              {dmUsername && (
+                <p className="text-[15px] text-text-secondary mt-0.5">{dmUsername}</p>
+              )}
+              <p className="text-[14px] text-text-tertiary mt-4">
+                This is the beginning of your direct message history with{' '}
+                <span className="font-semibold text-text-secondary">{dmName || 'this user'}</span>.
+              </p>
+            </div>
+          )}
+
           {loadingMore && (
             <div className="flex justify-center py-3">
               <Loader2 className="w-4 h-4 text-venom-yellow animate-spin" />
@@ -254,18 +366,22 @@ export default function ChatRoomPage() {
               <Loader2 className="w-5 h-5 text-venom-yellow animate-spin" />
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center px-8">
-              <div className="w-12 h-12 rounded-2xl bg-krait-surface3 flex items-center justify-center mb-4">
-                <Hash className="w-6 h-6 text-text-tertiary" />
+            /* A DM already has its profile head above — the channel welcome
+               block would read as "Welcome to #<person>". */
+            isDm ? null : (
+              <div className="flex flex-col items-center justify-center h-full text-center px-8">
+                <div className="w-12 h-12 rounded-2xl bg-krait-surface3 flex items-center justify-center mb-4">
+                  <Hash className="w-6 h-6 text-text-tertiary" />
+                </div>
+                <h3 className="text-[17px] font-semibold text-text-primary mb-1">
+                  Welcome to #{room?.name ?? 'channel'}
+                </h3>
+                <p className="text-[14px] text-text-tertiary max-w-md">
+                  This is the start of the {room?.name ?? 'channel'} channel. Send a message to get
+                  the conversation going.
+                </p>
               </div>
-              <h3 className="text-[17px] font-semibold text-text-primary mb-1">
-                Welcome to #{room?.name ?? 'channel'}
-              </h3>
-              <p className="text-[14px] text-text-tertiary max-w-md">
-                This is the start of the {room?.name ?? 'channel'} channel. Send a message to get
-                the conversation going.
-              </p>
-            </div>
+            )
           ) : (
             <div className="py-2">
               {messages.map((msg, idx) => {
@@ -277,6 +393,7 @@ export default function ChatRoomPage() {
                 const showHeader = !sameSender || timeGap > 300000;
                 const isEditing = editingMsg === msg.message_id;
                 const isOwn = msg.sender_id === userId;
+                const senderUsername = senderProfileMap[msg.sender_id]?.username;
 
                 return (
                   <div
@@ -325,9 +442,18 @@ export default function ChatRoomPage() {
                         {/* Header row */}
                         {showHeader && (
                           <div className="flex items-baseline gap-2 mb-0.5">
-                            <span className="font-semibold text-[15px] text-text-primary hover:underline cursor-pointer">
-                              {msg.sender_name}
-                            </span>
+                            {senderUsername ? (
+                              <Link
+                                href={`/${workspaceSlug}/profile/${senderUsername}`}
+                                className="font-semibold text-[15px] text-text-primary hover:underline"
+                              >
+                                {msg.sender_name}
+                              </Link>
+                            ) : (
+                              <span className="font-semibold text-[15px] text-text-primary">
+                                {msg.sender_name}
+                              </span>
+                            )}
                             <span className="text-[11px] text-text-tertiary">
                               {formatRelativeTime(msg.created_at)}
                             </span>
@@ -450,7 +576,7 @@ export default function ChatRoomPage() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={`Message #${room?.name ?? 'channel'}`}
+              placeholder={messagePlaceholder}
               rows={1}
               className="w-full bg-transparent border-none text-[14px] text-text-primary placeholder:text-text-tertiary resize-none px-3 py-2.5 focus:outline-none max-h-[200px]"
             />
@@ -476,9 +602,7 @@ export default function ChatRoomPage() {
 
       {/* DMs are one-to-one, so a workspace member list beside them is
           noise — the presence panel belongs to channels only. */}
-      {room && room.room_type !== 'dm' && (
-        <MembersPanel workspaceId={workspaceId} onlineUserIds={onlineUserIds} />
-      )}
+      {room && room.room_type !== 'dm' && <MembersPanel workspaceId={workspaceId} />}
     </div>
   );
 }

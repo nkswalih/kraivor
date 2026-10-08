@@ -8,8 +8,10 @@ import { Hash, Plus, Loader2, Edit3, Trash2, X, Check } from 'lucide-react';
 import { chatEndpoints, profileEndpoints } from '@/lib/api/endpoints';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useChatStore } from '@/lib/stores/chat-store';
+import { usePresence } from '@/lib/hooks/use-presence';
 import { formatCompactTime, truncate, avatarUrl } from '@/lib/utils';
 import { CreateChannelDialog } from './chat-create-channel-dialog';
+import { PresenceAvatar } from './presence-avatar';
 
 interface ChannelSidebarProps {
   workspaceId: string;
@@ -21,6 +23,7 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
   const router = useRouter();
   const queryClient = useQueryClient();
   const userId = useAuthStore(s => s.user?.id);
+  const onlineUserIds = usePresence();
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -229,29 +232,49 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
               const profile = otherUserId ? profileMap[otherUserId] : undefined;
               const displayName = profile?.display_name ?? room.name;
               const bestAvatar = avatarUrl(profile?.avatar_url, profile?.user_avatar_url);
+              const online = otherUserId ? onlineUserIds.has(otherUserId) : false;
+              const roomHref = `/${workspaceSlug}/chat/${room.id}`;
+              const profileHref = profile?.username
+                ? `/${workspaceSlug}/profile/${profile.username}`
+                : null;
               return (
-                <Link
+                <div
                   key={room.id}
-                  href={`/${workspaceSlug}/chat/${room.id}`}
-                  className={`flex items-start gap-2.5 mx-2 px-2 py-2 rounded-md transition-colors ${
-                     active ? 'bg-krait-surface3' : 'hover:bg-krait-surface1/40'
+                  onClick={e => {
+                    // The name owns its own link (to the profile), so only
+                    // clicks that did not land on an anchor open the DM.
+                    if ((e.target as HTMLElement).closest('a')) return;
+                    router.push(roomHref);
+                  }}
+                  className={`group flex items-start gap-2.5 mx-2 px-2 py-2 rounded-md cursor-pointer transition-colors ${
+                    active ? 'bg-krait-surface3' : 'hover:bg-krait-surface1/40'
                   }`}
                 >
-                  {/* Avatar */}
-                  <div className="w-8 h-8 rounded-full bg-krait-surface3 flex items-center justify-center text-[13px] font-bold text-text-primary shrink-0 overflow-hidden">
-                    {bestAvatar ? (
-                      <img src={bestAvatar} alt="" loading="lazy" className="w-full h-full object-cover" />
-                    ) : (
-                      displayName.charAt(0).toUpperCase()
-                    )}
-                  </div>
+                  {/* Avatar opens the conversation and carries the
+                      online / offline badge */}
+                  <Link
+                    href={roomHref}
+                    aria-label={`Open conversation with ${displayName}`}
+                    className="rounded-full shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  >
+                    <PresenceAvatar src={bestAvatar} name={displayName} online={online} />
+                  </Link>
 
                   {/* Content */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-[14px] font-medium text-text-primary">
-                        {displayName}
-                      </span>
+                      {profileHref ? (
+                        <Link
+                          href={profileHref}
+                          className="truncate text-[14px] font-medium text-text-primary hover:underline"
+                        >
+                          {displayName}
+                        </Link>
+                      ) : (
+                        <span className="truncate text-[14px] font-medium text-text-primary">
+                          {displayName}
+                        </span>
+                      )}
                       {room.last_message_at && (
                         <span className="text-[11px] text-text-tertiary shrink-0">
                           {formatCompactTime(room.last_message_at)}
@@ -264,7 +287,7 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
                       </p>
                     )}
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>

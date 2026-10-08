@@ -28,6 +28,7 @@ export type WsServerEvent =
     }
   | { type: 'typing.start' | 'typing.stop'; user_id: string; user_name: string }
   | { type: 'presence'; user_id: string; status: 'online' | 'offline' }
+  | { type: 'presence.sync'; user_ids: string[] }
   | {
       type: 'notification';
       id: string;

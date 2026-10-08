@@ -474,7 +474,11 @@ export default function ChatRoomPage() {
         </div>
       </div>
 
-      <MembersPanel workspaceId={workspaceId} onlineUserIds={onlineUserIds} />
+      {/* DMs are one-to-one, so a workspace member list beside them is
+          noise — the presence panel belongs to channels only. */}
+      {room && room.room_type !== 'dm' && (
+        <MembersPanel workspaceId={workspaceId} onlineUserIds={onlineUserIds} />
+      )}
     </div>
   );
 }

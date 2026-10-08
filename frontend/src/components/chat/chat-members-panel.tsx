@@ -13,61 +13,75 @@ interface MembersPanelProps {
   onlineUserIds: Set<string>;
 }
 
-function MemberRow({
-  member,
-  online,
-  profile,
-}: {
-  member: WorkspaceMember;
-  online: boolean;
-  profile?: {
-    avatar_url?: string;
-    user_avatar_url?: string;
-    username?: string;
-    display_name?: string;
-  };
-}) {
-  const currentUser = useAuthStore(s => s.user);
+type MemberProfile = {
+  avatar_url?: string;
+  user_avatar_url?: string;
+  username?: string;
+  display_name?: string;
+};
 
-  const name =
+function resolveName(
+  member: WorkspaceMember,
+  profile: MemberProfile | undefined,
+  fallbackUser: { id: string; name: string } | null
+) {
+  return (
     profile?.username ||
     profile?.display_name ||
     member.user?.name ||
-    (currentUser && member.user_id === currentUser.id ? currentUser.name : '') ||
+    (fallbackUser && member.user_id === fallbackUser.id ? fallbackUser.name : '') ||
     member.user?.email ||
-    'Member';
+    'Member'
+  );
+}
 
-  const src =
-    avatarUrl(profile?.avatar_url, profile?.user_avatar_url) || member.user?.avatar_url || null;
-
+function MemberRow({
+  name,
+  role,
+  src,
+  online,
+}: {
+  name: string;
+  role: string;
+  src: string | null;
+  online: boolean;
+}) {
   return (
-    <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-[4px] hover:bg-krait-surface1/40 transition-colors group">
-      {src ? (
-        <img
-          src={src}
-          alt={name}
-          className="w-7 h-7 rounded-[4px] border border-gray-800 object-cover shrink-0"
-        />
-      ) : (
-        <div className="w-7 h-7 rounded-[4px] bg-krait-surface3 flex items-center justify-center text-[11px] font-bold text-text-primary shrink-0">
-          {name.charAt(0).toUpperCase()}
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-medium text-text-primary truncate">{name}</p>
-        <p className="text-[11px] text-text-secondary truncate">
-          {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
-        </p>
+    <div
+      title={`${name} · ${online ? 'Online' : 'Offline'} · ${role}`}
+      className={`flex items-center gap-2.5 px-2 py-1.5 rounded-md transition-all hover:bg-krait-surface1/60 ${
+        online ? '' : 'opacity-40 hover:opacity-70'
+      }`}
+    >
+      {/* Avatar carries the presence dot, so the row reads at a glance
+          (green = here, no dot = away) without a trailing status column. */}
+      <div className="relative shrink-0">
+        {src ? (
+          <img
+            src={src}
+            alt={name}
+            className="w-7 h-7 rounded-full border border-gray-800 object-cover"
+          />
+        ) : (
+          <div className="w-7 h-7 rounded-full bg-krait-surface3 flex items-center justify-center text-[11px] font-bold text-text-primary">
+            {name.charAt(0).toUpperCase()}
+          </div>
+        )}
+        {online && (
+          <span
+            className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-krait-obsidian"
+            aria-label="Online"
+          />
+        )}
       </div>
-      <div
-        className={`w-2 h-2 rounded-full shrink-0 ${online ? 'bg-green-400' : 'bg-[#3A3A3D]'}`}
-        title={online ? 'Online' : 'Offline'}
-      />
+      <p className="flex-1 min-w-0 text-[13px] font-medium text-text-primary truncate">{name}</p>
     </div>
   );
 }
 
 export function MembersPanel({ workspaceId, onlineUserIds }: MembersPanelProps) {
+  const currentUser = useAuthStore(s => s.user);
+
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ['members', workspaceId],
     queryFn: () => workspaceEndpoints.getMembers(workspaceId),
@@ -87,6 +101,20 @@ export function MembersPanel({ workspaceId, onlineUserIds }: MembersPanelProps) 
 
   const profileMap = useMemo(() => profilesData?.profiles ?? {}, [profilesData]);
 
+  /* Split into presence buckets, each sorted by display name — online
+     first, then everyone else, the way a members list is expected to read. */
+  const { online, offline } = useMemo(() => {
+    const sorted = [...membersList].sort((a, b) =>
+      resolveName(a, profileMap[a.user_id], currentUser).localeCompare(
+        resolveName(b, profileMap[b.user_id], currentUser)
+      )
+    );
+    return {
+      online: sorted.filter(m => onlineUserIds.has(m.user_id)),
+      offline: sorted.filter(m => !onlineUserIds.has(m.user_id)),
+    };
+  }, [membersList, profileMap, onlineUserIds, currentUser]);
+
   const isLoading = membersLoading;
 
   return (
@@ -97,7 +125,7 @@ export function MembersPanel({ workspaceId, onlineUserIds }: MembersPanelProps) 
         <span className="text-[11px] text-text-tertiary ml-auto">{membersList.length}</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
+      <div className="flex-1 overflow-y-auto py-2 px-2">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="w-4 h-4 border-2 border-venom-yellow border-t-transparent rounded-full animate-spin" />
@@ -105,14 +133,51 @@ export function MembersPanel({ workspaceId, onlineUserIds }: MembersPanelProps) 
         ) : membersList.length === 0 ? (
           <p className="text-[12px] text-text-tertiary px-2 py-4 text-center">No members</p>
         ) : (
-          membersList.map(member => (
-            <MemberRow
-              key={member.id}
-              member={member}
-              online={onlineUserIds.has(member.user_id)}
-              profile={profileMap[member.user_id]}
-            />
-          ))
+          <>
+            <p className="px-2 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-text-tertiary">
+              Online — {online.length}
+            </p>
+            <div className="space-y-0.5">
+              {online.map(member => {
+                const profile = profileMap[member.user_id];
+                return (
+                  <MemberRow
+                    key={member.id}
+                    name={resolveName(member, profile, currentUser)}
+                    role={member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                    src={
+                      avatarUrl(profile?.avatar_url, profile?.user_avatar_url) ||
+                      member.user?.avatar_url ||
+                      null
+                    }
+                    online
+                  />
+                );
+              })}
+            </div>
+
+            <p className="px-2 pt-4 pb-1 text-[11px] font-semibold tracking-wider text-text-tertiary">
+              Offline — {offline.length}
+            </p>
+            <div className="space-y-0.5">
+              {offline.map(member => {
+                const profile = profileMap[member.user_id];
+                return (
+                  <MemberRow
+                    key={member.id}
+                    name={resolveName(member, profile, currentUser)}
+                    role={member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                    src={
+                      avatarUrl(profile?.avatar_url, profile?.user_avatar_url) ||
+                      member.user?.avatar_url ||
+                      null
+                    }
+                    online={false}
+                  />
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -8,17 +8,17 @@ import { Avatar } from './avatar';
 import { FollowButton } from './follow-button';
 import { MessageButton } from './message-button';
 import type { Profile } from '@/types/domain/profiles';
+import { copyToClipboard } from '@/lib/utils';
+import { XLogo } from '@phosphor-icons/react/dist/ssr';
 import {
   MapPin,
   Link as LinkIcon,
   Github,
-  Twitter,
   Linkedin,
   Pencil,
   Share2,
   Loader2,
 } from 'lucide-react';
-import { copyToClipboard } from '@/lib/utils';
 
 interface ProfileHeaderProps {
   profile: Profile;
@@ -141,12 +141,12 @@ export function ProfileHeader({ profile, userAvatarUrl, workspaceSlug }: Profile
           )}
           {profile.twitter_username && (
             <a
-              href={`https://x.com//${profile.twitter_username}`}
+              href={`https://x.com/${profile.twitter_username}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 hover:text-foreground"
             >
-              <Twitter className="w-3.5 h-3.5" /> @{profile.twitter_username}
+              <XLogo className="w-3.5 h-3.5" /> @{profile.twitter_username}
             </a>
           )}
           {profile.linkedin_url && (

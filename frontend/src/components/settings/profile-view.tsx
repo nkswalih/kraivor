@@ -182,7 +182,7 @@ export function ProfileView() {
           <Field label="Website" value={websiteUrl} onChange={setWebsiteUrl} placeholder="https://" />
           <Field label="Location" value={location} onChange={setLocation} placeholder="City, Country" />
           <Field label="GitHub" value={githubUsername} onChange={setGithubUsername} placeholder="username" />
-          <Field label="Twitter" value={twitterUsername} onChange={setTwitterUsername} placeholder="@username" />
+          <Field label="X" value={twitterUsername} onChange={setTwitterUsername} placeholder="@username" />
           <Field label="LinkedIn" value={linkedinUrl} onChange={setLinkedinUrl} placeholder="https://linkedin.com/in/..." />
         </div>
       </Section>

@@ -337,10 +337,10 @@ export default function EditProfilePage() {
           />
         </div>
 
-        {/* Twitter */}
+        {/* X (formerly Twitter) */}
         <div>
           <Label htmlFor="twitterUsername" className="text-[13px] text-muted-foreground">
-            Twitter username
+            X username
           </Label>
           <Input
             id="twitterUsername"

@@ -73,6 +73,43 @@ export enum Tiers {
 
 // ─── Analysis Job ───────────────────────────────────────
 
+/** Per-engine execution state for one job. */
+export interface EngineState {
+  status: string;
+  started_at: string | null;
+  ended_at: string | null;
+  error: string;
+}
+
+/**
+ * Engine statuses keyed by engine id.
+ *
+ * The service serves the `EngineState` object shape and upgrades older rows
+ * server-side, but the bare-string shape stays assignable here so the UI does
+ * not depend on when a given job ran. Read it through
+ * `normalizeEngineState` rather than indexing it directly.
+ */
+export type EngineStatusMap = Record<string, EngineState | string>;
+
+/**
+ * One engine from the analysis service's canonical catalogue.
+ *
+ * Served rather than hardcoded: the list had drifted into four disagreeing
+ * frontend/backend copies, and `dead_code` and `error_detection` were in none
+ * of the frontend ones despite running on every analysis.
+ */
+export interface EngineInfo {
+  key: string;
+  label: string;
+  description: string;
+  stage: string;
+  score_category: string | null;
+}
+
+export interface EngineListResponse {
+  engines: EngineInfo[];
+}
+
 export interface AnalysisJob {
   job_id: string;
   repo_id: string;
@@ -87,11 +124,24 @@ export interface AnalysisJob {
   total_lines: number | null;
   overall_score: number | null;
   blocked_by: string[];
-  engine_statuses: Record<string, string>;
+  engine_statuses: EngineStatusMap;
   error_message: string | null;
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
+  /**
+   * Null until the clone stage has detected them. Distinct from an empty array:
+   * null means "not measured yet", `[]` would mean "measured, found none", and
+   * the running sidebar shows a skeleton for the former.
+   */
+  languages_detected: string[] | null;
+  language_breakdown: LanguageShare[] | null;
+}
+
+/** One language's share of the repository's lines. */
+export interface LanguageShare {
+  name: string;
+  percentage: number;
 }
 
 export interface ScoreHistoryEntry {
@@ -427,6 +477,27 @@ export interface RawFinding {
   estimated_effort: number;
 }
 
+/**
+ * Why an AI summary is missing.
+ *
+ * Built by the AI service's `ClassifiedError` and narrowed again on the analysis
+ * side before storage, so `code` and `message` are always present when this
+ * object exists at all. There is no `provider`, `model` or `technical_message`
+ * field: the provider's verbatim response body contains, on an auth failure, the
+ * rejected key, and no field for it exists here to forget to remove.
+ */
+export interface AiSummaryError {
+  code: string;
+  message: string;
+  /**
+   * Omitted rather than null when the provider gave no hint. A client cannot tell
+   * "no hint" from "hint of zero" otherwise, and zero reads as "retry now" --
+   * the opposite of the advice a missing hint implies.
+   */
+  suggested_action?: string;
+  retry_after?: number;
+}
+
 export interface EnterpriseGuide {
   id: string;
   job_id: string;
@@ -434,6 +505,14 @@ export interface EnterpriseGuide {
   // Legacy fields
   executive_summary: string | null;
   ai_executive_summary: string | null;
+  /**
+   * Set only when `ai_executive_summary` is null *and* something failed.
+   *
+   * The difference between "no summary was produced" and "no summary was
+   * produced, here is why" -- a distinction that used to be invisible, because
+   * both arrived as null and the UI showed one fixed message for either.
+   */
+  ai_summary_error?: AiSummaryError | null;
   critical_issues: unknown[] | null;
   high_issues: unknown[] | null;
   medium_issues: unknown[] | null;
@@ -479,7 +558,14 @@ export interface JobStatistics {
 
 export interface AnalysisInsights {
   aiSummary: AiSummaryCard;
-  priorityRecommendation: PriorityRecommendation;
+  /**
+   * Null while a run is in flight.
+   *
+   * The card offers a recommendation by matching on the run's scores, so with no
+   * scores there is nothing to recommend and any advice shown would be a
+   * template rather than a conclusion.
+   */
+  priorityRecommendation: PriorityRecommendation | null;
   repositoryOverview: RepositoryOverview;
   engineStatus: EngineStatusItem[];
   metadata: AnalysisMetadata;
@@ -488,6 +574,16 @@ export interface AnalysisInsights {
 export interface AiSummaryCard {
   summary: string;
   isAiGenerated: boolean;
+  /**
+   * Why the summary is missing, when it is.
+   *
+   * Three states have to stay distinguishable here, and the previous type had
+   * room for one: a run still going, a run that finished with no summary at all,
+   * and a run that finished with a summary that could not be generated. Only the
+   * third has a `code`, and only it should offer a retry as though retrying were
+   * the thing to do.
+   */
+  error?: AiSummaryError | null;
 }
 
 export interface PriorityRecommendation {
@@ -498,6 +594,16 @@ export interface PriorityRecommendation {
   estimatedTime: string;
   findingId: string | null;
   category: string;
+  /**
+   * The severity of the finding the card is quoting, so the badge on screen
+   * is the one that finding was judged by. Null only when the card names no
+   * finding at all.
+   */
+  severity: Severity | null;
+  /** File the backing finding points at, or null when it names none. */
+  filePath: string | null;
+  /** First line of the backing finding, or null when it names none. */
+  lineStart: number | null;
 }
 
 export interface LanguageBar {
@@ -507,33 +613,69 @@ export interface LanguageBar {
 }
 
 export interface RepositoryOverview {
-  languages: LanguageBar[];
-  totalFiles: number;
-  totalLines: number;
+  /**
+   * Null until something has measured the repository's languages. `[]` means
+   * measured, and found none -- a different answer, and the reason this is not
+   * simply defaulted to an empty array.
+   */
+  languages: LanguageBar[] | null;
+  /** Null until measured. A measured zero stays `0`; only absence is null. */
+  totalFiles: number | null;
+  totalLines: number | null;
+  /**
+   * The rest of the repository's shape, measured by the same parse stage as
+   * `AnalysisMetadata`. They live here too because a card carrying only files
+   * and lines reads as an unfinished inventory -- these are the counts a
+   * reviewer actually scans for. Null until measured, for the same reason.
+   */
+  classes: number | null;
+  functions: number | null;
+  endpoints: number | null;
+  /** Count of distinct frameworks detected, not the list itself. */
+  frameworks: number | null;
 }
 
 export interface EngineStatusItem {
   name: string;
   key: string;
+  /** What this engine checks, from the service catalogue. Empty if unknown. */
+  description: string;
   status: 'completed' | 'running' | 'failed' | 'skipped' | 'pending' | 'unavailable';
   duration: string | null;
   score: number | null;
+  /**
+   * The engine's real result count, for engines that score nothing.
+   *
+   * Four engines report rows rather than a score dimension (hotspot files,
+   * dead-code entries, error findings, simulated load levels), so their score
+   * is null by design -- and a ring showing only null reads N/A on a run that
+   * produced thousands of rows. The count fills that slot with what the engine
+   * actually produced. Null whenever the score exists (the score says more),
+   * whenever the engine did not finish, or whenever the run's statistics have
+   * not arrived yet.
+   */
+  count?: number | null;
   error: string | null;
 }
 
 export interface AnalysisMetadata {
-  totalFiles: number;
-  totalLines: number;
-  classes: number;
-  functions: number;
-  endpoints: number;
-  languages: string[];
+  /**
+   * Every count here is null until the stage that measures it has run. A
+   * running job has measured none of them, and rendering `0` for a class count
+   * that has not been counted yet is a claim the data does not support.
+   */
+  totalFiles: number | null;
+  totalLines: number | null;
+  classes: number | null;
+  functions: number | null;
+  endpoints: number | null;
+  languages: string[] | null;
   duration: string | null;
   startedAt: string | null;
   completedAt: string | null;
-  branch: string;
-  repoUrl: string;
-  workspaceId: string;
+  branch: string | null;
+  repoUrl: string | null;
+  workspaceId: string | null;
 }
 
 // ─── Job Start Request ──────────────────────────────────

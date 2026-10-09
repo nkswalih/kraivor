@@ -34,6 +34,15 @@ class EndpointMetric:
     confidence: float = 0.8
 
     def to_dict(self) -> dict[str, object]:
+        # Exactly the columns of `analysis.performance_metrics`, because
+        # `save_many` spreads this dict straight into
+        # `PerformanceMetricModel(**entry)` and that constructor rejects any
+        # key it does not map. A stray `confidence` key did exactly that: the
+        # perf stage raised for every repository with routes, caught it as
+        # `perf_analysis_failed`, and returned None -- so no perf metric was
+        # ever saved *and* the load simulation, which needs that return value,
+        # never ran on the repos where it matters. The dataclass field itself
+        # stays: it is computed, held in memory, and read from the object.
         return {
             "metric_type": "endpoint",
             "endpoint": self.endpoint,
@@ -52,7 +61,6 @@ class EndpointMetric:
                 if self.deductions
                 else None
             ),
-            "confidence": self.confidence,
         }
 
 

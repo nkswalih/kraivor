@@ -1,3 +1,4 @@
+import ast
 import math
 import re
 from typing import cast
@@ -17,6 +18,92 @@ from app.domain.rules.patterns.security_patterns import (
     XSS_PATTERNS,
     XXE_PATTERNS,
 )
+
+# Routes reach these rules as `asdict(ParsedRoute)`, whose source field is
+# named `code`. `snippet` is what the rule tests and what a hand-written
+# `ast_data` dict supplies, so both are read: with only `snippet`, every route
+# produced by the parser carried an empty string into `code_snippet`, and the
+# authorization keyword scan below saw nothing to scan.
+_SNIPPET_KEYS = ("code", "snippet")
+
+# `Depends(...)`/`Security(...)` callees that grant a capability rather than
+# merely establishing identity. A handler taking `Depends(require_superadmin)`
+# is authorized even though the string "permission" appears nowhere in it, and
+# keyword scanning alone reported it as unprotected.
+_AUTHZ_DEPENDENCY_WORDS: tuple[str, ...] = (
+    "permission",
+    "role",
+    "admin",
+    "owner",
+    "member",
+    "authoriz",
+    "allow",
+    "access",
+    "require",
+    "guard",
+    "scope",
+    "superuser",
+    "staff",
+    "policy",
+    "acl",
+    "rbac",
+)
+
+# Cookie and session auth are what make CSRF exploitable: the browser attaches
+# credentials to a cross-site request on its own. A bearer token or API key in
+# a header does not get attached that way, so a state-changing endpoint guarded
+# by one cannot be forged by a form post.
+_COOKIE_AUTH_PATTERN = re.compile(
+    r"(?i)SessionAuthentication|session\[|cookies\.|Cookie\(|set_cookie|"
+    r"credentials\s*[=:]\s*['\"]include|SessionMiddleware"
+)
+_BEARER_AUTH_PATTERN = re.compile(
+    r"(?i)get_current_user|JWTPayload|Authorization|Bearer|api[_-]?key|"
+    r"x-api-key|token_header|require_superadmin|get_verified_user"
+)
+
+
+def _route_snippet(route: dict[str, object]) -> str:
+    """The route's source text, under whichever key the caller used."""
+    for key in _SNIPPET_KEYS:
+        value = route.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return ""
+
+
+def _route_depends_is_authorized(code: str) -> bool:
+    """Whether the route's own code declares an authorization dependency."""
+    if not code:
+        return False
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return False
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        name = (
+            func.id
+            if isinstance(func, ast.Name)
+            else func.attr
+            if isinstance(func, ast.Attribute)
+            else ""
+        )
+        if name not in {"Depends", "Security"} or not node.args:
+            continue
+        target = node.args[0]
+        target_name = (
+            target.id
+            if isinstance(target, ast.Name)
+            else target.attr
+            if isinstance(target, ast.Attribute)
+            else ""
+        ).lower()
+        if any(word in target_name for word in _AUTHZ_DEPENDENCY_WORDS):
+            return True
+    return False
 
 
 class SecurityNoAuthRule(BaseRule):
@@ -64,7 +151,7 @@ class SecurityNoAuthRule(BaseRule):
                         file_path=file_path,
                         line_start=cast(int | None, route.get("line_start")),
                         line_end=cast(int | None, route.get("line_end")),
-                        code_snippet=cast(str, route.get("snippet", "")),
+                        code_snippet=_route_snippet(route),
                         recommendation=(
                             "Add @login_required or equivalent authentication decorator"
                         ),
@@ -658,8 +745,10 @@ class SecurityMissingAuthzRule(BaseRule):
             if route.get("has_auth") is True:
                 method = route.get("method", "GET")
                 path = route.get("path", "/unknown")
-                snippet = cast(str, route.get("snippet", ""))
+                snippet = _route_snippet(route)
                 has_authz = any(kw in snippet.lower() for kw in self._AUTHZ_KEYWORDS)
+                if not has_authz and _route_depends_is_authorized(snippet):
+                    has_authz = True
                 if not has_authz:
                     violations.append(
                         RuleViolation(
@@ -709,6 +798,17 @@ class SecurityCSRFRule(BaseRule):
         violations: list[RuleViolation] = []
         has_csrf_protection = any(pattern.search(content) for pattern in CSRF_PATTERNS)
 
+        # CSRF forges a *cookie*-carried credential. A file that authenticates
+        # with a bearer token or API key in a header and never reads a cookie
+        # cannot be attacked this way -- the browser will not attach that header
+        # to a cross-site form post -- so reporting one would be noise. Cookie
+        # or session auth alongside bearer auth still counts, because that is
+        # the credential the attack would actually ride on.
+        if _BEARER_AUTH_PATTERN.search(content) and not _COOKIE_AUTH_PATTERN.search(
+            content
+        ):
+            return violations
+
         routes: list[dict[str, object]] = cast(
             list[dict[str, object]], ast_data.get("routes", [])
         )
@@ -732,7 +832,7 @@ class SecurityCSRFRule(BaseRule):
                         file_path=file_path,
                         line_start=cast(int | None, route.get("line_start")),
                         line_end=cast(int | None, route.get("line_end")),
-                        code_snippet=cast(str, route.get("snippet", "")),
+                        code_snippet=_route_snippet(route),
                         recommendation="Enable CSRF middleware or add CSRF tokens to forms. Use SameSite cookies.",
                         enterprise_pattern="Use anti-CSRF tokens, SameSite=Strict cookies, and double-submit cookie pattern",
                         score_impact=-8.0,

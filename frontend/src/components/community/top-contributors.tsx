@@ -1,14 +1,19 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
 import { useTopContributors } from '@/lib/hooks/use-profiles';
-import { Avatar } from '@/components/profiles/avatar';
+import { useProfileDialogStore } from '@/lib/stores/profile-dialog-store';
+import { UserRow } from '@/components/users/user-row';
 import { Skeleton } from '@/components/ui/shadcn';
+
+// No MessageButton here on purpose: direct messages start from the member's
+// own profile, so the list stays a list -- rank, name, discussion count --
+// instead of offering a second way to DM somebody from a ranking widget.
 
 export function TopContributors() {
   const params = useParams();
   const workspace = params?.workspace as string;
+  const openProfile = useProfileDialogStore(s => s.open);
   const { data, isLoading } = useTopContributors(5);
 
   if (isLoading) {
@@ -40,33 +45,23 @@ export function TopContributors() {
       ) : (
         <div className="space-y-3">
           {data.results.map(user => (
-            <Link
+            <UserRow
               key={user.user_id}
+              variant="compact"
               href={`/${workspace}/profile/${user.username}`}
-              className="flex items-center justify-between group cursor-pointer"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <Avatar
-                  src={user.avatar_url}
-                  fallbackSrc={user.user_avatar_url}
-                  name={user.display_name}
-                  size="sm"
-                />
-                <div className="min-w-0">
-                  <div className="text-[13px] font-medium text-foreground group-hover:underline truncate">
-                    {user.display_name}
-                  </div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {user.discussion_count} discussions
-                  </div>
-                </div>
-              </div>
-              <span className="text-[11px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0">
-                {user.reputation_score >= 1000
-                  ? `${(user.reputation_score / 1000).toFixed(1)}k`
-                  : user.reputation_score}
-              </span>
-            </Link>
+              name={user.display_name}
+              avatarUrl={user.avatar_url}
+              fallbackAvatarUrl={user.user_avatar_url}
+              onOpenProfile={() => openProfile(user.username)}
+              secondary={`${user.discussion_count} discussions`}
+              trailing={
+                <span className="text-[11px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                  {user.reputation_score >= 1000
+                    ? `${(user.reputation_score / 1000).toFixed(1)}k`
+                    : user.reputation_score}
+                </span>
+              }
+            />
           ))}
         </div>
       )}

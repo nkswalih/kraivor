@@ -1,14 +1,43 @@
+from typing import cast
 from uuid import UUID
 
+from sqlalchemy import case, func, select, update
 from sqlalchemy import delete as sa_delete
-from sqlalchemy import func, select, update
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
+from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.sql.expression import SQLColumnExpression
 
+from app.core.constants import EngineStateMap, JobStatus
 from app.domain.contracts.repository_provider import AbstractJobRepository
 from app.infrastructure.db.models.analysis_job import AnalysisJobModel
 from app.infrastructure.db.models.file_analysis import FileAnalysisModel
 from app.infrastructure.db.models.score_history import ScoreHistoryModel
+
+
+def floored_progress(
+    column: SQLColumnExpression[int], incoming: int
+) -> ColumnElement[int]:
+    """The value written into `progress_pct`: the stored percentage, floored.
+
+    Spelled as a CASE rather than `max(a, b)` or `greatest(a, b)` because no
+    scalar "larger of two numbers" exists on both engines: SQLite has `max` and
+    no `greatest`; Postgres has `greatest` and -- this is what took every run
+    down at start -- no two-argument `max` at all, rejecting the statement with
+    `function max(integer, integer) does not exist`. The expression before this
+    one was chosen while the only engine under test was SQLite, passed every
+    test in `test_progress_floor.py`, compiled without complaint, and could not
+    execute a single statement on the engine production uses. The CASE compiles
+    to plain SQL on both.
+
+    A NULL column -- a run's first write, before anything has been recorded --
+    takes the `else` branch: `column > incoming` is UNKNOWN, never TRUE, so the
+    incoming value is stored rather than a NULL propagating. That is the
+    outcome the previous form needed its `coalesce` for, without a function
+    name either engine could disagree about.
+    """
+    return case((column > incoming, column), else_=incoming)
 
 
 class JobRepository(AbstractJobRepository):
@@ -32,15 +61,88 @@ class JobRepository(AbstractJobRepository):
         return self._to_dict(model) if model else None
 
     async def update_status(
-        self, job_id: UUID, status: str, progress_pct: int = 0, **kwargs: object
+        self,
+        job_id: UUID,
+        status: str,
+        progress_pct: int | None = None,
+        engine_statuses: EngineStateMap | None = None,
+        **kwargs: object,
     ) -> None:
-        values = {"status": status, "progress_pct": progress_pct, **kwargs}
+        """Update a job's status.
+
+        `progress_pct=None` and `engine_statuses=None` leave those columns
+        untouched. The old `progress_pct=0` default meant any caller that forgot
+        the argument silently reset progress, which is what made a failed job's
+        bar snap from 90% back to 0. Every current caller passes it explicitly,
+        so nothing depended on that default.
+
+        `engine_statuses` is an explicit parameter rather than another `**kwargs`
+        entry so that "leave it alone" is expressible. Passing it through kwargs
+        could not distinguish "not supplied" from "set to None".
+
+        `progress_pct` is floored at whatever the row already holds. The pipeline
+        and the stage handlers each keep their own idea of how far along a stage
+        is, they are maintained by hand, and they disagree: the handler for
+        `errors` reported 86% while the pipeline's own table put that stage at
+        78%, so the next stage's write dropped the bar from 86 back to 80 in
+        front of the reader. Hand-aligning twelve literals against a table in
+        another module fixes today's numbers and leaves nothing stopping the next
+        edit from reintroducing it, so the invariant is enforced where every write
+        passes through instead.
+
+        The floor lives in `floored_progress`, and its spelling is load-bearing.
+        The expression this replaced was `max(coalesce(...), ...)`: correct on
+        the SQLite the suite runs on, fatal on Postgres, which has no
+        two-argument `max` -- the first status write of every run died there
+        with `function max(integer, integer) does not exist`, and no analysis
+        could start.
+        """
+        values: dict[str, object] = {"status": status}
+        if progress_pct is not None:
+            values["progress_pct"] = floored_progress(
+                AnalysisJobModel.progress_pct, progress_pct
+            )
+        if engine_statuses is not None:
+            values["engine_statuses"] = engine_statuses
+        values.update(kwargs)
         stmt = (
             update(AnalysisJobModel)
             .where(AnalysisJobModel.id == job_id)
             .values(**values)
         )
         await self._session.execute(stmt)
+
+    async def queue_if_failed(self, job_id: UUID, progress_message: str) -> bool:
+        """Claim a failed job for a retry. True only for the caller that won.
+
+        The status guard is what makes two concurrent retries safe: the first
+        UPDATE flips `failed` to `queued`, the second matches no row and
+        reports False. Without it, two clicks would launch two pipelines
+        writing two interleaved sets of findings into one job's tables.
+
+        The failure's traces are cleared on the way through: `error_message`
+        and `completed_at` describe a run that has ended, and a run being
+        revived must not still be carrying them. `progress_pct` is left
+        alone -- it holds the percentage the run reached, which is where the
+        resumed run continues from, and the floor in `update_status` keeps it
+        from moving backwards while it does.
+        """
+        stmt = (
+            update(AnalysisJobModel)
+            .where(
+                AnalysisJobModel.id == job_id,
+                AnalysisJobModel.status == JobStatus.FAILED,
+                AnalysisJobModel.deleted_at.is_(None),
+            )
+            .values(
+                status=JobStatus.QUEUED,
+                progress_message=progress_message,
+                error_message=None,
+                completed_at=None,
+            )
+        )
+        result = await self._session.execute(stmt)
+        return bool(cast(CursorResult[()], result).rowcount)
 
     async def list_by_repo(
         self, repo_id: UUID, limit: int = 10, offset: int = 0
@@ -136,6 +238,14 @@ class JobRepository(AbstractJobRepository):
             AnalysisJobModel.started_at,
             AnalysisJobModel.completed_at,
             AnalysisJobModel.created_at,
+            # Carried in the list projection too, not just the detail one. Both
+            # endpoints answer with the same `JobStatusResponse`, so projecting
+            # these here only would make the field real on one route and null on
+            # the other for the very same completed job. The two columns are a
+            # few short strings and a handful of small objects per row, which is
+            # cheaper than a schema that lies about half its callers.
+            AnalysisJobModel.languages_detected,
+            AnalysisJobModel.language_breakdown,
         )
 
     @staticmethod
@@ -159,6 +269,8 @@ class JobRepository(AbstractJobRepository):
             "started_at": model.started_at,
             "completed_at": model.completed_at,
             "created_at": model.created_at,
+            "languages_detected": model.languages_detected,
+            "language_breakdown": model.language_breakdown,
         }
 
     @staticmethod
@@ -197,4 +309,6 @@ class JobRepository(AbstractJobRepository):
             "completed_at": model.completed_at,
             "duration_seconds": model.duration_seconds,
             "created_at": model.created_at,
+            "languages_detected": model.languages_detected,
+            "language_breakdown": model.language_breakdown,
         }

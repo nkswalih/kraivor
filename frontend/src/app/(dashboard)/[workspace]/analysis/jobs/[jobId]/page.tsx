@@ -23,6 +23,9 @@ import {
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/utils';
+import { getErrorMessage } from '@/lib/api';
+import { AnalysisApiError } from '@/lib/api/analysis-service';
+import { analysisInsightsBuilder } from '@/lib/analysis/insights-builder';
 import {
   useJob,
   useReport,
@@ -31,11 +34,13 @@ import {
   useScoreHistory,
   useDeleteJob,
   useStartAnalysis,
+  useRetryJob,
   useFindings,
+  useEngines,
 } from '@/lib/hooks/use-analysis';
 import { useDetailBreadcrumb } from '@/lib/hooks/use-detail-breadcrumb';
 import { JobStatusBadge } from '@/components/analysis/job-status-badge';
-import { ProgressBar } from '@/components/analysis/progress-bar';
+import { AnalysisProgressPanel, JobFailurePanel } from '@/components/analysis/progress';
 import { BlockedOverall } from '@/components/analysis/blocked-overall';
 import { HeroCard } from '@/components/analysis/hero-card';
 import { EngineCard } from '@/components/analysis/engine-card';
@@ -69,18 +74,60 @@ export default function JobDetailPage() {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'all'>('all');
 
   const { data: job, isLoading, error } = useJob(jobId);
-  useDetailBreadcrumb(job ? `Analysis ${job.job_id.slice(0, 8)}` : null);
+  // The repository's short name -- what this run is actually known by. The
+  // header and the topbar path used to read `Analysis 63c45aae`: a job id
+  // prefix, which named nothing the reader could act on.
+  const repoName = job?.repo_url?.split('/').pop() || 'Analysis';
+  useDetailBreadcrumb(job ? repoName : null);
   const { data: report } = useReport(jobId);
+  const enginesQuery = useEngines();
   const { data: summary, isLoading: isSummaryLoading, error: summaryError } = useFindingsSummary(jobId);
-  const { data: findingsData } = useFindings(jobId);
+  // One row, not twenty. The repository orders findings worst-first, so row
+  // one is this run's worst active finding -- the only one the sidebar's
+  // recommendation card quotes. The old page_size of 20 made the card rank a
+  // twentieth of the run client-side, and it missed the worst finding whenever
+  // that one sat deeper than the first page (809 active findings did exactly
+  // that).
+  const { data: findingsData, error: findingsError } = useFindings(jobId, {
+    pageSize: 1,
+  });
+  // "Asked, not answered": the request is still out, or paused because the
+  // browser went offline. React Query's own `isLoading` is false in that
+  // paused state, so the flag is derived from the response instead -- an empty
+  // run answers with a defined payload whose `findings` array is simply short,
+  // which is the only shape allowed to reach the card as an empty run.
+  const findingsPending = !findingsData && !findingsError;
   const { data: stats, isLoading: isCountsLoading } = useJobStatistics(jobId);
   const { data: scoreHistory, isLoading: isScoreHistoryLoading, error: scoreHistoryError } = useScoreHistory(
     job?.repo_id ?? null,
   );
   const startAnalysis = useStartAnalysis();
+  const retryJob = useRetryJob();
   const deleteJob = useDeleteJob();
   const queryClient = useQueryClient();
   const prevStatusRef = useRef<string | undefined>(undefined);
+
+  // The same derived insights the sidebar builds, so the two cannot disagree
+  // about an engine's state, duration or score. Only `engineStatus` is read
+  // here; the rest of the object is unused on this page. `stats` is the run's
+  // statistics row, which is what fills the engines' result counts (dead-code
+  // entries, error findings, hotspots, load levels) for engines that score
+  // nothing.
+  const insights = useMemo(
+    () =>
+      analysisInsightsBuilder(
+        job,
+        report,
+        summary,
+        findingsData?.findings ?? null,
+        undefined,
+        undefined,
+        enginesQuery.data?.engines,
+        undefined,
+        stats,
+      ),
+    [job, report, summary, findingsData, enginesQuery.data, stats],
+  );
 
   const filteredEntries = useMemo(() => {
     if (timeRange === 'all' || !scoreHistory?.entries) return scoreHistory?.entries ?? [];
@@ -89,8 +136,17 @@ export default function JobDetailPage() {
     return scoreHistory.entries.filter(e => new Date(e.time) >= cutoff);
   }, [timeRange, scoreHistory?.entries]);
 
-  const handleReanalyze = async () => {
-    if (!job || reanalyzing) return;
+  /**
+   * The fresh-run path, without the in-flight guard.
+   *
+   * `handleReanalyze` is the guarded entry the header button uses;
+   * `handleRetry` reaches this from *inside* its own in-flight request (the
+   * no-checkpoint fallback), and React state does not update within a
+   * handler's tick -- calling the guarded version after
+   * `setReanalyzing(false)` would still read `true` and silently do nothing.
+   */
+  const startFreshAnalysis = async () => {
+    if (!job) return;
     setReanalyzing(true);
     try {
       const newJob = await startAnalysis.mutateAsync({
@@ -101,11 +157,85 @@ export default function JobDetailPage() {
       });
       toast.success('Reanalysis started');
       router.push(`/${workspaceSlug}/analysis/jobs/${newJob.job_id}`);
-    } catch {
-      toast.error('Failed to start reanalysis');
-    } finally {
+      // Deliberately no `setReanalyzing(false)` here. `router.push` returns
+      // before the new route's payload has been fetched, so this page stays
+      // mounted and interactive for as long as that takes -- and the `finally`
+      // that used to release the guard ran immediately, re-enabling the button
+      // inside that window. A second click then started a second run: two clones,
+      // two pipelines, two jobs on the repo, for one button. The button stays
+      // disabled until this page unmounts, which it does as soon as the new job's
+      // route renders.
+      //
+      // The accepted cost is that if the transition never completes the button
+      // stays disabled. That is the better of the two failure modes: a stuck
+      // button loses one click, a duplicate job burns a full clone and scan.
+    } catch (error) {
+      // Only here, because only here are we staying on the page.
       setReanalyzing(false);
+      // The same sentence for every cause -- a rate limit, an auth expiry, a
+      // service outage, a dropped connection all read "Failed to start
+      // reanalysis", so the toast told the reader nothing they could act on.
+      // `getErrorMessage` resolves the `ApiException` the api client built,
+      // which carries a distinct curated message per class.
+      toast.error(getErrorMessage(error));
     }
+  };
+
+  const handleReanalyze = () => {
+    if (reanalyzing) return;
+    return startFreshAnalysis();
+  };
+
+  /**
+   * Retry a failed run: ask the service to resume it where it stopped, and
+   * sort its three refusals into the right next step.
+   *
+   * On success this page does not navigate -- the mutation invalidates the
+   * job's query, polling resumes, and the failure panel is replaced by the
+   * running one in place. That is the point: the run continues at the
+   * percentage it reached, on the page that is already showing it.
+   */
+  const handleRetry = async () => {
+    if (!job || reanalyzing) return;
+    setReanalyzing(true);
+    try {
+      await retryJob.mutateAsync(jobId);
+      toast.success('Resuming where the run stopped');
+    } catch (error) {
+      if (error instanceof AnalysisApiError && error.status === 409) {
+        if (error.message === 'no_checkpoint') {
+          // No saved position to resume from: a failure from before resumes
+          // existed, or this run's container was recreated. The service
+          // refuses rather than restarting in place (the failed attempt's
+          // rows are still there, and a second copy would not be an
+          // improvement), so the honest retry is a fresh job -- what a retry
+          // did before resuming existed. Saying so before it happens keeps
+          // the second job from being a surprise.
+          setReanalyzing(false);
+          toast('No saved position to resume from — starting a fresh analysis instead');
+          await startFreshAnalysis();
+          return;
+        }
+        // `not_failed` or `already_queued`: another click, another tab, or
+        // the service itself already has this run going. Refetch and let the
+        // poll tell the truth -- starting a second pipeline here would be
+        // exactly what the service just refused.
+        setReanalyzing(false);
+        queryClient.invalidateQueries({ queryKey: ['analysis-job', jobId] });
+        toast('This run is already going again');
+        return;
+      }
+      setReanalyzing(false);
+      toast.error(getErrorMessage(error));
+    }
+  };
+
+  // What the recommendation card's button does. The findings list is ordered
+  // worst-first by the same repository, so the finding the card quotes is the
+  // first row of the page this opens on -- the button lands the reader on the
+  // one row it is describing, not on a search.
+  const handleViewFinding = () => {
+    router.push(`/${workspaceSlug}/analysis/jobs/${jobId}/findings`);
   };
 
   const handleDelete = async () => {
@@ -170,9 +300,7 @@ export default function JobDetailPage() {
 
   const isRunning = !['completed', 'failed'].includes(job.status);
   const isComplete = job.status === 'completed';
-  const engineKeys = ['security', 'reliability', 'maintainability', 'devops', 'performance'];
-
-  const sidebarLoading = isLoading || !job;
+  const isFailed = job.status === 'failed';
 
   return (
     <div className="flex h-full animate-fade-up">
@@ -189,7 +317,7 @@ export default function JobDetailPage() {
             </Link>
             <h1 className="text-lg font-medium text-foreground flex items-center gap-2">
               <Activity className="w-5 h-5 text-primary" />
-              Analysis {job.job_id.slice(0, 8)}
+              {repoName}
             </h1>
             <JobStatusBadge status={job.status} />
             <div className="ml-auto flex items-center gap-2">
@@ -209,15 +337,20 @@ export default function JobDetailPage() {
                 <Trash2 className="w-3.5 h-3.5" />
                 {deleting ? 'Deleting...' : 'Delete'}
               </button>
-              <button
-                onClick={handleReanalyze}
-                disabled={reanalyzing}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-card text-[12px] text-text-secondary hover:text-foreground hover:border-venom-yellow/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Run analysis again on this repository"
-              >
-                <RotateCcw className={`w-3.5 h-3.5 ${reanalyzing ? 'animate-spin' : ''}`} />
-                {reanalyzing ? 'Reanalyzing...' : 'Reanalyze'}
-              </button>
+              {/* Not rendered for a failed job: the failure panel carries the
+                  retry instead, next to the reason that motivates it. Two buttons
+                  for one action is worse than one button slightly lower down. */}
+              {!isFailed && (
+                <button
+                  onClick={handleReanalyze}
+                  disabled={reanalyzing}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-card text-[12px] text-text-secondary hover:text-foreground hover:border-venom-yellow/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Run analysis again on this repository"
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${reanalyzing ? 'animate-spin' : ''}`} />
+                  {reanalyzing ? 'Reanalyzing...' : 'Reanalyze'}
+                </button>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-4 text-[12px] text-text-tertiary">
@@ -232,53 +365,26 @@ export default function JobDetailPage() {
 
         <div className="flex-1 overflow-y-auto p-6">
           {isRunning && (
-            <div className="max-w-2xl mx-auto space-y-6">
-              <ProgressBar pct={job.progress_pct} message={job.progress_message} className="mb-4" />
-              <div className="space-y-3">
-                <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider">Engine Status</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {engineKeys.map(k => (
-                    <EngineCard
-                      key={k}
-                      engine={k}
-                      status={job.engine_statuses[k]}
-                      score={report?.[k === 'performance' ? 'performance_score' : `${k}_score` as keyof typeof report] as number | null | undefined}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-text-tertiary text-[12px]">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-venom-yellow" />
-                Analysis in progress — this page updates automatically
-              </div>
+            <div className="max-w-2xl mx-auto">
+              <AnalysisProgressPanel
+                job={job}
+                engineStatuses={job.engine_statuses}
+                items={insights.engineStatus}
+              />
             </div>
           )}
 
           {job.status === 'failed' && (
             <div className="max-w-2xl mx-auto space-y-4">
-              <div className="p-4 border border-red-500/30 bg-red-500/10 rounded-lg flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-[13px] font-medium text-red-400">Analysis Failed</p>
-                  <p className="text-[12px] text-text-tertiary mt-1">{job.error_message || 'Unknown error'}</p>
-                </div>
-              </div>
+              <JobFailurePanel
+                job={job}
+                items={insights.engineStatus}
+                onRetry={handleRetry}
+                isRetrying={reanalyzing}
+              />
               {job.blocked_by.length > 0 && (
                 <BlockedOverall blockedBy={job.blocked_by} />
               )}
-              <div className="space-y-3">
-                <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider">Engine Status</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {engineKeys.map(k => (
-                    <EngineCard
-                      key={k}
-                      engine={k}
-                      status={job.engine_statuses[k]}
-                      score={undefined}
-                    />
-                  ))}
-                </div>
-              </div>
             </div>
           )}
 
@@ -297,22 +403,19 @@ export default function JobDetailPage() {
                 job={job}
               />
 
-              {/* Engine Status Cards */}
+              {/* Engine Status Cards. Fed by the builder's rows rather than a bare key list:
+                  each card needs a name, a description, a state and a score, and
+                  that is exactly one `EngineStatusItem`. The grid also used to
+                  look each score up itself with a `performance` special case,
+                  while the builder reads it from the catalogue's own
+                  `score_category` -- so the page and the sidebar could disagree
+                  about an engine's score. */}
               <div className="space-y-3">
                 <h3 className="text-[12px] font-medium text-text-tertiary uppercase tracking-wider">Engine Status</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                  {engineKeys.map(k => {
-                    const scoreKey = k === 'performance' ? 'performance_score' : `${k}_score` as keyof typeof report;
-                    const engineScore = report?.[scoreKey] as number | null | undefined;
-                    return (
-                      <EngineCard
-                        key={k}
-                        engine={k}
-                        status={job.engine_statuses[k]}
-                        score={engineScore}
-                      />
-                    );
-                  })}
+                  {insights.engineStatus.map(item => (
+                    <EngineCard key={item.key} item={item} />
+                  ))}
                 </div>
               </div>
 
@@ -506,7 +609,9 @@ export default function JobDetailPage() {
           report={report}
           findingsSummary={summary}
           findings={findingsData?.findings ?? null}
-          isLoading={sidebarLoading}
+          findingsPending={findingsPending}
+          findingsError={findingsError}
+          onViewFinding={handleViewFinding}
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
@@ -525,7 +630,9 @@ export default function JobDetailPage() {
               report={report}
               findingsSummary={summary}
               findings={findingsData?.findings ?? null}
-              isLoading={sidebarLoading}
+              findingsPending={findingsPending}
+              findingsError={findingsError}
+              onViewFinding={handleViewFinding}
               onClose={() => setSidebarOpen(false)}
             />
           </div>

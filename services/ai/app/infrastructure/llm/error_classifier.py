@@ -20,6 +20,15 @@ class ErrorCategory(Enum):
     PROVIDER_UNAVAILABLE = "provider_unavailable"
     TIMEOUT = "timeout"
     UNKNOWN = "unknown"
+    # Neither of the next two is produced by `classify_error`, because neither is
+    # a provider response: both are this service failing before it makes a call.
+    # They live here rather than being invented at the call site so every consumer
+    # -- the chat route's status map, the enrich envelope, the frontend's copy --
+    # can handle the full set from one place. `PROVIDER_NOT_CONFIGURED` is the
+    # single most common real failure on the summary path, and it was previously
+    # indistinguishable from a timeout because both surfaced as an empty string.
+    PROVIDER_NOT_CONFIGURED = "provider_not_configured"
+    ALL_MODELS_FAILED = "all_models_failed"
 
 
 class SuggestedAction(Enum):

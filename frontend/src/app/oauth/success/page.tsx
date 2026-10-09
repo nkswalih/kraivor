@@ -57,6 +57,24 @@ export default function OAuthSuccessPage() {
         return;
       }
 
+      // `window.opener` can be lost on the way back from GitHub even though this
+      // is still the window our dialog opened: `window.name` is set by
+      // `window.open(..., 'github-install', ...)` and survives cross-origin
+      // navigation, while a window opened by our own link comes back with our
+      // origin as `document.referrer`. Either way it is script-closable, so close
+      // it here instead of waiting for the dialog's poll.
+      //
+      // A tab the user walked to from github.com matches neither and must keep the
+      // redirect below: Chrome treats a single-document session history as
+      // script-closable, so an unguarded close() would kill that tab outright.
+      const isOurPopup =
+        window.name === 'github-install' ||
+        document.referrer.startsWith(window.location.origin);
+      if (isOurPopup) {
+        window.close();
+        if (window.closed) return;
+      }
+
       if (workspaceId) {
         window.location.href = `/${workspaceId}/repositories`;
       } else {

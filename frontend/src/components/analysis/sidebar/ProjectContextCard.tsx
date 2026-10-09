@@ -1,0 +1,457 @@
+'use client';
+
+import {
+  Files,
+  Code2,
+  Braces,
+  FunctionSquare,
+  Route,
+  Languages,
+  Package,
+  GitBranch,
+  Globe,
+  Building2,
+  Hash,
+  Activity,
+  Clock,
+  Calendar,
+} from 'lucide-react';
+import { cn, formatRelativeTime } from '@/lib/utils';
+import {
+  CLONE_COMPLETE_PCT,
+  PARSE_COMPLETE_PCT,
+  PARSE_PROGRESSING_PCT,
+  measure,
+} from '@/lib/analysis/run-context';
+import type { RunFact } from '@/lib/analysis/run-context';
+import {
+  elapsedBetween,
+  formatDuration,
+  useElapsedSeconds,
+  usableTimestamp,
+} from '@/lib/format/duration';
+import { JobStatus } from '@/types/domain/analysis';
+import type { AnalysisJob, AnalysisMetadataResponse } from '@/types/domain/analysis';
+
+export interface ProjectContextCardProps {
+  job: AnalysisJob | null | undefined;
+  /** The parse-stage metadata row, while a run is still producing one. */
+  metadata?: AnalysisMetadataResponse | null;
+  /**
+   * The workspace's human name, supplied by the caller because the job payload
+   * carries only `workspace_id`. An id prefix is not a name anyone knows the
+   * workspace by, so the row waits instead of printing it.
+   */
+  workspaceName?: string | null;
+  isLoading?: boolean;
+  className?: string;
+}
+
+const STATUS_LABEL: Record<JobStatus, string> = {
+  [JobStatus.QUEUED]: 'Queued',
+  [JobStatus.CLONING]: 'Cloning',
+  [JobStatus.PARSING]: 'Parsing',
+  [JobStatus.RULES]: 'Rules',
+  [JobStatus.DEAD_CODE]: 'Dead code',
+  [JobStatus.ERRORS]: 'Errors',
+  [JobStatus.PERF]: 'Performance',
+  [JobStatus.SIMULATION]: 'Simulation',
+  [JobStatus.SCORING]: 'Scoring',
+  [JobStatus.GUIDE_GEN]: 'Writing guide',
+  [JobStatus.COMPLETED]: 'Complete',
+  [JobStatus.FAILED]: 'Failed',
+};
+
+/**
+ * The run's own facts, and the repository's, as they are established.
+ *
+ * Every figure here is either real or visibly absent. There are no defaults and
+ * no placeholders dressed as values: a count that has not been taken shows a
+ * shimmering block, and the row beside it names the stage that will take it.
+ */
+export function ProjectContextCard({
+  job,
+  metadata,
+  workspaceName,
+  isLoading,
+  className,
+}: ProjectContextCardProps) {
+  if (isLoading || !job) {
+    return <Skeleton className={className} />;
+  }
+
+  // `job` is non-null from here: the loading case returned above.
+  const progressPct = job.progress_pct ?? 0;
+  const status = job.status;
+
+  const files = measure(job.total_files, progressPct, CLONE_COMPLETE_PCT);
+  const lines = measure(job.total_lines, progressPct, CLONE_COMPLETE_PCT);
+  const languages = measure(job.languages_detected, progressPct, CLONE_COMPLETE_PCT);
+  // Frameworks are detected during clone but reach the frontend with the
+  // metadata row, which the parse stage starts writing at 25%. A zero here is a
+  // real answer -- the detection ran and found none.
+  const frameworks = measure(
+    metadata?.frameworks == null ? null : metadata.frameworks.length,
+    progressPct,
+    PARSE_PROGRESSING_PCT,
+  );
+
+  // The parse stage recounts as it goes, so these are ready from the first
+  // batch and only become settled once it finishes.
+  const classes = measure(
+    metadata?.class_count,
+    progressPct,
+    PARSE_PROGRESSING_PCT,
+    PARSE_COMPLETE_PCT,
+  );
+  const functions = measure(
+    metadata?.function_count,
+    progressPct,
+    PARSE_PROGRESSING_PCT,
+    PARSE_COMPLETE_PCT,
+  );
+  const endpoints = measure(
+    metadata?.endpoint_count,
+    progressPct,
+    PARSE_PROGRESSING_PCT,
+    PARSE_COMPLETE_PCT,
+  );
+
+  return (
+    <div className={cn('bg-card border border-border rounded-xl p-4', className)}>
+      <h3 className="text-[13px] font-semibold text-foreground mb-3">Project Context</h3>
+
+      <section className="mb-3">
+        <SectionLabel>Repository</SectionLabel>
+        <div className="space-y-0.5">
+          <Row
+            icon={Globe}
+            label="Repository"
+            value={formatRepo(job.repo_url)}
+            pendingText="Waiting for the clone"
+          />
+          <Row
+            icon={GitBranch}
+            label="Branch"
+            value={job.branch ?? null}
+            pendingText="Waiting for the clone"
+          />
+          <Row
+            icon={Building2}
+            label="Workspace"
+            value={workspaceName ?? null}
+            pendingText="Unknown"
+          />
+        </div>
+      </section>
+
+      <section className="mb-3">
+        <SectionLabel>This run</SectionLabel>
+        <div className="space-y-0.5">
+          <Row
+            icon={Hash}
+            label="Run"
+            value={shortRepoName(job.repo_url)}
+            pendingText="Waiting for the clone"
+          />
+          <Row
+            icon={Activity}
+            label="Status"
+            value={status ? STATUS_LABEL[status] ?? status : null}
+            pendingText="Unknown until the job loads"
+            tone={status === JobStatus.FAILED ? 'danger' : undefined}
+          />
+          <ElapsedRow job={job} />
+          <Row
+            icon={Calendar}
+            label="Started"
+            value={
+              usableTimestamp(job.started_at)
+                ? formatRelativeTime(job.started_at as string)
+                : null
+            }
+            pendingText="Once the run starts"
+          />
+        </div>
+      </section>
+
+      <section>
+        <SectionLabel>Measured</SectionLabel>
+        <div className="grid grid-cols-2 gap-2">
+          <Fact
+            icon={Files}
+            iconClass="text-blue-400"
+            label="Files"
+            fact={files}
+          />
+          <Fact
+            icon={Code2}
+            iconClass="text-green-400"
+            label="Lines"
+            fact={lines}
+          />
+          <Fact
+            icon={Braces}
+            iconClass="text-purple-400"
+            label="Classes"
+            fact={classes}
+          />
+          <Fact
+            icon={FunctionSquare}
+            iconClass="text-cyan-400"
+            label="Functions"
+            fact={functions}
+          />
+          <Fact
+            icon={Route}
+            iconClass="text-amber-400"
+            label="Endpoints"
+            fact={endpoints}
+          />
+          <Fact
+            icon={Package}
+            iconClass="text-pink-400"
+            label="Frameworks"
+            fact={frameworks}
+          />
+        </div>
+
+        <div className="mt-2 space-y-0.5">
+          <Row
+            icon={Languages}
+            label="Languages"
+            value={
+              languages.state === 'ready' && languages.value.length > 0
+                ? languages.value.join(', ')
+                : null
+            }
+            pendingText={languages.state === 'ready' ? 'None detected' : 'Waiting for the clone'}
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/**
+ * Placeholder for the whole card while the job itself is loading.
+ *
+ * Distinct from the per-fact placeholders below: here nothing is known at all,
+ * not even which facts exist. The row count matches the settled card so the
+ * panel below does not jump when the real one arrives.
+ */
+function Skeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn('bg-card border border-border rounded-xl p-4', className)}>
+      <div className="h-3.5 bg-krait-surface2 rounded animate-shimmer w-32 mb-4" />
+
+      {/* Same three sections, same shapes as the settled card: two labelled row
+          groups, then the tile grid with its trailing language row. Matching the
+          shape rather than approximating it is what stops the cards below
+          shifting when the real panel replaces this one. */}
+      <div className="mb-3">
+        <div className="h-2.5 bg-krait-surface2 rounded animate-shimmer w-16 mb-2" />
+        <SkeletonRows count={3} />
+      </div>
+      <div className="mb-3">
+        <div className="h-2.5 bg-krait-surface2 rounded animate-shimmer w-16 mb-2" />
+        <SkeletonRows count={4} />
+      </div>
+      <div>
+        <div className="h-2.5 bg-krait-surface2 rounded animate-shimmer w-16 mb-2" />
+        <div className="grid grid-cols-2 gap-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-krait-surface1 rounded-lg p-3">
+              <div className="w-4 h-4 rounded bg-krait-surface2 animate-shimmer mx-auto mb-2" />
+              <div className="h-2.5 w-1/2 rounded bg-krait-surface2 animate-shimmer mx-auto mb-1.5" />
+              <div className="h-2 w-3/4 rounded bg-krait-surface2 animate-shimmer mx-auto" />
+            </div>
+          ))}
+        </div>
+        <div className="mt-2">
+          <SkeletonRows count={1} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonRows({ count }: { count: number }) {
+  return (
+    <div className="space-y-1.5">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 px-1.5 py-1">
+          <div className="w-3.5 h-3.5 rounded bg-krait-surface2 animate-shimmer shrink-0" />
+          <div className="h-2.5 w-16 rounded bg-krait-surface2 animate-shimmer shrink-0" />
+          <div className="h-2.5 flex-1 rounded bg-krait-surface2 animate-shimmer" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[10px] uppercase tracking-wider text-text-tertiary font-medium mb-1.5">
+      {children}
+    </p>
+  );
+}
+
+type Tone = 'default' | 'danger';
+
+/**
+ * One labelled value.
+ *
+ * The pending form names the stage that will produce the value rather than
+ * showing a dash or a zero, because "not yet" and "measured, and it is nothing"
+ * are different answers and this row is where that difference is visible.
+ */
+function Row({
+  icon: Icon,
+  label,
+  value,
+  pendingText,
+  tone = 'default',
+}: {
+  icon: typeof Files;
+  label: string;
+  value: string | null;
+  pendingText: string;
+  tone?: Tone;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-1.5 py-1 rounded-lg text-[11px]">
+      <Icon className="w-3.5 h-3.5 text-text-tertiary shrink-0" />
+      <span className="text-text-tertiary w-20 shrink-0">{label}</span>
+      {value ? (
+        <span
+          className={cn(
+            'font-medium truncate',
+            tone === 'danger' ? 'text-red-400' : 'text-foreground',
+          )}
+        >
+          {value}
+        </span>
+      ) : (
+        <span className="text-text-tertiary italic truncate">{pendingText}</span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * A counted figure in the grid.
+ *
+ * Renders a shimmering block the same height the number would occupy, so the
+ * grid does not reflow when the value arrives and an unmeasured count is never
+ * mistakable for a measured zero.
+ */
+function Fact({
+  icon: Icon,
+  iconClass,
+  label,
+  fact,
+}: {
+  icon: typeof Files;
+  iconClass: string;
+  label: string;
+  fact: RunFact<number>;
+}) {
+  return (
+    <div className="bg-krait-surface1 rounded-lg p-3 text-center">
+      <Icon className={cn('w-4 h-4 mx-auto mb-1', iconClass)} />
+      {fact.state === 'pending' ? (
+        <div
+          className="h-7 my-0.5 rounded bg-krait-surface2 animate-shimmer w-2/3 mx-auto"
+          role="status"
+          aria-label={`${label} not measured yet`}
+        />
+      ) : (
+        <p
+          className="text-lg font-semibold text-foreground tabular-nums"
+          title={
+            fact.settled
+              ? `${label}, measured`
+              : `${label}, still being recounted`
+          }
+        >
+          {fact.value.toLocaleString()}
+        </p>
+      )}
+      <p className="text-[10px] text-text-tertiary uppercase tracking-wider">{label}</p>
+    </div>
+  );
+}
+
+/**
+ * How long the run has taken, counting while it is still going.
+ *
+ * Three cases, because a run has three endings. Still going: the counter is
+ * live, ticking once a second. Ended: the figure is the recorded distance from
+ * start to the end timestamp, so it is the run's real duration and stops
+ * moving. No start time yet: nothing to measure from, and it says so.
+ *
+ * The ended case uses the end timestamp rather than `now` deliberately. A
+ * finished job left open on screen would otherwise report a duration that keeps
+ * growing, and a failed one would tick forever -- both claiming the run is still
+ * taking time to finish when it finished hours ago.
+ */
+function ElapsedRow({ job }: { job: AnalysisJob }) {
+  const startedAt = usableTimestamp(job.started_at);
+  const endedAt = usableTimestamp(job.completed_at);
+  const finished = job.status === JobStatus.COMPLETED || job.status === JobStatus.FAILED;
+  const live = useElapsedSeconds(startedAt, !finished);
+
+  const recorded = elapsedBetween(startedAt, endedAt);
+
+  let shown: string;
+  if (finished && recorded !== null) {
+    shown = formatDuration(Math.max(0, recorded)) ?? '0s';
+  } else if (!startedAt) {
+    shown = 'Once the run starts';
+  } else {
+    shown = live === null ? 'Measuring' : (formatDuration(live) ?? '0s');
+  }
+
+  return (
+    <div className="flex items-center gap-3 px-1.5 py-1 rounded-lg text-[11px]">
+      <Clock className="w-3.5 h-3.5 text-text-tertiary shrink-0" />
+      <span className="text-text-tertiary w-20 shrink-0">Elapsed</span>
+      {startedAt ? (
+        <span className="font-medium text-foreground tabular-nums">{shown}</span>
+      ) : (
+        <span className="text-text-tertiary italic truncate">{shown}</span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * `owner/repo` from a clone URL, or the host and path when it is not GitHub.
+ *
+ * A self-hosted or local URL still identifies the repository, so it is shown
+ * rather than discarded -- just without pretending to be a GitHub path. The
+ * scheme and any trailing `.git` go either way, since neither carries
+ * information the panel needs.
+ */
+function formatRepo(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const bare = url.replace(/^https?:\/\//, '').replace(/\.git$/, '');
+  return bare.replace(/^github\.com\//, '');
+}
+
+/**
+ * `widget` from a clone URL -- the repository's own name, without the owner.
+ *
+ * The run row uses it because a run has no name of its own: in the runs list
+ * each row is identified by its repository, and this is the same answer. The
+ * Repository row above keeps the full `owner/repo` path, so the short form
+ * here names the run without printing the same string twice.
+ */
+function shortRepoName(url: string | null | undefined): string | null {
+  const full = formatRepo(url);
+  if (!full) return null;
+  const segments = full.replace(/\/+$/, '').split('/').filter(Boolean);
+  return segments.length > 0 ? segments[segments.length - 1] : null;
+}

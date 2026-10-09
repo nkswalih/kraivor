@@ -10,6 +10,22 @@ from unittest.mock import MagicMock, patch
 from tests.factories import UserFactory
 
 
+@pytest.fixture(autouse=True)
+def unlocked_lockout_manager():
+    """Default every sign-in test in this module to "not locked out".
+
+    The real manager reads Redis, which CI does not provide. Since the lockout
+    now fails closed on an unreachable Redis, every sign-in test would 503
+    without this. Tests that exercise the locked path patch
+    `get_lockout_manager` inside the test body, which takes precedence over this
+    fixture. Outage behaviour is covered in test_lockout_redis_fail_closed.py.
+    """
+    mgr = MagicMock()
+    mgr.check_lockout.return_value = (False, 0)
+    with patch("authentication.views.get_lockout_manager", return_value=mgr):
+        yield mgr
+
+
 @pytest.mark.auth
 class TestSignInIdentify:
     def setup_method(self):
@@ -93,10 +109,18 @@ class TestOTPFlow:
     def test_otp_send(self, mock_sender, db):
         user = UserFactory.verified()
         mock_sender.return_value.send = lambda e, o: None
-        client = APIClient()
-        response = client.post(
-            "/api/auth/signin/otp/send/", {"email": user.email}, format="json"
-        )
+        # Stub the service: OTP storage now fails closed when Redis is
+        # unreachable, and the suite has no Redis. This test is about the send
+        # endpoint's happy path, not about Redis availability -- the outage
+        # behaviour is covered in test_otp_redis_fail_closed.py.
+        mock_svc = MagicMock()
+        mock_svc.create_and_send.return_value = ("123456", True)
+
+        with patch("authentication.views.get_otp_service", return_value=mock_svc):
+            client = APIClient()
+            response = client.post(
+                "/api/auth/signin/otp/send/", {"email": user.email}, format="json"
+            )
         assert response.status_code == 200
 
     def test_otp_verify_invalid(self, db):

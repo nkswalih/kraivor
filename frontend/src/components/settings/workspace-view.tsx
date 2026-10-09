@@ -8,6 +8,7 @@ import { useAuthStore } from '@/lib/stores/auth-store';
 import { workspaceEndpoints, profileEndpoints } from '@/lib/api/endpoints';
 import type { WorkspaceMember, WorkspaceInvitation } from '@/types/api';
 import { cn } from '@/lib/utils';
+import { ListSkeleton } from '@/components/settings/settings-skeletons';
 
 type Tab = 'settings' | 'team';
 
@@ -329,7 +330,7 @@ function TeamContent({ workspaceId }: { workspaceId: string }) {
 
       {/* Pending Invitations */}
       {invitationsLoading ? (
-        <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-text-tertiary" /></div>
+        <ListSkeleton rows={1} />
       ) : pendingInvitations.length > 0 ? (
         <div>
           <p className="text-[10px] font-semibold tracking-[0.08em] uppercase text-text-tertiary mb-2.5">
@@ -367,7 +368,7 @@ function TeamContent({ workspaceId }: { workspaceId: string }) {
           Members ({allMembers.length})
         </p>
         {membersLoading ? (
-          <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-text-tertiary" /></div>
+          <ListSkeleton rows={4} />
         ) : allMembers.length === 0 ? (
           <p className="text-[13px] text-text-tertiary text-center py-8">No members yet.</p>
         ) : (

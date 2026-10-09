@@ -8,15 +8,17 @@ marked as failed immediately and the pipeline halts.
 import asyncio
 import time
 import traceback
-from datetime import datetime
-from typing import cast
+from collections.abc import Awaitable, Mapping
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Protocol, cast
 from uuid import UUID
 
 from app.application.analysis.commands import ProcessStageCommand, StartAnalysisCommand
 from app.application.analysis.handler import (
+    _push_engine_statuses,
     _push_progress,
     handle_analysis_failure,
-    handle_save_analysis_metadata,
     handle_save_findings,
     handle_stage_ai_enrich,
     handle_stage_churn,
@@ -35,6 +37,14 @@ from app.application.analysis.handler import (
     handle_stage_simulation,
     handle_start_analysis,
 )
+from app.application.tasks.checkpoint import (
+    delete_checkpoint,
+    load_checkpoint,
+    save_checkpoint,
+)
+from app.core.constants import EngineStateMap
+from app.core.engines import ALL_ENGINES as CANONICAL_ALL_ENGINES
+from app.core.engines import stage_to_engine_keys
 from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
 from app.domain.entities.finding import Finding
@@ -96,38 +106,12 @@ _STAGE_STATUS: dict[str, str] = {
     "finalize": "finalize",
 }
 
-_STAGE_ENGINE: dict[str, str | None] = {
-    "start": None,
-    "clone": None,
-    "churn": None,
-    "parse": None,
-    "rules": None,
-    "save_findings": None,
-    "dead_code": "dead_code",
-    "errors": "error_detection",
-    "reliability": "reliability",
-    "maintainability": "maintainability",
-    "devops": "devops",
-    "perf": "performance",
-    "simulation": "simulation",
-    "score": None,
-    "guide_gen": None,
-    "ai_enrich": None,
-    "finalize": None,
-}
-
-_STAGE_ENGINES: dict[str, list[str]] = {"rules": ["security"]}
-
-ALL_ENGINES = {
-    "security",
-    "maintainability",
-    "reliability",
-    "devops",
-    "dead_code",
-    "error_detection",
-    "performance",
-    "simulation",
-}
+# Engine keys come from the canonical catalogue in app.core.engines, so the
+# tracked set, the stage->engine mapping and the set GET /jobs/engines
+# advertises are all the same data and cannot disagree. Stages absent from
+# STAGE_ENGINE_KEYS run no engine.
+STAGE_ENGINE_KEYS = stage_to_engine_keys()
+ALL_ENGINES = CANONICAL_ALL_ENGINES
 
 _STAGE_PROGRESS: dict[str, int] = {
     "start": 10,
@@ -174,7 +158,6 @@ async def _push_stage_progress(state: dict[str, object], stage_name: str) -> Non
     job_id = cast(UUID, state["job_id"])
     pct = _STAGE_PROGRESS.get(stage_name, 50)
     status = _STAGE_STATUS.get(stage_name, stage_name)
-    engine_statuses = cast(dict[str, str] | None, state.get("engine_statuses"))
     try:
         await asyncio.wait_for(
             _push_progress(
@@ -182,7 +165,7 @@ async def _push_stage_progress(state: dict[str, object], stage_name: str) -> Non
                 status,
                 pct,
                 f"Running {stage_name}...",
-                engine_statuses=engine_statuses,
+                engine_statuses=_build_engine_payload(state),
             ),
             timeout=10,
         )
@@ -200,6 +183,199 @@ async def _push_stage_progress(state: dict[str, object], stage_name: str) -> Non
         logger.warning("publish_progress_failed", stage=stage_name)
 
 
+def _utc_now_iso() -> str:
+    return datetime.now(UTC).isoformat()
+
+
+def _describe_engine_error(stage_name: str, exc: BaseException) -> str:
+    """Short, user-safe description of why an engine failed.
+
+    The full traceback stays in the logs. It carries absolute source paths and
+    internal frames, and it is served back over the API to anyone who can read
+    the job, so it is not something to put in a response column.
+    """
+    detail = " ".join(str(exc).split())[:200]
+    summary = f"{stage_name}: {type(exc).__name__}"
+    return f"{summary} - {detail}" if detail else summary
+
+
+def _mark_engine_started(state: dict[str, object], engine_id: str) -> None:
+    meta = cast(dict[str, dict[str, object]], state.setdefault("_engine_meta", {}))
+    meta.setdefault(engine_id, {})["started_at"] = _utc_now_iso()
+
+
+def _mark_engine_ended(
+    state: dict[str, object], engine_id: str, error: str = ""
+) -> None:
+    meta = cast(dict[str, dict[str, object]], state.setdefault("_engine_meta", {}))
+    entry = meta.setdefault(engine_id, {})
+    entry["ended_at"] = _utc_now_iso()
+    if error:
+        entry["error"] = error
+
+
+def _build_engine_payload(state: dict[str, object]) -> EngineStateMap:
+    """Assemble the wire shape from the pipeline's status and timing maps."""
+    statuses = cast(dict[str, str], state.get("engine_statuses") or {})
+    meta = cast(dict[str, dict[str, object]], state.get("_engine_meta") or {})
+    payload: EngineStateMap = {}
+    for engine_id, status in statuses.items():
+        entry = meta.get(engine_id, {})
+        payload[engine_id] = {
+            "status": status,
+            "started_at": entry.get("started_at"),
+            "ended_at": entry.get("ended_at"),
+            "error": entry.get("error", ""),
+        }
+    return payload
+
+
+async def _persist_engine_statuses(state: dict[str, object]) -> None:
+    """Write engine_statuses to the job row immediately.
+
+    Without this the only write of `completed` was the *next* stage's
+    `_push_stage_progress`, so the API served every engine one stage stale: the
+    engine that had just finished still read `running`, and a completed engine
+    read `running` until an unrelated stage began. Progress is polled every 2s
+    against this column, so a stage that takes a minute shows a minute of stale
+    status.
+    """
+    if not state.get("job_id"):
+        return
+    job_id = cast(UUID, state["job_id"])
+    try:
+        await asyncio.wait_for(
+            _push_engine_statuses(job_id, _build_engine_payload(state)), timeout=10
+        )
+    except Exception:
+        logger.warning("persist_engine_statuses_failed")
+
+
+class _StageFn(Protocol):
+    """One pipeline stage: the shared state, plus that stage's own arguments.
+
+    Only `start` takes anything today (the command); every other stage reads
+    what it needs straight out of the state dict. The `*args` shape is what
+    lets one tuple hold both kinds -- and why `_stages` casts its literal:
+    the concrete functions have fixed arities that a variadic signature
+    cannot promise, only accept.
+    """
+
+    def __call__(
+        self, state: dict[str, object], *args: object
+    ) -> Awaitable[None]: ...
+
+
+def _stages(cmd: StartAnalysisCommand) -> tuple[tuple[str, _StageFn, tuple[object, ...]], ...]:
+    """The pipeline's stages, in order.
+
+    Built from module globals when called, so a test that patches a `_stage_*`
+    attribute takes over the whole loop. The order is the order
+    `_STAGE_PROGRESS` lists as well -- `plan_resume` reads positions from that
+    table, and a test pins the two together so an edit to one cannot silently
+    leave the other behind.
+    """
+    return cast(
+        tuple[tuple[str, _StageFn, tuple[object, ...]], ...],
+        (
+            ("start", _stage_start, (cmd,)),
+            ("clone", _stage_clone, ()),
+            ("churn", _stage_churn, ()),
+            ("parse", _stage_parse, ()),
+            ("rules", _stage_rules, ()),
+            ("save_findings", _stage_save_findings, ()),
+            ("dead_code", _stage_dead_code, ()),
+            ("errors", _stage_errors, ()),
+            ("reliability", _stage_reliability, ()),
+            ("maintainability", _stage_maintainability, ()),
+            ("devops", _stage_devops, ()),
+            ("perf", _stage_perf, ()),
+            ("simulation", _stage_simulation, ()),
+            ("score", _stage_score, ()),
+            ("guide_gen", _stage_guide_gen, ()),
+            ("ai_enrich", _stage_ai_enrich, ()),
+            ("finalize", _stage_finalize, ()),
+        ),
+    )
+
+
+def _save_checkpoint_quiet(state: dict[str, object], stage_name: str) -> None:
+    """Save the run's position after a finished stage. Never raises.
+
+    Losing a checkpoint costs only the *next* retry's ability to resume; it
+    must never cost the run that is succeeding right now, which is why every
+    failure -- a full disk, a state object something upstream made
+    unpicklable -- is a logged warning here and nothing else. The clone stage
+    leaves `job_id` as a string behind (its result dict carries the str form),
+    so both spellings are accepted rather than trusting one shape.
+    """
+    raw = state.get("job_id")
+    if raw is None:
+        return
+    try:
+        job_id = raw if isinstance(raw, UUID) else UUID(str(raw))
+    except (ValueError, TypeError):
+        return
+    try:
+        save_checkpoint(job_id, state)
+    except Exception:
+        logger.warning("checkpoint_save_failed", stage=stage_name, job_id=str(job_id))
+
+
+def _plan_from_state(state: Mapping[str, object], depth: int = 1) -> str | None:
+    """The stage a retry should start at, or None if this state cannot resume.
+
+    The checkpoint records the last stage that *finished* (`_last_stage` is
+    written at stage start and the file is only saved after stage success, so
+    the newest file always describes a completed stage). The resume point is
+    therefore the stage after it -- the one that failed.
+
+    `depth` matters for one case: churn reads the cloned repository's git
+    history from disk, so a deep analysis whose container has since been
+    recreated (taking /tmp with it) cannot run it. Every other stage past
+    clone works from what the checkpoint holds in memory -- parse reads the
+    file contents the clone stage collected, not the disk -- so only churn is
+    handed the question of whether the workspace is still there.
+    """
+    last = state.get("_last_stage")
+    if not isinstance(last, str) or last not in _STAGE_PROGRESS:
+        logger.warning("resume_stage_unknown", last_stage=repr(last))
+        return None
+    order = list(_STAGE_PROGRESS)
+    next_index = order.index(last) + 1
+    if next_index >= len(order):
+        # The checkpoint describes a pipeline that ran to completion while the
+        # job row says failed. There is no stage left to resume *at*, and
+        # re-running earlier ones against rows they already wrote is exactly
+        # how duplicate findings happen.
+        return None
+    next_stage = order[next_index]
+    if next_stage == "churn" and depth > 1:
+        repo_path = state.get("repo_path")
+        if not (isinstance(repo_path, str) and Path(repo_path).is_dir()):
+            logger.info(
+                "resume_unusable",
+                reason="workspace_gone",
+                next_stage=next_stage,
+                repo_path=repr(repo_path),
+            )
+            return None
+    return next_stage
+
+
+def plan_resume(job_id: UUID, depth: int = 1) -> str | None:
+    """The stage a retry of this job would start at, or None if it cannot resume.
+
+    Read by the retry endpoint before it claims the job, and again by the
+    retried run when it starts -- one planner, so the stage the endpoint
+    promised and the stage the pipeline keeps are the same value.
+    """
+    state = load_checkpoint(job_id)
+    if state is None:
+        return None
+    return _plan_from_state(state, depth=depth)
+
+
 async def run_full_analysis(cmd_dict: dict[str, object]) -> dict[str, object]:
     """Execute the complete analysis pipeline in the background.
 
@@ -211,24 +387,66 @@ async def run_full_analysis(cmd_dict: dict[str, object]) -> dict[str, object]:
     Args:
         cmd_dict: Serialized StartAnalysisCommand fields.
                    May include 'job_id' if the job was already created
-                   by the API router.
+                   by the API router, and 'resume' when the job is a failed
+                   run being retried from its saved position.
 
     Returns:
         Dict with job_id and report summary.
     """
     job_id_str = cmd_dict.pop("job_id", None)
+    resume = bool(cmd_dict.pop("resume", False))
     cmd = StartAnalysisCommand(**cmd_dict)  # type: ignore[arg-type]
+    job_id = UUID(cast(str, job_id_str)) if job_id_str else None
     state: dict[str, object] = {}
-    if job_id_str:
-        state["job_id"] = UUID(cast(str, job_id_str))
+    if job_id:
+        state["job_id"] = job_id
+
+    resume_from: str | None = None
+    if resume:
+        if job_id is None:
+            # Defensive: a resume with no identity has nowhere to read a
+            # position from, and starting over as a fresh job would write a
+            # second set of rows beside the ones the failed attempt left.
+            logger.error("resume_without_job_id")
+            return {"status": "failed", "reason": "resume_requires_job_id"}
+        restored = load_checkpoint(job_id)
+        if restored:
+            state.update(restored)
+            # The checkpoint's copy is the same job, but the identity this run
+            # was launched with is the one every stage must keep seeing -- the
+            # clone stage stores it as a string, and downstream casts assume
+            # the UUID form until it does.
+            state["job_id"] = job_id
+        resume_from = _plan_from_state(state, depth=cmd.depth)
+        if resume_from is None:
+            # The endpoint checked this before launching, so arriving here
+            # means the file vanished or changed in between -- the container
+            # restarted, or the state was written by code this one cannot
+            # read. Refusing is the honest outcome: re-running from stage one
+            # would duplicate every row the attempt already wrote.
+            await _handle_failure_async(
+                job_id=job_id,
+                stage="resume",
+                error_message=(
+                    "This run's saved position is no longer readable, so it "
+                    "cannot resume. Start a new analysis instead."
+                ),
+            )
+            return {"job_id": str(job_id), "status": "failed"}
 
     try:
-        await _run_pipeline(cmd, state)
+        await _run_pipeline(cmd, state, resume_from=resume_from)
     except Exception:
         # Stage-level handlers already called _handle_failure_async;
         # just log and re-raise so asyncio doesn't swallow it silently.
         logger.exception("pipeline_aborted")
         raise
+
+    if job_id:
+        # The run finished; there is nothing left to resume from. A completed
+        # job's checkpoint is dead weight holding a copy of the repository's
+        # parsed contents in ephemeral storage.
+        delete_checkpoint(job_id)
 
     score_raw = state.get("score")
     overall_score = score_raw.overall if isinstance(score_raw, Score) else None
@@ -260,65 +478,101 @@ async def _publish_engine_event(
         logger.warning("publish_engine_event_failed", engine=engine_name)
 
 
-async def _run_pipeline(cmd: StartAnalysisCommand, state: dict[str, object]) -> None:
+async def _run_pipeline(
+    cmd: StartAnalysisCommand,
+    state: dict[str, object],
+    *,
+    resume_from: str | None = None,
+) -> None:
     """Execute all pipeline stages sequentially with per-stage error handling.
 
     Each stage is wrapped in try/except so a failure marks the job as failed
     immediately with a clear message and halts the pipeline.
+
+    `resume_from` names the stage to start at: every stage before it already
+    finished in a previous attempt, and their outputs arrive in `state` from
+    the checkpoint instead of being produced again. A fresh run passes None
+    and starts at `start`.
     """
     state["_pipeline_start"] = time.monotonic()
-    state["engine_statuses"] = dict.fromkeys(ALL_ENGINES, "pending")
-    for stage_name, stage_fn, stage_args in (
-        ("start", _stage_start, (cmd,)),
-        ("clone", _stage_clone, ()),
-        ("churn", _stage_churn, ()),
-        ("parse", _stage_parse, ()),
-        ("rules", _stage_rules, ()),
-        ("save_findings", _stage_save_findings, ()),
-        ("dead_code", _stage_dead_code, ()),
-        ("errors", _stage_errors, ()),
-        ("reliability", _stage_reliability, ()),
-        ("maintainability", _stage_maintainability, ()),
-        ("devops", _stage_devops, ()),
-        ("perf", _stage_perf, ()),
-        ("simulation", _stage_simulation, ()),
-        ("score", _stage_score, ()),
-        ("guide_gen", _stage_guide_gen, ()),
-        ("ai_enrich", _stage_ai_enrich, ()),
-        ("finalize", _stage_finalize, ()),
-    ):
+    # `setdefault`, because a resumed run arrives holding the checkpoint's
+    # maps: engines that finished must stay finished -- the score reads that
+    # map -- and their recorded timings are history, not something to blank.
+    # A fresh run has neither key and gets the all-pending pair it always had.
+    state.setdefault("engine_statuses", dict.fromkeys(ALL_ENGINES, "pending"))
+    state.setdefault("_engine_meta", {})
+
+    stages = _stages(cmd)
+    if resume_from is not None:
+        for index, (name, _, _) in enumerate(stages):
+            if name == resume_from:
+                stages = stages[index:]
+                logger.info(
+                    "pipeline_resuming",
+                    stage=resume_from,
+                    job_id=str(state.get("job_id")),
+                )
+                break
+        else:
+            # `plan_resume` reads positions from `_STAGE_PROGRESS`, which a
+            # test pins to this list, so disagreement means the process
+            # changed underneath itself. Refusing beats guessing an index: a
+            # wrong slice either re-runs completed stages or skips unfinished
+            # ones, and both are worse than a failed job that says why.
+            raise ValueError(f"cannot resume at unknown stage {resume_from!r}")
+
+    for stage_name, stage_fn, stage_args in stages:
         state["_last_stage"] = stage_name
-        engine_ids = _STAGE_ENGINES.get(stage_name, [])
-        single_engine_id = _STAGE_ENGINE.get(stage_name)
-        engine_ids = engine_ids + ([single_engine_id] if single_engine_id else [])
+        engine_ids = STAGE_ENGINE_KEYS.get(stage_name, [])
         job_id = cast(UUID, state.get("job_id"))
         for eid in engine_ids:
             cast(dict[str, str], state["engine_statuses"])[eid] = "running"
-            state[f"_engine_start_{eid}"] = time.monotonic()
+            _mark_engine_started(state, eid)
             if job_id:
                 await _publish_engine_event(job_id, eid, "running")
         await _push_stage_progress(state, stage_name)
         try:
-            if stage_args:
-                await stage_fn(state, *stage_args)  # type: ignore[call-arg]
-            else:
-                await stage_fn(state)  # type: ignore[call-arg]
+            await stage_fn(state, *stage_args)
             for eid in engine_ids:
                 cast(dict[str, str], state["engine_statuses"])[eid] = "completed"
+                _mark_engine_ended(state, eid)
                 if job_id:
                     await _publish_engine_event(job_id, eid, "completed")
-        except Exception:
+            # Persist now rather than leaving it for the next stage's progress
+            # write. See _persist_engine_statuses.
+            await _persist_engine_statuses(state)
+            # The position of a finished stage, saved while it is still true.
+            # Reached only on the success path: when a stage raises, the newest
+            # file on disk is the last stage that *did* finish, which is
+            # exactly where a retry resumes from.
+            await asyncio.to_thread(_save_checkpoint_quiet, state, stage_name)
+        except Exception as exc:
+            engine_error = _describe_engine_error(stage_name, exc)
             for eid in engine_ids:
                 cast(dict[str, str], state["engine_statuses"])[eid] = "failed"
+                _mark_engine_ended(state, eid, engine_error)
                 if job_id:
-                    await _publish_engine_event(
-                        job_id, eid, "failed", traceback.format_exc()
-                    )
+                    # The described form, not the traceback. This event reaches
+                    # subscribers that render it into notifications, and it was the
+                    # last place a full traceback still went out over the wire --
+                    # the row it was written to had already been guarded.
+                    await _publish_engine_event(job_id, eid, "failed", engine_error)
+            # Carry the failed statuses to the failure handler, which is what
+            # writes the row. Without this the run halts with every engine
+            # still reading "running"/"pending" in the API.
+            await _persist_engine_statuses(state)
             if job_id:
+                # The traceback is safe to pass here and nowhere else:
+                # `handle_analysis_failure` reduces it before it reaches the job
+                # row or the failure event. Passing `engine_error` instead would
+                # work too, but then a caller that forgot would leak silently --
+                # the whole reason the reduction lives in the handler is that this
+                # is the only choke point every failure path goes through.
                 await _handle_failure_async(
                     job_id=job_id,
                     stage=stage_name,
                     error_message=traceback.format_exc(),
+                    engine_statuses=_build_engine_payload(state),
                 )
             raise
 
@@ -419,16 +673,17 @@ async def _stage_parse(state: dict[str, object]) -> None:
     async with UnitOfWork() as uow:
         producer = EventProducer()
         metadata, parsed_files = await handle_stage_parse(
-            cmd, parser, uow, producer, repo_path, files
-        )
-        await handle_save_analysis_metadata(
-            job_id=job_id,
-            parsed_files_metadata=metadata,
+            cmd,
+            parser,
+            uow,
+            producer,
+            repo_path,
+            files,
             languages=cast(list[str], state.get("languages", [])),
             frameworks=cast(list[str], state.get("frameworks", [])),
-            uow=uow,
         )
-        await uow.commit()
+        # handle_stage_parse persisted the running totals itself, including a
+        # final checkpoint, so there is nothing left to save here.
 
         state["parsed_files_metadata"] = metadata
         state["_parsed_files"] = parsed_files
@@ -826,6 +1081,9 @@ async def _stage_finalize(state: dict[str, object]) -> None:
         time.monotonic() - cast(float, state.get("_pipeline_start", 0))
     )
     cmd = ProcessStageCommand(job_id=job_id, stage="finalize")
+    # Authoritative engine statuses. See handle_stage_finalize for why the
+    # scorer's map cannot be used here.
+    engine_statuses = _build_engine_payload(state)
 
     async with UnitOfWork() as uow:
         job = await uow.jobs.get_by_id(cmd.job_id)
@@ -846,6 +1104,7 @@ async def _stage_finalize(state: dict[str, object]) -> None:
             total_files,
             total_lines,
             duration_seconds,
+            engine_statuses,
         )
         await uow.commit()
         state["report"] = report.to_dict()
@@ -853,8 +1112,15 @@ async def _stage_finalize(state: dict[str, object]) -> None:
     logger.info("pipeline_stage_complete", stage="finalize", job_id=str(job_id))
 
 
-async def _handle_failure_async(job_id: UUID, stage: str, error_message: str) -> None:
+async def _handle_failure_async(
+    job_id: UUID,
+    stage: str,
+    error_message: str,
+    engine_statuses: EngineStateMap | None = None,
+) -> None:
     async with UnitOfWork() as uow:
         producer = EventProducer()
-        await handle_analysis_failure(job_id, stage, error_message, uow, producer)
+        await handle_analysis_failure(
+            job_id, stage, error_message, uow, producer, engine_statuses
+        )
         await uow.commit()

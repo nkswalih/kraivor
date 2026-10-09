@@ -1,4 +1,7 @@
+import uuid
+
 from app.domain.contracts.parser import ParsedFile, ParsedRoute
+from app.infrastructure.db.models.performance_metric import PerformanceMetricModel
 from app.workers.perf.rpm_calculator import RPMCalculator
 
 
@@ -338,3 +341,42 @@ class TestRPMCalculator:
         metrics = await calculator.calculate()
         ep = metrics.endpoints[0]
         assert "file_io_in_request" in ep.bottlenecks
+
+
+class TestPersistence:
+    async def test_to_dict_builds_the_persistable_model(self) -> None:
+        """`save_many` spreads `to_dict()` straight into the model constructor.
+
+        A key that is not a column of `analysis.performance_metrics` raised
+        `TypeError` inside the perf stage, which caught it, logged
+        `perf_analysis_failed` and returned None. No perf metric was ever
+        saved for any job -- and the load simulation, which needs that return
+        value, never ran on the repos with routes. The dict must therefore
+        contain only mapped columns; constructing the model here is the exact
+        call `save_many` makes.
+        """
+        route = ParsedRoute(
+            path="/api/users",
+            method="GET",
+            handler_name="get_users",
+            line_start=1,
+            line_end=5,
+            code="def get_users():\n    users = User.all()\n    for u in users:\n        u.profile.get()\n",
+        )
+        pf = _make_pf("routes.py", routes=[route])
+        metrics = await RPMCalculator([pf]).calculate()
+        entry = metrics.endpoints[0].to_dict()
+
+        model = PerformanceMetricModel(
+            job_id=uuid.uuid4(),
+            repo_id=uuid.uuid4(),
+            workspace_id=uuid.uuid4(),
+            **entry,
+        )
+
+        assert model.metric_type == "endpoint"
+        assert model.endpoint == "/api/users"
+        # The bottleneck fields were part of the same miss once: they must be
+        # strings the Text/VARCHAR columns accept, not the raw structures.
+        assert isinstance(model.bottleneck_type, str)
+        assert isinstance(model.bottleneck_severity, str)

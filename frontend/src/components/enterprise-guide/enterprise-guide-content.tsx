@@ -33,6 +33,7 @@ export function EnterpriseGuideContent({ guide }: { guide: EnterpriseGuide }) {
       <div data-section="ai-summary">
         <AiExecutiveSummarySection
           summary={guide.ai_executive_summary}
+          error={guide.ai_summary_error}
           jobId={guide.job_id}
         />
       </div>

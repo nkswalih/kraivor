@@ -39,6 +39,7 @@ class EnterpriseGuideRepository:
             "capacity_analysis": m.capacity_analysis,
             "migration_path": m.migration_path,
             "ai_executive_summary": m.ai_executive_summary,
+            "ai_summary_error": m.ai_summary_error,
             "repository_health": m.repository_health,
             "engineering_scorecard": m.engineering_scorecard,
             "business_risk": m.business_risk,

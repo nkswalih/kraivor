@@ -7,6 +7,23 @@ if "ANALYSIS_DATABASE__URL" not in os.environ:
     os.environ["ANALYSIS_DATABASE__URL"] = "sqlite+aiosqlite:///./test.db"
 
 
+@pytest.fixture(autouse=True)
+def _isolated_checkpoints(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Keep every test's pipeline checkpoints inside its own tmp directory.
+
+    The pipeline now saves its resume position after every stage, into the
+    configured ephemeral directory. Without this fixture each run would write
+    real files to the settings' path (`/tmp/analysis` by default) and leave
+    them there -- thousands of orphaned `.state` files across a suite run, and
+    tests asserting on file contents that another test happened to write.
+    """
+    from app.application.tasks import checkpoint
+
+    monkeypatch.setattr(checkpoint, "_checkpoint_dir", lambda: tmp_path)
+
+
 # ── Fixtures for domain rule tests ─────────────────────────────────────
 
 

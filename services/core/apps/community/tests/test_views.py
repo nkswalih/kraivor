@@ -78,11 +78,14 @@ class TestDiscussionVoteView:
 @pytest.mark.django_db
 class TestTrendingDiscussionsView:
     def test_trending(self, client, user_id):
-        DiscussionFactory.create_batch(3, author_id=uuid.UUID(user_id))
+        DiscussionFactory.create_batch(
+            3, author_id=uuid.UUID(user_id), upvote_count=1
+        )
+        DiscussionFactory(author_id=uuid.UUID(user_id))  # no engagement: excluded
         url = reverse("discussion-trending")
         resp = client.get(url)
         assert resp.status_code == status.HTTP_200_OK
-        assert len(resp.json()["results"]) >= 3
+        assert len(resp.json()["results"]) == 3
 
 
 @pytest.mark.django_db

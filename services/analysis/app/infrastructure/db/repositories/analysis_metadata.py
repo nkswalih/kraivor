@@ -1,6 +1,9 @@
+from datetime import datetime
+from typing import cast
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.analysis_metadata import AnalysisMetadata
@@ -14,16 +17,49 @@ class AnalysisMetadataRepository:
         self._session = session
 
     async def save(self, metadata: AnalysisMetadata) -> None:
-        model = AnalysisMetadataModel(
-            id=metadata.id,
-            job_id=metadata.job_id,
-            class_count=metadata.class_count,
-            function_count=metadata.function_count,
-            endpoint_count=metadata.endpoint_count,
-            languages=metadata.languages,
-            frameworks=metadata.frameworks,
+        """Insert or update the one metadata row belonging to this job.
+
+        An upsert rather than a plain insert because parse now persists partial
+        totals as it works, so a job is saved repeatedly. `get_by_job` reads
+        with `scalar_one_or_none`, so a second insert would turn every later read
+        into a `MultipleResultsFound`.
+
+        `job_id` is the natural key. There is no unique constraint on it and
+        none is needed here, because the pipeline runs one job at a time in a
+        single worker; update-then-insert is therefore not racy in practice. It
+        is preferred over `ON CONFLICT` so the statement also runs on SQLite.
+        """
+        stmt = (
+            update(AnalysisMetadataModel)
+            .where(AnalysisMetadataModel.job_id == metadata.job_id)
+            .values(
+                class_count=metadata.class_count,
+                function_count=metadata.function_count,
+                endpoint_count=metadata.endpoint_count,
+                languages=metadata.languages,
+                frameworks=metadata.frameworks,
+                updated_at=datetime.now(),
+            )
         )
-        self._session.add(model)
+        result = await self._session.execute(stmt)
+        # AsyncSession.execute is declared as returning the base Result, which
+        # has no rowcount. An UPDATE against a real dialect always yields a
+        # CursorResult, empty-tuple-typed because an UPDATE returns no rows; the
+        # cast is only there because the signature is wider than what comes back.
+        if cast(CursorResult[()], result).rowcount:
+            return
+
+        self._session.add(
+            AnalysisMetadataModel(
+                id=metadata.id,
+                job_id=metadata.job_id,
+                class_count=metadata.class_count,
+                function_count=metadata.function_count,
+                endpoint_count=metadata.endpoint_count,
+                languages=metadata.languages,
+                frameworks=metadata.frameworks,
+            )
+        )
 
     async def get_by_job(self, job_id: UUID) -> AnalysisMetadata | None:
         stmt = select(AnalysisMetadataModel).where(

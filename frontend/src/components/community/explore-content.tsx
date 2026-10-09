@@ -1,20 +1,22 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Search, Users, MessageSquare } from 'lucide-react';
 import { useDiscussions } from '@/lib/hooks/use-community';
 import { useProfileSearch } from '@/lib/hooks/use-profiles';
 import { useAuthorProfiles } from '@/lib/hooks/use-profiles';
 import { useCommunityStore } from '@/lib/stores/community-store';
+import { useProfileDialogStore } from '@/lib/stores/profile-dialog-store';
 import { DiscussionCard } from './discussion-card';
-import { Avatar } from '@/components/profiles/avatar';
+import { UserRow } from '@/components/users/user-row';
+import { MessageButton } from '@/components/profiles/message-button';
 import { Skeleton } from '@/components/ui/shadcn';
 
 export function ExploreContent() {
-  const router = useRouter();
   const params = useParams();
   const workspace = params?.workspace as string;
+  const openProfile = useProfileDialogStore(s => s.open);
   const searchQuery = useCommunityStore(s => s.searchQuery);
   const [debounced, setDebounced] = useState('');
 
@@ -148,26 +150,28 @@ export function ExploreContent() {
           </div>
           <div className="space-y-1">
             {profileResults.slice(0, 5).map(profile => (
-              <button
+              <UserRow
                 key={profile.user_id}
-                onClick={() => router.push(`/${workspace}/profile/${profile.username}`)}
-                className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-muted/50 transition-colors text-left"
-              >
-                <Avatar
-                  src={profile.avatar_url}
-                  fallbackSrc={profile.user_avatar_url}
-                  name={profile.display_name}
-                  size="sm"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13px] font-medium text-foreground truncate">
-                    {profile.display_name}
-                  </div>
-                  <div className="text-[12px] text-muted-foreground">
+                variant="search"
+                href={`/${workspace}/profile/${profile.username}`}
+                name={profile.display_name}
+                avatarUrl={profile.avatar_url}
+                fallbackAvatarUrl={profile.user_avatar_url}
+                onOpenProfile={() => openProfile(profile.username)}
+                secondary={
+                  <>
                     @{profile.username} · {profile.reputation_score} rep
-                  </div>
-                </div>
-              </button>
+                  </>
+                }
+                actions={
+                  <MessageButton
+                    compact
+                    targetUserId={profile.user_id}
+                    targetName={profile.display_name}
+                    isOwner={profile.is_owner}
+                  />
+                }
+              />
             ))}
           </div>
         </section>

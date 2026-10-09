@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   X,
   GitBranch,
@@ -27,6 +28,8 @@ interface ConnectRepoDialogProps {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const POPUP_FEATURES = 'width=1000,height=700,scrollbars=yes,resizable=yes,left=200,top=100';
 
 function useDebounce<T>(value: T, delay = 400): T {
   const [debounced, setDebounced] = useState(value);
@@ -70,6 +73,28 @@ function isGitHubAuthError(err: unknown): boolean {
   );
 }
 
+/**
+ * User-facing text for a failed install request.
+ *
+ * These paths used to only `console.error`, so pressing "Authorize with GitHub"
+ * when the backend was down did nothing visible at all -- the button simply
+ * appeared inert. Never surfaces the raw error: it can carry upstream provider
+ * detail or request internals that are none of the user's business.
+ */
+function describeInstallError(err: unknown): string {
+  const { detail, code } = extractError(err);
+
+  if (code === 'github_app_not_configured') {
+    return 'GitHub integration is not configured on this server.';
+  }
+  if (code === 'permission_denied' || /only workspace admins/i.test(detail)) {
+    return 'Only workspace admins can authorize GitHub access.';
+  }
+  if (detail) return `Could not reach GitHub authorization: ${detail}`;
+
+  return 'Could not start GitHub authorization. Please try again.';
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
@@ -78,6 +103,7 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
   const [search, setSearch] = useState('');
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [awaitingPopup, setAwaitingPopup] = useState(false);
+  const [blockedUrl, setBlockedUrl] = useState<string | null>(null);
   const popupRef = useRef<Window | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const debouncedSearch = useDebounce(search, 400);
@@ -94,6 +120,7 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
       if (type === 'github-app-installed') {
         clearInterval(pollIntervalRef.current);
         setAwaitingPopup(false);
+        setBlockedUrl(null);
 
         if (noState && installationId && workspaceId) {
           try {
@@ -113,8 +140,10 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
       if (type === 'github-app-install-error') {
         clearInterval(pollIntervalRef.current);
         setAwaitingPopup(false);
-        console.error('[ConnectRepoDialog] GitHub App install error:', event.data.error);
-
+        setBlockedUrl(null);
+        // Was only ever console.error, so an installation the user abandoned or
+        // that GitHub rejected closed the popup and left no explanation.
+        toast.error(event.data?.error || 'GitHub authorization did not complete.');
         popupRef.current?.close();
       }
     };
@@ -131,6 +160,7 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
     if (!open) {
       clearInterval(pollIntervalRef.current);
       setAwaitingPopup(false);
+      setBlockedUrl(null);
       if (popupRef.current && !popupRef.current.closed) {
         popupRef.current.close();
       }
@@ -217,53 +247,144 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
       : null;
 
   // ── Popup helper ─────────────────────────────────────────────────────────
-  const openInstallPopup = (url: string) => {
-    const popup = window.open(
-      url,
-      'github-install',
-      'width=1000,height=700,scrollbars=yes,resizable=yes,left=200,top=100'
-    );
-    if (!popup) {
-      window.location.href = url;
-      return;
-    }
+  //
+  // `window.open` must be called synchronously from the click handler. Once we
+  // `await` the install-URL request the browser no longer treats the call as
+  // part of the user gesture, and the popup blocker rejects it. That was the
+  // bug: the popup never opened, the code silently fell back to
+  // `window.location.href`, and the whole app navigated away to GitHub --
+  // contradicting the "you'll return here automatically" copy below.
+  //
+  // So the window is opened first, while the gesture is still live, and only
+  // its `location` is assigned once the URL arrives.
+
+  const startPopupPolling = (popup: Window) => {
     popupRef.current = popup;
     setAwaitingPopup(true);
 
+    const finishPopup = () => {
+      clearInterval(pollIntervalRef.current);
+      setAwaitingPopup(false);
+      refetchInstallations();
+      refetchRepos();
+      queryClient.invalidateQueries({ queryKey: ['repos', workspaceId] });
+    };
+
+    // GitHub hands the popup back to this origin, but `window.opener` does not
+    // reliably survive that round trip. Without it `/oauth/success` skips its
+    // `postMessage` + `window.close()` and redirects into the workspace instead,
+    // so the window is left open forever -- nothing else in the app can close it.
+    // This dialog still holds the handle, so it watches for the return trip and
+    // closes the window itself.
+    //
+    // Every branch below is inert until `leftOrigin` is set, which happens only
+    // once the popup has been readable on another origin (or threw, which is what
+    // github.com does). That keeps `about:blank` and any same-origin hop on the
+    // way *out* from ever closing the window early.
+    let leftOrigin = false;
+
+    const returnedToApp = (): boolean => {
+      let href: string;
+      try {
+        href = popup.location.href;
+      } catch {
+        leftOrigin = true;
+        return false;
+      }
+      if (!href || href.startsWith('about:')) return false;
+      if (!href.startsWith(window.location.origin)) {
+        leftOrigin = true;
+        return false;
+      }
+      if (!leftOrigin) return false;
+
+      const path = new URL(href).pathname;
+      // Still our own handoff: the backend callback is mid-request, or
+      // `/oauth/success` is about to postMessage and close itself.
+      if (path.startsWith('/api/')) return false;
+      if (path === '/oauth/success') return false;
+      return true;
+    };
+
     pollIntervalRef.current = setInterval(() => {
       if (popup.closed) {
-        clearInterval(pollIntervalRef.current);
-        setAwaitingPopup(false);
-        refetchInstallations();
-        refetchRepos();
-        queryClient.invalidateQueries({ queryKey: ['repos', workspaceId] });
+        finishPopup();
+        return;
+      }
+      if (returnedToApp()) {
+        popup.close();
+        finishPopup();
       }
     }, 1000);
   };
 
-  const handleConnectGitHub = async () => {
-    if (!workspaceId) return;
-    try {
-      const data = await repositoryEndpoints.installApp(workspaceId);
-      if (data.installation_url) {
-        openInstallPopup(data.installation_url);
-      }
-    } catch (err) {
-      console.error('[ConnectRepoDialog] Failed to get GitHub App install URL', err);
+  const abandonPopup = () => {
+    clearInterval(pollIntervalRef.current);
+    setAwaitingPopup(false);
+    if (popupRef.current && !popupRef.current.closed) {
+      popupRef.current.close();
     }
+    popupRef.current = null;
   };
 
-  const handleConfigure = async (installationId?: number) => {
-    if (!workspaceId) return;
-    try {
-      const data = await repositoryEndpoints.installApp(workspaceId, installationId);
-      const url = data.configure_url || data.installation_url;
-      if (url) {
-        openInstallPopup(url);
+  /**
+   * Open the install popup and navigate it to `url` once that is known.
+   *
+   * `getUrl` is called only after the window exists, so the synchronous part
+   * stays inside the user gesture.
+   */
+  const runInstallFlow = async (getUrl: () => Promise<string | null>) => {
+    const popup = window.open('about:blank', 'github-install', POPUP_FEATURES);
+
+    if (!popup) {
+      // Blocked. We still need the URL, but we can no longer open a window for
+      // the user, so surface a link they can click -- that click *is* a gesture.
+      setAwaitingPopup(true);
+      try {
+        const url = await getUrl();
+        setAwaitingPopup(false);
+        if (url) setBlockedUrl(url);
+      } catch (err) {
+        setAwaitingPopup(false);
+        toast.error(describeInstallError(err));
       }
-    } catch (err) {
-      console.error('[ConnectRepoDialog] Failed to get configure URL', err);
+      return;
     }
+
+    startPopupPolling(popup);
+
+    let url: string | null;
+    try {
+      url = await getUrl();
+    } catch (err) {
+      abandonPopup();
+      toast.error(describeInstallError(err));
+      return;
+    }
+
+    if (!url) {
+      abandonPopup();
+      toast.error('GitHub did not return an installation link. Please try again.');
+      return;
+    }
+
+    popup.location.href = url;
+  };
+
+  const handleConnectGitHub = () => {
+    if (!workspaceId) return;
+    void runInstallFlow(async () => {
+      const data = await repositoryEndpoints.installApp(workspaceId);
+      return data.installation_url;
+    });
+  };
+
+  const handleConfigure = (installationId?: number) => {
+    if (!workspaceId) return;
+    void runInstallFlow(async () => {
+      const data = await repositoryEndpoints.installApp(workspaceId, installationId);
+      return data.configure_url ?? data.installation_url;
+    });
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -319,6 +440,39 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
               Click here to refocus the popup
             </button>
           </div>
+        ) : blockedUrl ? (
+          // ── Popup blocked by the browser ─────────────────────────────────
+          // Showing a link rather than silently navigating the whole app away:
+          // the old fallback did `window.location.href = url`, which lost the
+          // dialog and the return trip the user was just promised.
+          <div className="flex flex-col items-center justify-center py-10 px-8 text-center gap-5">
+            <div className="w-14 h-14 rounded-full bg-[#1E1E21] border border-[#27272A] flex items-center justify-center">
+              <AlertCircle className="w-7 h-7 text-venom-yellow" />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[14px] font-semibold text-[#FAFAFA]">Pop-up blocked</p>
+              <p className="text-[12px] text-text-tertiary max-w-xs leading-relaxed">
+                Your browser blocked the GitHub authorization window. Allow pop-ups for this site, or
+                open the link below in a new tab.
+              </p>
+            </div>
+            <a
+              href={blockedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#FAFAFA] text-black text-[13px] font-semibold rounded-lg hover:bg-white transition-colors"
+            >
+              <Github className="w-4 h-4" />
+              Open GitHub authorization
+              <ExternalLink className="w-3 h-3 opacity-50" />
+            </a>
+            <button
+              onClick={() => setBlockedUrl(null)}
+              className="text-[12px] text-text-tertiary hover:text-[#FAFAFA] transition-colors"
+            >
+              Back
+            </button>
+          </div>
         ) : githubNotConfigured ? (
           // ── GitHub App not configured on server ───────────────────────────
           <div className="flex flex-col items-center justify-center py-10 px-8 text-center gap-5">
@@ -345,16 +499,27 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
             <div className="space-y-1.5">
               <p className="text-[14px] font-semibold text-[#FAFAFA]">Authorize GitHub access</p>
               <p className="text-[12px] text-text-tertiary max-w-xs leading-relaxed">
-                Kraivor needs access to your GitHub repositories. You&apos;ll be redirected to GitHub to
-                grant access — choose all repositories or select specific ones.
+                Kraivor needs access to your GitHub repositories to analyse them. GitHub shows you
+                exactly which permissions are requested before you approve anything.
               </p>
             </div>
 
+            {/*
+              This previously listed three hardcoded scopes with green ticks --
+              "Repository access / Read your repositories", "Account information",
+              "Email addresses / Read your verified emails". None of it came from
+              the server, so it asserted whatever the GitHub App happened to be
+              configured with. If the App did not request the user:email scope,
+              the dialog was still claiming it reads verified email addresses.
+
+              GitHub renders the real permission list on the install page, so
+              there is nothing honest to hardcode here. These two statements are
+              true of the flow regardless of configuration.
+            */}
             <div className="w-full bg-[#0A0A0B] border border-[#27272A] rounded-lg divide-y divide-[#27272A] text-left">
               {[
-                { icon: '📂', label: 'Repository access', sub: 'Read your repositories' },
-                { icon: '👤', label: 'Account information', sub: 'Read your public profile' },
-                { icon: '📧', label: 'Email addresses', sub: 'Read your verified emails' },
+                { icon: '📂', label: 'You choose the repositories', sub: 'All of them, or only some' },
+                { icon: '🔧', label: 'You can change it later', sub: 'Manage access from this dialog' },
               ].map(item => (
                 <div key={item.label} className="flex items-center gap-3 px-3 py-2.5">
                   <span className="text-base">{item.icon}</span>
@@ -377,8 +542,8 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
             </button>
 
             <p className="text-[10px] text-text-tertiary">
-              You&apos;ll be redirected to GitHub. After granting access you&apos;ll return here
-              automatically.
+              You&apos;ll be taken to GitHub in a pop-up window. After granting access you&apos;ll
+              return here automatically.
             </p>
           </div>
         ) : !canAdmin ? (
@@ -564,7 +729,9 @@ export function ConnectRepoDialog({ open, onClose }: ConnectRepoDialogProps) {
           <p className="text-[11px] text-text-tertiary">
             {awaitingPopup
               ? 'Waiting for GitHub authorization...'
-              : githubNotConfigured
+              : blockedUrl
+                ? 'Pop-up blocked — open the link above'
+                : githubNotConfigured
                 ? 'GitHub integration not configured'
                 : needsGitHubSetup
                   ? 'GitHub authorization required'

@@ -1,7 +1,7 @@
 'use client';
 
-import { InboxView } from '@/components/settings/inbox-view';
+import { SettingsRouteGate } from '@/components/settings/settings-route-gate';
 
-export default function InboxPage() {
-  return <InboxView />;
+export default function InboxSettingsPage() {
+  return <SettingsRouteGate section="inbox" />;
 }

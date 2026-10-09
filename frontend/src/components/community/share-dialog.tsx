@@ -1,9 +1,14 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { X, Share2, Check, Search, Send } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { X, Share2, Check, Search, Send, Loader2 } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useParams } from 'next/navigation';
+import { chatEndpoints, workspaceEndpoints } from '@/lib/api/endpoints';
+import { isApiError } from '@/lib/api/error-handler';
+import { useAuthStore } from '@/lib/stores/auth-store';
+import { describeDmFailure } from '@/components/profiles/message-button';
 import { copyToClipboard } from '@/lib/utils';
 
 interface ShareDialogProps {
@@ -125,7 +130,7 @@ export function ShareDialog({ discussionId, title }: ShareDialogProps) {
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
               Send to team member
             </p>
-            <TeamMemberSearch discussionId={discussionId} />
+            <TeamMemberSearch url={url} />
           </div>
 
           <div className="pt-2 border-t border-border">
@@ -150,20 +155,89 @@ export function ShareDialog({ discussionId, title }: ShareDialogProps) {
   );
 }
 
-function TeamMemberSearch({ discussionId }: { discussionId: string }) {
+/**
+ * Send the discussion link to a teammate by DM.
+ *
+ * This used to be a costume. `handleSend` called
+ * `toast.success('Link sent to ${name} via DM')` and touched no API, and the
+ * search input it sat under was bound to a `query` that nothing read: no result
+ * was ever rendered, so `selected` could never become non-null and the Send
+ * button was unreachable. A user could type a name, watch nothing happen, and
+ * leave believing a message had gone out.
+ *
+ * The plan offered "make it real or delete the affordance". It is made real,
+ * and everything it needs already existed -- `getMembers`, `createDm` and
+ * `sendMessage` were all in `endpoints/` -- so this is wiring rather than a new
+ * feature.
+ *
+ * ## Two steps, two different failures
+ *
+ * Sending is `createDm` followed by `sendMessage`, and they fail for different
+ * reasons. If the second fails the room has still been created, so "could not
+ * start the conversation" would be untrue and "try again" would be useless
+ * advice. `stage` records which step threw so each gets its own sentence.
+ */
+function TeamMemberSearch({ url }: { url: string }) {
+  const queryClient = useQueryClient();
+  const workspaceId = useAuthStore(s => s.workspaceId);
+  const currentUserId = useAuthStore(s => s.user?.id);
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<{
-    id: string;
-    name: string;
-    avatar_url?: string;
-  } | null>(null);
+  const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
 
-  const handleSend = () => {
-    if (!selected) return;
-    toast.success(`Link sent to ${selected.name} via DM`);
-    setSelected(null);
-    setQuery('');
-  };
+  const { data: members, isLoading: membersLoading } = useQuery({
+    queryKey: ['members', workspaceId],
+    queryFn: () => workspaceEndpoints.getMembers(workspaceId!),
+    enabled: !!workspaceId,
+    staleTime: 60_000,
+  });
+
+  // Filtered client-side. `getMembers` is already cached under this exact key
+  // by the chat member panel and the dashboard hook, and a workspace roster is
+  // a workspace's worth of rows -- not something that needs a query per
+  // keystroke.
+  const candidates = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (members ?? [])
+      // Yourself. The backend refuses a self-DM with a 400, so offering it here
+      // would only produce a toast telling the user off.
+      .filter(m => m.user_id !== currentUserId)
+      // `!== 'removed'` rather than `=== 'active'` so a row the serializer
+      // leaves untyped still shows instead of emptying the list silently.
+      .filter(m => m.status !== 'removed')
+      .filter(m =>
+        `${m.user?.name ?? ''} ${m.user?.email ?? ''}`.toLowerCase().includes(q)
+      )
+      .slice(0, 6);
+  }, [members, query, currentUserId]);
+
+  const stage = useRef<'dm' | 'send'>('dm');
+
+  const send = useMutation({
+    mutationFn: async (recipient: { id: string; name: string }) => {
+      stage.current = 'dm';
+      const room = await chatEndpoints.createDm(workspaceId!, recipient.id, recipient.name);
+      stage.current = 'send';
+      await chatEndpoints.sendMessage(workspaceId!, room.id, { content: url });
+      return room;
+    },
+    onSuccess: (_room, recipient) => {
+      // The same key the channel sidebar, the dashboard hook and the inbox all
+      // query, so the new conversation shows up where the user will look for it.
+      queryClient.invalidateQueries({ queryKey: ['rooms', workspaceId] });
+      toast.success(`Link sent to ${recipient.name}`);
+      setSelected(null);
+      setQuery('');
+    },
+    onError: error => {
+      toast.error(
+        stage.current === 'dm'
+          ? describeDmFailure(isApiError(error) ? error.statusCode : undefined)
+          : 'The conversation was created, but the link was not sent. Open it and send the link.'
+      );
+    },
+  });
+
+  const canSend = !!selected && !!workspaceId;
 
   return (
     <div className="space-y-2">
@@ -177,20 +251,64 @@ function TeamMemberSearch({ discussionId }: { discussionId: string }) {
           className="w-full bg-background border border-border rounded-md pl-8 pr-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
         />
       </div>
-      {selected && (
+
+      {selected ? (
         <div className="flex items-center justify-between bg-muted/50 rounded-md px-3 py-2">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-medium">
-              {selected.name.charAt(0)}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-medium shrink-0">
+              {selected.name.charAt(0).toUpperCase()}
             </div>
-            <span className="text-[12px] text-foreground">{selected.name}</span>
+            <span className="text-[12px] text-foreground truncate">{selected.name}</span>
           </div>
-          <button
-            onClick={handleSend}
-            className="flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 transition-colors"
-          >
-            <Send className="w-3 h-3" /> Send
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setSelected(null)}
+              aria-label={`Choose someone else instead of ${selected.name}`}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => selected && send.mutate(selected)}
+              disabled={!canSend}
+              aria-label={`Send link to ${selected.name}`}
+              className="flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {send.isPending ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Send className="w-3 h-3" />
+              )}
+              {send.isPending ? 'Sending…' : 'Send'}
+            </button>
+          </div>
+        </div>
+      ) : membersLoading ? (
+        <p className="text-[11px] text-muted-foreground">Loading members…</p>
+      ) : !workspaceId ? (
+        <p className="text-[11px] text-muted-foreground">No workspace selected.</p>
+      ) : candidates.length === 0 ? (
+        <p className="text-[11px] text-muted-foreground">No members match.</p>
+      ) : (
+        <div className="max-h-40 overflow-y-auto space-y-0.5">
+          {candidates.map(m => {
+            const name = m.user?.name || m.user_id;
+            return (
+              <button
+                key={m.user_id}
+                onClick={() => {
+                  setSelected({ id: m.user_id, name });
+                  setQuery('');
+                }}
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 text-left transition-colors"
+              >
+                <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-medium shrink-0">
+                  {name.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-[12px] text-foreground truncate flex-1">{name}</span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

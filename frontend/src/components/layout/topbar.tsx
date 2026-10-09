@@ -10,7 +10,10 @@ import { useAuthStore } from '@/lib/stores/auth-store';
 import { useAiConversationStore } from '@/lib/stores/ai-conversation-store';
 import { useBreadcrumbStore } from '@/lib/stores/breadcrumb-store';
 import { CommandPalette } from '@/components/features/command-palette';
-import { InboxPopover } from '@/components/features/inbox-popover';
+import { ProfileDialog } from '@/components/profiles/profile-dialog';
+import { SettingsDialog } from '@/components/settings/settings-dialog';
+import { InboxDialog } from '@/components/inbox/inbox-dialog';
+import { InboxBell } from '@/components/inbox/inbox-bell';
 import { CreateWorkspaceDialog } from '@/components/features/create-workspace-dialog';
 
 const ROUTE_LABELS: Record<string, string> = {
@@ -150,13 +153,20 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
           )}
         </div>
 
-        <span className="text-krait-border mx-1 shrink-0">/</span>
-        <Link
-          href={`/${workspaceSlug}/${route}`}
-          className="text-text-secondary hover:text-text-primary transition-colors text-[13px] truncate hover:bg-krait-surface1 rounded-[4px] px-1 -mx-1"
-        >
-          {routeLabel}
-        </Link>
+        {/* A profile is a card, not a place: `/{ws}/profile/{user}` exists only
+            for pasted URLs, so it writes nothing over the topbar. The account
+            page (`/{ws}/profile`) and the edit screen keep their label. */}
+        {!(route === 'profile' && segments.length === 3) && (
+          <>
+            <span className="text-krait-border mx-1 shrink-0">/</span>
+            <Link
+              href={`/${workspaceSlug}/${route}`}
+              className="text-text-secondary hover:text-text-primary transition-colors text-[13px] truncate hover:bg-krait-surface1 rounded-[4px] px-1 -mx-1"
+            >
+              {routeLabel}
+            </Link>
+          </>
+        )}
         {hasDetail && (
           <>
             <span className="text-krait-border mx-1 shrink-0">/</span>
@@ -192,7 +202,7 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
 
         {/* Icons */}
         <div className="flex items-center gap-1.5">
-          <InboxPopover />
+          <InboxBell />
 
           {/* VS Code Style Right Panel Toggle */}
           {/* <button
@@ -213,6 +223,13 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
       />
 
       <CommandPalette workspaceSlug={workspaceSlug} />
+      {/* One card for every profile click in the workspace, whoever navigates
+          to it: chat, community, search, the sidebar. */}
+      <ProfileDialog workspaceSlug={workspaceSlug} />
+      {/* One panel for settings, opened over whatever page you were on. */}
+      <SettingsDialog workspaceSlug={workspaceSlug} />
+      {/* One panel for the inbox, for the same reason. */}
+      <InboxDialog workspaceSlug={workspaceSlug} />
     </header>
   );
 }

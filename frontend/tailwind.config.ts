@@ -59,6 +59,22 @@ const config: Config = {
           orange:  'var(--venom-orange)',
           amber:   'var(--venom-amber)',
         },
+        // Semantic status colours, already defined as custom properties in
+        // `globals.css` for both themes.
+        //
+        // Most of the app reaches them through the arbitrary-value spelling
+        // (`text-[var(--color-error)]`), which works because it bypasses the
+        // theme entirely. The short spelling was written too -- 15 times across
+        // 8 files -- and resolved to nothing, since `color` was not a key here:
+        // those error banners and score colours were rendering in whatever the
+        // inherited text colour happened to be. Exposing the keys makes both
+        // spellings mean the same thing.
+        color: {
+          success: 'var(--color-success)',
+          error:   'var(--color-error)',
+          warning: 'var(--color-warning)',
+          info:    'var(--color-info)',
+        },
         text: {
           primary:   'var(--text-primary)',
           secondary: 'var(--text-secondary)',

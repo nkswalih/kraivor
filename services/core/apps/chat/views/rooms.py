@@ -1,7 +1,7 @@
 import logging
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,6 +16,7 @@ from apps.chat.serializers import (
     CreateDmSerializer,
 )
 from apps.chat.services import ChatRoomService
+from apps.workspaces.models import WorkspaceMember
 from apps.workspaces.permissions import IsAuthenticated
 
 logger = logging.getLogger(__name__)
@@ -187,6 +188,9 @@ class DMCreateView(APIView):
         responses={
             200: ChatRoomDetailSerializer,
             400: OpenApiResponse(description="Validation error"),
+            403: OpenApiResponse(
+                description="Target is not a member of this workspace"
+            ),
         },
         examples=[
             OpenApiExample(
@@ -200,13 +204,69 @@ class DMCreateView(APIView):
         workspace_id: str = str(workspace_pk)
         serializer: CreateDmSerializer = CreateDmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        target_id: str = str(serializer.validated_data["target_user_id"])
+
+        # Both checks read `validated_data`, never `request.data`. The serializer
+        # is what guarantees the id parses as a UUID and the name fits the column;
+        # reaching past it would put the over-length and blank cases back to the
+        # driver-dependent 500s it currently prevents.
+        self._reject_a_dm_to_oneself(user_id, target_id)
+        self._reject_an_unreachable_target(workspace_id, target_id)
+
         room: ChatRoom = ChatRoomService.get_or_create_dm_room(
             workspace_id=workspace_id,
             user_id_1=user_id,
-            user_id_2=str(serializer.validated_data["target_user_id"]),
+            user_id_2=target_id,
             target_name=serializer.validated_data["target_user_name"],
         )
         output: ChatRoomDetailSerializer = ChatRoomDetailSerializer(
             room, context={"request": request}
         )
         return Response(output.data, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def _reject_a_dm_to_oneself(user_id: str, target_id: str) -> None:
+        """Refuse a self-DM before it reaches the service, where it was a 500.
+
+        `get_or_create_dm_room` finds an existing conversation by counting
+        participants whose id is in `[user_id_1, user_id_2]`. With the two equal,
+        that `cnt=2` can never match -- one user, one row -- so the lookup always
+        fell through to creating a room and inserting the *same* participant twice.
+        `ChatRoomParticipant` has `unique_together(room, user_id)` and that
+        `bulk_create` has no `ignore_conflicts`, so the insert raised
+        `IntegrityError` and the client got a 500 for asking a question with an
+        obvious answer.
+
+        400 rather than 403: nobody was forbidden, the request itself cannot be
+        satisfied. Checked first because a self-DM is also a membership question
+        that would pass, and reporting the wrong one of two true things is a small
+        waste of the reader's time.
+        """
+        if str(target_id) != str(user_id):
+            return
+        raise ValidationError({"target_user_id": "You cannot direct message yourself."})
+
+    @staticmethod
+    def _reject_an_unreachable_target(workspace_id: str, target_id: str) -> None:
+        """Refuse a target who is not a live member of *this* workspace.
+
+        `IsChatRoomMember` checks the *caller* and this view had no `pk`, so it
+        checked nobody else. A room was therefore created with a participant row
+        for whatever id arrived: a user who never joined, a user who has since left,
+        a user belonging to a different workspace. The other participant's sidebar
+        rendered a DM to somebody no request could ever reach.
+
+        The predicate is `WorkspaceMember.objects`, whose queryset is already
+        `.alive()` -- the same manager the caller's own check goes through, so this
+        is the same definition of "belongs here" rather than a second one.
+
+        One 403 for all three cases, deliberately. A 404 for "no such user" next to
+        a 403 for "not in your workspace" is a reliable oracle: post any UUID and
+        learn whether it belongs to an account. The message names none of them.
+        """
+        is_reachable: bool = WorkspaceMember.objects.filter(
+            workspace_id=workspace_id, user_id=target_id
+        ).exists()
+        if is_reachable:
+            return
+        raise PermissionDenied("That user is not a member of this workspace.")

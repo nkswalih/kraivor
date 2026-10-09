@@ -87,8 +87,19 @@ class TestProfileService:
 @pytest.mark.django_db
 class TestReputationService:
     def test_get_top_contributors(self):
-        profiles = ProfileFactory.create_batch(3)
+        profiles = ProfileFactory.create_batch(3, discussion_count=2)
         results = ReputationService.get_top_contributors(limit=10)
         assert len(results) == len(profiles)
         assert "username" in results[0]
         assert "reputation_score" in results[0]
+
+    def test_get_top_contributors_excludes_members_with_no_discussions(self):
+        # The sidebar must not list "0 discussions" people: the ranking keeps
+        # only members who have posted at least once, even when a silent
+        # member outranks them on reputation.
+        contributor = ProfileFactory(discussion_count=1, reputation_score=10)
+        ProfileFactory(reputation_score=10_000)  # discussion_count defaults to 0
+
+        results = ReputationService.get_top_contributors(limit=10)
+
+        assert [r["username"] for r in results] == [contributor.username]

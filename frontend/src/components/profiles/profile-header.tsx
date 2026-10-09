@@ -6,18 +6,19 @@ import Image from 'next/image';
 import { toast } from 'sonner';
 import { Avatar } from './avatar';
 import { FollowButton } from './follow-button';
+import { MessageButton } from './message-button';
 import type { Profile } from '@/types/domain/profiles';
+import { copyToClipboard } from '@/lib/utils';
+import { XLogo } from '@phosphor-icons/react/dist/ssr';
 import {
   MapPin,
   Link as LinkIcon,
   Github,
-  Twitter,
   Linkedin,
   Pencil,
   Share2,
   Loader2,
 } from 'lucide-react';
-import { copyToClipboard } from '@/lib/utils';
 
 interface ProfileHeaderProps {
   profile: Profile;
@@ -84,7 +85,7 @@ export function ProfileHeader({ profile, userAvatarUrl, workspaceSlug }: Profile
             {profile.is_owner && (
               <button
                 onClick={() => router.push(workspaceSlug ? `/profile/${profile.username}/edit?from=${workspaceSlug}` : `/profile/${profile.username}/edit`)}
-                className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md border border-border hover:bg-accent transition-colors"
+                className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md border border-border hover:bg-muted/60 transition-colors"
               >
                 <Pencil className="w-3.5 h-3.5" />
                 Edit Profile
@@ -92,11 +93,16 @@ export function ProfileHeader({ profile, userAvatarUrl, workspaceSlug }: Profile
             )}
             <button
               onClick={handleShare}
-              className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md border border-border hover:bg-accent transition-colors"
+              className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md border border-border hover:bg-muted/60 transition-colors"
             >
               <Share2 className="w-3.5 h-3.5" />
               Share
             </button>
+            <MessageButton
+              targetUserId={profile.user_id}
+              targetName={profile.display_name}
+              isOwner={profile.is_owner}
+            />
             <FollowButton
               username={profile.username}
               isFollowing={profile.is_following}
@@ -135,12 +141,12 @@ export function ProfileHeader({ profile, userAvatarUrl, workspaceSlug }: Profile
           )}
           {profile.twitter_username && (
             <a
-              href={`https://x.com//${profile.twitter_username}`}
+              href={`https://x.com/${profile.twitter_username}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 hover:text-foreground"
             >
-              <Twitter className="w-3.5 h-3.5" /> @{profile.twitter_username}
+              <XLogo className="w-3.5 h-3.5" /> @{profile.twitter_username}
             </a>
           )}
           {profile.linkedin_url && (

@@ -1,5 +1,6 @@
 import asyncio
 import json
+from collections.abc import Sequence
 from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import cast
@@ -20,7 +21,13 @@ from app.application.analysis.queries import (
     ListJobsQuery,
 )
 from app.core.config import get_settings
-from app.core.constants import Category, JobStatus, Severity
+from app.core.constants import (
+    Category,
+    EngineStateMap,
+    EngineStatus,
+    JobStatus,
+    Severity,
+)
 from app.core.exceptions import NotFoundError
 from app.core.logging import get_logger
 from app.domain.contracts.parser import ParsedFile
@@ -55,6 +62,132 @@ from app.workers.reliability.detector import ReliabilityDetector
 from app.workers.reliability.models import ReliabilityFinding
 
 logger = get_logger(__name__)
+
+# How much of a failure detail to keep on the job. The exception's own message is
+# usually a sentence; anything past this is a driver's diagnostic that names
+# internals without saying anything a person can act on.
+_MAX_FAILURE_DETAIL = 400
+
+# A traceback line that points at a source frame, e.g.
+#   File "/srv/app/core/pipeline.py", line 214, in run_pipeline
+_TRACEBACK_FRAME = 'File "'
+
+
+def describe_failure(stage: str, error_message: str | None) -> str:
+    """A failure message fit to store on the job and read back over the API.
+
+    `error_message` arrives from three callers, and the pipeline one passes
+    ``traceback.format_exc()``. The job row is served by ``GET /jobs/{id}``, so a
+    traceback in this column put absolute server paths, internal module names and
+    whatever the exception happened to embed -- a connection string, a URL with a
+    token in it -- in front of anyone who could read the job. The engine column
+    was already guarded for exactly this; the job column next to it was not.
+
+    A traceback also tells the person reading it very little. It ends in the
+    deepest internal frame, not the cause. What answers "why did this fail?" is
+    the stage it failed in and the exception's own message, which is all this
+    keeps.
+
+    The traceback is not lost. ``run_full_analysis`` logs it with
+    ``logger.exception("pipeline_aborted")`` before re-raising, so it reaches the
+    logs on every path that produced one.
+    """
+    summary = f"{stage} failed"
+    detail = _exception_detail(error_message)
+    return f"{summary}: {detail}" if detail else summary
+
+
+# The only keys from the AI service's `ai_summary_error` envelope that may be
+# stored or served. Whitelist rather than blacklist: the envelope crosses a
+# network boundary from a service that deploys independently, and a blacklist
+# only protects against the leaks somebody already thought of. A field added to
+# the envelope upstream is ignored here until somebody adds it deliberately.
+_SUMMARY_ERROR_KEYS = ("code", "message", "suggested_action", "retry_after")
+
+
+def _carried_across_regeneration(existing: dict[str, object]) -> dict[str, object]:
+    """The AI summary fields a guide regeneration does not itself produce.
+
+    `EnterpriseGuide.to_dict()` knows nothing about `ai_executive_summary` or
+    `ai_summary_error`, so `handle_re_generate_guide` has to copy both across by
+    hand. Skip either and `save()` hands `merge()` an instance with that column
+    unset, which nulls the recorded value -- silently losing a summary the user
+    paid for, and silently losing the reason one is missing.
+
+    Both are returned together, and the error is checked with `is not None`
+    rather than truthiness: `{}` is a real if degenerate reason to keep, and
+    `None` is the only thing that means "no error". Treating the two the same is
+    how the error would come back as `{}` on a guide that had none.
+    """
+    carried: dict[str, object] = {}
+    summary = existing.get("ai_executive_summary")
+    if summary:
+        carried["ai_executive_summary"] = summary
+    error = existing.get("ai_summary_error")
+    if error is not None:
+        carried["ai_summary_error"] = error
+    return carried
+
+
+def _readable_summary_error(raw: object) -> dict[str, object] | None:
+    """Narrow the AI service's summary-error envelope to what is safe to serve.
+
+    The AI service already builds this from four named fields on
+    ``ClassifiedError`` rather than by copying the exception, so the provider
+    name, the model and the verbatim provider response body are not in it to
+    begin with. That is a real defence, but it is a defence in *that* service
+    about *that* object; this is a second boundary, and the guide endpoint serves
+    whatever lands in this column to browsers.
+
+    Returns ``None`` -- "no reason was reported" -- rather than a synthetic one
+    when the payload is unusable, because inventing a code here would put a
+    confident-sounding wrong answer in the place where the truth is missing. The
+    caller distinguishes the two.
+    """
+    if not isinstance(raw, dict):
+        return None
+    code = raw.get("code")
+    message = raw.get("message")
+    if not isinstance(code, str) or not code.strip():
+        return None
+    if not isinstance(message, str) or not message.strip():
+        return None
+
+    error: dict[str, object] = {"code": code, "message": message}
+
+    action = raw.get("suggested_action")
+    if isinstance(action, str) and action.strip():
+        error["suggested_action"] = action
+
+    # Omitted rather than stored as null, matching the envelope: a client cannot
+    # tell "no hint" from "hint of zero", and a zero hint reads as "retry now".
+    retry_after = raw.get("retry_after")
+    if isinstance(retry_after, int | float) and not isinstance(retry_after, bool):
+        error["retry_after"] = retry_after
+
+    assert set(error).issubset(_SUMMARY_ERROR_KEYS)
+    return error
+
+
+def _exception_detail(error_message: str | None) -> str:
+    """The part of a failure message worth serving, bounded and single-line."""
+    if not error_message:
+        return ""
+    lines = [line.strip() for line in error_message.splitlines() if line.strip()]
+
+    # A traceback is a run of `File "..."` frames with the `SomeError: detail`
+    # line after the last one. Everything up to that point is machinery. A
+    # message that is not a traceback has no frames and is used as it stands.
+    last_frame = max(
+        (i for i, line in enumerate(lines) if line.startswith(_TRACEBACK_FRAME)),
+        default=None,
+    )
+    if last_frame is not None:
+        tail = lines[last_frame + 1 :]
+        if tail:
+            lines = tail
+
+    return " ".join(lines)[:_MAX_FAILURE_DETAIL].strip()
 
 
 async def handle_start_analysis(
@@ -129,7 +262,6 @@ async def handle_stage_clone(
         repo_path = repo_url.removeprefix("local://")
         languages = await fetcher.detect_languages(repo_path)
         files = await fetcher.get_source_files(repo_path)
-        loc = await fetcher.count_loc(repo_path)
         logger.info("local_repo_scan", path=repo_path, files=len(files))
     else:
         repo_path = await fetcher.clone(
@@ -140,22 +272,29 @@ async def handle_stage_clone(
         )
         languages = await fetcher.detect_languages(repo_path)
         files = await fetcher.get_source_files(repo_path)
-        loc = await fetcher.count_loc(repo_path)
 
-    language_lines: dict[str, int] = {}
-    for f in files:
-        lang = f.get("language", "unknown") or "unknown"
-        language_lines[lang] = language_lines.get(lang, 0) + (
-            f.get("lines_count", 0) or 0
-        )
-    total_lang_lines = sum(language_lines.values()) or 1
-    language_breakdown = sorted(
-        [
-            {"name": lang, "percentage": round(count / total_lang_lines * 100, 1)}
-            for lang, count in language_lines.items()
-        ],
-        key=lambda x: -x["percentage"],
-    )
+    # One walk answers both numbers. `total_lines` used to come from `count_loc`
+    # (every non-excluded file) while the breakdown was summed over
+    # `get_source_files` (only the files an entry maps, minus anything over the
+    # size cap), so the shares added up over a denominator that was a fraction
+    # of the LINES figure printed beside them -- and languages the table did not
+    # know at all, `.toml`, `.html`, `.css`, `.tf`, `.ini`, extensionless files,
+    # were in the denominator but in no bucket.
+    language_lines = await fetcher.language_line_counts(repo_path)
+    loc = sum(language_lines.values())
+    total_lang_lines = loc or 1
+    # Two decimals rather than one: a share that rounds to 0.0 at one decimal
+    # is a real share, not an absence, and "0%" for a language the repository
+    # demonstrably contains is the wrong answer. The renderer turns a
+    # non-zero share below 0.1 into "<0.1%".
+    _shares: list[tuple[str, float]] = [
+        (lang, count / total_lang_lines * 100)
+        for lang, count in language_lines.items()
+    ]
+    language_breakdown = [
+        {"name": lang, "percentage": round(share, 2)}
+        for lang, share in sorted(_shares, key=lambda item: (-item[1], item[0]))
+    ]
 
     from app.infrastructure.detection.detector import FrameworkDetector
 
@@ -169,6 +308,16 @@ async def handle_stage_clone(
         progress_message=f"Found {len(files)} files across {len(languages)} languages",
         total_files=len(files),
         total_lines=loc,
+        # `languages_detected` and `language_breakdown` are columns on the job
+        # row that nothing had ever written to. The breakdown was computed right
+        # above, to a tenth of a percent, and then thrown away: it only lived in
+        # this stage's return value and reached the reports table at finalize,
+        # hours later for a slow repository. Writing it here means a reader
+        # watching a running job sees the real language mix from 15% instead of
+        # a placeholder. The reconstruction path in the report repository reads
+        # these same columns, and was therefore always returning empty lists.
+        languages_detected=languages,
+        language_breakdown=language_breakdown,
     )
 
     result = {
@@ -252,7 +401,7 @@ async def _push_progress(
     status: str,
     pct: int,
     message: str,
-    engine_statuses: dict[str, str] | None = None,
+    engine_statuses: EngineStateMap | None = None,
 ) -> None:
     from sqlalchemy import update
 
@@ -276,6 +425,57 @@ async def _push_progress(
         await session.commit()
 
 
+async def _push_engine_statuses(job_id: UUID, engine_statuses: EngineStateMap) -> None:
+    """Persist engine status transitions on their own.
+
+    `_push_progress` rewrites status/progress_pct/progress_message too, and
+    those do not change when an engine finishes. Writing the whole row for every
+    transition risks clobbering a concurrent stage write, so engine transitions
+    get a narrow update of just the JSON column.
+    """
+    from sqlalchemy import update
+
+    from app.infrastructure.db.models.analysis_job import AnalysisJobModel
+    from app.infrastructure.db.session import async_session_factory
+
+    async with async_session_factory() as session:
+        stmt = (
+            update(AnalysisJobModel)
+            .where(AnalysisJobModel.id == job_id)
+            .values(engine_statuses=engine_statuses)
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+
+def _coerce_engine_statuses(statuses: object) -> EngineStateMap:
+    """Normalise any engine-status shape into the wire shape.
+
+    The pipeline builds this shape. The scorer's `display_statuses` is a plain
+    string map, and rows written before per-engine timings existed hold strings
+    too, so upgrade rather than writing a second shape into the same column.
+    """
+    if not isinstance(statuses, dict):
+        return {}
+    coerced: EngineStateMap = {}
+    for engine_id, value in statuses.items():
+        if isinstance(value, dict):
+            coerced[str(engine_id)] = {
+                "status": str(value.get("status", EngineStatus.PENDING)),
+                "started_at": value.get("started_at"),
+                "ended_at": value.get("ended_at"),
+                "error": str(value.get("error", "")),
+            }
+        else:
+            coerced[str(engine_id)] = {
+                "status": str(value),
+                "started_at": None,
+                "ended_at": None,
+                "error": "",
+            }
+    return coerced
+
+
 async def handle_stage_parse(
     cmd: ProcessStageCommand,
     parser: ChainedParser,
@@ -283,10 +483,16 @@ async def handle_stage_parse(
     producer: EventProducer,
     repo_path: str,
     files: list[dict[str, object]],
+    languages: list[str],
+    frameworks: list[str],
 ) -> tuple[list[dict[str, object]], list[ParsedFile]]:
     parsed: list[ParsedFile] = []
     errors = 0
     total = len(files)
+    # Written every 10 points of progress rather than every tick, so a long
+    # repository does not turn each 5-file batch into an UPDATE. Ten writes over
+    # the stage is also more often than the frontend's 2s poll can notice.
+    last_checkpoint = -1
     for i, f in enumerate(files):
         try:
             pf = await parser.parse(cast(str, f["path"]), cast(str, f["content"]))
@@ -297,12 +503,41 @@ async def handle_stage_parse(
 
         if (i + 1) % 5 == 0 or i == total - 1:
             pct = 25 + int(35 * (i + 1) / total)
+            checkpoint = pct // 10
+            if checkpoint != last_checkpoint:
+                last_checkpoint = checkpoint
+                await handle_save_analysis_metadata(
+                    job_id=cmd.job_id,
+                    parsed=parsed,
+                    languages=languages,
+                    frameworks=frameworks,
+                    uow=uow,
+                )
+                # Committed here on purpose: the frontend polls this job through
+                # its own session, so holding the totals until parse finished
+                # would defeat the point of writing them early. Nothing else is
+                # pending on this transaction at this point in the stage.
+                await uow.commit()
             await _push_progress(
                 cmd.job_id,
                 JobStatus.PARSING,
                 pct,
                 f"Parsing files... ({i + 1}/{total})",
             )
+
+    if last_checkpoint < 0:
+        # No loop iteration ever reached a checkpoint: either the repository has
+        # no source files, or there were fewer than the tick interval. A job must
+        # end up with a metadata row either way, recording zeros rather than
+        # nothing, or the metadata endpoint has no answer to give for this run.
+        await handle_save_analysis_metadata(
+            job_id=cmd.job_id,
+            parsed=parsed,
+            languages=languages,
+            frameworks=frameworks,
+            uow=uow,
+        )
+        await uow.commit()
 
     if errors:
         logger.warning(
@@ -639,6 +874,7 @@ async def handle_stage_finalize(
     total_files: int,
     total_lines: int,
     duration_seconds: int,
+    engine_statuses: EngineStateMap | None = None,
 ) -> Report:
     get_settings()
 
@@ -695,7 +931,20 @@ async def handle_stage_finalize(
         progress_message="Analysis complete",
         overall_score=score.overall,
         blocked_by=score.blocked_by,
-        engine_statuses=score.engine_statuses,
+        # The pipeline's engine map, not score.engine_statuses.
+        #
+        # `score.engine_statuses` is the *scorer's* display view, built from
+        # CATEGORY_ORDER -- the five scoring categories (performance, security,
+        # reliability, maintainability, devops). Writing it over the pipeline's
+        # map silently deleted dead_code, error_detection and simulation, so a
+        # fully completed job reported 5 of its 8 engines and the other three
+        # vanished rather than showing as completed. A scoring view is not a
+        # record of which engines ran.
+        engine_statuses=(
+            _coerce_engine_statuses(engine_statuses)
+            if engine_statuses is not None
+            else _coerce_engine_statuses(score.engine_statuses)
+        ),
         performance_score=score.performance,
         security_score=score.security,
         reliability_score=score.reliability,
@@ -706,6 +955,12 @@ async def handle_stage_finalize(
         high_count=severity_counts.get(Severity.HIGH, 0),
         medium_count=severity_counts.get(Severity.MEDIUM, 0),
         low_count=severity_counts.get(Severity.LOW, 0),
+        # Written at clone too, so a completed job's row carries the same values
+        # whether or not that earlier write landed. This is the authoritative
+        # point: whatever clone detected, finalize is what the report was built
+        # from.
+        languages_detected=languages,
+        language_breakdown=language_breakdown,
         duration_seconds=duration_seconds,
         completed_at=datetime.now(UTC).replace(tzinfo=None),
     )
@@ -739,28 +994,57 @@ async def handle_analysis_failure(
     error_message: str,
     uow: UnitOfWork,
     producer: EventProducer,
+    engine_statuses: EngineStateMap | None = None,
 ) -> None:
+    # Reduced once, here, at the single point every failure path passes through.
+    # Both the row and the event get the same string, so the page and any
+    # notification built from it cannot disagree about what went wrong -- and a
+    # fourth caller cannot forget, which is the failure mode that left the engine
+    # column's guard one line short of this one.
+    described = describe_failure(stage, error_message)
+
     try:
         job = await uow.jobs.get_by_id(job_id)
     except Exception:
         job = None
 
     if job:
+        # Without engine_statuses the failed engines were lost: the pipeline had
+        # already set them to "failed" in memory, but nothing carried that map
+        # through to the row, so every engine still read "running" or "pending"
+        # on a job that had already halted.
+        #
+        # progress_pct is deliberately omitted: the bar should stay where the
+        # run actually got to, not snap back to 0. It used to reset to 0 here,
+        # so a job that failed at 90% rendered as "0% - failed" and looked like
+        # it had never done any work. The failure message names the stage.
+        #
+        # completed_at is written here because the run did end, and that column
+        # means when the run ended. Only finalize wrote it before, so every failed
+        # job was a terminal state with no terminal instant -- which left the
+        # frontend unable to say how long a failed run had been going and unable
+        # to distinguish "failed just now" from "failed three weeks ago" without
+        # measuring against the current time.
         await uow.jobs.update_status(
             job_id,
             JobStatus.FAILED,
-            progress_pct=0,
             progress_message=f"Failed at stage: {stage}",
-            error_message=error_message,
+            error_message=described,
+            completed_at=datetime.now(UTC).replace(tzinfo=None),
+            engine_statuses=_coerce_engine_statuses(engine_statuses),
         )
 
+    # The event goes to subscribers, which render it into notifications. It gets
+    # the described form for the same reason the column does: a notification is
+    # shown to people who did not run the pipeline, and the traceback is both
+    # unreadable at that size and a disclosure of server paths.
     try:
         await asyncio.wait_for(
             producer.publish(
                 AnalysisFailed(
                     job_id=job_id,
                     repo_id=cast(UUID, job["repo_id"]) if job else UUID(int=0),
-                    error_message=error_message,
+                    error_message=described,
                     stage=stage,
                 )
             ),
@@ -769,6 +1053,8 @@ async def handle_analysis_failure(
     except Exception:
         logger.warning("analysis_failed_publish_failed", job_id=str(job_id))
 
+    # The raw exception stays here. This is the one line that gets the traceback,
+    # and it is the reason the column and the event above can safely do without.
     logger.error(
         "analysis_failed", job_id=str(job_id), stage=stage, error=error_message
     )
@@ -1130,10 +1416,13 @@ async def handle_stage_ai_enrich(
             progress_pct=98,
             progress_message="AI enrichment skipped (no findings)",
         )
-        return {"findings": [], "ai_executive_summary": ""}
+        # `None`, not `""`: there was nothing to summarise, which is a different
+        # statement from "the summary failed", and this dict is the return value
+        # the pipeline puts in the shared run state.
+        return {"findings": [], "ai_executive_summary": None}
 
     client = AiEnrichmentClient()
-    result = await client.enrich_findings(
+    outcome = await client.enrich_findings(
         findings=cast(list[dict[str, object]], finding_dicts),
         overall_score=score.overall if score else None,
         tier=str(score.tier) if score and score.tier else None,
@@ -1141,12 +1430,25 @@ async def handle_stage_ai_enrich(
         frameworks=frameworks,
     )
 
-    if not result:
+    if outcome.result is None:
+        # A transport failure, not a generation failure, and now distinguishable
+        # from one. The reason is persisted rather than logged and dropped: the
+        # findings themselves were already computed and are about to be saved, so
+        # the one thing missing is the summary -- and the user will see a completed
+        # run with an empty card unless something says why.
+        reason = _readable_summary_error(outcome.error)
         logger.error(
             "ai_enrichment_unavailable",
             job_id=str(job_id),
-            message="AI enrichment client returned None — AI service is unreachable, timing out, or returning errors",
+            reason=reason.get("code") if reason else "not_reported",
+            message="AI service did not return an enrichment",
         )
+
+        guide = await uow.enterprise_guides.get_by_job(job_id)
+        if guide is not None:
+            guide["ai_summary_error"] = reason
+            await uow.enterprise_guides.save(guide)
+
         await uow.jobs.update_status(
             job_id,
             JobStatus.AI_ENRICH,
@@ -1154,6 +1456,8 @@ async def handle_stage_ai_enrich(
             progress_message="AI enrichment skipped (service unavailable)",
         )
         return None
+
+    result = outcome.result
 
     enriched_findings_map: dict[str, dict[str, object]] = {}
     enrich_data = result.get("findings", [])
@@ -1179,29 +1483,60 @@ async def handle_stage_ai_enrich(
             )
             updated_count += 1
 
-    ai_executive_summary = str(result.get("ai_executive_summary", ""))
-    if ai_executive_summary:
-        guide = await uow.enterprise_guides.get_by_job(job_id)
-        if guide:
-            guide["ai_executive_summary"] = ai_executive_summary
-            await uow.enterprise_guides.save(guide)
-            logger.info(
-                "ai_enrichment_summary_saved",
-                job_id=str(job_id),
-                summary_length=len(ai_executive_summary),
-            )
-        else:
-            logger.warning(
-                "ai_enrichment_guide_not_found",
-                job_id=str(job_id),
-                message="Enterprise guide not found — cannot save AI summary",
-            )
-    else:
+    # `ai_executive_summary` is `str | None` on the wire now, and this line was
+    # `str(result.get("ai_executive_summary", ""))` -- which turned the AI
+    # service's `None` back into `""`. The type change upstream is worth nothing
+    # if this coerces it away, and it did: a failed summary and a summary nobody
+    # asked for both became an empty string, and the `if` below treated them
+    # identically.
+    raw_summary = result.get("ai_executive_summary")
+    ai_executive_summary = raw_summary if isinstance(raw_summary, str) else None
+
+    # The AI service sends this only when the summary failed, and builds it from
+    # named fields on `ClassifiedError` -- so what arrives has already been
+    # reduced to code / message / suggested_action / retry_after. Re-validated
+    # here rather than trusted: this is a network boundary between two services
+    # that deploy independently, and the consequence of a widened envelope would
+    # be a leaked provider error body landing in a column the guide endpoint
+    # serves to browsers.
+    summary_error = _readable_summary_error(result.get("ai_summary_error"))
+
+    guide = await uow.enterprise_guides.get_by_job(job_id)
+    if guide is None:
+        # Unchanged behaviour, but no longer conditional on having a summary: a
+        # failed summary is worth logging just as a saved one is, and the old
+        # `if ai_executive_summary` nesting meant a failure logged a different
+        # message than a success logged nothing about.
         logger.warning(
-            "ai_enrichment_empty_summary",
+            "ai_enrichment_guide_not_found",
             job_id=str(job_id),
-            response_keys=list(result.keys()) if result else [],
-            message="AI service returned empty ai_executive_summary — LLM generation may have failed",
+            message="Enterprise guide not found — cannot save AI summary",
+        )
+    elif ai_executive_summary:
+        guide["ai_executive_summary"] = ai_executive_summary
+        # A successful summary clears any error left by an earlier attempt. Without
+        # this, a re-enrich that succeeds leaves the previous failure in place and
+        # the UI shows both a summary and the reason it could not be written.
+        guide["ai_summary_error"] = None
+        await uow.enterprise_guides.save(guide)
+        logger.info(
+            "ai_enrichment_summary_saved",
+            job_id=str(job_id),
+            summary_length=len(ai_executive_summary),
+        )
+    else:
+        guide["ai_summary_error"] = summary_error
+        await uow.enterprise_guides.save(guide)
+        logger.warning(
+            "ai_enrichment_summary_failed",
+            job_id=str(job_id),
+            # The code, not the provider's words: the log is where technical detail
+            # belongs, but the envelope is what crossed the boundary.
+            reason=summary_error.get("code") if summary_error else "not_reported",
+            # Distinguishes "the AI service said nothing" from "it said the summary
+            # was empty", which were the same event before and are not now.
+            reported=summary_error is not None,
+            message="No AI executive summary — see ai_summary_error",
         )
 
     await uow.jobs.update_status(
@@ -1341,12 +1676,10 @@ async def handle_re_generate_guide(
         guide_dict["workspace_id"] = job["workspace_id"]
 
         # Preserve existing guide ID so merge() doesn't create a duplicate row
-        # Also preserve ai_executive_summary — regeneration doesn't produce one
         existing = await uow.enterprise_guides.get_by_job(job_id)
         if existing and existing.get("id"):
             guide_dict["id"] = existing["id"]
-            if existing.get("ai_executive_summary"):
-                guide_dict["ai_executive_summary"] = existing["ai_executive_summary"]
+            guide_dict.update(_carried_across_regeneration(existing))
 
         await uow.enterprise_guides.save(guide_dict)
         logger.info("enterprise_guide_regenerated", job_id=str(job_id))
@@ -1456,6 +1789,16 @@ async def handle_delete_job(
     if not job:
         raise NotFoundError(f"Job {cmd.job_id} not found")
 
+    # The saved resume position holds a copy of this run's parsed contents.
+    # The row is gone, so the position is unreachable anyway -- dropping it
+    # here rather than leaving an unreadable file describing a job that no
+    # longer exists. Imported here, not at module scope: the tasks package's
+    # __init__ imports the pipeline, and the pipeline imports this module --
+    # a top-level import would have the two loading each other.
+    from app.application.tasks.checkpoint import delete_checkpoint
+
+    delete_checkpoint(cmd.job_id)
+
     # Clean up S3 artifacts for this job
     if storage:
         s3_prefix = f"reports/{cmd.workspace_id}/{cmd.job_id}"
@@ -1547,20 +1890,34 @@ async def get_enterprise_guide(
     return await uow.enterprise_guides.get_by_job(job_id)
 
 
+def _count_code_entities(parsed: Sequence[ParsedFile]) -> tuple[int, int, int]:
+    """Total (classes, functions, routes) across the files parsed so far.
+
+    One counting path for both the running total written during parse and the
+    final one, so the number a reader sees mid-run cannot drift from the number
+    they see afterwards.
+    """
+    return (
+        sum(len(p.classes) for p in parsed),
+        sum(len(p.functions) for p in parsed),
+        sum(len(p.routes) for p in parsed),
+    )
+
+
 async def handle_save_analysis_metadata(
     job_id: UUID,
-    parsed_files_metadata: list[dict[str, object]],
+    parsed: Sequence[ParsedFile],
     languages: list[str],
     frameworks: list[str],
     uow: UnitOfWork,
 ) -> None:
-    class_count = 0
-    function_count = 0
-    endpoint_count = 0
-    for meta in parsed_files_metadata:
-        class_count += cast(int, meta.get("classes", 0))
-        function_count += cast(int, meta.get("functions", 0))
-        endpoint_count += cast(int, meta.get("routes", 0))
+    """Persist the code-entity totals for a job, overwriting any earlier total.
+
+    Called repeatedly while parse is still running, so that a reader polling a
+    job in progress sees real counts from about 25% rather than skeletons until
+    the whole repository has been parsed.
+    """
+    class_count, function_count, endpoint_count = _count_code_entities(parsed)
 
     metadata = AnalysisMetadata(
         job_id=job_id,
@@ -1577,6 +1934,7 @@ async def handle_save_analysis_metadata(
         classes=class_count,
         functions=function_count,
         endpoints=endpoint_count,
+        files=len(parsed),
     )
 
 

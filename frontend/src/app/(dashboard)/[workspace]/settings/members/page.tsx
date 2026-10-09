@@ -1,7 +1,7 @@
 'use client';
 
-import { MembersView } from '@/components/settings/members-view';
+import { SettingsRouteGate } from '@/components/settings/settings-route-gate';
 
 export default function MembersSettingsPage() {
-  return <MembersView />;
+  return <SettingsRouteGate section="members" />;
 }

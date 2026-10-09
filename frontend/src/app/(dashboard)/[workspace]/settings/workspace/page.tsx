@@ -1,7 +1,7 @@
 'use client';
 
-import { WorkspaceView } from '@/components/settings/workspace-view';
+import { SettingsRouteGate } from '@/components/settings/settings-route-gate';
 
 export default function WorkspaceSettingsPage() {
-  return <WorkspaceView />;
+  return <SettingsRouteGate section="workspace" />;
 }

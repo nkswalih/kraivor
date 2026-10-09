@@ -19,6 +19,18 @@ const VARIANTS: Record<JobStatus, { label: string; class: string }> = {
   [JobStatus.FAILED]: { label: 'Failed', class: 'bg-red-500/20 text-red-400 border-red-500/30' },
 };
 
+/**
+ * The plain-English name for a stage.
+ *
+ * Extracted because the stage name is needed in two places that cannot both be
+ * the badge: the badge itself, and a visually hidden live region that announces
+ * stage changes without repeating the badge's colours. Keeping one table means
+ * neither can drift from the other's vocabulary.
+ */
+export function jobStatusLabel(status: JobStatus): string {
+  return VARIANTS[status]?.label ?? status;
+}
+
 export function JobStatusBadge({ status, className }: { status: JobStatus; className?: string }) {
   const v = VARIANTS[status] ?? { label: status, class: '' };
   return (

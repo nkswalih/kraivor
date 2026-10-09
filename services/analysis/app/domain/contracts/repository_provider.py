@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
+from app.core.constants import EngineStateMap
 from app.domain.entities.finding import Finding
 from app.domain.entities.report import Report
 from app.domain.entities.score import Score
@@ -17,8 +18,28 @@ class AbstractJobRepository(ABC):
 
     @abstractmethod
     async def update_status(
-        self, job_id: UUID, status: str, progress_pct: int = 0, **kwargs: object
-    ) -> None: ...
+        self,
+        job_id: UUID,
+        status: str,
+        progress_pct: int | None = None,
+        engine_statuses: EngineStateMap | None = None,
+        **kwargs: object,
+    ) -> None:
+        """Update a job's status.
+
+        `progress_pct=None` and `engine_statuses=None` leave those columns
+        untouched rather than resetting them.
+        """
+        ...
+
+    @abstractmethod
+    async def queue_if_failed(self, job_id: UUID, progress_message: str) -> bool:
+        """Claim a failed job for a retry: flip it to `queued`, clearing the
+        failure's traces. Returns False when the job was not failed -- which
+        is also what a second, concurrent retry gets, so only one of them
+        can launch a pipeline.
+        """
+        ...
 
     @abstractmethod
     async def list_by_repo(

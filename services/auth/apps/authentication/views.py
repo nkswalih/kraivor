@@ -31,6 +31,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from auth.logging_utils import log_safe
 from users.models import User
 
 from .cookie_utils import create_refresh_cookie
@@ -39,9 +40,11 @@ from .otp import (
     OTPExpiredError,
     OTPInvalidError,
     OTPRateLimitError,
+    OTPServiceUnavailableError,
     get_otp_sender,
     get_otp_service,
 )
+from .security import LoginLockoutUnavailableError
 from .security import check_password as verify_password
 from .security import generate_device_id, get_client_ip, get_lockout_manager
 from .serializers import (
@@ -112,6 +115,21 @@ def log_auth_event(
         logger.info("auth_event", extra=log_data)
     else:
         logger.warning("auth_event_failed", extra=log_data)
+
+
+def _lockout_unavailable_response() -> Response:
+    """503 for a Redis outage that prevents an authentication decision.
+
+    Shared by every endpoint that consults the login lockout. The wording is
+    deliberately non-specific: it must not tell an unauthenticated caller
+    whether Redis is down, and it must stay distinct from `account_locked` so
+    the two conditions are never conflated.
+    """
+    return ErrorResponse(
+        error="Sign-in is temporarily unavailable. Please try again shortly.",
+        error_code="auth_service_unavailable",
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+    ).to_response()
 
 
 def _hash_token(raw_token: str) -> str:
@@ -186,7 +204,10 @@ class SignInIdentifyView(APIView):
         description="Email lookup - determines next authentication method (password/OTP/signup).",
         tags=["Authentication"],
         request=SignInIdentifySerializer,
-        responses={200: OpenApiResponse(description="Next step determined")},
+        responses={
+            200: OpenApiResponse(description="Next step determined"),
+            503: OpenApiResponse(description="Lockout state unavailable"),
+        },
     )
     def post(self, request):
         serializer = SignInIdentifySerializer(data=request.data)
@@ -201,7 +222,10 @@ class SignInIdentifyView(APIView):
         ip = get_client_ip(request)
 
         lockout_mgr = get_lockout_manager()
-        is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
+        try:
+            is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
+        except LoginLockoutUnavailableError:
+            return _lockout_unavailable_response()
 
         if is_locked:
             return ErrorResponse(
@@ -257,7 +281,10 @@ class SignInPasswordView(APIView):
         description="Password verification - issues access + refresh token pair.",
         tags=["Authentication"],
         request=SignInPasswordSerializer,
-        responses={200: OpenApiResponse(description="Token pair issued")},
+        responses={
+            200: OpenApiResponse(description="Token pair issued"),
+            503: OpenApiResponse(description="Lockout state unavailable"),
+        },
     )
     def post(self, request):
         serializer = SignInPasswordSerializer(data=request.data)
@@ -278,7 +305,10 @@ class SignInPasswordView(APIView):
         user_agent = request.META.get("HTTP_USER_AGENT", "")
 
         lockout_mgr = get_lockout_manager()
-        is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
+        try:
+            is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
+        except LoginLockoutUnavailableError:
+            return _lockout_unavailable_response()
 
         if is_locked:
             return ErrorResponse(
@@ -298,7 +328,13 @@ class SignInPasswordView(APIView):
             ).to_response()
 
         if not verify_password(password, user.password):
-            lockout_mgr.record_failure(email, ip)
+            try:
+                lockout_mgr.record_failure(email, ip)
+            except LoginLockoutUnavailableError:
+                # The attempt could not be counted. Reporting "invalid
+                # credentials" here would be a lie the caller acts on, and
+                # staying silent would let them keep guessing unmetered.
+                return _lockout_unavailable_response()
             log_auth_event(
                 event_type="login_failed",
                 user_id=str(user.id),
@@ -352,7 +388,10 @@ class OTPSendView(APIView):
         description="Send a one-time passcode to the user's email for sign-in.",
         tags=["Authentication"],
         request=OTPSendSerializer,
-        responses={200: OpenApiResponse(description="OTP sent to email")},
+        responses={
+            200: OpenApiResponse(description="OTP sent to email"),
+            503: OpenApiResponse(description="Lockout state or OTP store unavailable"),
+        },
     )
     def post(self, request):
         serializer = OTPSendSerializer(data=request.data)
@@ -367,7 +406,10 @@ class OTPSendView(APIView):
         ip = get_client_ip(request)
 
         lockout_mgr = get_lockout_manager()
-        is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
+        try:
+            is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
+        except LoginLockoutUnavailableError:
+            return _lockout_unavailable_response()
 
         if is_locked:
             return ErrorResponse(
@@ -404,6 +446,15 @@ class OTPSendView(APIView):
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 extra={"retry_after": e.retry_after},
             ).to_response()
+        except OTPServiceUnavailableError:
+            # The code was never persisted, so nothing was sent. Tell the caller
+            # the sign-in path is down rather than confirming a delivery that
+            # cannot be completed.
+            return ErrorResponse(
+                error="Sign-in codes are temporarily unavailable. Please try again.",
+                error_code="otp_service_unavailable",
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            ).to_response()
 
         otp_sender = get_otp_sender()
         try:
@@ -434,7 +485,10 @@ class OTPVerifyView(APIView):
         description="Verify a one-time passcode and issue a token pair.",
         tags=["Authentication"],
         request=OTPVerifySerializer,
-        responses={200: OpenApiResponse(description="Token pair issued")},
+        responses={
+            200: OpenApiResponse(description="Token pair issued"),
+            503: OpenApiResponse(description="Lockout state or OTP store unavailable"),
+        },
     )
     def post(self, request):
         serializer = OTPVerifySerializer(data=request.data)
@@ -455,7 +509,10 @@ class OTPVerifyView(APIView):
         user_agent = request.META.get("HTTP_USER_AGENT", "")
 
         lockout_mgr = get_lockout_manager()
-        is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
+        try:
+            is_locked, retry_after = lockout_mgr.check_lockout(email, ip)
+        except LoginLockoutUnavailableError:
+            return _lockout_unavailable_response()
 
         if is_locked:
             return ErrorResponse(
@@ -479,18 +536,37 @@ class OTPVerifyView(APIView):
         try:
             otp_service.verify_otp(email, otp_code)
         except OTPExpiredError:
-            lockout_mgr.record_failure(email, ip)
+            try:
+                lockout_mgr.record_failure(email, ip)
+            except LoginLockoutUnavailableError:
+                return _lockout_unavailable_response()
             return ErrorResponse(
                 error="OTP has expired. Please request a new one.",
                 error_code="otp_expired",
                 status_code=status.HTTP_401_UNAUTHORIZED,
             ).to_response()
         except OTPInvalidError as e:
-            lockout_mgr.record_failure(email, ip)
+            try:
+                lockout_mgr.record_failure(email, ip)
+            except LoginLockoutUnavailableError:
+                return _lockout_unavailable_response()
             return ErrorResponse(
                 error=str(e),
                 error_code="invalid_otp",
                 status_code=status.HTTP_401_UNAUTHORIZED,
+            ).to_response()
+        except OTPServiceUnavailableError:
+            # Deliberately no lockout_mgr.record_failure(): an infrastructure
+            # outage is not a failed attempt by this user, and counting it would
+            # lock out every legitimate sign-in attempt for the duration.
+            logger.error(
+                "auth.otp_verify_unavailable",
+                extra={"user_id": log_safe(str(user.id)), "email": log_safe(email)},
+            )
+            return ErrorResponse(
+                error="Sign-in verification is temporarily unavailable. Please try again.",
+                error_code="otp_service_unavailable",
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             ).to_response()
 
         lockout_mgr.clear_attempts(email, ip)

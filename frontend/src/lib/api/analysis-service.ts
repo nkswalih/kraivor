@@ -15,7 +15,26 @@ import type {
   SimulationResultListResponse,
   ScoreHistoryListResponse,
   EnterpriseGuide,
+  EngineListResponse,
+  AiSummaryError,
 } from '@/types/domain/analysis';
+
+/**
+ * What a re-enrich actually achieved.
+ *
+ * `status` is `"degraded"` when the findings were re-enriched but no summary
+ * came back. The request succeeded -- it returned 200 and it recorded why -- and
+ * the distinction from `"ok"` is what stops a client reporting success on a run
+ * that still has no summary. `enriched` alone cannot say this: it is
+ * `result is not None`, and a failed summary is precisely the case where the
+ * stage still returns a result.
+ */
+export interface ReEnrichResponse {
+  status: 'ok' | 'degraded';
+  enriched: boolean;
+  has_summary: boolean;
+  ai_summary_error: AiSummaryError | null;
+}
 
 const BASE = process.env.NEXT_PUBLIC_ANALYSIS_API_URL ?? 'http://localhost:8003';
 
@@ -24,7 +43,15 @@ function getJwt(): string | null {
   return useAuthStore.getState().accessToken;
 }
 
-class AnalysisApiError extends Error {
+/**
+ * A failed analysis call, carrying the HTTP status the service answered with.
+ *
+ * Exported because callers branch on it: the retry endpoint has three
+ * different 409s (not failed / no saved position / already claimed), each
+ * asking the page for a different next step, and `status` plus `message` is
+ * how it distinguishes them.
+ */
+export class AnalysisApiError extends Error {
   constructor(
     public status: number,
     public code: string,
@@ -115,15 +142,28 @@ export const analysisService = {
     delete(jobId: string): Promise<void> {
       return analysisDelete<void>(API_ENDPOINTS.ANALYSIS.JOB_DELETE(jobId));
     },
+    engines(): Promise<EngineListResponse> {
+      return analysisGet<EngineListResponse>(API_ENDPOINTS.ANALYSIS.JOB_ENGINES);
+    },
     statistics(jobId: string): Promise<JobStatistics> {
       return analysisGet<JobStatistics>(
         API_ENDPOINTS.ANALYSIS.JOB_STATISTICS(jobId)
       );
     },
-    reEnrich(jobId: string): Promise<{ status: string; enriched: boolean }> {
-      return analysisPost<{ status: string; enriched: boolean }>(
-        `/api/v1/jobs/${jobId}/re-enrich`, null
-      );
+    reEnrich(jobId: string): Promise<ReEnrichResponse> {
+      return analysisPost<ReEnrichResponse>(`/api/v1/jobs/${jobId}/re-enrich`, null);
+    },
+    /**
+     * Resume a failed run from the stage that failed.
+     *
+     * A 409 is not an error state here but the service explaining which of
+     * three situations applies -- see `AnalysisApiError`: `not_failed`,
+     * `no_checkpoint`, or `already_queued`. A 409 with `no_checkpoint` means
+     * this run predates saved positions (or its container was recreated), and
+     * the caller should fall back to `start`.
+     */
+    retry(jobId: string): Promise<AnalysisJob> {
+      return analysisPost<AnalysisJob>(`/api/v1/jobs/${jobId}/retry`, null);
     },
     branches(repoUrl: string): Promise<string[]> {
       return analysisGet<string[]>(

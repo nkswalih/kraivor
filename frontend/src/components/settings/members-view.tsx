@@ -10,6 +10,7 @@ import { workspaceEndpoints, profileEndpoints } from '@/lib/api/endpoints';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import type { WorkspaceMember, WorkspaceInvitation } from '@/types/api';
 import { cn } from '@/lib/utils';
+import { ListSkeleton } from '@/components/settings/settings-skeletons';
 
 type Role = 'owner' | 'admin' | 'member' | 'viewer';
 type Filter = 'all' | 'online' | 'admin' | 'member' | 'viewer';
@@ -255,9 +256,7 @@ function MembersContent({
         </SectionLabel>
 
         {membersLoading ? (
-          <div className="flex justify-center py-10">
-            <Loader2 className="w-5 h-5 animate-spin text-text-tertiary" />
-          </div>
+          <ListSkeleton rows={4} />
         ) : filteredMembers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Users className="w-8 h-8 text-text-tertiary mb-3" />
@@ -287,9 +286,7 @@ function MembersContent({
 
       {/* Pending Invitations */}
       {invitationsLoading ? (
-        <div className="flex justify-center py-4">
-          <Loader2 className="w-4 h-4 animate-spin text-text-tertiary" />
-        </div>
+        <ListSkeleton rows={1} />
       ) : pendingInvitations.length > 0 ? (
         <div>
           <SectionLabel>Pending Invitations ({pendingInvitations.length})</SectionLabel>

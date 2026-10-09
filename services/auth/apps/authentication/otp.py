@@ -15,6 +15,8 @@ import redis
 import secrets
 from django.conf import settings
 
+from auth.logging_utils import log_safe
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,6 +44,16 @@ class OTPRateLimitError(OTPError):
     def __init__(self, retry_after: int) -> None:
         self.retry_after = retry_after
         super().__init__(f"Too many requests. Try again in {retry_after} seconds.")
+
+
+class OTPServiceUnavailableError(OTPError):
+    """Raised when Redis cannot be reached to make an OTP decision.
+
+    Every code path in this module that needs Redis to answer a security
+    question -- "does this code match?", "is this code still live?", "has this
+    address been served recently?" -- must fail closed when Redis is
+    unreachable. A missing answer is not a passing answer.
+    """
 
 
 class OTPService:
@@ -78,7 +90,12 @@ class OTPService:
         return otp
 
     def store_otp(self, email: str, otp: str) -> None:
-        """Store OTP in Redis with expiry."""
+        """Store OTP in Redis with expiry.
+
+        Raises OTPServiceUnavailableError when the code could not be persisted.
+        Emailing a code that was never stored would tell the user to wait for a
+        verification that cannot succeed.
+        """
         try:
             otp_key = self._get_otp_key(email)
             expiry_seconds = settings.OTP_EXPIRE_MINUTES * 60
@@ -86,10 +103,14 @@ class OTPService:
             pipe = self.client.pipeline()
             pipe.setex(otp_key, expiry_seconds, otp)
             pipe.execute()
-        except redis.exceptions.ConnectionError as e:
-            logger.warning(f"Redis unavailable in store_otp: {e}. OTP not persisted.")
-        except redis.exceptions.TimeoutError as e:
-            logger.warning(f"Redis timeout in store_otp: {e}. OTP not persisted.")
+        except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
+            logger.error(
+                "otp.store_failed",
+                extra={"email": log_safe(email.lower()), "error": log_safe(e)},
+            )
+            raise OTPServiceUnavailableError(
+                "Could not store the sign-in code. Please try again."
+            ) from e
 
     def send_otp(self, email: str, otp: str) -> bool:
         """
@@ -163,33 +184,40 @@ class OTPService:
             pipe.execute()
 
             return True
-        except redis.exceptions.ConnectionError as e:
-            logger.warning(
-                f"Redis unavailable in verify_otp: {e}. Allowing OTP verification."
+        except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
+            # Fail closed. Redis holds the only copy of the code, so an
+            # unreachable Redis means the comparison above never happened.
+            # Returning True here accepted any code for any address during a
+            # Redis outage -- a full bypass of OTP verification.
+            logger.error(
+                "otp.verify_unavailable",
+                extra={"email": log_safe(email.lower()), "error": log_safe(e)},
             )
-            return True  # Allow verification if Redis is down
-        except redis.exceptions.TimeoutError as e:
-            logger.warning(
-                f"Redis timeout in verify_otp: {e}. Allowing OTP verification."
-            )
-            return True  # Allow verification if Redis is down
+            raise OTPServiceUnavailableError(
+                "Could not verify the sign-in code. Please try again."
+            ) from e
 
     def check_resend_rate_limit(self, email: str) -> None:
-        """Check if user can request OTP resend."""
+        """Check if user can request OTP resend.
+
+        Raises OTPServiceUnavailableError when the rate-limit state cannot be
+        read. Failing open would remove the throttle entirely for the duration
+        of a Redis outage, which is exactly when an attacker would want it gone.
+        """
         try:
             resend_key = self._get_resend_key(email)
             ttl = self.client.ttl(resend_key)
 
             if ttl > 0:
                 raise OTPRateLimitError(retry_after=ttl)
-        except redis.exceptions.ConnectionError as e:
-            logger.warning(
-                f"Redis unavailable in check_resend_rate_limit: {e}. Allowing resend."
+        except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
+            logger.error(
+                "otp.resend_check_unavailable",
+                extra={"email": log_safe(email.lower()), "error": log_safe(e)},
             )
-        except redis.exceptions.TimeoutError as e:
-            logger.warning(
-                f"Redis timeout in check_resend_rate_limit: {e}. Allowing resend."
-            )
+            raise OTPServiceUnavailableError(
+                "Could not check the resend limit. Please try again."
+            ) from e
 
     def record_resend(self, email: str) -> None:
         """Record that OTP was requested for resend rate limiting."""

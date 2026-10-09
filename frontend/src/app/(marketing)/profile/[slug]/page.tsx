@@ -1,31 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useProfile, useFollowers, useFollowing } from '@/lib/hooks/use-profiles';
-import { ProfileHeader } from '@/components/profiles/profile-header';
-import { UserDiscussionList } from '@/components/profiles/user-discussions-list';
-import { UserCommentList } from '@/components/profiles/user-comments-list';
-import { Avatar } from '@/components/profiles/avatar';
-import { Skeleton } from '@/components/ui/shadcn';
-import { formatRelativeTime } from '@/lib/utils';
-import { cn } from '@/lib/utils';
+import { useProfile } from '@/lib/hooks/use-profiles';
+import { ProfileView } from '@/components/profiles/profile-view';
 
-type Tab = 'discussions' | 'comments' | 'followers' | 'following';
-
+/**
+ * The public profile. Same `ProfileView` the workspace renders, minus the two
+ * workspace-only props: no slug means `/profile/{username}` links, and no
+ * `onOpenProfile` means people here navigate, because this layout has no card
+ * to open. The page scrolls with the document -- the marketing shell is not
+ * `overflow-hidden` the way the dashboard is.
+ */
 export default function UserProfilePage() {
   const params = useParams();
   const username = params?.slug as string;
   const { data: profile, isLoading, error } = useProfile(username);
-  const [activeTab, setActiveTab] = useState<Tab>('followers');
-
-  const { data: followersData, isLoading: followersLoading, refetch: refetchFollowers } = useFollowers(username);
-  const { data: followingData, isLoading: followingLoading, refetch: refetchFollowing } = useFollowing(username);
-
-  useEffect(() => {
-    if (activeTab === 'followers') refetchFollowers();
-    if (activeTab === 'following') refetchFollowing();
-  }, [activeTab, refetchFollowers, refetchFollowing]);
 
   if (isLoading) {
     return (
@@ -45,128 +34,9 @@ export default function UserProfilePage() {
     );
   }
 
-  const tabs: { key: Tab; label: string; count: number }[] = [
-    { key: 'discussions', label: 'Discussions', count: profile.discussion_count },
-    { key: 'comments', label: 'Comments', count: profile.comment_count },
-    { key: 'followers', label: 'Followers', count: profile.followers_count },
-    { key: 'following', label: 'Following', count: profile.following_count },
-  ];
-
-  const followers = followersData?.results ?? [];
-  const following = followingData?.results ?? [];
-
   return (
     <div className="max-w-3xl mx-auto p-6 w-full">
-      <ProfileHeader profile={profile} userAvatarUrl={profile.user_avatar_url} />
-
-      {/* Tabs */}
-      <div className="flex border-b border-border mt-6">
-        {tabs.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={cn(
-              'px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors -mb-px',
-              activeTab === tab.key
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {tab.label} <span className="text-muted-foreground">({tab.count})</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Tab Content */}
-      <div className="mt-4">
-        {activeTab === 'discussions' && profile && (
-          <UserDiscussionList userId={profile.user_id} />
-        )}
-
-        {activeTab === 'comments' && profile && (
-          <UserCommentList userId={profile.user_id} />
-        )}
-
-        {activeTab === 'followers' && (
-          <div className="space-y-2">
-            {followersLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map(i => (
-                  <Skeleton key={i} className="h-12 w-full rounded-md" />
-                ))}
-              </div>
-            ) : followers.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <p className="text-[13px]">No followers yet</p>
-              </div>
-            ) : (
-              followers.map(f => (
-                <a
-                  key={f.id}
-                  href={`/profile/${f.username}`}
-                  className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors"
-                >
-                  <Avatar
-                    src={f.avatar_url}
-                    fallbackSrc={f.user_avatar_url}
-                    name={f.display_name}
-                    size="md"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-foreground truncate">
-                      {f.display_name}
-                    </p>
-                    <p className="text-[12px] text-muted-foreground truncate">@{f.username}</p>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground shrink-0">
-                    Followed {formatRelativeTime(f.followed_at)}
-                  </p>
-                </a>
-              ))
-            )}
-          </div>
-        )}
-
-        {activeTab === 'following' && (
-          <div className="space-y-2">
-            {followingLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map(i => (
-                  <Skeleton key={i} className="h-12 w-full rounded-md" />
-                ))}
-              </div>
-            ) : following.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <p className="text-[13px]">Not following anyone yet</p>
-              </div>
-            ) : (
-              following.map(f => (
-                <a
-                  key={f.id}
-                  href={`/profile/${f.username}`}
-                  className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors"
-                >
-                  <Avatar
-                    src={f.avatar_url}
-                    fallbackSrc={f.user_avatar_url}
-                    name={f.display_name}
-                    size="md"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-foreground truncate">
-                      {f.display_name}
-                    </p>
-                    <p className="text-[12px] text-muted-foreground truncate">@{f.username}</p>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground shrink-0">
-                    Followed {formatRelativeTime(f.followed_at)}
-                  </p>
-                </a>
-              ))
-            )}
-          </div>
-        )}
-      </div>
+      <ProfileView profile={profile} />
     </div>
   );
 }

@@ -6,6 +6,7 @@ from django.db import transaction
 from django.db.models import Count, QuerySet
 
 from apps.chat.models import ChatRoom, ChatRoomParticipant
+from apps.workspaces.models import WorkspaceMember
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,36 @@ class ChatRoomService:
     def get_or_create_dm_room(
         *, workspace_id: str, user_id_1: str, user_id_2: str, target_name: str
     ) -> ChatRoom:
+        # Serialise the two callers of this pair before the lookup below.
+        #
+        # The window being closed: the lookup is a plain read, and between reading
+        # "no such conversation" and the `bulk_create` a second request reads the
+        # same empty result and also creates. Nothing in the schema objects —
+        # `unique_together(room, user_id)` constrains participants *within* a room,
+        # and there is no constraint at all on one-DM-per-pair — so on Postgres
+        # (READ COMMITTED) both transactions commit and the pair ends up with two
+        # conversations, each carrying a participant row for both of them. The
+        # lookup then cannot tell them apart from a duplicated room and no UI can
+        # merge them, so the user just sees their history missing from the thread
+        # they are now in.
+        #
+        # Locked on the two *member* rows rather than the workspace row. Both users
+        # are workspace members by the time this is reachable (the view checks the
+        # caller, and `DMCreateView` checks the target), so the rows exist, and
+        # taking them means two unrelated pairs never contend. Locking the workspace
+        # would serialise every DM in it against every other.
+        #
+        # `order_by("user_id")` is load-bearing, not tidiness: two pairs that
+        # share a member, taken in argument order, can each hold the row the other
+        # wants and Postgres reports a deadlock. Sorted, the second transaction
+        # always blocks on the one both want first.
+        list(
+            WorkspaceMember.objects.select_for_update()
+            .filter(workspace_id=workspace_id, user_id__in=[user_id_1, user_id_2])
+            .order_by("user_id")
+            .values_list("user_id", flat=True)
+        )
+
         existing_rooms: QuerySet = (
             ChatRoomParticipant.objects.filter(
                 room__workspace_id=workspace_id,

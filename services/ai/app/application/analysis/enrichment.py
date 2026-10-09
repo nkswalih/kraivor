@@ -3,9 +3,71 @@ import logging
 
 from app.core.config import settings
 from app.infrastructure.llm.client import LLMClient
+from app.infrastructure.llm.error_classifier import (
+    ClassifiedError,
+    ErrorCategory,
+    SuggestedAction,
+    classify_error,
+)
 from app.infrastructure.llm.router import FREE_MODELS, ModelRouter
 
 logger = logging.getLogger(__name__)
+
+# How many of `FREE_MODELS` to try before giving up on the summary.
+#
+# The loop used to walk all nine, and each attempt was three retries at a 45s
+# timeout -- roughly 1250s in the worst case, against a client (`services/analysis`
+# config) that gives up at 120s and writes "AI enrichment skipped" into a progress
+# message no screen renders. So the worst case was not slow, it was invisible: the
+# worker was pinned and the user saw nothing at all.
+#
+# Four is enough to clear a single-model outage or a model that has quietly been
+# retired from the free tier, which is the failure this loop exists for, and it
+# cuts the worst case by more than half. The findings are enriched by a separate
+# per-category path, so a summary that gives up costs one paragraph, not the report.
+MAX_SUMMARY_MODEL_ATTEMPTS = 4
+
+# Wall-clock budget for the whole summary attempt, across all models.
+#
+# Set below the 120s the analysis service allows for the entire enrich call, and
+# below the 90s the AI service uses as its own LLM chain budget, for the reason
+# given at the call site: a deadline that races the caller's own timeout is not a
+# deadline. 75s leaves room for the findings enrichment that has already run and
+# for the response to be serialised before the caller's clock expires.
+#
+# 75s is also comfortably more than the cap needs: four models at a 45s client
+# timeout is 180s, so in the worst case this is what stops the loop rather than
+# the loop stopping itself -- which is the point of having it, since a client
+# timeout is not a decision this code gets to make.
+SUMMARY_TIMEOUT_SECONDS = 75
+
+# A summary shorter than this is not a summary.
+#
+# `LLMClient.generate` already strips `<think>` blocks, so a reasoning model that
+# spent its whole budget thinking returns `""`. Returning that as a successful
+# summary is what made this failure invisible in the first place: the analysis
+# service logged "AI service returned empty ai_executive_summary -- LLM generation
+# may have failed" at WARNING, and the user was shown an empty card. Two sentences
+# is the floor the prompt itself asks for ("Overall assessment (1-2 sentences)").
+MIN_SUMMARY_CHARS = 80
+
+# Responses that are a refusal or a meta-comment rather than a summary. Matched on
+# the opening because a model asked for Markdown sometimes prefixes a note, and
+# only the first line distinguishes that from a real summary that happens to
+# contain the words later on.
+_REFUSAL_PREFIXES = (
+    "i'm sorry",
+    "i am sorry",
+    "i cannot",
+    "i can't",
+    "i'm unable",
+    "i am unable",
+    "as an ai",
+    "i'm not able",
+    "i am not able",
+    "sorry, ",
+    "no summary",
+)
 
 
 CATEGORY_PROMPTS: dict[str, str] = {
@@ -58,6 +120,33 @@ CATEGORY_ROUTES: dict[str, str] = {
 }
 
 
+def describe_summary_failure(error: ClassifiedError) -> dict[str, object]:
+    """Reduce a `ClassifiedError` to the four fields a client may see.
+
+    This function is the boundary. `ClassifiedError` carries `technical_message`,
+    `provider` and `model` alongside the user-facing metadata, and those three are
+    the ones that must never reach a browser: `technical_message` is the provider's
+    verbatim response, which for an auth failure routinely contains the rejected
+    key, and the model name is an internal routing decision a user cannot act on.
+
+    So the envelope is built from named fields rather than by copying and deleting,
+    because a copy-then-delete approach fails the first time someone adds a field to
+    `ClassifiedError` -- the new field is copied and the delete list is not updated.
+
+    `code` is the enum's string value rather than its name, and is the one value the
+    frontend switches on. `retry_after` is omitted rather than sent as null when
+    there is no hint, so the client can distinguish "no hint" from "hint of zero".
+    """
+    envelope: dict[str, object] = {
+        "code": error.category.value,
+        "message": error.user_message,
+        "suggested_action": error.suggested_action.value,
+    }
+    if error.retry_after is not None:
+        envelope["retry_after"] = error.retry_after
+    return envelope
+
+
 class EnrichmentService:
     def __init__(self) -> None:
         self.router = ModelRouter()
@@ -108,17 +197,97 @@ class EnrichmentService:
             for item in cat_results:
                 enriched_findings.append(item)
 
-        ai_executive_summary = ""
+        # The summary is one field of a large response. Losing it must not lose
+        # the findings it was summarising, so this is a degraded result rather
+        # than a raised error -- but it is no longer a *silent* one.
+        #
+        # It used to be `ai_executive_summary = ""` with a WARNING log, which
+        # made four different situations indistinguishable to everyone downstream:
+        # the provider failed, no key is configured, generation is still running,
+        # and the model genuinely had nothing to say. This service already knows
+        # which one it is -- `ClassifiedError` carries a category, a user-facing
+        # message, a suggested action and a retry hint -- and threw all of it
+        # away at the catch below. The envelope now forwards only that computed
+        # metadata. `technical_message`, the provider name, the model and the key
+        # never leave this process.
+        ai_executive_summary: str | None = None
+        ai_summary_error: dict[str, object] | None = None
         try:
-            ai_executive_summary = await self._generate_executive_summary(
-                enriched_findings, overall_score, tier, languages, frameworks
+            # A deadline on the summary, and specifically not on the response.
+            #
+            # `services/analysis` configures a 120s timeout on this call and
+            # treats a timeout as the whole enrichment having failed. Putting a
+            # deadline here rather than at the route means a slow *summary* costs
+            # the summary and nothing else, instead of costing the findings that
+            # were already computed and are sitting in memory a line below.
+            #
+            # The budget is deliberately below the client's, not equal to it. A
+            # deadline that fires at the same moment the client gives up is not a
+            # deadline; it is a coin toss decided by scheduling, and the losing
+            # side reports a transport error for something that was only ever
+            # slow. `MAX_SUMMARY_MODEL_ATTEMPTS` bounds the worst case at roughly
+            # 540s, so without this the client almost always times out first.
+            ai_executive_summary = await asyncio.wait_for(
+                self._generate_executive_summary(
+                    enriched_findings, overall_score, tier, languages, frameworks
+                ),
+                timeout=SUMMARY_TIMEOUT_SECONDS,
             )
-        except Exception as e:
-            logger.warning("executive_summary_generation_failed error=%s", str(e))
+        except TimeoutError:
+            # A distinct arm, not the generic `Exception` one below. The generic
+            # arm would classify this via `classify_error`, which reads
+            # `str(exc)`, and a bare `TimeoutError` stringifies to nothing useful
+            # -- so it would arrive as `unknown` with "Something went wrong".
+            # The truth is more specific and more actionable than that: the model
+            # was reachable and simply too slow, which is worth retrying and is
+            # not the same as a provider that is down.
+            ai_summary_error = describe_summary_failure(
+                ClassifiedError(
+                    category=ErrorCategory.TIMEOUT,
+                    provider="openrouter",
+                    model="unknown",
+                    user_message=(
+                        "The AI model took too long to write a summary. Your "
+                        "findings are unaffected -- try again for the summary."
+                    ),
+                    technical_message=f"summary exceeded {SUMMARY_TIMEOUT_SECONDS}s",
+                    suggested_action=SuggestedAction.RETRY,
+                    retry_after=30,
+                )
+            )
+            logger.warning(
+                "executive_summary_generation_timed_out",
+                extra={"timeout_seconds": SUMMARY_TIMEOUT_SECONDS},
+            )
+        except ClassifiedError as e:
+            ai_summary_error = describe_summary_failure(e)
+            logger.warning(
+                "executive_summary_generation_failed",
+                extra={
+                    "category": e.category.value,
+                    "provider": e.provider,
+                    "model": e.model,
+                    "retry_after": e.retry_after,
+                },
+            )
+        except Exception as e:  # noqa: BLE001
+            # Anything unclassified still has to reach the user as *something*.
+            # Losing the summary without saying so is the defect being fixed, so
+            # the catch cannot simply re-raise: an unexpected error type would
+            # take the findings down with it, which is worse than an unclassified
+            # message. Classifying it keeps this a degraded 200 carrying an honest
+            # code, instead of a 500 that discards the whole report.
+            ai_summary_error = describe_summary_failure(
+                classify_error(e, provider="openrouter", model="unknown")
+            )
+            logger.warning(
+                "executive_summary_generation_failed_unclassified", exc_info=True
+            )
 
         return {
             "findings": enriched_findings,
             "ai_executive_summary": ai_executive_summary,
+            "ai_summary_error": ai_summary_error,
         }
 
     async def _enrich_category(self, category: str, findings: list[dict]) -> list[dict]:
@@ -277,14 +446,35 @@ class EnrichmentService:
             for f in high[:10]:
                 user_prompt += f"- {f.get('title', '')} ({f.get('file_path', '')})\n"
 
-        last_error: Exception | None = None
-        for model in FREE_MODELS:
+        # Short-circuit before the loop.
+        #
+        # With no master key this used to walk every model, and every model failed
+        # identically at the client with an empty key -- three retries and a 45s
+        # timeout apiece, all of it certain. That is the single most common real
+        # failure on this path (a deployment without an AI key configured) and it
+        # was also the slowest, because it was treated as a transient failure
+        # rather than as the missing configuration it is.
+        api_key = settings.openrouter__master__key
+        if not api_key:
+            raise ClassifiedError(
+                category=ErrorCategory.PROVIDER_NOT_CONFIGURED,
+                provider="openrouter",
+                model="none",
+                user_message=(
+                    "The AI service is not configured on this server, so no "
+                    "executive summary could be generated. Your findings are "
+                    "unaffected."
+                ),
+                technical_message="openrouter master key is not set",
+                suggested_action=SuggestedAction.ADD_KEY,
+            )
+
+        candidates = FREE_MODELS[:MAX_SUMMARY_MODEL_ATTEMPTS]
+        last_error: ClassifiedError | None = None
+
+        for model in candidates:
             try:
-                client = LLMClient(
-                    api_key=settings.openrouter__master__key,
-                    provider="openrouter",
-                    model=model,
-                )
+                client = LLMClient(api_key=api_key, provider="openrouter", model=model)
                 result = await client.generate(
                     messages=[
                         {"role": "system", "content": system_prompt},
@@ -294,14 +484,99 @@ class EnrichmentService:
                     max_tokens=1024,
                 )
 
-                return result["content"]
-            except Exception as e:
-                last_error = e
+                content = _usable_summary(result.get("content"))
+                if content is not None:
+                    return content
+
+                # A response arrived and it was not usable. This is a different
+                # failure from a provider error and must not be counted as
+                # "try the next model" without a reason -- an empty string and a
+                # refusal both usually mean the same thing upstream (the model
+                # spent its budget on `<think>` blocks, or declined), so trying
+                # four models is unlikely to help where one did not. It is
+                # recorded and the loop continues, but the final report names this
+                # rather than blaming the last model's transport.
                 logger.warning(
-                    "summary_model_failed model=%s error=%s", model, str(e)
+                    "summary_model_returned_unusable_content", extra={"model": model}
+                )
+                last_error = ClassifiedError(
+                    category=ErrorCategory.UNKNOWN,
+                    provider="openrouter",
+                    model=model,
+                    user_message=(
+                        "The AI model returned an empty response instead of a "
+                        "summary. Please try again."
+                    ),
+                    technical_message="empty or refusal-shaped summary content",
+                    suggested_action=SuggestedAction.RETRY,
+                )
+                continue
+            except ClassifiedError:
+                raise
+            except Exception as e:
+                # Classified per attempt rather than once at the end, because the
+                # categories differ per model: one model can be retired from the
+                # free tier (switch) while the account itself is rate limited
+                # (wait), and the report should name whichever is the real reason
+                # the first one -- not whatever the last model happened to say.
+                last_error = classify_error(e, provider="openrouter", model=model)
+                logger.warning(
+                    "summary_model_failed",
+                    extra={
+                        "model": model,
+                        "category": last_error.category.value,
+                        "status_code": last_error.metadata.get("status_code"),
+                    },
                 )
                 continue
 
         if last_error is not None:
             raise last_error
-        raise RuntimeError("No free models configured for executive summary generation")
+        # Only reachable if `FREE_MODELS` is empty or every entry was filtered out
+        # -- which is a configuration fault here rather than anything a retry fixes.
+        raise ClassifiedError(
+            category=ErrorCategory.ALL_MODELS_FAILED,
+            provider="openrouter",
+            model="none",
+            user_message=(
+                "No AI models are available to generate a summary. Please try "
+                "again later."
+            ),
+            technical_message="FREE_MODELS is empty",
+            suggested_action=SuggestedAction.RETRY,
+        )
+
+
+def _usable_summary(content: object) -> str | None:
+    """The generated text, or None if it is not something to call a summary.
+
+    `client.generate` already returns a string with `<think>` blocks stripped, so
+    the three shapes rejected here are the ones that survive that:
+
+      * `""` -- a reasoning model that spent its entire budget thinking. This is
+        the common one, and it used to be persisted verbatim as a successful
+        summary.
+      * whitespace only -- same outcome, less obviously so.
+      * a refusal -- the model declined, and the reason it declined is very likely
+        to contain instructions or excerpts rather than an assessment, so passing
+        it through would put model-authored text in front of a reader as if a
+        person had written it.
+
+    Returns None rather than raising, so the caller can decide whether to try the
+    next model; the reason it rejected is not worth a second error type, because
+    all three look the same to whoever reads the report.
+    """
+    if not isinstance(content, str):
+        return None
+
+    text = content.strip()
+    if len(text) < MIN_SUMMARY_CHARS:
+        return None
+
+    # Only the first line decides: a real summary may well contain "I cannot
+    # recommend shipping this" further down, and that is the model doing its job.
+    first_line = text.splitlines()[0].strip().lower() if text.splitlines() else ""
+    if any(first_line.startswith(prefix) for prefix in _REFUSAL_PREFIXES):
+        return None
+
+    return text

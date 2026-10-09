@@ -9,6 +9,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatEngineCount } from '@/lib/analysis/engine-count';
 import type { EngineStatusItem } from '@/types/domain/analysis';
 
 interface StatusStyle {
@@ -95,7 +96,16 @@ export function EngineStatusCard({
         {items.map((item) => {
           const style = STATUS_STYLES[item.status] ?? STATUS_STYLES.pending;
           const StatusIcon = style.icon;
-          const scoreText = formatScore(item.score);
+          // The row's real number: the score when this engine has one, and the
+          // engine's result count when it reports rows instead -- dead-code
+          // entries, error findings, hotspots, load levels. Without the second
+          // half these four rows showed nothing at all beside their name while
+          // the page's tiles below already carried the same counts.
+          const valueText =
+            item.status === 'completed'
+              ? formatScore(item.score) ??
+                (item.count != null ? formatEngineCount(item.count) : null)
+              : null;
 
           return (
             <div
@@ -113,7 +123,10 @@ export function EngineStatusCard({
                 )}
               />
 
-              <span className="text-[12px] text-foreground flex-1 min-w-0 truncate">
+              <span
+                className="text-[12px] text-foreground flex-1 min-w-0 truncate"
+                title={item.description || item.name}
+              >
                 {item.name}
               </span>
 
@@ -126,9 +139,9 @@ export function EngineStatusCard({
                 </span>
               )}
 
-              {item.status === 'completed' && scoreText != null && (
+              {valueText != null && (
                 <span className="text-[11px] text-text-secondary font-medium tabular-nums">
-                  {scoreText}
+                  {valueText}
                 </span>
               )}
 

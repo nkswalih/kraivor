@@ -2,12 +2,15 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/hooks';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useChatStore } from '@/lib/stores/chat-store';
 import { useUIStore } from '@/lib/stores/ui-store';
+import { useProfileDialogStore } from '@/lib/stores/profile-dialog-store';
+import { useSettingsDialogStore } from '@/lib/stores/settings-dialog-store';
+import { useInboxDialogStore } from '@/lib/stores/inbox-dialog-store';
 import { profileEndpoints, chatEndpoints, notificationEndpoints } from '@/lib/api/endpoints';
 import { getInitials, cn } from '@/lib/utils';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/shadcn/popover';
@@ -35,7 +38,14 @@ import {
 
 export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
   const pathname = usePathname();
-  const router = useRouter();
+  // Your own profile opens like anyone else's -- a card, not a navigation
+  // that would take you off the page you were reading.
+  const openProfile = useProfileDialogStore(s => s.open);
+  // Settings is a panel, not a page: these links keep their hrefs for
+  // copy-link and middle-click, but a plain click opens the panel over the
+  // page you are already on.
+  const openSettings = useSettingsDialogStore(s => s.open);
+  const openInbox = useInboxDialogStore(s => s.open);
   const { user, logout } = useAuth();
   const workspaceId = useAuthStore(s => s.workspaceId);
   const collapsed = useUIStore(s => s.sidebarCollapsed);
@@ -248,6 +258,10 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
       <div className="p-2 border-t border-krait-border space-y-0.5">
         <Link
           href={`/${workspaceSlug}/settings/workspace`}
+          onClick={e => {
+            e.preventDefault();
+            openSettings('workspace');
+          }}
           title={collapsed ? 'Workspaces' : undefined}
           className={cn(
             'flex items-center rounded-[6px] text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary transition-colors text-[13px] font-medium',
@@ -260,6 +274,10 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
 
         <Link
           href={`/${workspaceSlug}/inbox`}
+          onClick={e => {
+            e.preventDefault();
+            openInbox();
+          }}
           title={collapsed ? 'Inbox' : undefined}
           className={cn(
             'flex items-center rounded-[6px] text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary transition-colors text-[13px] font-medium',
@@ -279,6 +297,10 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
 
         <Link
           href={`/${workspaceSlug}/settings`}
+          onClick={e => {
+            e.preventDefault();
+            openSettings();
+          }}
           title={collapsed ? 'Settings' : undefined}
           className={cn(
             'flex items-center rounded-[6px] text-text-secondary hover:bg-krait-surface1/50 hover:text-text-primary transition-colors text-[13px] font-medium',
@@ -296,7 +318,7 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
         <div className={collapsed ? '' : 'mt-2'}>
           <button
             onClick={() => {
-              if (profile?.username) router.push(`/${workspaceSlug}/profile/${profile.username}`);
+              if (profile?.username) openProfile(profile.username);
             }}
             title={collapsed ? profile?.display_name || user?.name || 'Profile' : undefined}
             className={cn(

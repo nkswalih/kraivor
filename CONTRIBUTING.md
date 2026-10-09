@@ -198,13 +198,54 @@ docs(readme): update Docker setup instructions
 
 ### Before Opening a PR
 
+`make check` runs the hard CI gates in the order CI runs them:
+
+```bash
+make check          # lint + tests + security + frontend
+```
+
+Individually:
+
+- [ ] `make lint` passes (ruff, all four services) — **required**
+- [ ] `make test` passes and clears each service's coverage floor — **required**
+- [ ] `make security` passes (bandit + pip-audit) — **required**
+- [ ] `make frontend-check` passes (tsc, vitest, production build) — **required**
+- [ ] `make format` and `make typecheck` are clean — advisory, same as CI
 - [ ] Pre-commit hooks pass (`make precommit`)
-- [ ] All tests pass locally (`make test`)
-- [ ] Lint checks pass (`make lint`)
 - [ ] Rebased on latest `dev` branch
 - [ ] PR is focused on a single concern (small PRs review faster)
 - [ ] Description is clear and thorough
-- [ ] All CI checks pass (format, lint, type, security, tests)
+
+Two things worth knowing, because they used to hide failures:
+
+- **`make test` and `make lint` fail on failure.** They used to end every
+  command with `|| true`, so they exited 0 unconditionally and a broken suite
+  looked identical to a green one. They also ran `manage.py test` for the
+  Django services where CI runs `pytest`, which is a different test runner
+  against pytest-style suites — and it cannot produce the coverage report.
+  `make test` now runs `pytest --cov`, so the `fail_under` floor in each
+  service's `pyproject.toml` is enforced locally too.
+- **The frontend has no `services/` directory.** Its gates are the
+  `package.json` scripts: `npm run typecheck`, `npm test`, `npm run build`.
+  There is no separate lint target because `next build` runs ESLint as a
+  gate; `typecheck` and `vitest` both pass with lint errors present.
+
+### Coverage Floors
+
+Each service holds itself to its own number in its own `pyproject.toml`, under
+`[tool.coverage.report] fail_under`:
+
+| Service | Floor |
+|---------|-------|
+| `auth` | 88% |
+| `core` | 55% |
+| `analysis` | 64% |
+| `ai` | 27% |
+
+The floors are uneven on purpose. `ai` is a thin orchestration layer over
+provider SDKs and has little of its own to cover; `auth` holds credential and
+token logic where a missed branch is a security bug. Dropping a floor to make a
+red build green is not a fix — add the test.
 
 ### PR Template
 
@@ -296,8 +337,11 @@ All significant changes **must include tests**.
 ### Running Tests
 
 ```bash
-# All services
+# All services, with coverage gates -- what CI runs
 make test
+
+# Everything CI treats as a hard gate
+make check
 
 # Individual service (using uv)
 cd services/analysis && uv run pytest tests/ -v
@@ -305,6 +349,23 @@ cd services/analysis && uv run pytest tests/ -v
 # Frontend
 cd frontend && npm test
 ```
+
+### JWT Keys for the Auth Service
+
+`auth`'s test suite signs real JWTs and needs an RSA keypair on disk. CI
+generates it in `services/auth/.keys/`, which is gitignored, so a fresh clone
+will fail the auth suite until you create it once:
+
+```bash
+mkdir -p services/auth/.keys && cd services/auth/.keys
+openssl genrsa -out jwt-private.pem 2048
+openssl rsa -in jwt-private.pem -pubout -out jwt-public.pem
+```
+
+This never bit anyone before because `make test` ended in `|| true` and the
+auth service ran under `manage.py test` instead of `pytest`, so neither the
+missing keys nor a genuine failure could stop the run. Now that the gate is
+real, the missing keys surface as a genuine failure.
 
 ---
 

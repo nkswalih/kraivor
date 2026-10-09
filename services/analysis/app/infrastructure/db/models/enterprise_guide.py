@@ -39,6 +39,16 @@ class EnterpriseGuideModel(Base):
     )
     migration_path: Mapped[list[object] | None] = mapped_column(JSONB, nullable=True)
     ai_executive_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Why the summary is missing, when it is. See migration 0016 for why this
+    # lives beside `ai_executive_summary` rather than in `analysis_metadata`.
+    #
+    # Nullable and normally null: a run that produced a summary has no error.
+    # JSONB because the envelope is built by the AI service and read by a browser
+    # -- a fixed column set would need a migration revision every time a
+    # `ClassifiedError` category is added.
+    ai_summary_error: Mapped[dict[str, object] | None] = mapped_column(
+        JSONB, nullable=True
+    )
 
     # ── New structured columns ──────────────────────────────────
     repository_health: Mapped[dict[str, object] | None] = mapped_column(

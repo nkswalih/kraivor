@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { analysisService } from '@/lib/api/analysis-service';
+import type { ReEnrichResponse } from '@/lib/api/analysis-service';
 import type {
   AnalysisJob,
   AnalysisMetadataResponse,
@@ -16,6 +17,7 @@ import type {
   SimulationResultListResponse,
   ScoreHistoryListResponse,
   EnterpriseGuide,
+  EngineListResponse,
 } from '@/types/domain/analysis';
 
 // ─── Job Polling ────────────────────────────────────────
@@ -34,6 +36,26 @@ export function useJob(jobId: string | null) {
       if (terminalStatuses.has(data.status)) return false;
       return 2000;
     },
+  });
+}
+
+// ─── Engine Catalogue ───────────────────────────────────
+
+/**
+ * The analysis service's canonical engine list.
+ *
+ * This is static for the life of a deployment, so it is cached hard and never
+ * refetched on a poll. Returns null while loading so callers can show the
+ * engines they already know about rather than an empty list.
+ */
+export function useEngines() {
+  return useQuery<EngineListResponse>({
+    queryKey: ['analysis-engines'],
+    queryFn: () => analysisService.jobs.engines(),
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -86,6 +108,29 @@ export function useStartAnalysis() {
   return useMutation<AnalysisJob, Error, StartAnalysisRequest>({
     mutationFn: (data) => analysisService.jobs.start(data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['analysis-jobs'] });
+    },
+  });
+}
+
+// ─── Retry Failed Job (resume) ──────────────────────────
+
+/**
+ * Claim a failed run and continue it from the stage that failed.
+ *
+ * The invalidation of this job's own query is the load-bearing part:
+ * `useJob` stops polling while the cached status is terminal, so without it
+ * the page would keep showing the failure panel for a run the service has
+ * already queued -- the retry would be invisible until a manual refresh.
+ * `['analysis-jobs']` follows, so the list's status column does not lag
+ * behind either.
+ */
+export function useRetryJob() {
+  const queryClient = useQueryClient();
+  return useMutation<AnalysisJob, Error, string>({
+    mutationFn: (jobId) => analysisService.jobs.retry(jobId),
+    onSuccess: (_data, jobId) => {
+      queryClient.invalidateQueries({ queryKey: ['analysis-job', jobId] });
       queryClient.invalidateQueries({ queryKey: ['analysis-jobs'] });
     },
   });
@@ -204,7 +249,7 @@ export function useSimulationResults(jobId: string | null) {
 
 export function useReEnrich() {
   const queryClient = useQueryClient();
-  return useMutation<{ status: string; enriched: boolean }, Error, string>({
+  return useMutation<ReEnrichResponse, Error, string>({
     mutationFn: (jobId) => analysisService.jobs.reEnrich(jobId),
     onSuccess: (_data, jobId) => {
       queryClient.invalidateQueries({ queryKey: ['analysis-guide', jobId] });

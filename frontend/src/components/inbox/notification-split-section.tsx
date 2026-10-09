@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ThumbsUp } from 'lucide-react';
+import { CheckCheck, Loader2, ThumbsUp } from 'lucide-react';
+import { toast } from 'sonner';
 import { notificationEndpoints, workspaceEndpoints } from '@/lib/api/endpoints';
 import { formatRelativeTime } from '@/lib/utils';
 import type { Notification } from '@/types/api';
@@ -16,6 +17,13 @@ interface NotificationSplitSectionProps {
   filter?: (n: Notification) => boolean;
   /** Shown when the request resolves to nothing. */
   emptyMessage: string;
+  /**
+   * Renders a "Mark all read" bar over the list.
+   *
+   * Only the All section turns this on. `markAllRead` is global, so offering it
+   * from a filtered view would clear unread state outside what that view shows.
+   */
+  showMarkAllRead?: boolean;
 }
 
 /**
@@ -36,6 +44,7 @@ interface NotificationSplitSectionProps {
 export function NotificationSplitSection({
   filter,
   emptyMessage,
+  showMarkAllRead = false,
 }: NotificationSplitSectionProps) {
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -52,6 +61,11 @@ export function NotificationSplitSection({
     onSuccess: invalidate,
   });
 
+  const markAllReadMut = useMutation({
+    mutationFn: () => notificationEndpoints.markAllRead(),
+    onSuccess: invalidate,
+  });
+
   const dismissMut = useMutation({
     mutationFn: (id: string) => notificationEndpoints.dismiss(id),
     onSuccess: invalidate,
@@ -60,8 +74,12 @@ export function NotificationSplitSection({
   const acceptMut = useMutation({
     mutationFn: (token: string) => workspaceEndpoints.acceptInvitation(token),
     onSuccess: () => {
+      toast.success('Invitation accepted');
       invalidate();
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to accept invitation');
     },
   });
 
@@ -71,6 +89,7 @@ export function NotificationSplitSection({
 
   const all: Notification[] = notifications ?? [];
   const notifs = filter ? all.filter(filter) : all;
+  const unreadInList = notifs.filter(n => !n.read_at).length;
 
   if (notifs.length === 0) return <InboxEmpty message={emptyMessage} />;
 
@@ -81,7 +100,31 @@ export function NotificationSplitSection({
       hasSelection={!!selectedId}
       onBack={() => setSelectedId(null)}
       list={
-        <div className="p-3 space-y-1">
+        <>
+          {/* Sticky so it stays reachable while scrolled through the feed.
+              This replaces the popover's header action verbatim -- the label,
+              icon and wording are unchanged so it reads as the same control. */}
+          {showMarkAllRead && unreadInList > 0 && (
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-[#27272A] bg-[#0A0A0B] px-3 py-2">
+              <span className="text-[10px] font-semibold tracking-wider text-text-tertiary uppercase">
+                {unreadInList} unread
+              </span>
+              <button
+                type="button"
+                onClick={() => markAllReadMut.mutate()}
+                disabled={markAllReadMut.isPending}
+                className="flex items-center gap-1 text-[11px] text-venom-yellow hover:text-venom-gold transition-colors disabled:opacity-50"
+              >
+                {markAllReadMut.isPending ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <CheckCheck className="w-3 h-3" />
+                )}
+                Mark all read
+              </button>
+            </div>
+          )}
+          <div className="p-3 space-y-1">
           {notifs.map(n => {
             const isInvite = n.notification_type === 'workspace.invitation';
             const isFollow = n.notification_type === 'profile.follow.new';
@@ -149,7 +192,8 @@ export function NotificationSplitSection({
               </div>
             );
           })}
-        </div>
+          </div>
+        </>
       }
       detail={
         selected ? (

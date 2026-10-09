@@ -18,7 +18,7 @@ import { ToasterProvider } from './toaster-provider';
  *   components/profiles/create-profile-dialog.tsx
  *   components/analysis/enterprise-guide/AiExecutiveSummarySection.tsx
  *   components/community/share-dialog.tsx
- *   components/features/inbox-popover.tsx
+ *   components/features/inbox-popover.tsx (superseded by the inbox panel)
  *
  * So a failed profile update, a failed analysis delete and a failed reanalysis
  * all completed without a word to the user. The mount point was the bug; these

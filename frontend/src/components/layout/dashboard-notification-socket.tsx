@@ -14,6 +14,26 @@ export function DashboardNotificationSocket() {
   const queryClient = useQueryClient();
   const notifSocket = useRef<NotificationSocket | null>(null);
 
+  /* Browsers only allow audio after a user gesture, and this is the component
+     that plays the notification chime. Nothing it renders can cause a gesture,
+     so permission is primed on the first click or tap anywhere.
+
+     This used to happen in `InboxPopover`, which the panel superseded. The
+     popover was the only thing triggering it, so deleting it would have
+     silently disabled the chime; the listener lives here instead, which is
+     where the sound is actually needed. */
+  useEffect(() => {
+    const prime = () => {
+      import('@/lib/notification-sound').then(m => m.requestAudioPermission());
+    };
+    document.addEventListener('click', prime, { once: true });
+    document.addEventListener('touchstart', prime, { once: true });
+    return () => {
+      document.removeEventListener('click', prime);
+      document.removeEventListener('touchstart', prime);
+    };
+  }, []);
+
   const handleNotification = useCallback(
     (event: WsServerEvent & { type: 'notification' }) => {
       playNotificationSound();

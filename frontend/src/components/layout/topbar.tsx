@@ -13,7 +13,7 @@ import { CommandPalette } from '@/components/features/command-palette';
 import { ProfileDialog } from '@/components/profiles/profile-dialog';
 import { SettingsDialog } from '@/components/settings/settings-dialog';
 import { InboxDialog } from '@/components/inbox/inbox-dialog';
-import { InboxPopover } from '@/components/features/inbox-popover';
+import { InboxBell } from '@/components/inbox/inbox-bell';
 import { CreateWorkspaceDialog } from '@/components/features/create-workspace-dialog';
 
 const ROUTE_LABELS: Record<string, string> = {
@@ -202,7 +202,7 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
 
         {/* Icons */}
         <div className="flex items-center gap-1.5">
-          <InboxPopover />
+          <InboxBell />
 
           {/* VS Code Style Right Panel Toggle */}
           {/* <button

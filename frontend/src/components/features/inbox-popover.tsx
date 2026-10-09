@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 import { notificationEndpoints, workspaceEndpoints } from '@/lib/api/endpoints';
 import { useAuthStore } from '@/lib/stores/auth-store';
+import { useInboxDialogStore } from '@/lib/stores/inbox-dialog-store';
 import { formatRelativeTime } from '@/lib/utils';
 import type { Notification } from '@/types/api';
 
@@ -31,6 +32,7 @@ export function InboxPopover() {
   const queryClient = useQueryClient();
   const user = useAuthStore(s => s.user);
   const workspaces = useAuthStore(s => s.workspaces);
+  const openInbox = useInboxDialogStore(s => s.open);
 
   const { data: unreadCount } = useQuery({
     queryKey: ['unread-count'],
@@ -307,12 +309,19 @@ export function InboxPopover() {
                 </div>
               )}
               {notifications && notifications.length > 3 && (
-                <a
-                  href={`/inbox`}
-                  className="block text-[11px] text-venom-yellow hover:text-venom-gold text-center py-2 mt-1"
+                /* Was `href="/inbox"`, which matches no route -- the segment
+                   before `inbox` is the workspace slug. The full inbox is a
+                   panel now, so open it and let the popover close behind it. */
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    openInbox();
+                  }}
+                  className="block w-full text-[11px] text-venom-yellow hover:text-venom-gold text-center py-2 mt-1"
                 >
                   View all notifications
-                </a>
+                </button>
               )}
             </div>
 

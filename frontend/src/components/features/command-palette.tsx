@@ -4,6 +4,9 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUIStore, useAuthStore } from '@/lib/stores';
 import { useSearch } from '@/lib/hooks/use-search';
+import { useProfileDialogStore } from '@/lib/stores/profile-dialog-store';
+import { useSettingsDialogStore } from '@/lib/stores/settings-dialog-store';
+import { useInboxDialogStore } from '@/lib/stores/inbox-dialog-store';
 import {
   Search,
   Hash,
@@ -64,6 +67,9 @@ const typeLabels: Record<string, string> = {
 
 export function CommandPalette({ workspaceSlug }: { workspaceSlug: string }) {
   const router = useRouter();
+  const openProfile = useProfileDialogStore(s => s.open);
+  const openSettings = useSettingsDialogStore(s => s.open);
+  const openInbox = useInboxDialogStore(s => s.open);
   const isCommandPaletteOpen = useUIStore(s => s.isCommandPaletteOpen);
   const setCommandPaletteOpen = useUIStore(s => s.setCommandPaletteOpen);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -128,11 +134,34 @@ export function CommandPalette({ workspaceSlug }: { workspaceSlug: string }) {
 
   const handleSelect = (action: (typeof defaultActions)[0]) => {
     handleClose();
+    /* Settings and Inbox are panels now, so they open over the page you are on
+       instead of navigating to an address that renders nothing. */
+    if (action.id === 'settings') {
+      openSettings();
+      return;
+    }
+    if (action.id === 'inbox') {
+      openInbox();
+      return;
+    }
     router.push(action.href(workspaceSlug));
   };
 
   const handleSearchSelect = (result: (typeof results)[0]) => {
     handleClose();
+    // Search reports a person as `/profiles/{username}`, which is an API path
+    // and not a route in this app -- so it 404'd, and even had it resolved it
+    // would have been the one profile visit that still navigated. The card is
+    // what every other profile click opens, and the username arrives in
+    // `metadata`, so use it. Anything else keeps its url.
+    if (result.type === 'profile') {
+      const username =
+        typeof result.metadata?.username === 'string' ? result.metadata.username : '';
+      if (username) {
+        openProfile(username);
+        return;
+      }
+    }
     router.push(result.url);
   };
 

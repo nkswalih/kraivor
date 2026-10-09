@@ -10,6 +10,9 @@ import { useAuthStore } from '@/lib/stores/auth-store';
 import { useAiConversationStore } from '@/lib/stores/ai-conversation-store';
 import { useBreadcrumbStore } from '@/lib/stores/breadcrumb-store';
 import { CommandPalette } from '@/components/features/command-palette';
+import { ProfileDialog } from '@/components/profiles/profile-dialog';
+import { SettingsDialog } from '@/components/settings/settings-dialog';
+import { InboxDialog } from '@/components/inbox/inbox-dialog';
 import { InboxPopover } from '@/components/features/inbox-popover';
 import { CreateWorkspaceDialog } from '@/components/features/create-workspace-dialog';
 
@@ -220,6 +223,13 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
       />
 
       <CommandPalette workspaceSlug={workspaceSlug} />
+      {/* One card for every profile click in the workspace, whoever navigates
+          to it: chat, community, search, the sidebar. */}
+      <ProfileDialog workspaceSlug={workspaceSlug} />
+      {/* One panel for settings, opened over whatever page you were on. */}
+      <SettingsDialog workspaceSlug={workspaceSlug} />
+      {/* One panel for the inbox, for the same reason. */}
+      <InboxDialog workspaceSlug={workspaceSlug} />
     </header>
   );
 }

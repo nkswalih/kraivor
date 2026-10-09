@@ -21,6 +21,7 @@ Severity is about impact, not about whether it blocks this migration.
 | F11 | local env | untracked `.env`, `.env.bak-20260930-233203`, `.env.production` and a repo-root `.venv/` exist on disk (uv warns `VIRTUAL_ENV` mismatch) | `BASELINE` capture; `.gitignore:2` | local hygiene; delete stale `.env.bak-*` and root `.venv` | info |
 | F12 | dead scaffolds | `services/notifications` (all `app/` 0-byte; `fail_under=90` passes vacuously) and `services/realtime` (Dockerfile runs `npm install` with no `package.json`) fail to build | `BASELINE`; service listings | **resolved by this migration** (Phase 0.5 removes both) | — |
 | F13 | uv version drift | core/auth Dockerfiles use `ghcr.io/astral-sh/uv:0.4.30`; analysis/ai use `0.11.7` | `Dockerfile*` grep | **normalised by this migration** (Phase 2e) | — |
+| F14 | compose | `docker-compose.prod.yml` cannot be validated with `docker compose config`, alone or layered on the base: it sets `profiles: ["removed"]` on `postgres`/`redis`/`kafka`/`dynamodb-local`/`frontend`, so dependents such as `ai` fail with `depends on undefined service "postgres"` | `docker-compose.prod.yml:12–26`; observed in Phase 0.5 | document that prod validation needs `--profile`, or decouple `depends_on` from profiled infra | low |
 
 ## Notes
 

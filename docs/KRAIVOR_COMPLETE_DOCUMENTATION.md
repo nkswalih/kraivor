@@ -203,15 +203,15 @@ While most analysis tools focus on 2-3 languages, Kraivor's `ChainedParser` supp
 │         │                  │                                         │
 │         ▼                  ▼                                         │
 │  ┌──────────────┐   ┌──────────────┐   ┌──────────────────┐        │
-│  │   Analysis   │   │      AI      │   │  Notifications   │        │
-│  │   :8003      │   │   :8004      │   │   :8005          │        │
-│  │   FastAPI    │   │   FastAPI    │   │   FastAPI        │        │
+│  │   Analysis   │   │      AI      │   │  Channels (WS)   │        │
+│  │   :8003      │   │   :8004      │   │   (in Core)      │        │
+│  │   FastAPI    │   │   FastAPI    │   │   (Django)       │        │
 │  └──────┬───────┘   └──────┬───────┘   └──────────────────┘        │
 │         │                  │                                         │
 │         ▼                  ▼                                         │
 │  ┌─────────────────────────────────────────────────────────┐        │
-│  │                    Realtime :8006                        │        │
-│  │               Node.js + Socket.io + Kafka                │        │
+│  │   Core Channels — WebSocket + notifications (:8002)      │        │
+│  │   WebSocket + presence, served by the Core service       │        │
 │  └─────────────────────────────────────────────────────────┘        │
 │                                                                     │
 │  ┌─────────────────────────────────────────────────────────┐        │
@@ -407,28 +407,32 @@ While most analysis tools focus on 2-3 languages, Kraivor's `ChainedParser` supp
 
 ---
 
-### 6.5 Notifications Service (FastAPI — Port 8005 — Stubs)
+### 6.5 Notifications (served by Core)
 
 **Purpose**: Email (AWS SES), Slack, push notifications
 
-**Status**: Stubs only (Lambda variant implemented at `infra/lambda/notifications/main.py`)
+**Status**: In-app notifications and dispatch live in the Core service
+(`services/core/apps/notifications/`). The serverless Lambda variant remains at
+`infra/lambda/notifications/main.py`. There is no standalone FastAPI
+notification service.
 
 **Delivery Channels:**
 - **Email** — AWS SES with HTML templates
 - **Slack** — Webhook-based Slack message posting
 - **Push** — Firebase Cloud Messaging (FCM)
-- **In-App** — Notifications stored in core service DB
+- **In-App** — Notifications stored in the Core service DB
 
 ---
 
-### 6.6 Realtime Service (Node.js + Socket.io — Port 8006 — Stubs)
+### 6.6 Realtime (served by Core)
 
 **Purpose**: WebSocket connections, presence, real-time updates
 
-**Status**: Stubs only
+**Status**: WebSocket fan-out, presence, and chat delivery are served by the Core
+service via Django Channels. There is no standalone Node.js realtime service.
 
 **Architecture:**
-- Socket.io server with Redis adapter for multi-instance scaling
+- Django Channels (ASGI) with a Redis channel layer for multi-instance scaling
 - Kafka consumer for cross-service event streaming
 - Room-based subscription management
 - Presence tracking (online/offline/away)
@@ -445,7 +449,7 @@ While most analysis tools focus on 2-3 languages, Kraivor's `ChainedParser` supp
 - **Styling**: TailwindCSS with custom "krait-" design tokens (dark theme, venom-yellow accent)
 - **State Management**: Zustand (persisted to localStorage)
 - **API Client**: Axios (with token refresh interceptor + request queue) + native fetch
-- **Real-time**: Socket.io client
+- **Real-time**: WebSocket client (Django Channels in Core)
 
 **Route Structure:**
 ```
@@ -498,7 +502,7 @@ Used for chat message storage (NoSQL for high-volume write throughput):
 | Cache (general) | String/Hash | allkeys-lru |
 | Rate Limiting | Sorted Set | volatile-lru |
 | Session Store | String | allkeys-lru |
-| Socket.io Adapter | Pub/Sub | N/A |
+| Channels layer (Redis) | Pub/Sub | N/A |
 | Job Locks | String (NX) | volatile-lru |
 
 ### 7.4 pgvector
@@ -1269,7 +1273,7 @@ celery_app.conf.update(
 - **Rate Limiting** — Sliding window rate limiting via sorted sets
 - **Session Store** — Distributed session storage across service instances
 - **Job Locks** — Distributed locks to prevent duplicate job execution
-- **Socket.io Adapter** — Multi-instance WebSocket message broadcasting
+- **Channels layer (Redis)** — Multi-instance WebSocket message broadcasting
 
 **Configuration:**
 ```yaml
@@ -1456,7 +1460,7 @@ def handler(event, context):
 
 ### 12.13 WebSocket
 
-**Where Used:** Core Service (Django Channels), Realtime Service (Socket.io — planned)
+**Where Used:** Core Service (Django Channels)
 
 **What It Does:** WebSocket provides full-duplex communication channels over a single TCP connection.
 
@@ -1512,15 +1516,15 @@ SENTRY_TRACES_SAMPLE_RATE=0.2  # Sample 20% of transactions
 - **Event sourcing** — Audit trail of all analysis requests and completions
 - **Buffering** — Handles traffic spikes by queuing events
 - **Replay capability** — Re-process events for debugging or recovery
-- **Multiple consumers** — Both core service and realtime service consume analysis events
+- **Multiple consumers** — Core consumes analysis events for realtime fan-out and notifications
 
 **Topics:**
 | Topic | Producer | Consumers | Message Type |
 |-------|----------|-----------|-------------|
-| `analysis.requested` | Analysis Service | Core, Realtime | Analysis job started |
-| `analysis.completed` | Analysis Service | Core, Realtime | Analysis results ready |
-| `analysis.failed` | Analysis Service | Core, Realtime | Analysis job failed |
-| `notification.required` | Core Service | Notifications | Send notification |
+| `analysis.requested` | Analysis Service | Core | Analysis job started |
+| `analysis.completed` | Analysis Service | Core | Analysis results ready |
+| `analysis.failed` | Analysis Service | Core | Analysis job failed |
+| `notification.required` | Core Service | Core | Send notification |
 
 ---
 
@@ -1586,8 +1590,6 @@ SENTRY_TRACES_SAMPLE_RATE=0.2  # Sample 20% of transactions
 | analysis | 2 | 500m/1000m | 512Mi/1Gi |
 | ai | 2 | 500m/1000m | 512Mi/1Gi |
 | frontend | 2 | 250m/500m | 256Mi/512Mi |
-| notifications | 1 | default | default |
-| realtime | 1 | default | default |
 
 **Features:**
 - Horizontal Pod Autoscaler (HPA) for auto-scaling

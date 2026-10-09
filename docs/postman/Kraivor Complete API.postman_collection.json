@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "kraivor-complete-api",
 		"name": "Kraivor Complete API",
-		"description": "Complete Postman collection for Kraivor platform including all services: Auth, Core, Analysis, AI, and Notification services. Use the environment file to configure base URLs.",
+		"description": "Complete Postman collection for Kraivor platform including all services: Auth, Core (including notifications), Analysis, and AI services. Use the environment file to configure base URLs.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -29,11 +29,6 @@
 		{
 			"key": "aiBaseUrl",
 			"value": "{{aiBaseUrl}}",
-			"type": "string"
-		},
-		{
-			"key": "notificationsBaseUrl",
-			"value": "{{notificationsBaseUrl}}",
 			"type": "string"
 		},
 		{
@@ -1987,18 +1982,18 @@
 			]
 		},
 		{
-			"name": "Notification Service",
+			"name": "Notifications (Core)",
 			"item": [
 				{
 					"name": "Health Check",
 					"request": {
 						"method": "GET",
 						"url": {
-							"raw": "{{notificationsBaseUrl}}/api/health/",
-							"host": ["{{notificationsBaseUrl}}"],
+							"raw": "{{coreBaseUrl}}/api/health/",
+							"host": ["{{coreBaseUrl}}"],
 							"path": ["api", "health", ""]
 						},
-						"description": "Health check endpoint for Notification Service"
+						"description": "Health check endpoint for the Core service"
 					},
 					"response": []
 				},
@@ -2011,8 +2006,8 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{notificationsBaseUrl}}/api/notifications/",
-									"host": ["{{notificationsBaseUrl}}"],
+									"raw": "{{coreBaseUrl}}/api/notifications/",
+									"host": ["{{coreBaseUrl}}"],
 									"path": ["api", "notifications", ""]
 								},
 								"description": "List all notifications for the current user"
@@ -2039,8 +2034,8 @@
 									}
 								},
 								"url": {
-									"raw": "{{notificationsBaseUrl}}/api/notifications/{{notificationId}}/",
-									"host": ["{{notificationsBaseUrl}}"],
+									"raw": "{{coreBaseUrl}}/api/notifications/{{notificationId}}/",
+									"host": ["{{coreBaseUrl}}"],
 									"path": ["api", "notifications", "{{notificationId}}", ""]
 								},
 								"description": "Mark a notification as read"
@@ -2053,9 +2048,9 @@
 								"method": "POST",
 								"header": [],
 						"url": {
-									"raw": "{{notificationsBaseUrl}}/api/notifications/read-all/",
-									"host": ["{{notificationsBaseUrl}}"],
-									"path": ["api", "notifications", "read-all", ""]
+									"raw": "{{coreBaseUrl}}/api/notifications/",
+									"host": ["{{coreBaseUrl}}"],
+									"path": ["api", "notifications", ""]
 								},
 								"description": "Mark all notifications as read"
 							},
@@ -2067,58 +2062,11 @@
 								"method": "DELETE",
 								"header": [],
 								"url": {
-									"raw": "{{notificationsBaseUrl}}/api/notifications/{{notificationId}}/",
-									"host": ["{{notificationsBaseUrl}}"],
+									"raw": "{{coreBaseUrl}}/api/notifications/{{notificationId}}/",
+									"host": ["{{coreBaseUrl}}"],
 									"path": ["api", "notifications", "{{notificationId}}", ""]
 								},
 								"description": "Delete a notification"
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Preferences",
-					"item": [
-						{
-							"name": "Get Preferences",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{notificationsBaseUrl}}/api/preferences/",
-									"host": ["{{notificationsBaseUrl}}"],
-									"path": ["api", "preferences", ""]
-								},
-								"description": "Get notification preferences"
-							},
-							"response": []
-						},
-						{
-							"name": "Update Preferences",
-							"request": {
-								"method": "PATCH",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"email_enabled\": true,\n    \"push_enabled\": true,\n    \"analysis_completed\": true,\n    \"ai_responses\": true,\n    \"workspace_invites\": true\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{notificationsBaseUrl}}/api/preferences/",
-									"host": ["{{notificationsBaseUrl}}"],
-									"path": ["api", "preferences", ""]
-								},
-								"description": "Update notification preferences"
 							},
 							"response": []
 						}

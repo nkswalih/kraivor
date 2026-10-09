@@ -60,7 +60,7 @@ docker-compose -f docker-compose.dev.yml down -v
 
 ## Full Stack
 
-Starts all services: postgres, redis, kafka, identity, core, analysis, ai, notifications, realtime, frontend, nginx.
+Starts all services: postgres, redis, kafka, identity, core, analysis, ai, frontend, nginx.
 
 ```bash
 # Start everything
@@ -330,8 +330,6 @@ Open **http://localhost:8025** — MailHog catches all outgoing email.
 | Core API      | http://localhost:8002/api/   | Full stack only              |
 | Analysis API  | http://localhost:8003/api/   | Full stack only              |
 | AI API        | http://localhost:8004/api/   | Full stack only              |
-| Notifications | http://localhost:8005/api/   | Full stack only              |
-| Realtime WS   | ws://localhost:8006          | Full stack only              |
 | Frontend      | http://localhost:3000        | Full stack only              |
 | Nginx         | http://localhost:80          | Full stack only              |
 | MailHog UI    | http://localhost:8025        | Dev email catcher            |

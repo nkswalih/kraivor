@@ -13,16 +13,13 @@ gateway, with no single place describing the whole path.
 | `core` (`services/core`) | 8002 | Django 5 + DRF | Workspaces, projects, tasks, knowledge, repos, chat, search, notifications |
 | `analysis` (`services/analysis`) | 8003 | FastAPI | Repo analysis, rule engine, scoring |
 | `ai` (`services/ai`) | 8004 | FastAPI | Agent orchestration, RAG, LLM providers |
-| `realtime` (`services/realtime`) | 8006 | Node.js | WebSocket fan-out, chat delivery, presence |
-| `notifications` (`services/notifications`) | 8005 | FastAPI | **Not implemented — see its README** |
 
 Supporting infrastructure: `postgres`, `redis`, `kafka`, `dynamodb-local`,
 `mailhog`, `nginx`.
 
-> `notifications` is listed here because it appears in the compose file, but
-> every file under `services/notifications/app/` is 0 bytes. Notification
-> behaviour actually lives in `core/apps/notifications/`. Do not go looking for
-> it in the service of the same name.
+> Chat (WebSocket) and notifications are served by `core` — via Django Channels
+> and `core/apps/notifications/` respectively. There are no separate `realtime`
+> or `notifications` services.
 
 ## Request path
 
@@ -33,7 +30,7 @@ Browser
 nginx (API gateway)  ── terminates TLS, routes by path prefix
   │
   │  Proxies /auth/* → identity, /core/* → core, /analysis/* → analysis, /ai/* → ai
-  │  Proxies /ws/*   → realtime
+  │  Proxies /ws/*   → core (Django Channels)
   ▼
 Django service (identity or core)
   │

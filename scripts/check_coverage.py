@@ -4,12 +4,12 @@
 ``fail_under`` in a service's pyproject.toml is enforced by pytest-cov, and it
 is a good gate. It has one blind spot, though, and this check closes it.
 
-A percentage of zero statements is 100%. ``services/notifications`` declares
-``fail_under = 90`` and passes it, because every module under ``app/`` is a
-0-byte file: there is nothing to execute, so coverage measures nothing and
-reports total success. The same thing happens the moment real code is moved,
-renamed out of the measured paths, or excluded by a pattern -- the floor stays
-green while the tests it was supposed to vouch for stop running.
+A percentage of zero statements is 100%. A package whose modules are all empty
+declares a high ``fail_under`` and passes it, because there is nothing to
+execute, so coverage measures nothing and reports total success. The same thing
+happens the moment real code is moved, renamed out of the measured paths, or
+excluded by a pattern -- the floor stays green while the tests it was supposed
+to vouch for stop running.
 
 So this checks three things, not one:
 

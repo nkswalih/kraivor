@@ -118,9 +118,6 @@ succeeded":
   carries an explicit `--ignore-vuln PYSEC-2026-3075` for the `ai` service
   rather than dropping the check, so the suppression is visible and reviewable.
   Remove it when `argostranslate` relaxes its pin.
-- **`services/notifications` is an empty scaffold** with no deployable
-  entrypoint. If anything expects it to be running, it is not.
-
 ### Accepted risk: DNS rebinding in the URL guard
 
 The AI service's outbound-fetch guard (`services/ai/app/core/url_guard.py`)

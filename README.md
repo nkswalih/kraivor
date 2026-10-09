@@ -126,11 +126,6 @@ flowchart LR
         CORE[Core API<br/>Django DRF]
         AN[Analysis<br/>FastAPI]
         AI[AI<br/>FastAPI]
-        NOTIF[Notifications<br/>FastAPI]
-    end
- 
-    subgraph Realtime
-        WS[Realtime Service<br/>Node.js / WebSocket]
     end
  
     subgraph Async
@@ -143,20 +138,17 @@ flowchart LR
     end
  
     FE --> GW
-    FE <--> WS
+    FE <-->|/ws/ WebSocket| GW
     GW --> ID
     GW --> CORE
     GW --> AN
     GW --> AI
-    GW --> NOTIF
  
     ID --> Q
     CORE --> Q
     AN --> Q
     AI --> Q
-    NOTIF --> Q
  
-    Q --> WS
     ID --> DB
     CORE --> DB
     AN --> DB
@@ -174,14 +166,9 @@ flowchart LR
 | Core API | `8002` | Django DRF | Workspaces, Repos, Notes, Projects |
 | Analysis | `8003` | FastAPI | Repo Analyzer, Rule Engine, Scoring |
 | AI | `8004` | FastAPI | Multi-Agent AI, RAG Pipeline |
-| Notifications | `8005` | FastAPI | **Scaffold only — not implemented** |
-| Realtime | `8006` | Node.js | WebSocket, Chat, Presence |
 
-> `services/notifications` exists as a scaffold: every file under its `app/`
-> directory is 0 bytes, it has no tests, and it is not in the CI matrix. The
-> working notification code lives in `services/core/apps/notifications/`. See
-> [`services/notifications/README.md`](services/notifications/README.md) before
-> relying on it.
+> Chat (WebSocket, via Django Channels) and notifications are served by the
+> Core service — there are no separate `realtime`/`notifications` services.
 
 **Architecture Principles:**
 

@@ -38,20 +38,6 @@ spec:
             name: ai-service
             port:
               number: 8004
-      - path: /api/notifications
-        pathType: Prefix
-        backend:
-          service:
-            name: notifications-service
-            port:
-              number: 8005
-      - path: /ws
-        pathType: Prefix
-        backend:
-          service:
-            name: realtime-service
-            port:
-              number: 8006
   - host: kraivor.com
     http:
       paths:

@@ -224,9 +224,8 @@ jobs:
 
       - name: Verify the coverage report is real
         # pytest-cov already enforces fail_under, but a percentage cannot tell
-        # 27% of a large package apart from 100% of an empty one -- and
-        # services/notifications sits at fail_under 90 with every module under
-        # app/ a 0-byte file, which passes on a report that measured nothing.
+        # 27% of a large package apart from 100% of an empty one -- an empty
+        # package passes on a report that measured nothing.
         # This rejects a missing report, one that measured too little to be
         # evidence, and a rate below the floor. It recomputes the percentage
         # the way coverage.py does, branches included, so this number and the

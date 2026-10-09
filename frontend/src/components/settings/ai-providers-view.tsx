@@ -14,12 +14,14 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ListSkeleton } from '@/components/settings/settings-skeletons';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { AI_PROVIDERS, AI_PROVIDER_ORDER } from '@/constants/ai-providers';
 
 /* ─── Types ─────────────────────────────────────────────── */
 
 interface ProviderStatus {
+  provider: string;
   name: string;
   has_key: boolean;
   last_validated: string | null;
@@ -31,6 +33,22 @@ interface ModelAssignment {
   display_name: string;
   provider: string;
   providers: string[];
+}
+
+/** Shapes as the API actually sends them, normalized on the way in. */
+interface RawProviderStatus {
+  provider?: string;
+  name?: string;
+  has_key?: boolean;
+  last_validated?: string | null;
+  custom_url?: string | null;
+}
+
+interface RawModelConfig {
+  model_id?: string;
+  model_name?: string;
+  selected_provider?: string | null;
+  available_providers?: Array<{ provider?: string }> | null;
 }
 
 /* ─── Provider metadata ─────────────────────────────────── */
@@ -120,11 +138,38 @@ export function AiProvidersView() {
       ]);
       if (provRes.ok) {
         const data = await provRes.json();
-        setProviders(data.providers || []);
+        // The API puts the provider *id* on `provider` (`anthropic`) and the
+        // human label on `name` (`Anthropic`); the status lookup below matches
+        // ids from PROVIDER_ORDER, so keep them apart here.
+        setProviders(
+          ((data.providers ?? []) as RawProviderStatus[]).map(p => ({
+            provider: p.provider ?? '',
+            name: p.name ?? p.provider ?? '',
+            has_key: p.has_key ?? false,
+            last_validated: p.last_validated ?? null,
+            custom_url: p.custom_url ?? null,
+          }))
+        );
       }
       if (modelRes.ok) {
         const data = await modelRes.json();
-        setModels(data.models || []);
+        // The API sends `available_providers` as objects and the user's pick as
+        // `selected_provider`; the table below wants a list of ids and one
+        // current id. Normalizing here means a partial payload degrades to an
+        // empty row instead of throwing mid-render.
+        setModels(
+          ((data.models ?? []) as RawModelConfig[]).map(m => {
+            const optionIds = (m.available_providers ?? [])
+              .map(opt => opt?.provider)
+              .filter((p): p is string => Boolean(p));
+            return {
+              model_id: m.model_id ?? '',
+              display_name: m.model_name ?? m.model_id ?? '',
+              provider: m.selected_provider ?? optionIds[0] ?? '',
+              providers: optionIds,
+            };
+          })
+        );
       }
     } catch {
       // silent
@@ -220,14 +265,15 @@ export function AiProvidersView() {
       {/* ── Provider Keys ────────────────────────────────────── */}
       <Section title="Provider Keys">
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-text-tertiary" />
-          </div>
+          <ListSkeleton rows={3} avatar={false} />
         ) : (
           <div className="space-y-1.5 max-w-[560px]">
             {PROVIDER_ORDER.map(key => {
               const meta = PROVIDERS[key];
-              const status = providers.find(p => p.name === key);
+              // The API returns provider *ids* on `provider` and human labels
+              // on `name`; matching on `name` here meant every row reported
+              // "no key saved" regardless of what the server said.
+              const status = providers.find(p => p.provider === key);
               const hasKey = status?.has_key ?? false;
               const isEditing = editingProvider === key;
 
@@ -408,6 +454,9 @@ export function AiProvidersView() {
         <p className="text-[12px] text-text-secondary mb-3">
           Choose which provider to use for each BYOK model. Models can route through native APIs or OpenRouter.
         </p>
+        {loading ? (
+          <ListSkeleton rows={6} avatar={false} />
+        ) : (
         <div className="border border-krait-border rounded-xl overflow-hidden max-w-[560px]">
           <table className="w-full">
             <thead>
@@ -425,23 +474,31 @@ export function AiProvidersView() {
                     </span>
                   </td>
                   <td className="px-4 py-2.5">
+                    {(model.providers ?? []).length === 0 ? (
+                      /* The server can list a model it has no backend for yet.
+                         An empty <select> just renders as a blank cell, so say
+                         so instead of implying the user can pick something. */
+                      <span className="text-[11px] text-text-tertiary">No providers</span>
+                    ) : (
                     <select
                       value={model.provider}
                       onChange={e => handleModelProviderChange(model.model_id, e.target.value)}
                       className="bg-krait-surface-1 border border-krait-border rounded-md px-2 py-1 text-[11px] text-text-primary focus:outline-none focus:border-primary/40 transition-colors cursor-pointer"
                     >
-                      {model.providers.map(p => (
+                      {(model.providers ?? []).map(p => (
                         <option key={p} value={p}>
                           {PROVIDERS[p]?.name || p}
                         </option>
                       ))}
                     </select>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        )}
       </Section>
 
       {/* ── Security Note ────────────────────────────────────── */}

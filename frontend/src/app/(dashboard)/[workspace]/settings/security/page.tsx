@@ -1,7 +1,7 @@
 'use client';
 
-import { SecurityAndKeysView } from '@/components/settings/security-and-keys-view';
+import { SettingsRouteGate } from '@/components/settings/settings-route-gate';
 
-export default function SecurityPage() {
-  return <SecurityAndKeysView />;
+export default function SecuritySettingsPage() {
+  return <SettingsRouteGate section="security" />;
 }

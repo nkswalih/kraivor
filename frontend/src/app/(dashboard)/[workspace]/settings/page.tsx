@@ -1,16 +1,24 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { useSettingsDialogStore } from '@/lib/stores/settings-dialog-store';
 
+/**
+ * `/settings` is the address people type; Preferences is what it shows. Say so
+ * in the URL -- the panel is open either way, so this is for the address bar,
+ * not for the UI.
+ */
 export default function SettingsIndexPage() {
   const router = useRouter();
   const params = useParams<{ workspace: string }>();
-  const slug = params?.workspace ?? '';
+  const workspace = params?.workspace ?? '';
+  const open = useSettingsDialogStore(s => s.open);
 
   useEffect(() => {
-    router.replace(`/${slug}/settings/preferences`);
-  }, [slug, router]);
+    open('preferences');
+    if (workspace) router.replace(`/${workspace}/settings/preferences`);
+  }, [workspace, router, open]);
 
   return null;
 }

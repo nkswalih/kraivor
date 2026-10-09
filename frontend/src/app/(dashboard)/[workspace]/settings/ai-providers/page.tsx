@@ -1,7 +1,7 @@
 'use client';
 
-import { AiProvidersView } from '@/components/settings/ai-providers-view';
+import { SettingsRouteGate } from '@/components/settings/settings-route-gate';
 
-export default function AiProvidersPage() {
-  return <AiProvidersView />;
+export default function AiProvidersSettingsPage() {
+  return <SettingsRouteGate section="ai-providers" />;
 }

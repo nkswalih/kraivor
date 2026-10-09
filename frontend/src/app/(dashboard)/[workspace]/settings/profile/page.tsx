@@ -1,7 +1,7 @@
 'use client';
 
-import { ProfileView } from '@/components/settings/profile-view';
+import { SettingsRouteGate } from '@/components/settings/settings-route-gate';
 
-export default function ProfilePage() {
-  return <ProfileView />;
+export default function ProfileSettingsPage() {
+  return <SettingsRouteGate section="profile" />;
 }

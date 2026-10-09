@@ -1,7 +1,7 @@
 'use client';
 
-import { PreferencesView } from '@/components/settings/preferences-view';
+import { SettingsRouteGate } from '@/components/settings/settings-route-gate';
 
-export default function PreferencesPage() {
-  return <PreferencesView />;
+export default function PreferencesSettingsPage() {
+  return <SettingsRouteGate section="preferences" />;
 }

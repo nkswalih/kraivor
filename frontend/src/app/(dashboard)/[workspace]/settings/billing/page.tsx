@@ -1,7 +1,7 @@
 'use client';
 
-import { BillingView } from '@/components/settings/billing-view';
+import { SettingsRouteGate } from '@/components/settings/settings-route-gate';
 
-export default function BillingPage() {
-  return <BillingView />;
+export default function BillingSettingsPage() {
+  return <SettingsRouteGate section="billing" />;
 }

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useSessions, useRevokeAllSessions, useApiKeys, useCreateApiKey, useRevokeApiKey } from '@/lib/hooks/use-settings';
 import { cn } from '@/lib/utils';
+import { ListSkeleton } from '@/components/settings/settings-skeletons';
 
 /* ── Connected OAuth apps (static for now) ────────────────────────── */
 
@@ -87,9 +88,7 @@ export function SecurityAndKeysView() {
       {/* ── 1. Active Sessions ───────────────────────────────────── */}
       <Section title="Active Sessions">
         {sessionsLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-text-tertiary" />
-          </div>
+          <ListSkeleton rows={2} avatar={false} />
         ) : sessions.length === 0 ? (
           <p className="text-[13px] text-text-tertiary py-4">No active sessions.</p>
         ) : (
@@ -250,7 +249,7 @@ function PATSection() {
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-text-tertiary" /></div>;
+    return <ListSkeleton rows={2} avatar={false} />;
   }
 
   return (

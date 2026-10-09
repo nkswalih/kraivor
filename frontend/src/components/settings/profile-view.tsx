@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Camera, Loader2, Check, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useMyProfile, useUpdateProfile, useUploadProfileImage } from '@/lib/hooks/use-settings';
+import { FormSkeleton } from '@/components/settings/settings-skeletons';
 import { cn } from '@/lib/utils';
 
 export function ProfileView() {
@@ -97,11 +98,9 @@ export function ProfileView() {
   );
 
   if (profileLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-5 h-5 animate-spin text-[#6b6b70]" />
-      </div>
-    );
+    /* Paints the shape of the form rather than a spinner, so the fields
+       appear to settle into place instead of dropping out of nowhere. */
+    return <FormSkeleton />;
   }
 
   const displayNameVal = displayName || user?.name || '';

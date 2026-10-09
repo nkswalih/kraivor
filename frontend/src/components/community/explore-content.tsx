@@ -7,6 +7,7 @@ import { useDiscussions } from '@/lib/hooks/use-community';
 import { useProfileSearch } from '@/lib/hooks/use-profiles';
 import { useAuthorProfiles } from '@/lib/hooks/use-profiles';
 import { useCommunityStore } from '@/lib/stores/community-store';
+import { useProfileDialogStore } from '@/lib/stores/profile-dialog-store';
 import { DiscussionCard } from './discussion-card';
 import { UserRow } from '@/components/users/user-row';
 import { MessageButton } from '@/components/profiles/message-button';
@@ -15,6 +16,7 @@ import { Skeleton } from '@/components/ui/shadcn';
 export function ExploreContent() {
   const params = useParams();
   const workspace = params?.workspace as string;
+  const openProfile = useProfileDialogStore(s => s.open);
   const searchQuery = useCommunityStore(s => s.searchQuery);
   const [debounced, setDebounced] = useState('');
 
@@ -155,6 +157,7 @@ export function ExploreContent() {
                 name={profile.display_name}
                 avatarUrl={profile.avatar_url}
                 fallbackAvatarUrl={profile.user_avatar_url}
+                onOpenProfile={() => openProfile(profile.username)}
                 secondary={
                   <>
                     @{profile.username} · {profile.reputation_score} rep

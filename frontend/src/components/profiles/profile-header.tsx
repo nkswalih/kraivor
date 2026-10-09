@@ -85,7 +85,7 @@ export function ProfileHeader({ profile, userAvatarUrl, workspaceSlug }: Profile
             {profile.is_owner && (
               <button
                 onClick={() => router.push(workspaceSlug ? `/profile/${profile.username}/edit?from=${workspaceSlug}` : `/profile/${profile.username}/edit`)}
-                className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md border border-border hover:bg-accent transition-colors"
+                className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md border border-border hover:bg-muted/60 transition-colors"
               >
                 <Pencil className="w-3.5 h-3.5" />
                 Edit Profile
@@ -93,7 +93,7 @@ export function ProfileHeader({ profile, userAvatarUrl, workspaceSlug }: Profile
             )}
             <button
               onClick={handleShare}
-              className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md border border-border hover:bg-accent transition-colors"
+              className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md border border-border hover:bg-muted/60 transition-colors"
             >
               <Share2 className="w-3.5 h-3.5" />
               Share

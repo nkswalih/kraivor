@@ -23,6 +23,7 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import { ProfileLink } from '@/components/profiles/profile-link';
 
 function timeAgo(date: string): string {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
@@ -234,12 +235,13 @@ function CommentItem({
     <div className={`${depth > 0 ? 'border-l-2 border-border pl-3' : ''} py-2`}>
       <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-1">
         <Avatar src={authorAvatarUrl} name={authorDisplayName} size="sm" />
-        <Link
-          href={`/${workspace}/profile/${authorUsername}`}
+        <ProfileLink
+          username={authorUsername}
+          workspaceSlug={workspace}
           className="font-medium text-foreground hover:underline"
         >
           {authorDisplayName}
-        </Link>
+        </ProfileLink>
         <span>·</span>
         <span>{timeAgo(comment.created_at)}</span>
       </div>

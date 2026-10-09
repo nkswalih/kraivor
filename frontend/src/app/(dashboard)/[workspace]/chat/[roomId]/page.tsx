@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Hash, Send, Loader2, ChevronDown, Trash2, Edit3, X, Check } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/auth-store';
@@ -14,6 +13,7 @@ import { ChatSocket } from '@/lib/ws/chat-socket';
 import { ChannelSidebar } from '@/components/chat/chat-channel-sidebar';
 import { MembersPanel } from '@/components/chat/chat-members-panel';
 import { PresenceAvatar } from '@/components/chat/presence-avatar';
+import { ProfileLink } from '@/components/profiles/profile-link';
 import { formatRelativeTime, avatarUrl } from '@/lib/utils';
 import {
   SkeletonMessage,
@@ -103,7 +103,6 @@ export default function ChatRoomPage() {
   const dmName = dmProfile?.display_name ?? room?.name ?? '';
   const dmUsername = dmProfile?.username;
   const dmAvatar = avatarUrl(dmProfile?.avatar_url, dmProfile?.user_avatar_url);
-  const dmProfileHref = dmUsername ? `/${workspaceSlug}/profile/${dmUsername}` : null;
   const dmOnline = !!dmUserId && onlineUserIds.has(dmUserId);
   const messagePlaceholder = isDm
     ? dmUsername
@@ -251,10 +250,11 @@ export default function ChatRoomPage() {
             /* DMs read as a person, not a channel: avatar + presence badge +
                name, the whole thing leading to their profile. Hovering the
                name surfaces the @username behind the display name. */
-            dmProfileHref ? (
-              <Link
-                href={dmProfileHref}
-                title={dmUsername || undefined}
+            dmUsername ? (
+              <ProfileLink
+                username={dmUsername}
+                workspaceSlug={workspaceSlug}
+                title={dmUsername}
                 className="group flex items-center gap-2 min-w-0 rounded-md py-1 -my-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               >
                 <PresenceAvatar
@@ -267,7 +267,7 @@ export default function ChatRoomPage() {
                 <span className="font-semibold text-[15px] text-text-primary truncate group-hover:underline decoration-1 underline-offset-2">
                   {dmName || '...'}
                 </span>
-              </Link>
+              </ProfileLink>
             ) : (
               <div className="flex items-center gap-2 min-w-0">
                 <PresenceAvatar
@@ -311,9 +311,10 @@ export default function ChatRoomPage() {
               the standard opening line, all from the profile the API returns. */}
           {isDm && (
             <div className="px-4 pt-6 pb-4">
-              {dmProfileHref ? (
-                <Link
-                  href={dmProfileHref}
+              {dmUsername ? (
+                <ProfileLink
+                  username={dmUsername}
+                  workspaceSlug={workspaceSlug}
                   className="inline-block rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 >
                   <PresenceAvatar
@@ -323,7 +324,7 @@ export default function ChatRoomPage() {
                     size="lg"
                     ringClassName="border-krait-void"
                   />
-                </Link>
+                </ProfileLink>
               ) : (
                 <PresenceAvatar
                   src={dmAvatar}
@@ -334,13 +335,14 @@ export default function ChatRoomPage() {
                 />
               )}
               <h3 className="mt-3 text-[22px] font-bold text-text-primary">
-                {dmProfileHref ? (
-                  <Link
-                    href={dmProfileHref}
+                {dmUsername ? (
+                  <ProfileLink
+                    username={dmUsername}
+                    workspaceSlug={workspaceSlug}
                     className="hover:underline decoration-1 underline-offset-2"
                   >
                     {dmName || '?'}
-                  </Link>
+                  </ProfileLink>
                 ) : (
                   dmName || '?'
                 )}
@@ -443,12 +445,13 @@ export default function ChatRoomPage() {
                         {showHeader && (
                           <div className="flex items-baseline gap-2 mb-0.5">
                             {senderUsername ? (
-                              <Link
-                                href={`/${workspaceSlug}/profile/${senderUsername}`}
+                              <ProfileLink
+                                username={senderUsername}
+                                workspaceSlug={workspaceSlug}
                                 className="font-semibold text-[15px] text-text-primary hover:underline"
                               >
                                 {msg.sender_name}
-                              </Link>
+                              </ProfileLink>
                             ) : (
                               <span className="font-semibold text-[15px] text-text-primary">
                                 {msg.sender_name}

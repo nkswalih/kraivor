@@ -29,6 +29,11 @@ import { Avatar } from '@/components/profiles/avatar';
  * because it is not interactive, which keeps the link's accessible name as
  * readable as before (a screen reader gets "Jane Doe @jane Followed 2 days ago",
  * not a bare aria-label). Clicking anywhere but the action still navigates.
+ *
+ * `onOpenProfile` is how a call site swaps navigation for the profile card:
+ * the href stays for copy-link and middle-click, and a plain left click opens
+ * the dialog instead. It takes no arguments because the caller already knows
+ * which person's row it rendered.
  */
 
 type Variant = 'detail' | 'search' | 'compact';
@@ -44,7 +49,7 @@ interface Style {
 const VARIANTS: Record<Variant, Style> = {
   /** Follower/following lists on a profile page. */
   detail: {
-    row: 'flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors',
+    row: 'flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted/60 transition-colors',
     inner: 'flex min-w-0 flex-1 items-center gap-3',
     name: 'text-[13px] font-medium text-foreground truncate',
     secondary: 'text-[12px] text-muted-foreground truncate',
@@ -79,6 +84,11 @@ export interface UserRowProps {
   trailing?: ReactNode;
   /** Sibling of the link, never inside it. */
   actions?: ReactNode;
+  /**
+   * Open the profile card instead of navigating. Set only where the dialog is
+   * mounted; without it the row navigates to `href` as before.
+   */
+  onOpenProfile?: () => void;
   variant?: Variant;
   className?: string;
 }
@@ -92,6 +102,7 @@ export function UserRow({
   secondary,
   trailing,
   actions,
+  onOpenProfile,
   variant = 'detail',
   className,
 }: UserRowProps) {
@@ -103,7 +114,20 @@ export function UserRow({
 
   return (
     <div className={cn(style.row, className)}>
-      <Link href={href} className={style.inner}>
+      <Link
+        href={href}
+        className={style.inner}
+        onClick={
+          onOpenProfile
+            ? e => {
+                // Modified clicks still belong to the browser (new tab).
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                e.preventDefault();
+                onOpenProfile();
+              }
+            : undefined
+        }
+      >
         <Avatar
           src={avatarUrl}
           fallbackSrc={fallbackAvatarUrl}

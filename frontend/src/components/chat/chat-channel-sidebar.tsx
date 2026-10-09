@@ -12,6 +12,7 @@ import { usePresence } from '@/lib/hooks/use-presence';
 import { formatCompactTime, truncate, avatarUrl } from '@/lib/utils';
 import { CreateChannelDialog } from './chat-create-channel-dialog';
 import { PresenceAvatar } from './presence-avatar';
+import { ProfileLink } from '@/components/profiles/profile-link';
 
 interface ChannelSidebarProps {
   workspaceId: string;
@@ -234,9 +235,6 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
               const bestAvatar = avatarUrl(profile?.avatar_url, profile?.user_avatar_url);
               const online = otherUserId ? onlineUserIds.has(otherUserId) : false;
               const roomHref = `/${workspaceSlug}/chat/${room.id}`;
-              const profileHref = profile?.username
-                ? `/${workspaceSlug}/profile/${profile.username}`
-                : null;
               return (
                 <div
                   key={room.id}
@@ -263,13 +261,14 @@ export function ChannelSidebar({ workspaceId, workspaceSlug, currentRoomId }: Ch
                   {/* Content */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      {profileHref ? (
-                        <Link
-                          href={profileHref}
+                      {profile?.username ? (
+                        <ProfileLink
+                          username={profile.username}
+                          workspaceSlug={workspaceSlug}
                           className="truncate text-[14px] font-medium text-text-primary hover:underline"
                         >
                           {displayName}
-                        </Link>
+                        </ProfileLink>
                       ) : (
                         <span className="truncate text-[14px] font-medium text-text-primary">
                           {displayName}

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { UserRow } from './user-row';
 
 /**
@@ -111,7 +111,7 @@ describe('UserRow', () => {
   it('accepts a custom class without losing the variant', () => {
     const { container } = renderRow({ className: 'mt-4' });
     expect(container.firstElementChild).toHaveClass('mt-4');
-    expect(container.firstElementChild).toHaveClass('hover:bg-accent');
+    expect(container.firstElementChild).toHaveClass('hover:bg-muted/60');
   });
 
   it('renders the detail variant by default', () => {
@@ -135,6 +135,23 @@ describe('UserRow', () => {
     const { container } = renderRow({ variant: 'compact' });
     expect(container.firstElementChild).toHaveClass('group');
     expect(screen.getByText('Jane Doe')).toHaveClass('group-hover:underline');
+  });
+
+  it('hands a plain click to the profile card when the row is asked to', () => {
+    // The href stays for copy-link and middle-click; only the click changes.
+    const onOpenProfile = vi.fn();
+    renderRow({ onOpenProfile });
+
+    fireEvent.click(screen.getByRole('link'));
+    expect(onOpenProfile).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves ctrl-click to the browser even when the card is wired up', () => {
+    const onOpenProfile = vi.fn();
+    renderRow({ onOpenProfile });
+
+    fireEvent.click(screen.getByRole('link'), { ctrlKey: true });
+    expect(onOpenProfile).not.toHaveBeenCalled();
   });
 
   it('uses the larger avatar the profile pages use, and the smaller one for the sidebar', () => {

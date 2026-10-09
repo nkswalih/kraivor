@@ -1,12 +1,12 @@
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
 import { MessageSquare } from 'lucide-react';
 import { TagChip } from './tag-chip';
 import { UpvoteButton } from './upvote-button';
 import { ShareDialog } from './share-dialog';
 import { Avatar } from '@/components/profiles/avatar';
+import { ProfileLink } from '@/components/profiles/profile-link';
 import type { Discussion } from '@/types/domain/community';
 
 function timeAgo(date: string): string {
@@ -59,13 +59,14 @@ export function DiscussionCard({ discussion, resolvedAuthor }: DiscussionCardPro
               name={authorDisplayName}
               size="sm"
             />
-            <Link
-              href={`/${workspace}/profile/${authorUsername}`}
+            <ProfileLink
+              username={authorUsername}
+              workspaceSlug={workspace}
               onClick={e => e.stopPropagation()}
               className="font-medium text-foreground hover:underline"
             >
               {authorDisplayName}
-            </Link>
+            </ProfileLink>
             <span>·</span>
             <span>{timeAgo(discussion.created_at)}</span>
           </div>

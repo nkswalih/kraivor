@@ -150,13 +150,20 @@ export function Topbar({ workspaceSlug }: { workspaceSlug: string }) {
           )}
         </div>
 
-        <span className="text-krait-border mx-1 shrink-0">/</span>
-        <Link
-          href={`/${workspaceSlug}/${route}`}
-          className="text-text-secondary hover:text-text-primary transition-colors text-[13px] truncate hover:bg-krait-surface1 rounded-[4px] px-1 -mx-1"
-        >
-          {routeLabel}
-        </Link>
+        {/* A profile is a card, not a place: `/{ws}/profile/{user}` exists only
+            for pasted URLs, so it writes nothing over the topbar. The account
+            page (`/{ws}/profile`) and the edit screen keep their label. */}
+        {!(route === 'profile' && segments.length === 3) && (
+          <>
+            <span className="text-krait-border mx-1 shrink-0">/</span>
+            <Link
+              href={`/${workspaceSlug}/${route}`}
+              className="text-text-secondary hover:text-text-primary transition-colors text-[13px] truncate hover:bg-krait-surface1 rounded-[4px] px-1 -mx-1"
+            >
+              {routeLabel}
+            </Link>
+          </>
+        )}
         {hasDetail && (
           <>
             <span className="text-krait-border mx-1 shrink-0">/</span>

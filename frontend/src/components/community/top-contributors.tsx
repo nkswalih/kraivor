@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useTopContributors } from '@/lib/hooks/use-profiles';
+import { useProfileDialogStore } from '@/lib/stores/profile-dialog-store';
 import { UserRow } from '@/components/users/user-row';
 import { Skeleton } from '@/components/ui/shadcn';
 
@@ -12,6 +13,7 @@ import { Skeleton } from '@/components/ui/shadcn';
 export function TopContributors() {
   const params = useParams();
   const workspace = params?.workspace as string;
+  const openProfile = useProfileDialogStore(s => s.open);
   const { data, isLoading } = useTopContributors(5);
 
   if (isLoading) {
@@ -50,6 +52,7 @@ export function TopContributors() {
               name={user.display_name}
               avatarUrl={user.avatar_url}
               fallbackAvatarUrl={user.user_avatar_url}
+              onOpenProfile={() => openProfile(user.username)}
               secondary={`${user.discussion_count} discussions`}
               trailing={
                 <span className="text-[11px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded">

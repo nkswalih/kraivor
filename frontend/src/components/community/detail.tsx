@@ -13,6 +13,7 @@ import { ShareDialog } from './share-dialog';
 import { Skeleton } from '@/components/ui/shadcn';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { ProfileLink } from '@/components/profiles/profile-link';
 import { useParams } from 'next/navigation';
 
 function timeAgo(date: string): string {
@@ -114,12 +115,13 @@ export function DiscussionDetail({ discussionId }: DiscussionDetailProps) {
                 name={authorDisplayName}
                 size="sm"
               />
-              <Link
-                href={`/${workspace}/profile/${authorUsername}`}
+              <ProfileLink
+                username={authorUsername}
+                workspaceSlug={workspace}
                 className="font-medium text-foreground hover:underline"
               >
                 {authorDisplayName}
-              </Link>
+              </ProfileLink>
               <span>·</span>
               <span>{timeAgo(discussion.created_at)}</span>
               <span>·</span>

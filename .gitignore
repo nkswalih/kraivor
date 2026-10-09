@@ -63,6 +63,10 @@ out/
 dist/
 build/
 
+# TypeScript incremental build cache -- a machine-local artifact. It is rewritten
+# by every `tsc` run, so tracking it shows the file dirty after any build.
+*.tsbuildinfo
+
 # IDE
 .vscode/
 .idea/

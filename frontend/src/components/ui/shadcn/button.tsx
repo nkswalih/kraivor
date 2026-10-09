@@ -10,10 +10,15 @@ const buttonVariants = cva(
       variant: {
         default: 'bg-primary text-primary-foreground shadow hover:bg-primary/90',
         destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
+        /* `--accent` in this app is the venom gold (47 78% 59%), so the stock
+           shadcn `hover:bg-accent` turned every outline and ghost button gold
+           on hover -- a brand colour doing the job of a hover state. These use
+           the neutral `--muted` surface instead and keep the text readable
+           against it, which is what those variants are for. */
         outline:
-          'border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground',
+          'border border-input bg-background shadow-sm hover:bg-muted hover:text-foreground',
         secondary: 'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
-        ghost: 'hover:bg-accent hover:text-accent-foreground',
+        ghost: 'hover:bg-muted hover:text-foreground',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {

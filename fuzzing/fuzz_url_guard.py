@@ -48,10 +48,10 @@ import random
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "services", "ai"))
+sys.path.insert(0, os.path.join(ROOT, "services", "ai", "src"))
 
-from app.core import url_guard  # noqa: E402
-from app.core.url_guard import UnsafeURLError, _is_blocked_address, assert_safe_url  # noqa: E402
+from ai.core import url_guard  # noqa: E402
+from ai.core.url_guard import UnsafeURLError, _is_blocked_address, assert_safe_url  # noqa: E402
 
 # A routable public address. Anything that is not a literal IP lands here,
 # so the guard's verdict for those hosts is "accept", deterministically.

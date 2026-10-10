@@ -29,38 +29,9 @@ dependencies = [
     "django-redis>=5.4",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "black>=24.0",
-    "isort>=5.13",
-    "flake8>=7.0",
-    "flake8-bugbear>=24.0",
-    "flake8-builtins>=2.2",
-    "flake8-comprehensions>=3.14",
-    "flake8-docstrings>=1.7",
-    "flake8-import-order>=0.18",
-    "pep8-naming>=0.14",
-    "mypy>=1.8",
-    "django-stubs>=4.2",
-    "djangorestframework-stubs>=3.14",
-    "pytest>=8.0",
-    "pytest-django>=4.12",
-    "pytest-cov>=5.0",
-    "pytest-mock>=3.12",
-    "pytest-xdist>=3.5",
-    "pytest-sugar>=1.1",
-    "factory-boy>=3.3",
-    "faker>=22.0",
-    "bandit>=1.7",
-    "pip-audit>=2.7",
-    "pre-commit>=3.6",
-    "tox>=4.14",
-    "ruff>=0.3.0",
-    "types-requests>=2.31",
-    "typing-extensions>=4.9",
-    "rich>=13.0",
-]
-
+# Dev dependencies live only in [dependency-groups] below (uv's PEP 735
+# default group). The former duplicated [project.optional-dependencies].dev
+# table was removed so there is a single source of truth.
 [dependency-groups]
 dev = [
     "black>=24.0",
@@ -139,22 +110,30 @@ ignore_missing_imports = false
 exclude_dirs = ["tests", ".venv", ".ruff_cache"]
 skips = ["B101", "B105", "B106", "B110", "B301", "B403"]
 
+# Consolidated from the former pytest.ini (which took precedence over this
+# table). Values are copied verbatim from pytest.ini so the effective pytest
+# configuration is unchanged by the removal of that file.
 [tool.pytest.ini_options]
+minversion = "9.0"
 DJANGO_SETTINGS_MODULE = "core.settings.test"
+pythonpath = [".", "apps"]
+testpaths = ["tests", "apps"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-testpaths = ["tests", "apps"]
-addopts = "-v --tb=short --strict-markers -p no:cacheprovider"
+addopts = "--strict-markers --tb=short --color=yes -p no:cacheprovider --maxfail=5"
 markers = [
-    "unit: Unit tests (fast, no external dependencies)",
-    "integration: Integration tests (require database or external services)",
-    "security: Security-related tests",
-    "auth: Authentication-specific tests",
-    "token: Token-related tests",
-    "slow: Tests that take longer than 5 seconds",
+    "unit: Unit tests (fast, isolated)",
+    "integration: Integration tests (multiple components)",
+    "security: Security-specific tests",
+    "auth: Authentication flow tests",
+    "token: Token lifecycle tests",
+    "slow: Tests that take longer to run",
 ]
-test_timeout = 120
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
 
 [tool.coverage.run]
 source = ["apps"]

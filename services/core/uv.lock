@@ -601,38 +601,6 @@ dependencies = [
     { name = "sentry-sdk" },
 ]
 
-[package.optional-dependencies]
-dev = [
-    { name = "bandit" },
-    { name = "black" },
-    { name = "django-stubs" },
-    { name = "djangorestframework-stubs" },
-    { name = "factory-boy" },
-    { name = "faker" },
-    { name = "flake8" },
-    { name = "flake8-bugbear" },
-    { name = "flake8-builtins" },
-    { name = "flake8-comprehensions" },
-    { name = "flake8-docstrings" },
-    { name = "flake8-import-order" },
-    { name = "isort" },
-    { name = "mypy" },
-    { name = "pep8-naming" },
-    { name = "pip-audit" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "pytest-django" },
-    { name = "pytest-mock" },
-    { name = "pytest-sugar" },
-    { name = "pytest-xdist" },
-    { name = "rich" },
-    { name = "ruff" },
-    { name = "tox" },
-    { name = "types-requests" },
-    { name = "typing-extensions" },
-]
-
 [package.dev-dependencies]
 dev = [
     { name = "bandit" },
@@ -667,8 +635,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7" },
-    { name = "black", marker = "extra == 'dev'", specifier = ">=24.0" },
     { name = "boto3", specifier = ">=1.34" },
     { name = "celery", specifier = ">=5.3" },
     { name = "channels", specifier = ">=4.0" },
@@ -680,46 +646,19 @@ requires-dist = [
     { name = "django-environ", specifier = ">=0.13.0" },
     { name = "django-redis", specifier = ">=5.4" },
     { name = "django-storages", specifier = ">=1.14" },
-    { name = "django-stubs", marker = "extra == 'dev'", specifier = ">=4.2" },
     { name = "djangorestframework", specifier = ">=3.14" },
-    { name = "djangorestframework-stubs", marker = "extra == 'dev'", specifier = ">=3.14" },
     { name = "drf-spectacular", specifier = ">=0.29.0" },
     { name = "drf-spectacular-sidecar" },
     { name = "factory-boy", specifier = ">=3.3.3" },
-    { name = "factory-boy", marker = "extra == 'dev'", specifier = ">=3.3" },
-    { name = "faker", marker = "extra == 'dev'", specifier = ">=22.0" },
     { name = "firebase-admin", specifier = ">=6.5" },
-    { name = "flake8", marker = "extra == 'dev'", specifier = ">=7.0" },
-    { name = "flake8-bugbear", marker = "extra == 'dev'", specifier = ">=24.0" },
-    { name = "flake8-builtins", marker = "extra == 'dev'", specifier = ">=2.2" },
-    { name = "flake8-comprehensions", marker = "extra == 'dev'", specifier = ">=3.14" },
-    { name = "flake8-docstrings", marker = "extra == 'dev'", specifier = ">=1.7" },
-    { name = "flake8-import-order", marker = "extra == 'dev'", specifier = ">=0.18" },
     { name = "gunicorn", specifier = ">=21.2.0" },
-    { name = "isort", marker = "extra == 'dev'", specifier = ">=5.13" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.8" },
-    { name = "pep8-naming", marker = "extra == 'dev'", specifier = ">=0.14" },
-    { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.7" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.6" },
     { name = "psycopg2-binary", specifier = ">=2.9" },
     { name = "pyjwt", specifier = ">=2.13.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
-    { name = "pytest-django", marker = "extra == 'dev'", specifier = ">=4.12" },
-    { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.12" },
-    { name = "pytest-sugar", marker = "extra == 'dev'", specifier = ">=1.1" },
-    { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.5" },
     { name = "python-json-logger", specifier = ">=2.0.0" },
     { name = "redis", specifier = ">=5.0" },
     { name = "requests", specifier = ">=2.31" },
-    { name = "rich", marker = "extra == 'dev'", specifier = ">=13.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.3.0" },
     { name = "sentry-sdk", specifier = ">=2.0" },
-    { name = "tox", marker = "extra == 'dev'", specifier = ">=4.14" },
-    { name = "types-requests", marker = "extra == 'dev'", specifier = ">=2.31" },
-    { name = "typing-extensions", marker = "extra == 'dev'", specifier = ">=4.9" },
 ]
-provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1218,8 +1157,8 @@ wheels = [
 
 [package.optional-dependencies]
 grpc = [
-    { name = "grpcio" },
-    { name = "grpcio-status" },
+    { name = "grpcio", marker = "platform_python_implementation != 'PyPy' or sys_platform != 'win32'" },
+    { name = "grpcio-status", marker = "platform_python_implementation != 'PyPy' or sys_platform != 'win32'" },
 ]
 
 [[package]]
@@ -1253,12 +1192,12 @@ name = "google-cloud-firestore"
 version = "2.33.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "google-api-core", extra = ["grpc"] },
-    { name = "google-auth" },
-    { name = "google-cloud-core" },
-    { name = "grpcio" },
-    { name = "proto-plus" },
-    { name = "protobuf" },
+    { name = "google-api-core", extra = ["grpc"], marker = "platform_python_implementation != 'PyPy' or sys_platform != 'win32'" },
+    { name = "google-auth", marker = "platform_python_implementation != 'PyPy' or sys_platform != 'win32'" },
+    { name = "google-cloud-core", marker = "platform_python_implementation != 'PyPy' or sys_platform != 'win32'" },
+    { name = "grpcio", marker = "platform_python_implementation != 'PyPy' or sys_platform != 'win32'" },
+    { name = "proto-plus", marker = "platform_python_implementation != 'PyPy' or sys_platform != 'win32'" },
+    { name = "protobuf", marker = "platform_python_implementation != 'PyPy' or sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cb/a6/ad4612cb0368fee76785e72a66be7203acdaaa89e41483f20cd7b1142b6e/google_cloud_firestore-2.33.0.tar.gz", hash = "sha256:1cbdeb51ddd2036d7493ee5453c6088b523170acde838b7dd9b75c17e20f7a1e", size = 672351, upload-time = "2026-09-29T19:26:04.766Z" }
 wheels = [
@@ -1329,7 +1268,7 @@ name = "grpcio"
 version = "1.84.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions" },
+    { name = "typing-extensions", marker = "platform_python_implementation != 'PyPy' or sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3f/4f/4435c0aae54657258d9cfcba78598f3d9e5fe4c82ff18d78558567b90faf/grpcio-1.84.0.tar.gz", hash = "sha256:19aaf172fc2edbefccce3f6e92c5150975dbe56c45744e9e87cf72ebdf85bfbe", size = 13493876, upload-time = "2026-09-14T06:59:33.291Z" }
 wheels = [
@@ -1360,9 +1299,9 @@ name = "grpcio-status"
 version = "1.84.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "googleapis-common-protos" },
-    { name = "grpcio" },
-    { name = "protobuf" },
+    { name = "googleapis-common-protos", marker = "platform_python_implementation != 'PyPy' or sys_platform != 'win32'" },
+    { name = "grpcio", marker = "platform_python_implementation != 'PyPy' or sys_platform != 'win32'" },
+    { name = "protobuf", marker = "platform_python_implementation != 'PyPy' or sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/52/45/f80309cdb6a7dbf8f65e2082dd2ddc9797ba7180516a73c54d966ba632c4/grpcio_status-1.84.0.tar.gz", hash = "sha256:5caf28ba7184b81f618b5f7f094859fd2541bf429d2189bbbcd715c9c2cdcee2", size = 14015, upload-time = "2026-09-14T07:10:29.402Z" }
 wheels = [

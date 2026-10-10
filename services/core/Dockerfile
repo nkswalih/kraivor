@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv (pinned version for reproducible builds)
-COPY --from=ghcr.io/astral-sh/uv:0.4.30 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.11.7 /uv /uvx /bin/
 
 # uv settings
 ENV UV_LINK_MODE=copy \
@@ -31,7 +31,8 @@ ENV UV_LINK_MODE=copy \
 COPY pyproject.toml uv.lock /app/
 
 # Install production deps only into /app/.venv
-RUN uv sync --frozen --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev
 
 # Copy application source
 COPY . /app/

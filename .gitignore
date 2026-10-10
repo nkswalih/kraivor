@@ -57,6 +57,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# Turborepo cache (local build cache; recreated by every `turbo run`)
+.turbo/
+
 # Build outputs
 .next/
 out/
@@ -86,7 +89,7 @@ logs/
 htmlcov/
 coverage.xml
 coverage/
-frontend/coverage/
+apps/web/coverage/
 
 # TypeScript incremental build cache
 *.tsbuildinfo

@@ -1,0 +1,44 @@
+# Docker build context is the repository root (the pnpm workspace root), so the
+# web image can reach pnpm-lock.yaml, pnpm-workspace.yaml and turbo.json. This
+# file keeps that context small: only workspace manifests and apps/web/ source
+# are needed by the turbo-prune build.
+
+# VCS
+.git
+.gitignore
+.gitattributes
+
+# Node build artifacts / caches
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/*.tsbuildinfo
+npm-debug.log*
+pnpm-debug.log*
+
+# Python caches / envs (never needed by the web image)
+**/__pycache__
+**/*.pyc
+**/.venv
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/.coverage
+
+# Secrets / local env
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Everything not required to build or run the web app
+services
+infra
+docs
+fuzzing
+scripts
+.github
+.vscode
+.idea
+**/*.md

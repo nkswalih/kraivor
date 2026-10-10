@@ -181,38 +181,6 @@ dependencies = [
     { name = "social-auth-app-django" },
 ]
 
-[package.optional-dependencies]
-dev = [
-    { name = "bandit" },
-    { name = "black" },
-    { name = "django-stubs" },
-    { name = "djangorestframework-stubs" },
-    { name = "factory-boy" },
-    { name = "faker" },
-    { name = "flake8" },
-    { name = "flake8-bugbear" },
-    { name = "flake8-builtins" },
-    { name = "flake8-comprehensions" },
-    { name = "flake8-docstrings" },
-    { name = "flake8-import-order" },
-    { name = "isort" },
-    { name = "mypy" },
-    { name = "pep8-naming" },
-    { name = "pip-audit" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "pytest-django" },
-    { name = "pytest-mock" },
-    { name = "pytest-sugar" },
-    { name = "pytest-xdist" },
-    { name = "rich" },
-    { name = "ruff" },
-    { name = "tox" },
-    { name = "types-requests" },
-    { name = "typing-extensions" },
-]
-
 [package.dev-dependencies]
 dev = [
     { name = "bandit" },
@@ -248,8 +216,6 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "argon2-cffi", specifier = ">=25.1.0" },
-    { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7" },
-    { name = "black", marker = "extra == 'dev'", specifier = ">=24.0" },
     { name = "boto3", specifier = ">=1.34" },
     { name = "celery", specifier = ">=5.3" },
     { name = "confluent-kafka", specifier = ">=2.3" },
@@ -259,44 +225,17 @@ requires-dist = [
     { name = "django-cors-headers", specifier = ">=4.0" },
     { name = "django-environ", specifier = ">=0.13.0" },
     { name = "django-storages", specifier = ">=1.14" },
-    { name = "django-stubs", marker = "extra == 'dev'", specifier = ">=4.2" },
     { name = "djangorestframework", specifier = ">=3.14" },
     { name = "djangorestframework-simplejwt", specifier = ">=5.3" },
-    { name = "djangorestframework-stubs", marker = "extra == 'dev'", specifier = ">=3.14" },
     { name = "drf-spectacular", specifier = ">=0.29.0" },
     { name = "drf-spectacular-sidecar" },
-    { name = "factory-boy", marker = "extra == 'dev'", specifier = ">=3.3" },
-    { name = "faker", marker = "extra == 'dev'", specifier = ">=22.0" },
-    { name = "flake8", marker = "extra == 'dev'", specifier = ">=7.0" },
-    { name = "flake8-bugbear", marker = "extra == 'dev'", specifier = ">=24.0" },
-    { name = "flake8-builtins", marker = "extra == 'dev'", specifier = ">=2.2" },
-    { name = "flake8-comprehensions", marker = "extra == 'dev'", specifier = ">=3.14" },
-    { name = "flake8-docstrings", marker = "extra == 'dev'", specifier = ">=1.7" },
-    { name = "flake8-import-order", marker = "extra == 'dev'", specifier = ">=0.18" },
     { name = "google-auth", specifier = ">=2.28.0" },
     { name = "gunicorn", specifier = ">=21.2.0" },
-    { name = "isort", marker = "extra == 'dev'", specifier = ">=5.13" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.8" },
-    { name = "pep8-naming", marker = "extra == 'dev'", specifier = ">=0.14" },
-    { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.7" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.6" },
     { name = "psycopg2-binary", specifier = ">=2.9" },
     { name = "pyjwt", specifier = ">=2.13.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
-    { name = "pytest-django", marker = "extra == 'dev'", specifier = ">=4.5" },
-    { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.12" },
-    { name = "pytest-sugar", marker = "extra == 'dev'", specifier = ">=1.1" },
-    { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.5" },
     { name = "redis", specifier = ">=5.0" },
-    { name = "rich", marker = "extra == 'dev'", specifier = ">=13.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.3.0" },
     { name = "social-auth-app-django", specifier = ">=5.0" },
-    { name = "tox", marker = "extra == 'dev'", specifier = ">=4.14" },
-    { name = "types-requests", marker = "extra == 'dev'", specifier = ">=2.31" },
-    { name = "typing-extensions", marker = "extra == 'dev'", specifier = ">=4.9" },
 ]
-provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [

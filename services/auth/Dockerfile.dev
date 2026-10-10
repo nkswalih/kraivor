@@ -27,7 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv (pinned — same version as prod for parity)
-COPY --from=ghcr.io/astral-sh/uv:0.4.30 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.11.7 /uv /usr/local/bin/uv
 
 # ── Key fix: venv goes to /opt/venv, NOT /app/.venv ──────────────────────────
 # When docker-compose mounts ./services/auth → /app, it overlays /app entirely.
@@ -45,7 +45,8 @@ ENV UV_LINK_MODE=copy \
 COPY pyproject.toml uv.lock /app/
 
 # Install ALL deps (including dev: pytest, ruff, etc.)
-RUN uv sync --frozen
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked
 
 # Copy source — this layer is overridden by the volume mount in dev,
 # but it means the image works standalone too (e.g. for CI)

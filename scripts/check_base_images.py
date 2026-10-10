@@ -193,7 +193,7 @@ def check_node_consistency() -> list[str]:
     rather than inheriting someone else's types."""
     problems: list[str] = []
 
-    for directory in ("frontend",):
+    for directory in ("apps/web",):
         pkg_path = f"{directory}/package.json"
         dockerfile = f"{directory}/Dockerfile"
         if not (os.path.exists(pkg_path) and os.path.exists(dockerfile)):

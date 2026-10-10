@@ -31,10 +31,10 @@ updates:
           - "*"
 
   # ========================================
-  # Frontend (Next.js)
+  # Frontend (Next.js) -- pnpm workspace root
   # ========================================
   - package-ecosystem: "npm"
-    directory: "/frontend"
+    directory: "/"
     target-branch: "dev"
 
     schedule:

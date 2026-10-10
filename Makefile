@@ -114,11 +114,11 @@ security:
 
 frontend-check:
 	@echo "==> frontend: typecheck"
-	cd frontend && npm run typecheck
+	cd apps/web && pnpm run typecheck
 	@echo "==> frontend: unit tests"
-	cd frontend && npm test
+	cd apps/web && pnpm test
 	@echo "==> frontend: production build (also gates ESLint)"
-	cd frontend && npm run build
+	cd apps/web && pnpm run build
 
 # `ai` is excluded from the plain pip-audit above, deliberately, and so it is in
 # CI. `ai` pins CPU-only torch from the PyTorch wheel index, which PyPI does not

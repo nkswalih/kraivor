@@ -1653,7 +1653,7 @@ def remove_from_team_group(sender, instance, **kwargs):
 ### Folder Structure
 
 ```
-frontend/src/
+apps/web/src/
 ├── app/(dashboard)/[workspace]/chat/
 │   ├── page.tsx                       # Empty state + sidebar
 │   └── [roomId]/page.tsx             # Chat room (refactored, lighter)
@@ -2109,21 +2109,21 @@ export function FloatingScrollButton({ containerRef, onScrollDown }: FloatingScr
 | `services/core/apps/chat/signals.py` | Workspace → TeamGroup auto-provision signals |
 | `services/core/apps/chat/views/uploads.py` | S3 presigned upload endpoint |
 | `services/core/apps/chat/urls.py` | Updated URL routing |
-| `frontend/src/components/features/chat/chat-message-list.tsx` | Virtualized message list |
-| `frontend/src/components/features/chat/chat-message-item.tsx` | Single message (memo'd) |
-| `frontend/src/components/features/chat/chat-input.tsx` | Auto-grow textarea |
-| `frontend/src/components/features/chat/chat-floating-scroll.tsx` | Floating scroll button |
-| `frontend/src/components/features/chat/chat-thread-panel.tsx` | Thread side panel |
-| `frontend/src/components/features/chat/chat-right-panel.tsx` | Members, media, settings |
-| `frontend/src/components/features/chat/chat-sidebar.tsx` | Virtualized room list |
-| `frontend/src/components/features/chat/chat-provider.tsx` | WS provider + context |
-| `frontend/src/lib/stores/message-store.ts` | Map-based O(1) message store |
-| `frontend/src/lib/stores/presence-store.ts` | Presence micro-store |
-| `frontend/src/lib/stores/typing-store.ts` | Typing micro-store |
-| `frontend/src/lib/stores/upload-store.ts` | Upload progress store |
-| `frontend/src/lib/ws/chat-socket-v2.ts` | Refactored WS client |
-| `frontend/src/lib/api/chat-v2.ts` | Updated REST endpoints |
-| `frontend/src/types/chat.ts` | Chat-specific TypeScript types |
+| `apps/web/src/components/features/chat/chat-message-list.tsx` | Virtualized message list |
+| `apps/web/src/components/features/chat/chat-message-item.tsx` | Single message (memo'd) |
+| `apps/web/src/components/features/chat/chat-input.tsx` | Auto-grow textarea |
+| `apps/web/src/components/features/chat/chat-floating-scroll.tsx` | Floating scroll button |
+| `apps/web/src/components/features/chat/chat-thread-panel.tsx` | Thread side panel |
+| `apps/web/src/components/features/chat/chat-right-panel.tsx` | Members, media, settings |
+| `apps/web/src/components/features/chat/chat-sidebar.tsx` | Virtualized room list |
+| `apps/web/src/components/features/chat/chat-provider.tsx` | WS provider + context |
+| `apps/web/src/lib/stores/message-store.ts` | Map-based O(1) message store |
+| `apps/web/src/lib/stores/presence-store.ts` | Presence micro-store |
+| `apps/web/src/lib/stores/typing-store.ts` | Typing micro-store |
+| `apps/web/src/lib/stores/upload-store.ts` | Upload progress store |
+| `apps/web/src/lib/ws/chat-socket-v2.ts` | Refactored WS client |
+| `apps/web/src/lib/api/chat-v2.ts` | Updated REST endpoints |
+| `apps/web/src/types/chat.ts` | Chat-specific TypeScript types |
 
 ---
 

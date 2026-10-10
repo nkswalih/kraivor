@@ -6,8 +6,8 @@ on:
     paths:
       - services/**/pyproject.toml
       - services/**/uv.lock
-      - frontend/package.json
-      - frontend/package-lock.json
+      - apps/web/package.json
+      - pnpm-lock.yaml
 
 permissions:
   contents: read

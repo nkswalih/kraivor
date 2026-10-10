@@ -701,7 +701,7 @@ services/core/apps/chat/
 ### Frontend
 
 ```
-frontend/src/
+apps/web/src/
 ├── app/(dashboard)/[workspace]/chat/
 │   ├── page.tsx                # Empty state + ChannelSidebar
 │   └── [roomId]/page.tsx       # Main chat view (messages, send, edit, delete, WS)
@@ -733,13 +733,13 @@ frontend/src/
 | `services/core/apps/chat/routing.py` | 15 | WebSocket URL routing |
 | `services/core/apps/chat/urls.py` | 43 | REST URL routing |
 | `services/core/apps/chat/signals.py` | 3 | message_sent Signal definition |
-| `frontend/src/app/(dashboard)/[workspace]/chat/[roomId]/page.tsx` | 480 | Full chat UI |
-| `frontend/src/app/(dashboard)/[workspace]/chat/page.tsx` | 33 | Empty state |
-| `frontend/src/components/features/channel-sidebar.tsx` | 282 | Room sidebar |
-| `frontend/src/lib/stores/chat-store.ts` | 153 | Zustand state store |
-| `frontend/src/lib/ws/chat-socket.ts` | 94 | WebSocket client |
-| `frontend/src/lib/api/endpoints/chat.ts` | 66 | REST client |
-| `frontend/src/types/ws.ts` | 42 | WebSocket types |
+| `apps/web/src/app/(dashboard)/[workspace]/chat/[roomId]/page.tsx` | 480 | Full chat UI |
+| `apps/web/src/app/(dashboard)/[workspace]/chat/page.tsx` | 33 | Empty state |
+| `apps/web/src/components/features/channel-sidebar.tsx` | 282 | Room sidebar |
+| `apps/web/src/lib/stores/chat-store.ts` | 153 | Zustand state store |
+| `apps/web/src/lib/ws/chat-socket.ts` | 94 | WebSocket client |
+| `apps/web/src/lib/api/endpoints/chat.ts` | 66 | REST client |
+| `apps/web/src/types/ws.ts` | 42 | WebSocket types |
 
 ---
 

@@ -4,7 +4,7 @@
 
 frontend:
   - changed-files:
-      - any-glob-to-any-file: ["frontend/**/*"]
+      - any-glob-to-any-file: ["apps/web/**/*"]
 
 backend:
   - changed-files:
@@ -63,6 +63,6 @@ dependencies:
       - any-glob-to-any-file:
           - services/**/pyproject.toml
           - services/**/uv.lock
-          - frontend/package.json
-          - frontend/package-lock.json
+          - apps/web/package.json
+          - pnpm-lock.yaml
           - .github/dependabot.yml

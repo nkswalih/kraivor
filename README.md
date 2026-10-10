@@ -270,8 +270,8 @@ Service-specific references live in `docs/`:
 ```bash
 make test                    # every service
 cd services/core && uv run pytest        # one service, with coverage gate
-cd frontend && npm test                  # frontend unit tests
-cd frontend && npm run test:coverage
+cd apps/web && pnpm test                 # frontend unit tests
+cd apps/web && pnpm run test:coverage
 ```
 
 Coverage floors are enforced per service in each service's `pyproject.toml`.

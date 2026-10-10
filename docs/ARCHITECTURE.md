@@ -152,6 +152,6 @@ above. Author identity is denormalised by `identity` and copied into `core`.
 | Workspace membership lookup | `services/core/apps/workspaces/selectors/workspace_selectors.py` |
 | Workspaces, projects, chat, knowledge | `services/core/apps/` |
 | Auth, users, profiles, OAuth | `services/auth/auth/`, `services/auth/apps/` |
-| Frontend API client (token refresh) | `frontend/src/lib/api/client.ts` |
-| AI provider metadata (single source) | `frontend/src/constants/ai-providers.ts` |
+| Frontend API client (token refresh) | `apps/web/src/lib/api/client.ts` |
+| AI provider metadata (single source) | `apps/web/src/constants/ai-providers.ts` |
 | Deploy pipeline | `.github/workflows/deploy.yml`, `infra/` |

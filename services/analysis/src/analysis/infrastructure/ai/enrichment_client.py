@@ -12,9 +12,9 @@ logger = get_logger(__name__)
 # reporting "my summary is missing" can be matched to a line in the AI service's
 # log without guessing which of several concurrent enrichments they meant.
 #
-# `app.api.middleware.request_id` declares the same constant, and the AI service has
+# `analysis.api.middleware.request_id` declares the same constant, and the AI service has
 # its own. This is a deliberate third declaration rather than an import of that
-# one: nothing under `app/infrastructure` imports from `app/api` anywhere in this
+# one: nothing under `analysis/infrastructure` imports from `analysis/api` anywhere in this
 # service, and an inbound HTTP middleware is not where an outbound client should
 # be learning the name of a header. The two constants in this service are the same
 # string, and the risk of them drifting is a log line that does not join up rather

@@ -1,6 +1,6 @@
 """End-to-End Integration Tests for the Knowledge Engine pipeline.
 
-Run with: python -m pytest services/ai/app/knowledge_engine/tests/test_e2e_pipeline.py -v
+Run with: python -m pytest services/ai/src/ai/knowledge_engine/tests/test_e2e_pipeline.py -v
 """
 
 import pytest

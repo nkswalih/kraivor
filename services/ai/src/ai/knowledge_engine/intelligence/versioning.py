@@ -12,8 +12,8 @@ from __future__ import annotations
 import logging
 
 from sqlalchemy import text
-from app.infrastructure.db.database import async_session_factory
-from app.core.logging import log_safe
+from ai.infrastructure.db.database import async_session_factory
+from ai.core.logging import log_safe
 
 logger = logging.getLogger(__name__)
 

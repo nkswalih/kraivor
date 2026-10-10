@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from app.knowledge_engine.sources.base import RankedSource
+from ai.knowledge_engine.sources.base import RankedSource
 
 
 def score_authority_and_freshness(

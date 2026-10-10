@@ -1,6 +1,6 @@
 import logging
 
-from app.application.chat.chat_service import ChatService
+from ai.application.chat.chat_service import ChatService
 
 logger = logging.getLogger(__name__)
 

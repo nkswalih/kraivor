@@ -3,29 +3,29 @@ from collections.abc import AsyncGenerator
 import logging
 from datetime import datetime, UTC
 
-from app.application.agents.graph import build_agent_graph
-from app.application.chat.conversation_repository import (
+from ai.application.agents.graph import build_agent_graph
+from ai.application.chat.conversation_repository import (
     ensure_conversation,
     get_messages,
     save_message,
     update_conversation_after_message,
 )
-from app.application.memory.user_memory_service import (
+from ai.application.memory.user_memory_service import (
     extract_and_store_facts,
     get_user_context,
 )
-from app.application.provisioning.key_resolver import KeyResolver
-from app.core.config import settings
-from app.core.exceptions import AllProvidersFailedError
-from app.domain.entities.message import Message as MessageEntity
-from app.domain.entities.message import MessageRole
-from app.infrastructure.cache.query_cache import SemanticQueryCache
-from app.application.usage.usage_service import increment_daily_usage
-from app.infrastructure.db.database import async_session_factory
-from app.infrastructure.llm.error_classifier import ClassifiedError
-from app.infrastructure.llm.failover_engine import FailoverEngine
-from app.infrastructure.llm.router import ModelRouter
-from app.infrastructure.service_client import ServiceClient
+from ai.application.provisioning.key_resolver import KeyResolver
+from ai.core.config import settings
+from ai.core.exceptions import AllProvidersFailedError
+from ai.domain.entities.message import Message as MessageEntity
+from ai.domain.entities.message import MessageRole
+from ai.infrastructure.cache.query_cache import SemanticQueryCache
+from ai.application.usage.usage_service import increment_daily_usage
+from ai.infrastructure.db.database import async_session_factory
+from ai.infrastructure.llm.error_classifier import ClassifiedError
+from ai.infrastructure.llm.failover_engine import FailoverEngine
+from ai.infrastructure.llm.router import ModelRouter
+from ai.infrastructure.service_client import ServiceClient
 import contextlib
 
 logger = logging.getLogger(__name__)
@@ -98,7 +98,7 @@ class ChatService:
     async def _load_history(self, conversation_id: str) -> list[dict]:
         """Load the last N messages from the database for context."""
         try:
-            from app.infrastructure.cache.redis_client import get_redis
+            from ai.infrastructure.cache.redis_client import get_redis
             import json
             r = await get_redis()
             cached = await r.get(f"history:{conversation_id}")
@@ -117,7 +117,7 @@ class ChatService:
         ]
 
         try:
-            from app.infrastructure.cache.redis_client import get_redis
+            from ai.infrastructure.cache.redis_client import get_redis
             import json
             r = await get_redis()
             await r.setex(f"history:{conversation_id}", _HISTORY_CACHE_TTL, json.dumps(history))
@@ -129,7 +129,7 @@ class ChatService:
 
     async def _invalidate_history_cache(self, conversation_id: str) -> None:
         try:
-            from app.infrastructure.cache.redis_client import get_redis
+            from ai.infrastructure.cache.redis_client import get_redis
             r = await get_redis()
             await r.delete(f"history:{conversation_id}")
         except Exception as e:
@@ -271,7 +271,7 @@ class ChatService:
 
                 # Extract and store conversation knowledge (background)
                 try:
-                    from app.application.tasks.knowledge import extract_conversation_knowledge
+                    from ai.application.tasks.knowledge import extract_conversation_knowledge
                     messages_for_extraction = [
                         {"role": m.get("role", "user"), "content": m.get("content", "")}
                         for m in db_history[-10:]

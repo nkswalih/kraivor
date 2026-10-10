@@ -1,7 +1,7 @@
 from sqlalchemy import Boolean, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.infrastructure.db.models.base import Base, TimestampMixin, UUIDMixin
+from ai.infrastructure.db.models.base import Base, TimestampMixin, UUIDMixin
 
 
 class PlatformTaskRoute(Base, UUIDMixin, TimestampMixin):

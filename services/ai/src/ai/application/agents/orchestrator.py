@@ -4,18 +4,18 @@ import re
 
 import logging
 
-from app.application.agents.prompts.orchestrator import (
+from ai.application.agents.prompts.orchestrator import (
     CODE_GENERATION_PROMPT,
     GREETING_PROMPT,
     ORCHESTRATOR_SYSTEM_PROMPT,
     RESPOND_DIRECT_PROMPT,
     WRITING_PROMPT,
 )
-from app.application.provisioning.key_resolver import KeyResolver
-from app.infrastructure.llm.client import LLM_SHORT_TIMEOUT
-from app.infrastructure.llm.error_classifier import ClassifiedError
-from app.infrastructure.llm.failover_engine import FailoverEngine
-from app.infrastructure.llm.router import ModelRouter
+from ai.application.provisioning.key_resolver import KeyResolver
+from ai.infrastructure.llm.client import LLM_SHORT_TIMEOUT
+from ai.infrastructure.llm.error_classifier import ClassifiedError
+from ai.infrastructure.llm.failover_engine import FailoverEngine
+from ai.infrastructure.llm.router import ModelRouter
 
 logger = logging.getLogger(__name__)
 
@@ -243,7 +243,7 @@ class OrchestratorNode:
         intent_cache_key = f"intent:{user_id}:{hashlib.sha256(f'{message}:{history_hash}'.encode()).hexdigest()[:24]}"
 
         try:
-            from app.infrastructure.cache.redis_client import get_redis
+            from ai.infrastructure.cache.redis_client import get_redis
             r = await get_redis()
             cached = await r.get(intent_cache_key)
             if cached:
@@ -334,7 +334,7 @@ class OrchestratorNode:
                 "response": None,
             }
             try:
-                from app.infrastructure.cache.redis_client import get_redis
+                from ai.infrastructure.cache.redis_client import get_redis
                 r = await get_redis()
                 await r.setex(intent_cache_key, INTENT_CACHE_TTL, json.dumps(result))
             except Exception as e:
@@ -357,7 +357,7 @@ class OrchestratorNode:
                 "response": None,
             }
             try:
-                from app.infrastructure.cache.redis_client import get_redis
+                from ai.infrastructure.cache.redis_client import get_redis
                 r = await get_redis()
                 await r.setex(intent_cache_key, INTENT_CACHE_TTL, json.dumps(result))
             except Exception as e:
@@ -407,7 +407,7 @@ class OrchestratorNode:
                 "needs_evidence": False,
             }
             try:
-                from app.infrastructure.cache.redis_client import get_redis
+                from ai.infrastructure.cache.redis_client import get_redis
                 r = await get_redis()
                 await r.setex(intent_cache_key, INTENT_CACHE_TTL, json.dumps(response))
             except Exception as e:
@@ -494,7 +494,7 @@ class OrchestratorNode:
                     "response": None,
                 }
             try:
-                from app.infrastructure.cache.redis_client import get_redis
+                from ai.infrastructure.cache.redis_client import get_redis
                 r = await get_redis()
                 await r.setex(intent_cache_key, INTENT_CACHE_TTL, json.dumps(result))
             except Exception as e:
@@ -513,7 +513,7 @@ class OrchestratorNode:
             "response": None,
         }
         try:
-            from app.infrastructure.cache.redis_client import get_redis
+            from ai.infrastructure.cache.redis_client import get_redis
             r = await get_redis()
             await r.setex(intent_cache_key, INTENT_CACHE_TTL, json.dumps(result))
         except Exception as e:

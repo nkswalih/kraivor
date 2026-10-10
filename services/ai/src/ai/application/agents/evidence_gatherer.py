@@ -43,7 +43,7 @@ class EvidenceGathererNode:
     def _get_engine(self):
         if self._engine is None:
             try:
-                from app.knowledge_engine.engine import KnowledgeEngine
+                from ai.knowledge_engine.engine import KnowledgeEngine
                 self._engine = KnowledgeEngine()
             except Exception as e:
                 log.warning("Failed to initialize KnowledgeEngine: %s", e)
@@ -56,7 +56,7 @@ class EvidenceGathererNode:
         Uses Redis SETNX for cross-process safety with a 24h TTL.
         """
         try:
-            from app.infrastructure.cache.redis_client import get_redis
+            from ai.infrastructure.cache.redis_client import get_redis
             r = await get_redis()
             seed_key = f"seeded:{workspace_id}"
             already = await r.exists(seed_key)
@@ -68,7 +68,7 @@ class EvidenceGathererNode:
             seed_key = None
 
         try:
-            from app.infrastructure.db.database import async_session_factory
+            from ai.infrastructure.db.database import async_session_factory
             from sqlalchemy import text as sql_text
 
             async with async_session_factory() as session:
@@ -85,8 +85,8 @@ class EvidenceGathererNode:
                             await r.setex(seed_key, _SEED_REDIS_TTL, "1")
                     return
 
-            from app.knowledge_engine.seed.kraivor_docs import KRAIVOR_DOCS
-            from app.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
+            from ai.knowledge_engine.seed.kraivor_docs import KRAIVOR_DOCS
+            from ai.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
             indexer = KnowledgeIndexer()
             seeded = 0
             for doc in KRAIVOR_DOCS:

@@ -6,7 +6,7 @@ never controls which workspace to query. This is the security boundary.
 
 from datetime import UTC, datetime
 
-from app.infrastructure.service_client import ServiceClient
+from ai.infrastructure.service_client import ServiceClient
 
 
 def _match_repo(repos: list[dict], name: str) -> dict | None:
@@ -294,7 +294,7 @@ class WorkspaceTools:
         max_results: int = 5,
         timelimit: str | None = None,
     ) -> str:
-        from app.application.tools.search_tool import DuckDuckGoSearchTool
+        from ai.application.tools.search_tool import DuckDuckGoSearchTool
 
         tool = DuckDuckGoSearchTool()
         return await tool.run(query=query, max_results=max_results, timelimit=timelimit)
@@ -307,7 +307,7 @@ class WorkspaceTools:
         max_results: int = 5,
         timelimit: str = "d",
     ) -> str:
-        from app.application.tools.search_tool import DuckDuckGoNewsTool
+        from ai.application.tools.search_tool import DuckDuckGoNewsTool
 
         tool = DuckDuckGoNewsTool()
         return await tool.run(query=query, max_results=max_results, timelimit=timelimit)
@@ -315,13 +315,13 @@ class WorkspaceTools:
     async def web_search_instant(
         self, user_id: str, workspace_id: str, query: str
     ) -> str:
-        from app.application.tools.search_tool import DuckDuckGoInstantTool
+        from ai.application.tools.search_tool import DuckDuckGoInstantTool
 
         tool = DuckDuckGoInstantTool()
         return await tool.run(query=query)
 
     async def web_fetch(self, user_id: str, workspace_id: str, url: str) -> str:
-        from app.application.tools.web_fetch_tool import WebFetchTool
+        from ai.application.tools.web_fetch_tool import WebFetchTool
 
         tool = WebFetchTool()
         return await tool.run(url=url)
@@ -329,7 +329,7 @@ class WorkspaceTools:
     async def browse_web(
         self, user_id: str, workspace_id: str, url: str, question: str | None = None
     ) -> str:
-        from app.application.tools.web_fetch_tool import WebFetchTool
+        from ai.application.tools.web_fetch_tool import WebFetchTool
 
         tool = WebFetchTool()
         content = await tool.run(url=url)
@@ -340,7 +340,7 @@ class WorkspaceTools:
     async def remember_user_fact(
         self, user_id: str, workspace_id: str, fact_type: str, fact_key: str, fact_value: str
     ) -> str:
-        from app.application.memory.user_memory_service import store_fact_explicit
+        from ai.application.memory.user_memory_service import store_fact_explicit
 
         return await store_fact_explicit(user_id, fact_type, fact_key, fact_value)
 
@@ -354,7 +354,7 @@ class WorkspaceTools:
         """Deep research using the Knowledge Engine — searches multiple sources,
         ranks by trust/relevance, builds verified context with citations.
         Automatically stores results for future retrieval."""
-        from app.knowledge_engine.engine import KnowledgeEngine
+        from ai.knowledge_engine.engine import KnowledgeEngine
 
         engine = KnowledgeEngine()
         result = await engine.research_with_memory(
@@ -374,7 +374,7 @@ class WorkspaceTools:
         """Search previously stored knowledge. Use this BEFORE doing a fresh web
         search — the knowledge base may already have relevant information from
         previous research sessions."""
-        from app.knowledge_engine.engine import KnowledgeEngine
+        from ai.knowledge_engine.engine import KnowledgeEngine
 
         engine = KnowledgeEngine()
         results = await engine.retrieve_knowledge(workspace_id, query, top_k=top_k)
@@ -408,7 +408,7 @@ class WorkspaceTools:
     ) -> str:
         """Manually store a piece of knowledge (URL, title, content) into the
         persistent knowledge base for future retrieval."""
-        from app.knowledge_engine.engine import KnowledgeEngine
+        from ai.knowledge_engine.engine import KnowledgeEngine
 
         engine = KnowledgeEngine()
         item_id = await engine.store_knowledge(
@@ -428,7 +428,7 @@ class WorkspaceTools:
         workspace_id: str,
     ) -> str:
         """Get statistics about the stored knowledge base for this workspace."""
-        from app.knowledge_engine.engine import KnowledgeEngine
+        from ai.knowledge_engine.engine import KnowledgeEngine
 
         engine = KnowledgeEngine()
         stats = await engine.get_knowledge_stats(workspace_id)
@@ -458,7 +458,7 @@ class WorkspaceTools:
     ) -> str:
         """Find entities related to a given technology or concept via the knowledge graph.
         Shows how technologies in the workspace connect to each other."""
-        from app.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
+        from ai.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
 
         graph = KnowledgeGraph()
         await graph.ensure_tables()
@@ -480,7 +480,7 @@ class WorkspaceTools:
         entity_type: str | None = None,
     ) -> str:
         """Get the most mentioned technologies and concepts in the workspace knowledge base."""
-        from app.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
+        from ai.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
 
         graph = KnowledgeGraph()
         await graph.ensure_tables()
@@ -502,7 +502,7 @@ class WorkspaceTools:
     ) -> str:
         """Run a proactive learning cycle — detect technologies used, check for
         new releases, security advisories, and auto-index relevant updates."""
-        from app.knowledge_engine.learning.proactive_agent import ProactiveLearningPipeline
+        from ai.knowledge_engine.learning.proactive_agent import ProactiveLearningPipeline
 
         pipeline = ProactiveLearningPipeline()
         result = await pipeline.run_full_cycle(workspace_id)
@@ -526,7 +526,7 @@ class WorkspaceTools:
         claim: str,
     ) -> str:
         """Cross-check a claim across multiple trusted sources to verify accuracy."""
-        from app.knowledge_engine.engine import KnowledgeEngine
+        from ai.knowledge_engine.engine import KnowledgeEngine
 
         engine = KnowledgeEngine()
         result = await engine.research(
@@ -566,7 +566,7 @@ class WorkspaceTools:
         topic: str | None = None,
     ) -> str:
         """Fetch official documentation for a specific framework or library."""
-        from app.knowledge_engine.engine import KnowledgeEngine
+        from ai.knowledge_engine.engine import KnowledgeEngine
 
         engine = KnowledgeEngine()
         content = await engine.get_documentation(framework, topic)
@@ -583,7 +583,7 @@ class WorkspaceTools:
         repo_name: str,
     ) -> str:
         """Fetch repository information, README, and latest release from GitHub."""
-        from app.knowledge_engine.engine import KnowledgeEngine
+        from ai.knowledge_engine.engine import KnowledgeEngine
 
         engine = KnowledgeEngine()
 
@@ -615,7 +615,7 @@ class WorkspaceTools:
         topic: str | None = None,
     ) -> str:
         """Summarize knowledge about a topic or the entire workspace using LLM."""
-        from app.knowledge_engine.intelligence.summarizer import KnowledgeSummarizer
+        from ai.knowledge_engine.intelligence.summarizer import KnowledgeSummarizer
 
         summarizer = KnowledgeSummarizer()
         if topic:
@@ -644,7 +644,7 @@ class WorkspaceTools:
         topic: str,
     ) -> str:
         """Detect and resolve conflicting claims about a topic across knowledge sources."""
-        from app.knowledge_engine.intelligence.conflict_resolver import ConflictResolver
+        from ai.knowledge_engine.intelligence.conflict_resolver import ConflictResolver
 
         resolver = ConflictResolver()
         report = await resolver.detect_conflicts(workspace_id, topic)
@@ -678,7 +678,7 @@ class WorkspaceTools:
         comment: str | None = None,
     ) -> str:
         """Submit feedback on a knowledge item's quality (helpful/not_helpful/outdated/incorrect)."""
-        from app.knowledge_engine.intelligence.feedback import FeedbackTracker
+        from ai.knowledge_engine.intelligence.feedback import FeedbackTracker
 
         tracker = FeedbackTracker()
         await tracker.record_feedback(
@@ -695,7 +695,7 @@ class WorkspaceTools:
         workspace_id: str,
     ) -> str:
         """Find and remove near-duplicate knowledge items in the workspace."""
-        from app.knowledge_engine.intelligence.deduplicator import SemanticDeduplicator
+        from ai.knowledge_engine.intelligence.deduplicator import SemanticDeduplicator
 
         dedup = SemanticDeduplicator()
         result = await dedup.deduplicate_workspace(workspace_id, dry_run=False)
@@ -715,7 +715,7 @@ class WorkspaceTools:
         workspace_id: str,
     ) -> str:
         """Export all knowledge for the workspace as a structured summary."""
-        from app.knowledge_engine.intelligence.exporter import KnowledgeExporter
+        from ai.knowledge_engine.intelligence.exporter import KnowledgeExporter
 
         exporter = KnowledgeExporter()
         result = await exporter.export_workspace(workspace_id, include_graph=True)
@@ -746,7 +746,7 @@ class WorkspaceTools:
         workspace_id: str,
     ) -> str:
         """Get a comprehensive health report for the workspace's knowledge base."""
-        from app.knowledge_engine.intelligence.health_dashboard import KnowledgeHealthDashboard
+        from ai.knowledge_engine.intelligence.health_dashboard import KnowledgeHealthDashboard
 
         dashboard = KnowledgeHealthDashboard()
         result = await dashboard.get_health_report(workspace_id)

@@ -5,26 +5,26 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from app.core.url_guard import host_matches
-from app.knowledge_engine.config import KnowledgeEngineConfig
-from app.knowledge_engine.sources.base import SourceResult, SourceContent, RankedSource
-from app.knowledge_engine.sources.web_search import WebSearchProvider
-from app.knowledge_engine.sources.documentation import DocumentationProvider
-from app.knowledge_engine.sources.github import GitHubProvider
-from app.knowledge_engine.sources.news import NewsProvider
-from app.knowledge_engine.sources.research_papers import ResearchPaperProvider
-from app.knowledge_engine.sources.package_registries import PackageRegistryProvider
-from app.knowledge_engine.sources.community import CommunityProvider
-from app.knowledge_engine.ranking.reranker import rank_sources
-from app.knowledge_engine.processing.deduplicator import deduplicate_sources, deduplicate_content
-from app.knowledge_engine.context.context_builder import build_knowledge_context, build_citation_list
-from app.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
-from app.knowledge_engine.store.knowledge_retriever import KnowledgeRetriever
-from app.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
-from app.knowledge_engine.quality.quality_scorer import KnowledgeQualityScorer
-from app.knowledge_engine.learning.proactive_agent import ProactiveLearningPipeline
-from app.knowledge_engine.monitoring.cache import KnowledgeCache
-from app.knowledge_engine.monitoring.metrics import KnowledgeMetrics, QueryMetric
+from ai.core.url_guard import host_matches
+from ai.knowledge_engine.config import KnowledgeEngineConfig
+from ai.knowledge_engine.sources.base import SourceResult, SourceContent, RankedSource
+from ai.knowledge_engine.sources.web_search import WebSearchProvider
+from ai.knowledge_engine.sources.documentation import DocumentationProvider
+from ai.knowledge_engine.sources.github import GitHubProvider
+from ai.knowledge_engine.sources.news import NewsProvider
+from ai.knowledge_engine.sources.research_papers import ResearchPaperProvider
+from ai.knowledge_engine.sources.package_registries import PackageRegistryProvider
+from ai.knowledge_engine.sources.community import CommunityProvider
+from ai.knowledge_engine.ranking.reranker import rank_sources
+from ai.knowledge_engine.processing.deduplicator import deduplicate_sources, deduplicate_content
+from ai.knowledge_engine.context.context_builder import build_knowledge_context, build_citation_list
+from ai.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
+from ai.knowledge_engine.store.knowledge_retriever import KnowledgeRetriever
+from ai.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
+from ai.knowledge_engine.quality.quality_scorer import KnowledgeQualityScorer
+from ai.knowledge_engine.learning.proactive_agent import ProactiveLearningPipeline
+from ai.knowledge_engine.monitoring.cache import KnowledgeCache
+from ai.knowledge_engine.monitoring.metrics import KnowledgeMetrics, QueryMetric
 
 logger = logging.getLogger(__name__)
 

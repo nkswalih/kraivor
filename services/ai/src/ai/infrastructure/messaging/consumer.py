@@ -3,8 +3,8 @@ import json
 import logging
 from aiokafka import AIOKafkaConsumer
 
-from app.core.config import settings
-from app.infrastructure.messaging.kafka_handler import handle_event
+from ai.core.config import settings
+from ai.infrastructure.messaging.kafka_handler import handle_event
 
 logger = logging.getLogger(__name__)
 

@@ -22,9 +22,9 @@ import sys
 from datetime import timedelta
 from sqlalchemy import select, text
 
-from app.infrastructure.db.database import async_session_factory
-from app.infrastructure.db.models.conversation import Conversation
-from app.infrastructure.db.models.message import Message
+from ai.infrastructure.db.database import async_session_factory
+from ai.infrastructure.db.models.conversation import Conversation
+from ai.infrastructure.db.models.message import Message
 
 
 async def fix_all():

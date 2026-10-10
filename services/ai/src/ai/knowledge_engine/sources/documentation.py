@@ -6,8 +6,8 @@ import re
 
 import logging
 
-from app.core.url_guard import UnsafeURLError, assert_safe_url
-from app.knowledge_engine.sources.base import SourceContent, SourceResult
+from ai.core.url_guard import UnsafeURLError, assert_safe_url
+from ai.knowledge_engine.sources.base import SourceContent, SourceResult
 
 logger = logging.getLogger(__name__)
 
@@ -196,7 +196,7 @@ class DocumentationProvider:
                 text = text[:8000] + "\n\n[Content truncated...]"
 
             # Determine trust score from URL
-            from app.knowledge_engine.config import get_trust_score
+            from ai.knowledge_engine.config import get_trust_score
             trust = get_trust_score(url)
 
             return SourceContent(

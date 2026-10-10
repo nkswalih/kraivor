@@ -15,18 +15,18 @@ import logging
 
 from langgraph.graph import END, StateGraph
 
-from app.application.agents.architecture import ArchitectureAnalystNode
-from app.application.agents.code_analyst import CodeAnalystNode
-from app.application.agents.context_assembler import ContextAssemblerNode
-from app.application.agents.evidence_gatherer import EvidenceGathererNode
-from app.application.agents.explainer import ExplainerNode
-from app.application.agents.orchestrator import OrchestratorNode
-from app.application.agents.performance import PerformanceAnalystNode
-from app.application.agents.security import SecurityAnalystNode
-from app.application.agents.state import AgentState
-from app.application.agents.tool_executor import ToolExecutorNode
-from app.application.tools.workspace_tools import WorkspaceTools
-from app.core.config import settings
+from ai.application.agents.architecture import ArchitectureAnalystNode
+from ai.application.agents.code_analyst import CodeAnalystNode
+from ai.application.agents.context_assembler import ContextAssemblerNode
+from ai.application.agents.evidence_gatherer import EvidenceGathererNode
+from ai.application.agents.explainer import ExplainerNode
+from ai.application.agents.orchestrator import OrchestratorNode
+from ai.application.agents.performance import PerformanceAnalystNode
+from ai.application.agents.security import SecurityAnalystNode
+from ai.application.agents.state import AgentState
+from ai.application.agents.tool_executor import ToolExecutorNode
+from ai.application.tools.workspace_tools import WorkspaceTools
+from ai.core.config import settings
 
 logger = logging.getLogger(__name__)
 

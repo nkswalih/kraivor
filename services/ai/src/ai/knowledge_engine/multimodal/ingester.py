@@ -14,7 +14,7 @@ import hashlib
 import logging
 import mimetypes
 
-from app.core.url_guard import (
+from ai.core.url_guard import (
     MAX_REDIRECT_HOPS,
     REDIRECT_STATUSES,
     UnsafeURLError,
@@ -24,7 +24,7 @@ from app.core.url_guard import (
 
 from ..config import KnowledgeEngineConfig
 from ..store.knowledge_indexer import KnowledgeIndexer
-from app.core.logging import log_safe
+from ai.core.logging import log_safe
 
 logger = logging.getLogger(__name__)
 

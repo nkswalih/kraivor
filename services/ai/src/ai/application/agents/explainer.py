@@ -4,17 +4,17 @@ import logging
 import re
 from datetime import datetime, UTC
 
-from app.application.agents.prompts.specialist import (
+from ai.application.agents.prompts.specialist import (
     EXPLAINER_SYSTEM_PROMPT,
     EXPLAINER_EVIDENCE_PROMPT,
     EXPLAINER_CASUAL_PROMPT,
     EXPLAINER_CODE_AUDIT_PROMPT,
     EXPLAINER_GENERAL_QA_PROMPT,
 )
-from app.application.provisioning.key_resolver import KeyResolver
-from app.infrastructure.llm.error_classifier import ClassifiedError, ErrorCategory
-from app.infrastructure.llm.failover_engine import FailoverEngine
-from app.infrastructure.llm.router import ModelRouter
+from ai.application.provisioning.key_resolver import KeyResolver
+from ai.infrastructure.llm.error_classifier import ClassifiedError, ErrorCategory
+from ai.infrastructure.llm.failover_engine import FailoverEngine
+from ai.infrastructure.llm.router import ModelRouter
 
 logger = logging.getLogger(__name__)
 

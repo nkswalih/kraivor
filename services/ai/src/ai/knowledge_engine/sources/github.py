@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
-from app.knowledge_engine.config import KnowledgeEngineConfig
-from app.knowledge_engine.sources.base import SourceResult, SourceContent
+from ai.knowledge_engine.config import KnowledgeEngineConfig
+from ai.knowledge_engine.sources.base import SourceResult, SourceContent
 
 logger = logging.getLogger(__name__)
 

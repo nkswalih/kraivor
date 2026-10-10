@@ -4,18 +4,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.dependencies.auth import invalidate_jwks_cache
-from app.api.dependencies.backpressure import init_backpressure
-from app.api.middleware.backpressure import BackpressureMiddleware
-from app.api.middleware.prometheus import PrometheusMiddleware
-from app.api.middleware.request_id import RequestIDMiddleware
-from app.application.admin.model_registry import ModelRegistry
-from app.core.config import settings
-from app.core.logging import setup_logging
-from app.infrastructure.cache.redis_client import close_redis
-from app.infrastructure.db.database import close_db, init_db
-from app.infrastructure.messaging.kafka_producer import get_event_producer
-from app.monitoring.metrics import setup_metrics
+from ai.api.dependencies.auth import invalidate_jwks_cache
+from ai.api.dependencies.backpressure import init_backpressure
+from ai.api.middleware.backpressure import BackpressureMiddleware
+from ai.api.middleware.prometheus import PrometheusMiddleware
+from ai.api.middleware.request_id import RequestIDMiddleware
+from ai.application.admin.model_registry import ModelRegistry
+from ai.core.config import settings
+from ai.core.logging import setup_logging
+from ai.infrastructure.cache.redis_client import close_redis
+from ai.infrastructure.db.database import close_db, init_db
+from ai.infrastructure.messaging.kafka_producer import get_event_producer
+from ai.monitoring.metrics import setup_metrics
 
 
 @asynccontextmanager
@@ -52,7 +52,7 @@ def create_app() -> FastAPI:
     app.add_middleware(PrometheusMiddleware)
     app.add_middleware(RequestIDMiddleware)
 
-    from app.api.routers import (
+    from ai.api.routers import (
         admin,
         analysis,
         api_keys,

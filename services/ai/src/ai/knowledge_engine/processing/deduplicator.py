@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 
-from app.knowledge_engine.sources.base import SourceResult, SourceContent
+from ai.knowledge_engine.sources.base import SourceResult, SourceContent
 
 
 def deduplicate_sources(sources: list[SourceResult]) -> list[SourceResult]:

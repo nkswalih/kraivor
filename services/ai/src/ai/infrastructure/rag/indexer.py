@@ -1,7 +1,7 @@
 from sqlalchemy import text
 
-from app.infrastructure.rag.chunker import SemanticChunker
-from app.infrastructure.rag.embedder import Embedder
+from ai.infrastructure.rag.chunker import SemanticChunker
+from ai.infrastructure.rag.embedder import Embedder
 
 
 class Indexer:

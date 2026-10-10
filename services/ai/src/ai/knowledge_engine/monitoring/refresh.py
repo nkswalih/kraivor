@@ -13,7 +13,7 @@ import logging
 import time
 
 from sqlalchemy import text
-from app.infrastructure.db.database import async_session_factory
+from ai.infrastructure.db.database import async_session_factory
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class KnowledgeRefreshPipeline:
         source_url: str,
     ) -> dict:
         """Re-fetch and update a single knowledge item."""
-        from app.knowledge_engine.intelligence.versioning import KnowledgeVersioning
+        from ai.knowledge_engine.intelligence.versioning import KnowledgeVersioning
 
         start = time.time()
 
@@ -83,7 +83,7 @@ class KnowledgeRefreshPipeline:
 
         # Fetch fresh content
         try:
-            from app.knowledge_engine.engine import KnowledgeEngine
+            from ai.knowledge_engine.engine import KnowledgeEngine
             engine = KnowledgeEngine()
             content = await engine.fetch(source_url)
 

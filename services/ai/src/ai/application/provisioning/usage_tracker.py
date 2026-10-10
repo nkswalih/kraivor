@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from app.infrastructure.db.models.usage_log import UsageLog
+from ai.infrastructure.db.models.usage_log import UsageLog
 
 
 class UsageTracker:

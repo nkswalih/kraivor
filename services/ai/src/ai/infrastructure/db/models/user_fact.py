@@ -1,7 +1,7 @@
 from sqlalchemy import Float, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.infrastructure.db.models.base import Base, TimestampMixin
+from ai.infrastructure.db.models.base import Base, TimestampMixin
 
 
 class UserFact(Base, TimestampMixin):

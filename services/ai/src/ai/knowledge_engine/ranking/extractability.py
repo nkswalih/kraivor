@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from app.knowledge_engine.sources.base import RankedSource
+from ai.knowledge_engine.sources.base import RankedSource
 
 
 def score_extractability(ranked: list[RankedSource]) -> list[RankedSource]:

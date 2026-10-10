@@ -7,13 +7,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from app.api.dependencies.admin import require_superadmin
-from app.api.dependencies.auth import JWTPayload
-from app.infrastructure.db.database import async_session_factory
-from app.infrastructure.db.models.platform_model import PlatformModel
-from app.infrastructure.db.models.platform_provider import PlatformProvider
-from app.infrastructure.db.models.platform_task_route import PlatformTaskRoute
-from app.application.admin.model_registry import ModelRegistry
+from ai.api.dependencies.admin import require_superadmin
+from ai.api.dependencies.auth import JWTPayload
+from ai.infrastructure.db.database import async_session_factory
+from ai.infrastructure.db.models.platform_model import PlatformModel
+from ai.infrastructure.db.models.platform_provider import PlatformProvider
+from ai.infrastructure.db.models.platform_task_route import PlatformTaskRoute
+from ai.application.admin.model_registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/admin", tags=["admin"])
@@ -213,7 +213,7 @@ async def create_provider(
         # Encrypt API key if provided
         encrypted_key = None
         if body.api_key:
-            from app.application.provisioning.key_resolver import _default_encrypter
+            from ai.application.provisioning.key_resolver import _default_encrypter
             encrypted_key = _default_encrypter.encrypt(body.api_key.encode()).decode()
 
         provider = PlatformProvider(
@@ -249,7 +249,7 @@ async def update_provider(
         if body.display_name is not None:
             provider.display_name = body.display_name
         if body.api_key is not None:
-            from app.application.provisioning.key_resolver import _default_encrypter
+            from ai.application.provisioning.key_resolver import _default_encrypter
             provider.api_key_encrypted = (
                 _default_encrypter.encrypt(body.api_key.encode()).decode()
                 if body.api_key

@@ -11,7 +11,7 @@ import pytest
 from fastapi import HTTPException
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.api.dependencies.rate_limiter import enforce_rate_limit
+from ai.api.dependencies.rate_limiter import enforce_rate_limit
 
 pytestmark = pytest.mark.unit
 
@@ -20,7 +20,7 @@ def _mock_redis(monkeypatch, allowed=1, count=1, max_limit=5):
     redis = AsyncMock()
     redis.eval.return_value = [allowed, count, max_limit]
     monkeypatch.setattr(
-        "app.api.dependencies.rate_limiter.get_redis", AsyncMock(return_value=redis)
+        "ai.api.dependencies.rate_limiter.get_redis", AsyncMock(return_value=redis)
     )
     return redis
 
@@ -29,7 +29,7 @@ class TestEnforceRateLimit:
     async def test_passes_budget_to_lua_script(self, monkeypatch):
         """max_requests and window_seconds must reach the script, not be dropped."""
         redis = _mock_redis(monkeypatch)
-        monkeypatch.setattr("app.api.dependencies.rate_limiter.settings.redis__url", "redis://x")
+        monkeypatch.setattr("ai.api.dependencies.rate_limiter.settings.redis__url", "redis://x")
 
         await enforce_rate_limit("user-1", "knowledge.seed", max_requests=5, window_seconds=60)
 
@@ -44,7 +44,7 @@ class TestEnforceRateLimit:
     async def test_action_is_part_of_the_key(self, monkeypatch):
         """Different actions must not share one budget."""
         redis = _mock_redis(monkeypatch)
-        monkeypatch.setattr("app.api.dependencies.rate_limiter.settings.redis__url", "redis://x")
+        monkeypatch.setattr("ai.api.dependencies.rate_limiter.settings.redis__url", "redis://x")
 
         await enforce_rate_limit("user-1", "action.a")
         await enforce_rate_limit("user-1", "action.b")
@@ -54,7 +54,7 @@ class TestEnforceRateLimit:
 
     async def test_raises_429_when_exceeded(self, monkeypatch):
         _mock_redis(monkeypatch, allowed=0, count=5, max_limit=5)
-        monkeypatch.setattr("app.api.dependencies.rate_limiter.settings.redis__url", "redis://x")
+        monkeypatch.setattr("ai.api.dependencies.rate_limiter.settings.redis__url", "redis://x")
 
         with pytest.raises(HTTPException) as exc:
             await enforce_rate_limit("user-1", "knowledge.seed", max_requests=5, window_seconds=60)
@@ -65,7 +65,7 @@ class TestEnforceRateLimit:
 
     async def test_retry_after_reflects_actual_window(self, monkeypatch):
         _mock_redis(monkeypatch, allowed=0, count=99, max_limit=99)
-        monkeypatch.setattr("app.api.dependencies.rate_limiter.settings.redis__url", "redis://x")
+        monkeypatch.setattr("ai.api.dependencies.rate_limiter.settings.redis__url", "redis://x")
 
         with pytest.raises(HTTPException) as exc:
             await enforce_rate_limit("user-1", "act", max_requests=99, window_seconds=15)
@@ -73,7 +73,7 @@ class TestEnforceRateLimit:
         assert exc.value.detail["retry_after"] == 15
 
     async def test_noop_when_redis_disabled(self, monkeypatch):
-        monkeypatch.setattr("app.api.dependencies.rate_limiter.settings.redis__url", None)
+        monkeypatch.setattr("ai.api.dependencies.rate_limiter.settings.redis__url", None)
         # Must not raise: with no Redis there is nothing to enforce against.
         assert await enforce_rate_limit("user-1", "act") is None
 
@@ -81,9 +81,9 @@ class TestEnforceRateLimit:
         redis = AsyncMock()
         redis.eval.side_effect = RuntimeError("connection reset")
         monkeypatch.setattr(
-            "app.api.dependencies.rate_limiter.get_redis", AsyncMock(return_value=redis)
+            "ai.api.dependencies.rate_limiter.get_redis", AsyncMock(return_value=redis)
         )
-        monkeypatch.setattr("app.api.dependencies.rate_limiter.settings.redis__url", "redis://x")
+        monkeypatch.setattr("ai.api.dependencies.rate_limiter.settings.redis__url", "redis://x")
 
         with pytest.raises(HTTPException) as exc:
             await enforce_rate_limit("user-1", "act")
@@ -99,7 +99,7 @@ class TestSeedProjectDocsRoute:
         Guards the original defect: a call with the wrong signature raised
         TypeError, which the route's except turned into a 200 + error body.
         """
-        from app.api.routers import knowledge
+        from ai.api.routers import knowledge
 
         called = {}
 
@@ -118,7 +118,7 @@ class TestSeedProjectDocsRoute:
             patch.object(knowledge, "enforce_rate_limit", fake_enforce),
             patch.dict(
                 "sys.modules",
-                {"app.application.tasks.knowledge": MagicMock(seed_kraivor_project_docs=task)},
+                {"ai.application.tasks.knowledge": MagicMock(seed_kraivor_project_docs=task)},
             ),
         ):
             result = await knowledge.seed_project_docs(
@@ -136,14 +136,14 @@ class TestSeedProjectDocsRoute:
 
     async def test_enqueue_failure_is_not_reported_as_success(self):
         """A failed enqueue must not return 200 with status=error."""
-        from app.api.routers import knowledge
+        from ai.api.routers import knowledge
 
         broken = MagicMock()
         broken.seed_kraivor_project_docs.delay.side_effect = RuntimeError("broker down")
 
         with (
             patch.object(knowledge, "enforce_rate_limit", AsyncMock()),
-            patch.dict("sys.modules", {"app.application.tasks.knowledge": broken}),
+            patch.dict("sys.modules", {"ai.application.tasks.knowledge": broken}),
             pytest.raises(HTTPException) as exc,
         ):
             await knowledge.seed_project_docs(

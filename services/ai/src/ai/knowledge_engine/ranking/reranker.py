@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import logging
 
-from app.knowledge_engine.ranking.relevance import score_relevance
-from app.knowledge_engine.ranking.authority import (
+from ai.knowledge_engine.ranking.relevance import score_relevance
+from ai.knowledge_engine.ranking.authority import (
     score_authority_and_freshness,
     get_domain_half_life,
 )
-from app.knowledge_engine.ranking.extractability import score_extractability
-from app.knowledge_engine.sources.base import SourceResult, SourceContent
+from ai.knowledge_engine.ranking.extractability import score_extractability
+from ai.knowledge_engine.sources.base import SourceResult, SourceContent
 
 logger = logging.getLogger(__name__)
 

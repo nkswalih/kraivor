@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from app.api.routers.chat import chat_service
+from ai.api.routers.chat import chat_service
 
 pytestmark = pytest.mark.unit
 
@@ -13,9 +13,9 @@ MOCK_MODELS = [
 
 
 class TestChatRouter:
-    @patch("app.api.routers.chat.ModelRegistry.get_selector_models", return_value=MOCK_MODELS)
+    @patch("ai.api.routers.chat.ModelRegistry.get_selector_models", return_value=MOCK_MODELS)
     async def test_models_endpoint(self, _mock):
-        from app.api.routers.chat import list_models
+        from ai.api.routers.chat import list_models
 
         mock_user = AsyncMock()
         mock_user.sub = "test-user"
@@ -26,7 +26,7 @@ class TestChatRouter:
         assert len(result["models"]) >= 3
 
     async def test_chat_non_streaming(self, monkeypatch):
-        from app.api.routers.chat import chat
+        from ai.api.routers.chat import chat
 
         monkeypatch.setattr(
             chat_service,

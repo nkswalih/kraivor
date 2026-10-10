@@ -2,7 +2,7 @@ import pytest
 from cryptography.fernet import Fernet
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.application.provisioning.key_provisioning import KeyProvisioner
+from ai.application.provisioning.key_provisioning import KeyProvisioner
 
 pytestmark = pytest.mark.unit
 
@@ -13,7 +13,7 @@ class TestKeyProvisioning:
         provisioner = KeyProvisioner(encrypter=encrypter)
 
         with patch(
-            "app.application.provisioning.key_provisioning.httpx.AsyncClient"
+            "ai.application.provisioning.key_provisioning.httpx.AsyncClient"
         ) as mock:
             mock.return_value.__aenter__.return_value.post = AsyncMock()
             mock.return_value.__aenter__.return_value.post.return_value.json = (

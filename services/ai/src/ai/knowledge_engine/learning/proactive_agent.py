@@ -15,8 +15,8 @@ import re
 
 from sqlalchemy import text
 
-from app.infrastructure.db.database import async_session_factory
-from app.core.logging import log_safe
+from ai.infrastructure.db.database import async_session_factory
+from ai.core.logging import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -280,7 +280,7 @@ class ProactiveLearningPipeline:
 
     async def _index_release(self, workspace_id: str, technology: str, release: dict):
         """Index a technology release as knowledge."""
-        from app.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
+        from ai.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
 
         indexer = KnowledgeIndexer()
         await indexer.index_knowledge(
@@ -299,7 +299,7 @@ class ProactiveLearningPipeline:
 
     async def _index_advisory(self, workspace_id: str, advisory: dict):
         """Index a security advisory as knowledge."""
-        from app.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
+        from ai.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
 
         indexer = KnowledgeIndexer()
         severity = advisory.get("severity", "unknown")

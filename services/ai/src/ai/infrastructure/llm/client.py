@@ -15,11 +15,11 @@ except ImportError:
     google_genai = None  # type: ignore[assignment]
     _HAS_GOOGLE_GENAI = False
 
-from app.infrastructure.llm.cost import estimate_cost
-from app.infrastructure.llm.error_classifier import classify_error, ClassifiedError
-from app.monitoring.metrics import llm_calls
-from app.monitoring.metrics import llm_cost as llm_cost_counter
-from app.monitoring.metrics import llm_duration, llm_tokens
+from ai.infrastructure.llm.cost import estimate_cost
+from ai.infrastructure.llm.error_classifier import classify_error, ClassifiedError
+from ai.monitoring.metrics import llm_calls
+from ai.monitoring.metrics import llm_cost as llm_cost_counter
+from ai.monitoring.metrics import llm_duration, llm_tokens
 
 logger = logging.getLogger(__name__)
 

@@ -6,8 +6,8 @@ from datetime import UTC, datetime
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.infrastructure.db.models.user_fact import UserFact
-from app.infrastructure.db.database import async_session_factory
+from ai.infrastructure.db.models.user_fact import UserFact
+from ai.infrastructure.db.database import async_session_factory
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +142,7 @@ async def extract_and_store_facts(
         await db.flush()
 
     try:
-        from app.infrastructure.cache.redis_client import get_redis
+        from ai.infrastructure.cache.redis_client import get_redis
         r = await get_redis()
         await r.delete(f"userctx:{user_id}")
     except Exception as e:
@@ -155,7 +155,7 @@ async def extract_and_store_facts(
 
 async def get_user_context(db: AsyncSession, user_id: str, limit: int = 20) -> str:
     try:
-        from app.infrastructure.cache.redis_client import get_redis
+        from ai.infrastructure.cache.redis_client import get_redis
         r = await get_redis()
         cached = await r.get(f"userctx:{user_id}")
         if cached is not None:
@@ -181,7 +181,7 @@ async def get_user_context(db: AsyncSession, user_id: str, limit: int = 20) -> s
     context_str = "\n".join(parts)
 
     try:
-        from app.infrastructure.cache.redis_client import get_redis
+        from ai.infrastructure.cache.redis_client import get_redis
         r = await get_redis()
         await r.setex(f"userctx:{user_id}", USER_CONTEXT_CACHE_TTL, context_str)
     except Exception as e:
@@ -235,7 +235,7 @@ async def store_fact_explicit(
                 db.add(fact)
             await db.commit()
             try:
-                from app.infrastructure.cache.redis_client import get_redis
+                from ai.infrastructure.cache.redis_client import get_redis
                 r = await get_redis()
                 await r.delete(f"userctx:{user_id}")
             except Exception as e:

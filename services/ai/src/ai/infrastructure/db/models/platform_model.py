@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.infrastructure.db.models.base import Base, TimestampMixin, UUIDMixin
+from ai.infrastructure.db.models.base import Base, TimestampMixin, UUIDMixin
 
 
 class PlatformModel(Base, UUIDMixin, TimestampMixin):

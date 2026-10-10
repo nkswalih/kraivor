@@ -10,8 +10,8 @@ import logging
 from datetime import datetime
 from defusedxml import ElementTree as DefusedET
 
-from app.core.url_guard import host_matches
-from app.knowledge_engine.sources.base import SourceContent, SourceResult
+from ai.core.url_guard import host_matches
+from ai.knowledge_engine.sources.base import SourceContent, SourceResult
 
 logger = logging.getLogger(__name__)
 

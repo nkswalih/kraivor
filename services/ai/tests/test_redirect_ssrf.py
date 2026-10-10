@@ -18,9 +18,9 @@ import aiohttp
 import httpx
 import pytest
 import socket
-from app.application.tools.web_fetch_tool import NewsFetchTool, WebFetchTool
-from app.core.url_guard import MAX_REDIRECT_HOPS, UnsafeURLError, resolve_redirect
-from app.knowledge_engine.multimodal.ingester import MultiModalIngester
+from ai.application.tools.web_fetch_tool import NewsFetchTool, WebFetchTool
+from ai.core.url_guard import MAX_REDIRECT_HOPS, UnsafeURLError, resolve_redirect
+from ai.knowledge_engine.multimodal.ingester import MultiModalIngester
 
 METADATA = "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
 SECRET = "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE"

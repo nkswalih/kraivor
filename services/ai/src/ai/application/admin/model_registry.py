@@ -15,10 +15,10 @@ import logging
 
 from sqlalchemy import select
 
-from app.infrastructure.db.database import async_session_factory
-from app.infrastructure.db.models.platform_model import PlatformModel
-from app.infrastructure.db.models.platform_provider import PlatformProvider
-from app.infrastructure.db.models.platform_task_route import PlatformTaskRoute
+from ai.infrastructure.db.database import async_session_factory
+from ai.infrastructure.db.models.platform_model import PlatformModel
+from ai.infrastructure.db.models.platform_provider import PlatformProvider
+from ai.infrastructure.db.models.platform_task_route import PlatformTaskRoute
 
 logger = logging.getLogger(__name__)
 

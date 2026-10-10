@@ -7,7 +7,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, Float, Index, JSON, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.infrastructure.db.models.base import Base
+from ai.infrastructure.db.models.base import Base
 
 
 class KnowledgeEmbedding(Base):

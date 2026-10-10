@@ -7,15 +7,15 @@ from cryptography.fernet import Fernet
 from datetime import UTC, datetime
 from fastapi import APIRouter, Depends
 
-from app.api.dependencies.auth import JWTPayload, get_current_user
-from app.api.schemas.api_key import (
+from ai.api.dependencies.auth import JWTPayload, get_current_user
+from ai.api.schemas.api_key import (
     CreateKeyRequest,
     KeyResponse,
     ProvisionRequest,
     ProvisionResponse,
 )
-from app.application.provisioning.key_provisioning import KeyProvisioner
-from app.core.config import settings
+from ai.application.provisioning.key_provisioning import KeyProvisioner
+from ai.core.config import settings
 
 CurrentUser = Annotated[JWTPayload, Depends(get_current_user)]
 

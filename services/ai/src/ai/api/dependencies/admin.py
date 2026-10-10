@@ -2,9 +2,9 @@ import logging
 
 from fastapi import Depends, HTTPException
 
-from app.api.dependencies.auth import JWTPayload, get_current_user
-from app.infrastructure.db.database import async_session_factory
-from app.infrastructure.db.models.platform_admin import PlatformAdmin
+from ai.api.dependencies.auth import JWTPayload, get_current_user
+from ai.infrastructure.db.database import async_session_factory
+from ai.infrastructure.db.models.platform_admin import PlatformAdmin
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)

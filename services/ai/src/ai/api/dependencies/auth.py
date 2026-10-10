@@ -6,7 +6,7 @@ import time
 from fastapi import HTTPException, Request
 from pydantic import BaseModel
 
-from app.core.config import settings
+from ai.core.config import settings
 
 logger = logging.getLogger(__name__)
 

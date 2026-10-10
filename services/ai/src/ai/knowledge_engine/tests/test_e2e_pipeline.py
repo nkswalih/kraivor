@@ -31,14 +31,14 @@ def mock_db():
     mock_factory.return_value.__aenter__ = AsyncMock(return_value=session)
     mock_factory.return_value.__aexit__ = AsyncMock(return_value=False)
 
-    with patch("app.knowledge_engine.store.knowledge_store.async_session_factory", mock_factory):
+    with patch("ai.knowledge_engine.store.knowledge_store.async_session_factory", mock_factory):
         yield session
 
 
 @pytest.fixture
 def mock_embedder():
     """Mock the embedder to avoid model loading."""
-    with patch("app.knowledge_engine.store.knowledge_indexer.Embedder") as mock:
+    with patch("ai.knowledge_engine.store.knowledge_indexer.Embedder") as mock:
         instance = mock.return_value
         instance.embed = AsyncMock(return_value=[0.1] * 384)
         instance.embed_batch = AsyncMock(return_value=[[0.1] * 384])
@@ -47,7 +47,7 @@ def mock_embedder():
 
 @pytest.mark.asyncio
 async def test_store_knowledge(mock_db, mock_embedder):
-    from app.knowledge_engine.store.knowledge_store import KnowledgeStore
+    from ai.knowledge_engine.store.knowledge_store import KnowledgeStore
 
     store = KnowledgeStore()
     item_id = await store.store(
@@ -65,7 +65,7 @@ async def test_store_knowledge(mock_db, mock_embedder):
 
 @pytest.mark.asyncio
 async def test_search_knowledge(mock_db, mock_embedder):
-    from app.knowledge_engine.store.knowledge_store import KnowledgeStore
+    from ai.knowledge_engine.store.knowledge_store import KnowledgeStore
 
     mock_row = {
         "id": "test-id-001",
@@ -95,7 +95,7 @@ async def test_search_knowledge(mock_db, mock_embedder):
 
 @pytest.mark.asyncio
 async def test_index_knowledge(mock_db, mock_embedder):
-    from app.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
+    from ai.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
 
     indexer = KnowledgeIndexer()
     item_id = await indexer.index_knowledge(
@@ -111,7 +111,7 @@ async def test_index_knowledge(mock_db, mock_embedder):
 
 
 def test_conflict_detection():
-    from app.knowledge_engine.intelligence.conflict_resolver import ConflictResolver
+    from ai.knowledge_engine.intelligence.conflict_resolver import ConflictResolver
 
     resolver = ConflictResolver()
     assert resolver._is_factual_claim("FastAPI is a modern Python web framework for building APIs quickly.")
@@ -153,7 +153,7 @@ def test_feedback_adjustment():
 
 
 def test_cache_key_determinism():
-    from app.knowledge_engine.monitoring.cache import KnowledgeCache
+    from ai.knowledge_engine.monitoring.cache import KnowledgeCache
 
     cache = KnowledgeCache()
     key1 = cache._make_key(TEST_WORKSPACE, "search", "FastAPI tutorial")
@@ -166,7 +166,7 @@ def test_cache_key_determinism():
 
 
 def test_dedup_cosine_similarity():
-    from app.knowledge_engine.intelligence.deduplicator import SemanticDeduplicator
+    from ai.knowledge_engine.intelligence.deduplicator import SemanticDeduplicator
 
     dedup = SemanticDeduplicator()
 
@@ -185,14 +185,14 @@ def test_dedup_cosine_similarity():
 
 
 def test_versioning_class_init():
-    from app.knowledge_engine.intelligence.versioning import KnowledgeVersioning
+    from ai.knowledge_engine.intelligence.versioning import KnowledgeVersioning
 
     v = KnowledgeVersioning()
     assert v is not None
 
 
 def test_health_score_calculation():
-    from app.knowledge_engine.intelligence.health_dashboard import KnowledgeHealthDashboard
+    from ai.knowledge_engine.intelligence.health_dashboard import KnowledgeHealthDashboard
 
     dashboard = KnowledgeHealthDashboard()
     stats = {"total_items": 20, "providers": 5}
@@ -205,28 +205,28 @@ def test_health_score_calculation():
 
 
 def test_exporter_class_init():
-    from app.knowledge_engine.intelligence.exporter import KnowledgeExporter
+    from ai.knowledge_engine.intelligence.exporter import KnowledgeExporter
 
     exporter = KnowledgeExporter()
     assert exporter is not None
 
 
 def test_advanced_search_init():
-    from app.knowledge_engine.search.advanced import AdvancedSearch
+    from ai.knowledge_engine.search.advanced import AdvancedSearch
 
     search = AdvancedSearch()
     assert search is not None
 
 
 def test_metrics_class_init():
-    from app.knowledge_engine.monitoring.metrics import KnowledgeMetrics
+    from ai.knowledge_engine.monitoring.metrics import KnowledgeMetrics
 
     metrics = KnowledgeMetrics()
     assert metrics is not None
 
 
 def test_engine_init():
-    from app.knowledge_engine.engine import KnowledgeEngine
+    from ai.knowledge_engine.engine import KnowledgeEngine
 
     engine = KnowledgeEngine()
     assert engine.web_search is not None
@@ -242,7 +242,7 @@ def test_engine_init():
 
 
 def test_tool_definitions_count():
-    from app.application.tools.workspace_tools import WORKSPACE_TOOL_DEFINITIONS
+    from ai.application.tools.workspace_tools import WORKSPACE_TOOL_DEFINITIONS
 
     tool_names = set()
     for defn in WORKSPACE_TOOL_DEFINITIONS:
@@ -254,7 +254,7 @@ def test_tool_definitions_count():
 
 
 def test_celery_tasks_registered():
-    from app.application.tasks.knowledge import (
+    from ai.application.tasks.knowledge import (
         index_knowledge_space_canvas,
         extract_conversation_knowledge,
         check_knowledge_freshness,
@@ -280,7 +280,7 @@ def test_celery_tasks_registered():
 
 
 def test_workflow_definitions_exist():
-    from app.knowledge_engine.workflows.definitions import get_workflow_definitions
+    from ai.knowledge_engine.workflows.definitions import get_workflow_definitions
 
     workflows = get_workflow_definitions()
     assert len(workflows) >= 5
@@ -292,7 +292,7 @@ def test_workflow_definitions_exist():
 
 
 def test_marketplace_templates_exist():
-    from app.knowledge_engine.marketplace.templates import get_templates
+    from ai.knowledge_engine.marketplace.templates import get_templates
 
     templates = get_templates()
     assert len(templates) >= 4
@@ -303,21 +303,21 @@ def test_marketplace_templates_exist():
 
 
 def test_language_detector_init():
-    from app.knowledge_engine.multilingual.detector import LanguageDetector
+    from ai.knowledge_engine.multilingual.detector import LanguageDetector
 
     detector = LanguageDetector()
     assert detector is not None
 
 
 def test_multimodal_ingester_init():
-    from app.knowledge_engine.multimodal.ingester import MultiModalIngester
+    from ai.knowledge_engine.multimodal.ingester import MultiModalIngester
 
     ingester = MultiModalIngester()
     assert ingester is not None
 
 
 def test_workflow_engine_init():
-    from app.knowledge_engine.workflows.engine import WorkflowEngine
+    from ai.knowledge_engine.workflows.engine import WorkflowEngine
 
     engine = WorkflowEngine()
     assert engine is not None

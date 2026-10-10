@@ -11,7 +11,7 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
-from app.core.logging import log_safe
+from ai.core.logging import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class BundleManager:
         include_embeddings: bool = False,
     ) -> KnowledgeBundle:
         """Export workspace knowledge as a portable bundle."""
-        from app.knowledge_engine.store.knowledge_store import KnowledgeStore
+        from ai.knowledge_engine.store.knowledge_store import KnowledgeStore
 
         store = KnowledgeStore()
         items = await store.list_items(workspace_id, limit=10000)
@@ -113,7 +113,7 @@ class BundleManager:
         skip_existing: bool = True,
     ) -> ImportResult:
         """Import a knowledge bundle into a workspace."""
-        from app.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
+        from ai.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
 
         indexer = KnowledgeIndexer()
         imported = 0

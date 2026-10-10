@@ -1,4 +1,4 @@
-from app.core.celery_app import celery_app
+from ai.core.celery_app import celery_app
 
 
 @celery_app.task(bind=True, queue="ai.maintenance")

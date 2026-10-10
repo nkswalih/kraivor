@@ -1,15 +1,15 @@
 import asyncio
 import logging
 
-from app.core.config import settings
-from app.infrastructure.llm.client import LLMClient
-from app.infrastructure.llm.error_classifier import (
+from ai.core.config import settings
+from ai.infrastructure.llm.client import LLMClient
+from ai.infrastructure.llm.error_classifier import (
     ClassifiedError,
     ErrorCategory,
     SuggestedAction,
     classify_error,
 )
-from app.infrastructure.llm.router import FREE_MODELS, ModelRouter
+from ai.infrastructure.llm.router import FREE_MODELS, ModelRouter
 
 logger = logging.getLogger(__name__)
 

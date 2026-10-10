@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 
-from app.knowledge_engine.sources.base import RankedSource
+from ai.knowledge_engine.sources.base import RankedSource
 
 logger = logging.getLogger(__name__)
 

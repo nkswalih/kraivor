@@ -2,7 +2,7 @@ import hashlib
 import logging
 from openai import AsyncOpenAI
 
-from app.core.config import settings
+from ai.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class Embedder:
     async def embed(self, text: str) -> list[float]:
         cache_key = f"emb:{hashlib.sha256(text.encode()).hexdigest()}"
         try:
-            from app.infrastructure.cache.redis_client import get_redis
+            from ai.infrastructure.cache.redis_client import get_redis
             import json
             r = await get_redis()
             cached = await r.get(cache_key)
@@ -70,7 +70,7 @@ class Embedder:
             result = response.data[0].embedding
 
         try:
-            from app.infrastructure.cache.redis_client import get_redis
+            from ai.infrastructure.cache.redis_client import get_redis
             import json
             r = await get_redis()
             await r.setex(cache_key, EMBED_CACHE_TTL, json.dumps(result))

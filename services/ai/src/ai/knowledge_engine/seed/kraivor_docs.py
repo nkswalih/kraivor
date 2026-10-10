@@ -4,7 +4,7 @@ Public-facing project info only. No internal architecture, system design,
 or technical implementation details — those stay in code.
 
 Usage:
-    from app.knowledge_engine.seed.kraivor_docs import KRAIVOR_DOCS
+    from ai.knowledge_engine.seed.kraivor_docs import KRAIVOR_DOCS
     for doc in KRAIVOR_DOCS:
         await indexer.index_knowledge(workspace_id=ws_id, **doc)
 """

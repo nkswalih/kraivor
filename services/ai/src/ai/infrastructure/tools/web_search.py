@@ -1,11 +1,11 @@
 """Web search and fetch tools - unified interface."""
 
-from app.application.tools.search_tool import (
+from ai.application.tools.search_tool import (
     DuckDuckGoInstantTool,
     DuckDuckGoNewsTool,
     DuckDuckGoSearchTool,
 )
-from app.application.tools.web_fetch_tool import NewsFetchTool, WebFetchTool
+from ai.application.tools.web_fetch_tool import NewsFetchTool, WebFetchTool
 
 
 class WebSearchTool:

@@ -5,15 +5,15 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from app.api.dependencies.auth import JWTPayload, get_current_user
-from app.api.dependencies.rate_limiter import check_rate_limit
-from app.application.chat.conversation_repository import (
+from ai.api.dependencies.auth import JWTPayload, get_current_user
+from ai.api.dependencies.rate_limiter import check_rate_limit
+from ai.application.chat.conversation_repository import (
     get_conversation,
     get_messages,
     list_conversations,
     update_conversation,
 )
-from app.infrastructure.db.database import async_session_factory
+from ai.infrastructure.db.database import async_session_factory
 
 CurrentUser = Annotated[JWTPayload, Depends(get_current_user)]
 RateLimit = Annotated[None, Depends(check_rate_limit)]

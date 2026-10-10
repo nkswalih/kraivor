@@ -1,4 +1,4 @@
-from app.application.admin.model_registry import ModelRegistry
+from ai.application.admin.model_registry import ModelRegistry
 
 FREE_MODELS = [
     "cohere/north-mini-code:free",

@@ -5,10 +5,10 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from app.api.dependencies.auth import JWTPayload, get_current_user
-from app.api.dependencies.backpressure import acquire_llm_slot, release_llm_slot
-from app.api.dependencies.rate_limiter import check_rate_limit
-from app.application.analysis.enrichment import EnrichmentService
+from ai.api.dependencies.auth import JWTPayload, get_current_user
+from ai.api.dependencies.backpressure import acquire_llm_slot, release_llm_slot
+from ai.api.dependencies.rate_limiter import check_rate_limit
+from ai.application.analysis.enrichment import EnrichmentService
 
 # stdlib logging, matching every other module in this service. `services/analysis`
 # uses structlog's keyword form; the two services log in different styles and

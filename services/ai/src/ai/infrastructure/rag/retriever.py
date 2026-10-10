@@ -1,6 +1,6 @@
 from sqlalchemy import text
 
-from app.infrastructure.rag.embedder import Embedder
+from ai.infrastructure.rag.embedder import Embedder
 
 
 class Retriever:

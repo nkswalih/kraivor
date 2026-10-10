@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import logging
 
-from app.infrastructure.rag.embedder import Embedder
-from app.knowledge_engine.store.knowledge_store import KnowledgeStore
-from app.core.logging import log_safe
+from ai.infrastructure.rag.embedder import Embedder
+from ai.knowledge_engine.store.knowledge_store import KnowledgeStore
+from ai.core.logging import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -85,19 +85,19 @@ class KnowledgeIndexer:
 
     def _get_graph(self):
         if self._graph is None:
-            from app.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
+            from ai.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
             self._graph = KnowledgeGraph()
         return self._graph
 
     def _get_quality(self):
         if self._quality is None:
-            from app.knowledge_engine.quality.quality_scorer import KnowledgeQualityScorer
+            from ai.knowledge_engine.quality.quality_scorer import KnowledgeQualityScorer
             self._quality = KnowledgeQualityScorer()
         return self._quality
 
     def _get_versioning(self):
         if self._versioning is None:
-            from app.knowledge_engine.intelligence.versioning import KnowledgeVersioning
+            from ai.knowledge_engine.intelligence.versioning import KnowledgeVersioning
             self._versioning = KnowledgeVersioning()
         return self._versioning
 

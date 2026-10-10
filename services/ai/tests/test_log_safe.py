@@ -17,7 +17,7 @@ why it is written against the source rather than the return value.
 import inspect
 import re
 
-from app.core.logging import log_safe
+from ai.core.logging import log_safe
 
 # A CR/LF payload whose second line is shaped exactly like a real record -
 # level, timestamp, module - which is what a log parser cannot tell apart

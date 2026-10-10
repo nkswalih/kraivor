@@ -3,7 +3,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.types import ASGIApp
 
-from app.monitoring.metrics import http_duration, http_requests
+from ai.monitoring.metrics import http_duration, http_requests
 
 
 class PrometheusMiddleware(BaseHTTPMiddleware):

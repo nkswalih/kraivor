@@ -2,8 +2,8 @@ import json
 import logging
 from cryptography.fernet import Fernet
 
-from app.core.config import settings
-from app.core.exceptions import InsufficientQuotaError
+from ai.core.config import settings
+from ai.core.exceptions import InsufficientQuotaError
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ def detect_provider_from_key(api_key: str) -> str | None:
 
 def _model_to_provider(model: str) -> str:
     # 1. Check platform_models table first (admin-configured)
-    from app.application.admin.model_registry import ModelRegistry
+    from ai.application.admin.model_registry import ModelRegistry
     db_provider = ModelRegistry.get_model_provider(model)
     if db_provider:
         return db_provider
@@ -100,7 +100,7 @@ _FALLBACK_ORDER = ["openrouter", "groq", "google", "anthropic", "openai", "deeps
 async def _get_user_byok_preference(user_id: str, model_id: str) -> str | None:
     """Get user's BYOK provider preference for a model from Redis."""
     try:
-        from app.infrastructure.cache.redis_client import get_redis
+        from ai.infrastructure.cache.redis_client import get_redis
         r = await get_redis()
         val = await r.get(f"byok:pref:{user_id}:{model_id}")
         return val.decode() if val else None
@@ -117,12 +117,12 @@ async def resolve_provider_key(
     """
     from sqlalchemy import select
 
-    from app.application.provisioning.provider_models import (
+    from ai.application.provisioning.provider_models import (
         BYOK_MODEL_PROVIDERS,
         PROVIDER_KEY_COLUMN,
         PROVIDER_URL_COLUMN,
     )
-    from app.infrastructure.db.models.api_key import ApiKey
+    from ai.infrastructure.db.models.api_key import ApiKey
 
     result = await db_session.execute(
         select(ApiKey).where(ApiKey.user_id == user_id, ApiKey.revoked.is_(False))
@@ -223,7 +223,7 @@ class KeyResolver:
         cache_key = _key_cache_key(user_id, preferred_model)
 
         try:
-            from app.infrastructure.cache.redis_client import get_redis
+            from ai.infrastructure.cache.redis_client import get_redis
             r = await get_redis()
             cached = await r.get(cache_key)
             if cached:
@@ -237,7 +237,7 @@ class KeyResolver:
             # Cache is optional: fall through to the database lookup.
             logger.debug("key_cache_read_failed user=%s err=%s", user_id, e)
 
-        from app.infrastructure.db.database import async_session_factory
+        from ai.infrastructure.db.database import async_session_factory
 
         async with async_session_factory() as session:
             api_key, provider, custom_url = await resolve_provider_key(
@@ -248,7 +248,7 @@ class KeyResolver:
             )
 
         try:
-            from app.infrastructure.cache.redis_client import get_redis
+            from ai.infrastructure.cache.redis_client import get_redis
             r = await get_redis()
             encrypted = self.encrypter.encrypt(api_key.encode()).decode()
             await r.setex(cache_key, KEY_CACHE_TTL, json.dumps({
@@ -264,7 +264,7 @@ class KeyResolver:
 
     async def invalidate(self, user_id: str, preferred_model: str | None = None) -> None:
         try:
-            from app.infrastructure.cache.redis_client import get_redis
+            from ai.infrastructure.cache.redis_client import get_redis
             r = await get_redis()
             await r.delete(_key_cache_key(user_id, preferred_model))
         except Exception as e:

@@ -425,7 +425,7 @@ services:
     command: >
       sh -c "
         alembic -c alembic.ini upgrade head &&
-        exec uvicorn app.api.main:app --host 0.0.0.0 --port 8004 --reload
+        exec uvicorn ai.api.main:app --host 0.0.0.0 --port 8004 --reload
       "
 
   ai-worker:
@@ -433,7 +433,7 @@ services:
     container_name: kraivor-ai-worker-dev
     healthcheck:
       disable: true
-    command: celery -A app.core.celery_app worker -Q ai.inference,ai.indexing,ai.maintenance --loglevel=info
+    command: celery -A ai.core.celery_app worker -Q ai.inference,ai.indexing,ai.maintenance --loglevel=info
     env_file:
       - .env
     environment:
@@ -460,7 +460,7 @@ services:
     container_name: kraivor-ai-beat-dev
     healthcheck:
       disable: true
-    command: celery -A app.core.celery_app beat --loglevel=info
+    command: celery -A ai.core.celery_app beat --loglevel=info
     env_file:
       - .env
     environment:

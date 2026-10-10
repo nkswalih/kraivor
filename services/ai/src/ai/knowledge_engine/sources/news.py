@@ -8,8 +8,8 @@ import logging
 from datetime import datetime
 from defusedxml import ElementTree as DefusedET
 
-from app.core.url_guard import UnsafeURLError, assert_safe_url
-from app.knowledge_engine.sources.base import SourceContent, SourceResult
+from ai.core.url_guard import UnsafeURLError, assert_safe_url
+from ai.knowledge_engine.sources.base import SourceContent, SourceResult
 
 logger = logging.getLogger(__name__)
 

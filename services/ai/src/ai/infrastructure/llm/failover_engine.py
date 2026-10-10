@@ -16,15 +16,15 @@ import json
 import logging
 import time
 
-from app.infrastructure.llm.error_classifier import (
+from ai.infrastructure.llm.error_classifier import (
     ClassifiedError,
     ErrorCategory,
     SuggestedAction,
     classify_error,
 )
-from app.infrastructure.llm.client import LLMClient
-from app.application.provisioning.key_resolver import KeyResolver
-from app.application.admin.model_registry import ModelRegistry
+from ai.infrastructure.llm.client import LLMClient
+from ai.application.provisioning.key_resolver import KeyResolver
+from ai.application.admin.model_registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +128,7 @@ class FailoverEngine:
             return self._model_health[model]
 
         try:
-            from app.infrastructure.cache.redis_client import get_redis
+            from ai.infrastructure.cache.redis_client import get_redis
             r = await get_redis()
             raw = await r.get(f"{_REDIS_HEALTH_PREFIX}{model}")
             if raw:
@@ -147,7 +147,7 @@ class FailoverEngine:
     async def _save_model_health(self, model: str, mh: ModelHealth) -> None:
         """Persist model health to Redis."""
         try:
-            from app.infrastructure.cache.redis_client import get_redis
+            from ai.infrastructure.cache.redis_client import get_redis
             r = await get_redis()
             await r.setex(
                 f"{_REDIS_HEALTH_PREFIX}{model}",

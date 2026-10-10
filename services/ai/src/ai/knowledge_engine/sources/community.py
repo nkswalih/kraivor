@@ -7,8 +7,8 @@ import contextlib
 import logging
 from datetime import UTC, datetime
 
-from app.core.url_guard import UnsafeURLError, assert_safe_url, host_matches
-from app.knowledge_engine.sources.base import SourceContent, SourceResult
+from ai.core.url_guard import UnsafeURLError, assert_safe_url, host_matches
+from ai.knowledge_engine.sources.base import SourceContent, SourceResult
 
 logger = logging.getLogger(__name__)
 

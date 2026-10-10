@@ -10,7 +10,7 @@ blocklist is asserted explicitly rather than sampled.
 import pytest
 import socket
 
-from app.core.url_guard import UnsafeURLError, assert_safe_url, host_matches
+from ai.core.url_guard import UnsafeURLError, assert_safe_url, host_matches
 
 
 class TestSchemeValidation:

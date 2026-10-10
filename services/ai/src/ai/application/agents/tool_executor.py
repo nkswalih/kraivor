@@ -2,15 +2,15 @@ import json
 
 import logging
 
-from app.application.agents.prompts.tool_executor import TOOL_EXECUTOR_PROMPT
-from app.application.provisioning.key_resolver import KeyResolver
-from app.application.tools.workspace_tools import (
+from ai.application.agents.prompts.tool_executor import TOOL_EXECUTOR_PROMPT
+from ai.application.provisioning.key_resolver import KeyResolver
+from ai.application.tools.workspace_tools import (
     WORKSPACE_TOOL_DEFINITIONS,
     WorkspaceTools,
 )
-from app.infrastructure.llm.client import LLM_SHORT_TIMEOUT
-from app.infrastructure.llm.failover_engine import FailoverEngine
-from app.infrastructure.llm.router import ModelRouter
+from ai.infrastructure.llm.client import LLM_SHORT_TIMEOUT
+from ai.infrastructure.llm.failover_engine import FailoverEngine
+from ai.infrastructure.llm.router import ModelRouter
 
 logger = logging.getLogger(__name__)
 

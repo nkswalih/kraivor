@@ -3,8 +3,8 @@ import time
 
 from fastapi import HTTPException, Request
 
-from app.core.config import settings
-from app.infrastructure.cache.redis_client import get_redis
+from ai.core.config import settings
+from ai.infrastructure.cache.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 

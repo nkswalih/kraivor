@@ -1,12 +1,12 @@
 import logging
 import time
 
-from app.application.agents.prompts.specialist import CODE_ANALYST_SYSTEM_PROMPT
-from app.application.provisioning.key_resolver import KeyResolver
-from app.infrastructure.llm.client import LLM_SHORT_TIMEOUT
-from app.infrastructure.llm.error_classifier import ClassifiedError
-from app.infrastructure.llm.failover_engine import FailoverEngine
-from app.infrastructure.llm.router import ModelRouter
+from ai.application.agents.prompts.specialist import CODE_ANALYST_SYSTEM_PROMPT
+from ai.application.provisioning.key_resolver import KeyResolver
+from ai.infrastructure.llm.client import LLM_SHORT_TIMEOUT
+from ai.infrastructure.llm.error_classifier import ClassifiedError
+from ai.infrastructure.llm.failover_engine import FailoverEngine
+from ai.infrastructure.llm.router import ModelRouter
 
 logger = logging.getLogger(__name__)
 

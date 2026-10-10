@@ -6,8 +6,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.dependencies.auth import JWTPayload, get_current_user
-from app.api.schemas.byok import (
+from ai.api.dependencies.auth import JWTPayload, get_current_user
+from ai.api.schemas.byok import (
     ByokModelConfig,
     ModelProviderOption,
     ModelProviderUpdate,
@@ -15,8 +15,8 @@ from app.api.schemas.byok import (
     ProviderStatus,
     ValidateResult,
 )
-from app.application.provisioning.key_validator import validate_key
-from app.application.provisioning.provider_models import (
+from ai.application.provisioning.key_validator import validate_key
+from ai.application.provisioning.provider_models import (
     BYOK_MODEL_INFO,
     BYOK_MODEL_PROVIDERS,
     PROVIDER_DISPLAY_NAMES,
@@ -25,10 +25,10 @@ from app.application.provisioning.provider_models import (
     PROVIDER_URL_COLUMN,
     get_models_for_provider,
 )
-from app.infrastructure.cache.redis_client import get_redis
-from app.infrastructure.db.database import async_session_factory
-from app.infrastructure.db.models.api_key import ApiKey
-from app.core.logging import log_safe
+from ai.infrastructure.cache.redis_client import get_redis
+from ai.infrastructure.db.database import async_session_factory
+from ai.infrastructure.db.models.api_key import ApiKey
+from ai.core.logging import log_safe
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ async def _set_user_provider_preference(user_id: str, model_id: str, provider: s
 @router.get("/models")
 async def list_byok_models(user: CurrentUser):
     """Return all BYOK models with available providers and user's current selection."""
-    from app.application.provisioning.key_resolver import _default_encrypter
+    from ai.application.provisioning.key_resolver import _default_encrypter
 
     async with async_session_factory() as db:
         key_record = await _get_key_record(db, user.sub)
@@ -171,7 +171,7 @@ async def update_model_provider(
 @router.get("/providers")
 async def list_providers(user: CurrentUser):
     """Return all providers with key status, model count, and metadata."""
-    from app.application.provisioning.key_resolver import _default_encrypter
+    from ai.application.provisioning.key_resolver import _default_encrypter
 
     async with async_session_factory() as db:
         key_record = await _get_key_record(db, user.sub)
@@ -262,7 +262,7 @@ async def save_provider_key(
             detail=f"Key validation failed: {result.error}",
         )
 
-    from app.application.provisioning.key_resolver import _default_encrypter
+    from ai.application.provisioning.key_resolver import _default_encrypter
 
     key_col = PROVIDER_KEY_COLUMN[provider]
     url_col = PROVIDER_URL_COLUMN[provider]

@@ -5,8 +5,8 @@ from __future__ import annotations
 import aiohttp
 import logging
 
-from app.core.url_guard import host_matches
-from app.knowledge_engine.sources.base import SourceContent, SourceResult
+from ai.core.url_guard import host_matches
+from ai.knowledge_engine.sources.base import SourceContent, SourceResult
 
 logger = logging.getLogger(__name__)
 

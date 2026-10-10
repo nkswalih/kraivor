@@ -1,5 +1,5 @@
-from app.application.tools.base import BaseTool
-from app.infrastructure.rag.retriever import Retriever
+from ai.application.tools.base import BaseTool
+from ai.infrastructure.rag.retriever import Retriever
 
 
 class CodeSearchTool(BaseTool):

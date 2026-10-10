@@ -30,9 +30,9 @@ import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
 
-from app.api.dependencies.auth import JWTPayload
-from app.api.routers import analysis as router_module
-from app.api.routers.analysis import (
+from ai.api.dependencies.auth import JWTPayload
+from ai.api.routers import analysis as router_module
+from ai.api.routers.analysis import (
     ENRICH_REQUEST_TIMEOUT_SECONDS,
     AiSummaryError,
     EnrichFindingItem,
@@ -427,7 +427,7 @@ class TestTheRequestIsBounded:
         # that, it would always win and the summary's specific, actionable
         # `timeout` error would be unreachable -- replaced by a generic 504 that
         # names neither the provider nor the fact that retrying is worth trying.
-        from app.application.analysis.enrichment import SUMMARY_TIMEOUT_SECONDS
+        from ai.application.analysis.enrichment import SUMMARY_TIMEOUT_SECONDS
 
         assert ENRICH_REQUEST_TIMEOUT_SECONDS > SUMMARY_TIMEOUT_SECONDS
 

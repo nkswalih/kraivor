@@ -6,9 +6,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.dependencies.auth import JWTPayload, get_current_user
-from app.api.dependencies.rate_limiter import check_rate_limit, enforce_rate_limit
-from app.api.schemas.knowledge import (
+from ai.api.dependencies.auth import JWTPayload, get_current_user
+from ai.api.dependencies.rate_limiter import check_rate_limit, enforce_rate_limit
+from ai.api.schemas.knowledge import (
     KnowledgeIndexRequest,
     KnowledgeIndexResponse,
     KnowledgeBatchIndexRequest,
@@ -91,7 +91,7 @@ from app.api.schemas.knowledge import (
     TemplateSummary,
     TemplateImportRequest,
 )
-from app.core.logging import log_safe
+from ai.core.logging import log_safe
 
 CurrentUser = Annotated[JWTPayload, Depends(get_current_user)]
 RateLimit = Annotated[None, Depends(check_rate_limit)]
@@ -108,7 +108,7 @@ async def index_knowledge(
     _: RateLimit = None,
 ):
     """Index a single knowledge item into the persistent knowledge base."""
-    from app.knowledge_engine.engine import KnowledgeEngine
+    from ai.knowledge_engine.engine import KnowledgeEngine
 
     engine = KnowledgeEngine()
 
@@ -137,7 +137,7 @@ async def index_knowledge_batch(
     _: RateLimit = None,
 ):
     """Index multiple knowledge items at once."""
-    from app.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
+    from ai.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
 
     indexer = KnowledgeIndexer()
     ws = request.workspace_id
@@ -171,7 +171,7 @@ async def search_knowledge(
     _: RateLimit = None,
 ):
     """Search stored knowledge by semantic or text similarity."""
-    from app.knowledge_engine.store.knowledge_retriever import KnowledgeRetriever
+    from ai.knowledge_engine.store.knowledge_retriever import KnowledgeRetriever
 
     retriever = KnowledgeRetriever()
 
@@ -196,7 +196,7 @@ async def get_knowledge_stats(
     _: RateLimit = None,
 ):
     """Get knowledge base statistics for a workspace."""
-    from app.knowledge_engine.store.knowledge_store import KnowledgeStore
+    from ai.knowledge_engine.store.knowledge_store import KnowledgeStore
 
     store = KnowledgeStore()
     stats = await store.get_stats(workspace_id)
@@ -222,7 +222,7 @@ async def index_canvas(
 
     Extracts text content from canvas elements and stores them as knowledge.
     """
-    from app.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
+    from ai.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
 
     indexer = KnowledgeIndexer()
     canvas_data = request.canvas_data
@@ -276,7 +276,7 @@ async def index_conversation_knowledge(
     Analyzes messages for factual statements, decisions, and key information
     that should be remembered for future sessions.
     """
-    from app.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
+    from ai.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
 
     indexer = KnowledgeIndexer()
     extracted = _extract_knowledge_from_messages(request.messages)
@@ -317,7 +317,7 @@ async def get_graph_stats(
     _: RateLimit = None,
 ):
     """Get knowledge graph statistics for a workspace."""
-    from app.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
+    from ai.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
 
     graph = KnowledgeGraph()
     await graph.ensure_tables()
@@ -341,7 +341,7 @@ async def get_graph_entities(
     _: RateLimit = None,
 ):
     """Get the most mentioned entities in a workspace's knowledge graph."""
-    from app.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
+    from ai.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
 
     graph = KnowledgeGraph()
     await graph.ensure_tables()
@@ -366,7 +366,7 @@ async def find_related_entities(
     _: RateLimit = None,
 ):
     """Find entities related to a given entity via the knowledge graph."""
-    from app.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
+    from ai.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
 
     graph = KnowledgeGraph()
     await graph.ensure_tables()
@@ -401,7 +401,7 @@ async def get_quality_stats(
     _: RateLimit = None,
 ):
     """Get knowledge quality statistics for a workspace."""
-    from app.knowledge_engine.quality.quality_scorer import KnowledgeQualityScorer
+    from ai.knowledge_engine.quality.quality_scorer import KnowledgeQualityScorer
 
     scorer = KnowledgeQualityScorer()
     await scorer.ensure_table()
@@ -425,7 +425,7 @@ async def get_top_quality_items(
     _: RateLimit = None,
 ):
     """Get the highest quality knowledge items for a workspace."""
-    from app.knowledge_engine.quality.quality_scorer import KnowledgeQualityScorer
+    from ai.knowledge_engine.quality.quality_scorer import KnowledgeQualityScorer
 
     scorer = KnowledgeQualityScorer()
     await scorer.ensure_table()
@@ -464,7 +464,7 @@ async def trigger_proactive_learning(
     Detects technologies used, checks for new releases and security advisories,
     and auto-indexes relevant updates.
     """
-    from app.knowledge_engine.learning.proactive_agent import ProactiveLearningPipeline
+    from ai.knowledge_engine.learning.proactive_agent import ProactiveLearningPipeline
 
     pipeline = ProactiveLearningPipeline()
     result = await pipeline.run_full_cycle(workspace_id)
@@ -489,7 +489,7 @@ async def detect_conflicts(
     _: RateLimit = None,
 ):
     """Detect and resolve conflicting claims across knowledge sources for a topic."""
-    from app.knowledge_engine.intelligence.conflict_resolver import ConflictResolver
+    from ai.knowledge_engine.intelligence.conflict_resolver import ConflictResolver
 
     resolver = ConflictResolver()
     report = await resolver.detect_conflicts(
@@ -532,7 +532,7 @@ async def summarize_topic(
     _: RateLimit = None,
 ):
     """Summarize all knowledge about a specific topic using LLM."""
-    from app.knowledge_engine.intelligence.summarizer import KnowledgeSummarizer
+    from ai.knowledge_engine.intelligence.summarizer import KnowledgeSummarizer
 
     summarizer = KnowledgeSummarizer()
     result = await summarizer.summarize_topic(
@@ -554,7 +554,7 @@ async def summarize_workspace(
     _: RateLimit = None,
 ):
     """Generate an overview summary of all knowledge in a workspace."""
-    from app.knowledge_engine.intelligence.summarizer import KnowledgeSummarizer
+    from ai.knowledge_engine.intelligence.summarizer import KnowledgeSummarizer
 
     summarizer = KnowledgeSummarizer()
     result = await summarizer.summarize_workspace(request.workspace_id)
@@ -573,7 +573,7 @@ async def summarize_source(
     _: RateLimit = None,
 ):
     """Summarize all knowledge from a specific source/provider."""
-    from app.knowledge_engine.intelligence.summarizer import KnowledgeSummarizer
+    from ai.knowledge_engine.intelligence.summarizer import KnowledgeSummarizer
 
     summarizer = KnowledgeSummarizer()
     result = await summarizer.summarize_source(
@@ -597,7 +597,7 @@ async def submit_feedback(
     _: RateLimit = None,
 ):
     """Record user feedback on a knowledge item's quality."""
-    from app.knowledge_engine.intelligence.feedback import FeedbackTracker
+    from ai.knowledge_engine.intelligence.feedback import FeedbackTracker
 
     tracker = FeedbackTracker()
     await tracker.record_feedback(
@@ -618,7 +618,7 @@ async def get_feedback_summary(
     _: RateLimit = None,
 ):
     """Get overall feedback summary for a workspace."""
-    from app.knowledge_engine.intelligence.feedback import FeedbackTracker
+    from ai.knowledge_engine.intelligence.feedback import FeedbackTracker
 
     tracker = FeedbackTracker()
     result = await tracker.get_workspace_feedback_summary(workspace_id)
@@ -643,7 +643,7 @@ async def deduplicate_knowledge(
     _: RateLimit = None,
 ):
     """Find and optionally remove near-duplicate knowledge items."""
-    from app.knowledge_engine.intelligence.deduplicator import SemanticDeduplicator
+    from ai.knowledge_engine.intelligence.deduplicator import SemanticDeduplicator
 
     dedup = SemanticDeduplicator()
     result = await dedup.deduplicate_workspace(
@@ -671,7 +671,7 @@ async def get_version_history(
     _: RateLimit = None,
 ):
     """Get version history for a knowledge item."""
-    from app.knowledge_engine.intelligence.versioning import KnowledgeVersioning
+    from ai.knowledge_engine.intelligence.versioning import KnowledgeVersioning
 
     versioning = KnowledgeVersioning()
     versions = await versioning.get_version_history(workspace_id, item_id, limit)
@@ -691,7 +691,7 @@ async def get_version_stats(
     _: RateLimit = None,
 ):
     """Get versioning statistics for a workspace."""
-    from app.knowledge_engine.intelligence.versioning import KnowledgeVersioning
+    from ai.knowledge_engine.intelligence.versioning import KnowledgeVersioning
 
     versioning = KnowledgeVersioning()
     stats = await versioning.get_version_stats(workspace_id)
@@ -713,7 +713,7 @@ async def revert_version(
     _: RateLimit = None,
 ):
     """Revert a knowledge item to a previous version."""
-    from app.knowledge_engine.intelligence.versioning import KnowledgeVersioning
+    from ai.knowledge_engine.intelligence.versioning import KnowledgeVersioning
 
     versioning = KnowledgeVersioning()
     success = await versioning.revert_to_version(
@@ -740,7 +740,7 @@ async def export_knowledge(
     _: RateLimit = None,
 ):
     """Export all knowledge for a workspace as structured JSON."""
-    from app.knowledge_engine.intelligence.exporter import KnowledgeExporter
+    from ai.knowledge_engine.intelligence.exporter import KnowledgeExporter
 
     exporter = KnowledgeExporter()
     result = await exporter.export_workspace(
@@ -774,7 +774,7 @@ async def get_knowledge_health(
     _: RateLimit = None,
 ):
     """Get a comprehensive health report for the workspace's knowledge base."""
-    from app.knowledge_engine.intelligence.health_dashboard import KnowledgeHealthDashboard
+    from ai.knowledge_engine.intelligence.health_dashboard import KnowledgeHealthDashboard
 
     dashboard = KnowledgeHealthDashboard()
     result = await dashboard.get_health_report(workspace_id)
@@ -807,7 +807,7 @@ async def get_query_stats(
     _: RateLimit = None,
 ):
     """Get query performance statistics for a workspace."""
-    from app.knowledge_engine.monitoring.metrics import KnowledgeMetrics
+    from ai.knowledge_engine.monitoring.metrics import KnowledgeMetrics
 
     metrics = KnowledgeMetrics()
     result = await metrics.get_query_stats(workspace_id, hours)
@@ -836,7 +836,7 @@ async def get_source_reliability(
     _: RateLimit = None,
 ):
     """Get reliability stats per source provider."""
-    from app.knowledge_engine.monitoring.metrics import KnowledgeMetrics
+    from ai.knowledge_engine.monitoring.metrics import KnowledgeMetrics
 
     metrics = KnowledgeMetrics()
     providers = await metrics.get_source_reliability(workspace_id, hours)
@@ -857,7 +857,7 @@ async def get_usage_timeline(
     _: RateLimit = None,
 ):
     """Get query volume over time in time buckets."""
-    from app.knowledge_engine.monitoring.metrics import KnowledgeMetrics
+    from ai.knowledge_engine.monitoring.metrics import KnowledgeMetrics
 
     metrics = KnowledgeMetrics()
     buckets = await metrics.get_usage_timeline(workspace_id, hours, bucket_minutes)
@@ -878,7 +878,7 @@ async def get_top_queries(
     _: RateLimit = None,
 ):
     """Get most frequently asked queries."""
-    from app.knowledge_engine.monitoring.metrics import KnowledgeMetrics
+    from ai.knowledge_engine.monitoring.metrics import KnowledgeMetrics
 
     metrics = KnowledgeMetrics()
     queries = await metrics.get_top_queries(workspace_id, limit, hours)
@@ -896,7 +896,7 @@ async def get_cache_stats(
     _: RateLimit = None,
 ):
     """Get cache statistics for a workspace."""
-    from app.knowledge_engine.monitoring.cache import KnowledgeCache
+    from ai.knowledge_engine.monitoring.cache import KnowledgeCache
 
     cache = KnowledgeCache()
     stats = await cache.get_stats(workspace_id)
@@ -911,7 +911,7 @@ async def invalidate_cache(
     _: RateLimit = None,
 ):
     """Invalidate cache entries for a workspace."""
-    from app.knowledge_engine.monitoring.cache import KnowledgeCache
+    from ai.knowledge_engine.monitoring.cache import KnowledgeCache
 
     cache = KnowledgeCache()
     removed = await cache.invalidate(request.workspace_id, request.cache_type)
@@ -932,7 +932,7 @@ async def get_refresh_stats(
     _: RateLimit = None,
 ):
     """Get knowledge refresh pipeline statistics."""
-    from app.knowledge_engine.monitoring.refresh import KnowledgeRefreshPipeline
+    from ai.knowledge_engine.monitoring.refresh import KnowledgeRefreshPipeline
 
     pipeline = KnowledgeRefreshPipeline()
     stats = await pipeline.get_refresh_stats(workspace_id)
@@ -947,7 +947,7 @@ async def trigger_refresh(
     _: RateLimit = None,
 ):
     """Run a knowledge refresh cycle — re-index stale items."""
-    from app.knowledge_engine.monitoring.refresh import KnowledgeRefreshPipeline
+    from ai.knowledge_engine.monitoring.refresh import KnowledgeRefreshPipeline
 
     pipeline = KnowledgeRefreshPipeline()
     result = await pipeline.run_refresh_cycle(
@@ -976,7 +976,7 @@ async def advanced_search(
     _: RateLimit = None,
 ):
     """Search knowledge with advanced filters and composite ranking."""
-    from app.knowledge_engine.search.advanced import AdvancedSearch
+    from ai.knowledge_engine.search.advanced import AdvancedSearch
 
     search = AdvancedSearch()
     result = await search.search(
@@ -1107,7 +1107,7 @@ async def ingest_file(
     Accepts multipart/form-data with a file upload.
     Auto-detects file type and extracts text content.
     """
-    from app.knowledge_engine.multimodal.ingester import MultiModalIngester
+    from ai.knowledge_engine.multimodal.ingester import MultiModalIngester
 
     if file is None:
         raise HTTPException(status_code=400, detail="No file provided")
@@ -1145,7 +1145,7 @@ async def ingest_url(
     _: RateLimit = None,
 ):
     """Ingest content from a URL — auto-detects type and extracts text."""
-    from app.knowledge_engine.multimodal.ingester import MultiModalIngester
+    from ai.knowledge_engine.multimodal.ingester import MultiModalIngester
 
     ingester = MultiModalIngester()
 
@@ -1176,7 +1176,7 @@ async def ingest_text(
     _: RateLimit = None,
 ):
     """Ingest raw text content into the knowledge base."""
-    from app.knowledge_engine.multimodal.ingester import MultiModalIngester
+    from ai.knowledge_engine.multimodal.ingester import MultiModalIngester
 
     ingester = MultiModalIngester()
 
@@ -1208,7 +1208,7 @@ async def get_supported_types(
     _: RateLimit = None,
 ):
     """List all supported file types for multi-modal ingestion."""
-    from app.knowledge_engine.multimodal.ingester import MultiModalIngester
+    from ai.knowledge_engine.multimodal.ingester import MultiModalIngester
 
     ingester = MultiModalIngester()
     types = ingester.get_supported_types()
@@ -1226,7 +1226,7 @@ async def list_knowledge_items(
     _: RateLimit = None,
 ):
     """List knowledge items for a workspace with optional filtering."""
-    from app.knowledge_engine.store.knowledge_store import KnowledgeStore
+    from ai.knowledge_engine.store.knowledge_store import KnowledgeStore
 
     store = KnowledgeStore()
     items = await store.list_items(workspace_id, limit, offset, source_type)
@@ -1265,7 +1265,7 @@ async def detect_language(
     _: RateLimit = None,
 ):
     """Detect the language of text using langdetect."""
-    from app.knowledge_engine.multilingual.detector import LanguageDetector
+    from ai.knowledge_engine.multilingual.detector import LanguageDetector
 
     detector = LanguageDetector()
     result = detector.detect(request.text)
@@ -1287,7 +1287,7 @@ async def translate_text(
     _: RateLimit = None,
 ):
     """Translate text between languages using argostranslate."""
-    from app.knowledge_engine.multilingual.translator import LanguageTranslator
+    from ai.knowledge_engine.multilingual.translator import LanguageTranslator
 
     translator = LanguageTranslator()
     result = translator.translate(
@@ -1314,7 +1314,7 @@ async def multilingual_embed(
     _: RateLimit = None,
 ):
     """Generate multilingual embeddings for cross-lingual semantic search."""
-    from app.knowledge_engine.multilingual.multilingual_embedder import MultilingualEmbedder
+    from ai.knowledge_engine.multilingual.multilingual_embedder import MultilingualEmbedder
 
     embedder = MultilingualEmbedder(model_name=request.model)
     results = embedder.embed_batch(request.texts)
@@ -1336,7 +1336,7 @@ async def list_workflow_definitions(
     _: RateLimit = None,
 ):
     """List all available workflow definitions."""
-    from app.knowledge_engine.workflows.definitions import get_workflow_definitions
+    from ai.knowledge_engine.workflows.definitions import get_workflow_definitions
 
     defs = get_workflow_definitions()
     return [
@@ -1360,8 +1360,8 @@ async def run_workflow(
 ):
     """Run a knowledge workflow by name."""
     import uuid
-    from app.knowledge_engine.workflows.engine import WorkflowEngine
-    from app.knowledge_engine.workflows.definitions import get_workflow_definitions
+    from ai.knowledge_engine.workflows.engine import WorkflowEngine
+    from ai.knowledge_engine.workflows.definitions import get_workflow_definitions
 
     engine = WorkflowEngine()
     defs = {d.name: d for d in get_workflow_definitions()}
@@ -1415,7 +1415,7 @@ async def get_workflow_status(
     _: RateLimit = None,
 ):
     """Get the status of a running workflow."""
-    from app.knowledge_engine.workflows.engine import WorkflowEngine
+    from ai.knowledge_engine.workflows.engine import WorkflowEngine
 
     engine = WorkflowEngine()
     result = await engine.get_status(workflow_id)
@@ -1450,7 +1450,7 @@ async def export_bundle(
     _: RateLimit = None,
 ):
     """Export workspace knowledge as a portable bundle."""
-    from app.knowledge_engine.marketplace.bundle import BundleManager
+    from ai.knowledge_engine.marketplace.bundle import BundleManager
 
     manager = BundleManager()
     bundle = await manager.export_bundle(
@@ -1479,7 +1479,7 @@ async def import_bundle(
     _: RateLimit = None,
 ):
     """Import a knowledge bundle into a workspace."""
-    from app.knowledge_engine.marketplace.bundle import BundleManager
+    from ai.knowledge_engine.marketplace.bundle import BundleManager
 
     manager = BundleManager()
     bundle = manager.deserialize_bundle(request.bundle_json)
@@ -1504,7 +1504,7 @@ async def list_templates(
     _: RateLimit = None,
 ):
     """List available knowledge templates."""
-    from app.knowledge_engine.marketplace.templates import get_templates
+    from ai.knowledge_engine.marketplace.templates import get_templates
 
     templates = get_templates()
     return TemplateListResponse(
@@ -1530,8 +1530,8 @@ async def import_template(
     _: RateLimit = None,
 ):
     """Import a knowledge template into a workspace."""
-    from app.knowledge_engine.marketplace.bundle import BundleManager
-    from app.knowledge_engine.marketplace.templates import get_templates
+    from ai.knowledge_engine.marketplace.bundle import BundleManager
+    from ai.knowledge_engine.marketplace.templates import get_templates
 
     templates = {t.template_id: t for t in get_templates()}
     template = templates.get(request.template_id)
@@ -1539,7 +1539,7 @@ async def import_template(
         raise HTTPException(status_code=404, detail=f"Template '{request.template_id}' not found")
 
     # Convert template to bundle
-    from app.knowledge_engine.marketplace.bundle import KnowledgeBundle
+    from ai.knowledge_engine.marketplace.bundle import KnowledgeBundle
     bundle = KnowledgeBundle(
         bundle_id=f"template-{template.template_id}",
         name=template.name,
@@ -1647,7 +1647,7 @@ async def seed_project_docs(
     )
 
     try:
-        from app.application.tasks.knowledge import seed_kraivor_project_docs
+        from ai.application.tasks.knowledge import seed_kraivor_project_docs
         result = seed_kraivor_project_docs.delay(workspace_id=workspace_id)
         return {
             "status": "queued",

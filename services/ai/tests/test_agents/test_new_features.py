@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 class TestContextCompactor:
     def _make_compactor(self, **kwargs):
-        from app.application.agents.context_compactor import ContextCompactor
+        from ai.application.agents.context_compactor import ContextCompactor
         return ContextCompactor(llm=AsyncMock(), **kwargs)
 
     @pytest.mark.asyncio
@@ -70,7 +70,7 @@ class TestContextCompactor:
 
 class TestSemanticQueryCache:
     def _make_cache(self, **kwargs):
-        from app.infrastructure.cache.query_cache import SemanticQueryCache
+        from ai.infrastructure.cache.query_cache import SemanticQueryCache
         return SemanticQueryCache(**kwargs)
 
     def test_cosine_similarity_identical(self):
@@ -104,7 +104,7 @@ class TestParallelAnalystNode:
     @pytest.mark.asyncio
     async def test_all_analysts_run(self):
         """Parallel analyst node runs all four analysts."""
-        from app.application.agents.graph import _ParallelAnalystNode
+        from ai.application.agents.graph import _ParallelAnalystNode
 
         node = _ParallelAnalystNode()
         state = {
@@ -130,7 +130,7 @@ class TestParallelAnalystNode:
     @pytest.mark.asyncio
     async def test_single_failure_does_not_crash(self):
         """If one analyst fails, others still return results."""
-        from app.application.agents.graph import _ParallelAnalystNode
+        from ai.application.agents.graph import _ParallelAnalystNode
 
         node = _ParallelAnalystNode()
         state = {
@@ -158,13 +158,13 @@ class TestParallelAnalystNode:
 class TestGraphBuild:
     def test_parallel_analysts_setting_default(self):
         """enable_parallel_analysts defaults to True in config."""
-        from app.core.config import Settings
+        from ai.core.config import Settings
         s = Settings()
         assert s.enable_parallel_analysts is True
 
     def test_parallel_analysts_setting_can_be_false(self):
         """enable_parallel_analysts can be set to False."""
-        from app.core.config import Settings
+        from ai.core.config import Settings
         s = Settings(enable_parallel_analysts=False)
         assert s.enable_parallel_analysts is False
 
@@ -176,7 +176,7 @@ class TestGibberishDetection:
     @pytest.mark.asyncio
     async def test_gibberish_returns_early(self):
         """Gibberish queries bypass the pipeline and return a helpful message."""
-        from app.application.agents.orchestrator import OrchestratorNode
+        from ai.application.agents.orchestrator import OrchestratorNode
         node = OrchestratorNode()
         result = await node({"user_id": "u1", "message": "bhbbkbljh", "stream": False})
         assert result["response"] == "I'm not sure I understand. Could you rephrase that?"
@@ -186,7 +186,7 @@ class TestGibberishDetection:
     @pytest.mark.asyncio
     async def test_short_message_returns_early(self):
         """Very short messages (3 chars) bypass the pipeline."""
-        from app.application.agents.orchestrator import OrchestratorNode
+        from ai.application.agents.orchestrator import OrchestratorNode
         node = OrchestratorNode()
         result = await node({"user_id": "u1", "message": "???","stream": False})
         assert result["response"] == "I'm not sure I understand. Could you rephrase that?"
@@ -194,7 +194,7 @@ class TestGibberishDetection:
     @pytest.mark.asyncio
     async def test_valid_message_not_filtered(self):
         """Valid messages are not filtered by gibberish detection."""
-        from app.application.agents.orchestrator import OrchestratorNode
+        from ai.application.agents.orchestrator import OrchestratorNode
         node = OrchestratorNode()
         # This should NOT return early — it's a valid greeting
         with patch.object(node, "failover") as mock_failover:
@@ -215,7 +215,7 @@ class TestQueryQualityFilter:
     @pytest.mark.asyncio
     async def test_gibberish_skips_evidence(self):
         """Gibberish queries skip evidence gathering entirely."""
-        from app.application.agents.evidence_gatherer import EvidenceGathererNode
+        from ai.application.agents.evidence_gatherer import EvidenceGathererNode
         node = EvidenceGathererNode()
         result = await node({"message": "bhbbkbljh", "workspace_id": "w1"})
         assert result["evidence"] is None
@@ -224,7 +224,7 @@ class TestQueryQualityFilter:
     @pytest.mark.asyncio
     async def test_short_query_skips_evidence(self):
         """Very short queries skip evidence gathering."""
-        from app.application.agents.evidence_gatherer import EvidenceGathererNode
+        from ai.application.agents.evidence_gatherer import EvidenceGathererNode
         node = EvidenceGathererNode()
         result = await node({"message": "hi", "workspace_id": "w1"})
         assert result["evidence"] is None
@@ -249,12 +249,12 @@ class TestQueryQualityFilter:
 class TestEmbedderCache:
     def test_model_cache_is_module_level(self):
         """Verify _local_model_cache is a module-level dict."""
-        from app.infrastructure.rag.embedder import _local_model_cache
+        from ai.infrastructure.rag.embedder import _local_model_cache
         assert isinstance(_local_model_cache, dict)
 
     def test_embedder_uses_cache(self):
         """When model is in cache, Embedder reuses it instead of loading fresh."""
-        from app.infrastructure.rag import embedder
+        from ai.infrastructure.rag import embedder
 
         mock_model = MagicMock()
         mock_model.encode.return_value.tolist.return_value = [0.1, 0.2, 0.3]
@@ -277,58 +277,58 @@ class TestEmbedderCache:
 class TestFailoverWiring:
     def test_orchestrator_has_failover(self):
         """OrchestratorNode uses FailoverEngine."""
-        from app.application.agents.orchestrator import OrchestratorNode
+        from ai.application.agents.orchestrator import OrchestratorNode
         node = OrchestratorNode()
         assert hasattr(node, "failover")
-        from app.infrastructure.llm.failover_engine import FailoverEngine
+        from ai.infrastructure.llm.failover_engine import FailoverEngine
         assert isinstance(node.failover, FailoverEngine)
 
     def test_explainer_has_failover(self):
         """ExplainerNode uses FailoverEngine."""
-        from app.application.agents.explainer import ExplainerNode
+        from ai.application.agents.explainer import ExplainerNode
         node = ExplainerNode()
         assert hasattr(node, "failover")
-        from app.infrastructure.llm.failover_engine import FailoverEngine
+        from ai.infrastructure.llm.failover_engine import FailoverEngine
         assert isinstance(node.failover, FailoverEngine)
 
     def test_code_analyst_has_failover(self):
         """CodeAnalystNode uses FailoverEngine."""
-        from app.application.agents.code_analyst import CodeAnalystNode
+        from ai.application.agents.code_analyst import CodeAnalystNode
         node = CodeAnalystNode()
         assert hasattr(node, "failover")
-        from app.infrastructure.llm.failover_engine import FailoverEngine
+        from ai.infrastructure.llm.failover_engine import FailoverEngine
         assert isinstance(node.failover, FailoverEngine)
 
     def test_security_analyst_has_failover(self):
         """SecurityAnalystNode uses FailoverEngine."""
-        from app.application.agents.security import SecurityAnalystNode
+        from ai.application.agents.security import SecurityAnalystNode
         node = SecurityAnalystNode()
         assert hasattr(node, "failover")
-        from app.infrastructure.llm.failover_engine import FailoverEngine
+        from ai.infrastructure.llm.failover_engine import FailoverEngine
         assert isinstance(node.failover, FailoverEngine)
 
     def test_architecture_analyst_has_failover(self):
         """ArchitectureAnalystNode uses FailoverEngine."""
-        from app.application.agents.architecture import ArchitectureAnalystNode
+        from ai.application.agents.architecture import ArchitectureAnalystNode
         node = ArchitectureAnalystNode()
         assert hasattr(node, "failover")
-        from app.infrastructure.llm.failover_engine import FailoverEngine
+        from ai.infrastructure.llm.failover_engine import FailoverEngine
         assert isinstance(node.failover, FailoverEngine)
 
     def test_performance_analyst_has_failover(self):
         """PerformanceAnalystNode uses FailoverEngine."""
-        from app.application.agents.performance import PerformanceAnalystNode
+        from ai.application.agents.performance import PerformanceAnalystNode
         node = PerformanceAnalystNode()
         assert hasattr(node, "failover")
-        from app.infrastructure.llm.failover_engine import FailoverEngine
+        from ai.infrastructure.llm.failover_engine import FailoverEngine
         assert isinstance(node.failover, FailoverEngine)
 
     def test_tool_executor_has_failover(self):
         """ToolExecutorNode uses FailoverEngine."""
-        from app.application.agents.tool_executor import ToolExecutorNode
+        from ai.application.agents.tool_executor import ToolExecutorNode
         node = ToolExecutorNode(MagicMock())
         assert hasattr(node, "failover")
-        from app.infrastructure.llm.failover_engine import FailoverEngine
+        from ai.infrastructure.llm.failover_engine import FailoverEngine
         assert isinstance(node.failover, FailoverEngine)
 
 
@@ -338,21 +338,21 @@ class TestFailoverWiring:
 class TestRouterConfig:
     def test_simple_qa_uses_groq(self):
         """simple_qa task routes to Groq for faster inference."""
-        from app.infrastructure.llm.router import ModelRouter
+        from ai.infrastructure.llm.router import ModelRouter
         router = ModelRouter()
         route = router.get_route("simple_qa")
         assert route["model"] == "qwen/qwen3.6-27b"
 
     def test_intent_classify_uses_groq(self):
         """intent_classify task routes to Groq."""
-        from app.infrastructure.llm.router import ModelRouter
+        from ai.infrastructure.llm.router import ModelRouter
         router = ModelRouter()
         route = router.get_route("intent_classify")
         assert route["model"] == "qwen/qwen3.6-27b"
 
     def test_tool_calling_uses_groq(self):
         """tool_calling task routes to Groq."""
-        from app.infrastructure.llm.router import ModelRouter
+        from ai.infrastructure.llm.router import ModelRouter
         router = ModelRouter()
         route = router.get_route("tool_calling")
         assert route["model"] == "llama-3.3-70b-versatile"
@@ -364,5 +364,5 @@ class TestRouterConfig:
 class TestConfigDefaults:
     def test_parallel_analysts_enabled_by_default(self):
         """enable_parallel_analysts should be True by default."""
-        from app.core.config import settings
+        from ai.core.config import settings
         assert settings.enable_parallel_analysts is True

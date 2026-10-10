@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from app.knowledge_engine.store.knowledge_store import KnowledgeStore
+from ai.knowledge_engine.store.knowledge_store import KnowledgeStore
 
 logger = logging.getLogger(__name__)
 
@@ -20,13 +20,13 @@ class KnowledgeRetriever:
 
     def _get_graph(self):
         if self._graph is None:
-            from app.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
+            from ai.knowledge_engine.graph.knowledge_graph import KnowledgeGraph
             self._graph = KnowledgeGraph()
         return self._graph
 
     def _get_quality(self):
         if self._quality is None:
-            from app.knowledge_engine.quality.quality_scorer import KnowledgeQualityScorer
+            from ai.knowledge_engine.quality.quality_scorer import KnowledgeQualityScorer
             self._quality = KnowledgeQualityScorer()
         return self._quality
 
@@ -74,7 +74,7 @@ class KnowledgeRetriever:
         if include_graph and formatted:
             try:
                 graph = self._get_graph()
-                from app.knowledge_engine.graph.knowledge_graph import extract_entities
+                from ai.knowledge_engine.graph.knowledge_graph import extract_entities
                 entities = extract_entities(query)
                 entity_names = [e["name"] for e in entities]
                 if entity_names:

@@ -12,8 +12,8 @@ import json
 import logging
 import time
 
-from app.infrastructure.cache.redis_client import get_redis
-from app.monitoring.metrics import cache_hits, cache_misses
+from ai.infrastructure.cache.redis_client import get_redis
+from ai.monitoring.metrics import cache_hits, cache_misses
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class SemanticQueryCache:
 
     def _get_embedder(self):
         if self._embedder is None:
-            from app.infrastructure.rag.embedder import Embedder
+            from ai.infrastructure.rag.embedder import Embedder
             self._embedder = Embedder()
         return self._embedder
 

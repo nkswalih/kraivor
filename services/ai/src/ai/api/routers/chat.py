@@ -6,19 +6,19 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sse_starlette.sse import EventSourceResponse
 
-from app.api.dependencies.auth import JWTPayload, get_current_user
-from app.api.dependencies.backpressure import (
+from ai.api.dependencies.auth import JWTPayload, get_current_user
+from ai.api.dependencies.backpressure import (
     acquire_llm_slot,
     release_llm_slot,
 )
-from app.api.dependencies.rate_limiter import check_rate_limit
-from app.api.schemas.chat import ChatRequest, ChatResponse
-from app.application.chat.chat_service import ChatService
-from app.application.usage.usage_service import get_daily_usage_summary
-from app.infrastructure.llm.error_classifier import ClassifiedError, ErrorCategory
-from app.application.admin.model_registry import ModelRegistry
-from app.infrastructure.llm.router import KRAIVOR_MODEL
-from app.core.exceptions import AllProvidersFailedError
+from ai.api.dependencies.rate_limiter import check_rate_limit
+from ai.api.schemas.chat import ChatRequest, ChatResponse
+from ai.application.chat.chat_service import ChatService
+from ai.application.usage.usage_service import get_daily_usage_summary
+from ai.infrastructure.llm.error_classifier import ClassifiedError, ErrorCategory
+from ai.application.admin.model_registry import ModelRegistry
+from ai.infrastructure.llm.router import KRAIVOR_MODEL
+from ai.core.exceptions import AllProvidersFailedError
 
 CurrentUser = Annotated[JWTPayload, Depends(get_current_user)]
 RateLimit = Annotated[None, Depends(check_rate_limit)]
@@ -235,9 +235,9 @@ async def list_models(user: CurrentUser):
 async def byok_status(user: CurrentUser):
     """Return which BYOK providers the user has keys for."""
     from sqlalchemy import select
-    from app.infrastructure.db.database import async_session_factory
-    from app.infrastructure.db.models.api_key import ApiKey
-    from app.application.provisioning.key_resolver import _default_encrypter
+    from ai.infrastructure.db.database import async_session_factory
+    from ai.infrastructure.db.models.api_key import ApiKey
+    from ai.application.provisioning.key_resolver import _default_encrypter
 
     async with async_session_factory() as db:
         result = await db.execute(
@@ -280,7 +280,7 @@ async def byok_submit(request: dict, user: CurrentUser):
     if not provider or not api_key:
         return {"error": "provider and api_key are required"}
 
-    from app.application.provisioning.key_resolver import (
+    from ai.application.provisioning.key_resolver import (
         PROVIDER_FIELD_MAP,
         _default_encrypter,
     )
@@ -292,8 +292,8 @@ async def byok_submit(request: dict, user: CurrentUser):
     encrypted = _default_encrypter.encrypt(api_key.encode()).decode()
 
     from sqlalchemy import select
-    from app.infrastructure.db.database import async_session_factory
-    from app.infrastructure.db.models.api_key import ApiKey
+    from ai.infrastructure.db.database import async_session_factory
+    from ai.infrastructure.db.models.api_key import ApiKey
 
     async with async_session_factory() as db:
         result = await db.execute(
@@ -313,15 +313,15 @@ async def byok_submit(request: dict, user: CurrentUser):
 @router.delete("/byok/{provider}")
 async def byok_remove(provider: str, user: CurrentUser):
     """Remove a BYOK key for a provider."""
-    from app.application.provisioning.key_resolver import PROVIDER_FIELD_MAP
+    from ai.application.provisioning.key_resolver import PROVIDER_FIELD_MAP
 
     field = PROVIDER_FIELD_MAP.get(provider)
     if not field:
         return {"error": f"Unknown provider: {provider}"}
 
     from sqlalchemy import select
-    from app.infrastructure.db.database import async_session_factory
-    from app.infrastructure.db.models.api_key import ApiKey
+    from ai.infrastructure.db.database import async_session_factory
+    from ai.infrastructure.db.models.api_key import ApiKey
 
     async with async_session_factory() as db:
         result = await db.execute(

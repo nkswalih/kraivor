@@ -3,7 +3,7 @@
 import asyncio
 import logging
 
-from app.core.celery_app import celery_app
+from ai.core.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ def index_knowledge_space_canvas(
     """
 
     async def _run():
-        from app.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
+        from ai.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
 
         indexer = KnowledgeIndexer()
         elements = canvas_data.get("elements", [])
@@ -96,7 +96,7 @@ def extract_conversation_knowledge(
     """
 
     async def _run():
-        from app.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
+        from ai.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
 
         indexer = KnowledgeIndexer()
         extracted = _extract_from_messages(messages)
@@ -142,8 +142,8 @@ def check_knowledge_freshness(self, workspace_id: str, stale_days: int = 30):
     """
 
     async def _run():
-        from app.knowledge_engine.store.knowledge_store import KnowledgeStore
-        from app.knowledge_engine.engine import KnowledgeEngine
+        from ai.knowledge_engine.store.knowledge_store import KnowledgeStore
+        from ai.knowledge_engine.engine import KnowledgeEngine
 
         store = KnowledgeStore()
         engine = KnowledgeEngine()
@@ -187,13 +187,13 @@ def check_knowledge_freshness_daily(self):
     """Daily task: check freshness for all workspaces with stored knowledge."""
 
     async def _run():
-        from app.knowledge_engine.store.knowledge_store import KnowledgeStore
+        from ai.knowledge_engine.store.knowledge_store import KnowledgeStore
 
         KnowledgeStore()
 
         # Get all workspaces that have knowledge
         from sqlalchemy import text
-        from app.infrastructure.db.database import async_session_factory
+        from ai.infrastructure.db.database import async_session_factory
 
         async with async_session_factory() as session:
             result = await session.execute(
@@ -233,7 +233,7 @@ def proactive_learning_cycle(self, workspace_id: str):
     """
 
     async def _run():
-        from app.knowledge_engine.learning.proactive_agent import ProactiveLearningPipeline
+        from ai.knowledge_engine.learning.proactive_agent import ProactiveLearningPipeline
 
         pipeline = ProactiveLearningPipeline()
         return await pipeline.run_full_cycle(workspace_id)
@@ -248,7 +248,7 @@ def proactive_learning_daily(self):
 
     async def _run():
         from sqlalchemy import text
-        from app.infrastructure.db.database import async_session_factory
+        from ai.infrastructure.db.database import async_session_factory
 
         async with async_session_factory() as session:
             result = await session.execute(
@@ -289,8 +289,8 @@ def batch_index_workspace_knowledge(self, workspace_id: str):
 
     async def _run():
         import httpx
-        from app.core.config import settings
-        from app.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
+        from ai.core.config import settings
+        from ai.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
 
         indexer = KnowledgeIndexer()
         core_url = settings.core_api_url
@@ -476,7 +476,7 @@ def auto_refresh_stale_knowledge(self, workspace_id: str, stale_days: int = 30, 
     """
 
     async def _run():
-        from app.knowledge_engine.monitoring.refresh import KnowledgeRefreshPipeline
+        from ai.knowledge_engine.monitoring.refresh import KnowledgeRefreshPipeline
 
         pipeline = KnowledgeRefreshPipeline()
         return await pipeline.run_refresh_cycle(workspace_id, stale_days, max_items)
@@ -491,7 +491,7 @@ def auto_refresh_stale_knowledge_daily(self):
 
     async def _run():
         from sqlalchemy import text
-        from app.infrastructure.db.database import async_session_factory
+        from ai.infrastructure.db.database import async_session_factory
 
         async with async_session_factory() as session:
             result = await session.execute(
@@ -527,8 +527,8 @@ def cleanup_knowledge_cache(self):
     """Clean up expired knowledge cache entries and old metrics."""
 
     async def _run():
-        from app.knowledge_engine.monitoring.cache import KnowledgeCache
-        from app.knowledge_engine.monitoring.metrics import KnowledgeMetrics
+        from ai.knowledge_engine.monitoring.cache import KnowledgeCache
+        from ai.knowledge_engine.monitoring.metrics import KnowledgeMetrics
 
         cache = KnowledgeCache()
         metrics = KnowledgeMetrics()
@@ -557,8 +557,8 @@ def seed_kraivor_project_docs(self, workspace_id: str):
     """
 
     async def _run():
-        from app.knowledge_engine.seed.kraivor_docs import KRAIVOR_DOCS
-        from app.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
+        from ai.knowledge_engine.seed.kraivor_docs import KRAIVOR_DOCS
+        from ai.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
 
         indexer = KnowledgeIndexer()
         indexed = 0

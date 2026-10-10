@@ -22,7 +22,7 @@ import asyncio
 
 import pytest
 
-from app.knowledge_engine.workflows.engine import (
+from ai.knowledge_engine.workflows.engine import (
     StepStatus,
     WorkflowEngine,
     WorkflowStatus,

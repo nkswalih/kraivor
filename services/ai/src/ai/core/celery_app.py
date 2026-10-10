@@ -1,6 +1,6 @@
 from celery import Celery
 
-from app.core.config import settings
+from ai.core.config import settings
 
 celery_app = Celery(
     "ai", broker=settings.celery__broker__url, backend=settings.celery__result__backend
@@ -26,30 +26,30 @@ celery_app.conf.update(
     },
     beat_schedule={
         "health-check-every-5m": {
-            "task": "app.application.tasks.maintenance.health_check_worker",
+            "task": "ai.application.tasks.maintenance.health_check_worker",
             "schedule": 300.0,
         },
         "clean-expired-cache-daily": {
-            "task": "app.application.tasks.maintenance.clean_expired_cache",
+            "task": "ai.application.tasks.maintenance.clean_expired_cache",
             "schedule": 86400.0,
         },
         "knowledge-freshness-check-daily": {
-            "task": "app.application.tasks.knowledge.check_knowledge_freshness_daily",
+            "task": "ai.application.tasks.knowledge.check_knowledge_freshness_daily",
             "schedule": 86400.0,
         },
         "proactive-learning-every-6h": {
-            "task": "app.application.tasks.knowledge.proactive_learning_daily",
+            "task": "ai.application.tasks.knowledge.proactive_learning_daily",
             "schedule": 21600.0,  # 6 hours
         },
         "knowledge-auto-refresh-daily": {
-            "task": "app.application.tasks.knowledge.auto_refresh_stale_knowledge",
+            "task": "ai.application.tasks.knowledge.auto_refresh_stale_knowledge",
             "schedule": 86400.0,  # daily
         },
         "knowledge-cache-cleanup-daily": {
-            "task": "app.application.tasks.knowledge.cleanup_knowledge_cache",
+            "task": "ai.application.tasks.knowledge.cleanup_knowledge_cache",
             "schedule": 86400.0,  # daily
         },
     },
 )
 
-celery_app.autodiscover_tasks(["app.application.tasks"])
+celery_app.autodiscover_tasks(["ai.application.tasks"])

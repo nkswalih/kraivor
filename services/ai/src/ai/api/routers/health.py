@@ -3,9 +3,9 @@ import time
 
 from fastapi import APIRouter
 
-from app.api.dependencies.backpressure import get_backpressure_stats
-from app.api.schemas.health import HealthResponse
-from app.core.config import settings
+from ai.api.dependencies.backpressure import get_backpressure_stats
+from ai.api.schemas.health import HealthResponse
+from ai.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ async def provider_health():
     for name, api_key, provider, model in providers_to_check:
         start = time.monotonic()
         try:
-            from app.infrastructure.llm.client import LLMClient
+            from ai.infrastructure.llm.client import LLMClient
             client = LLMClient(api_key=api_key, provider=provider, model=model)
             await client.generate(
                 [{"role": "user", "content": "ping"}],

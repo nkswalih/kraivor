@@ -9,8 +9,8 @@ Keys:
 import logging
 from datetime import datetime, timedelta, UTC
 
-from app.core.config import settings
-from app.infrastructure.cache.redis_client import get_redis
+from ai.core.config import settings
+from ai.infrastructure.cache.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 

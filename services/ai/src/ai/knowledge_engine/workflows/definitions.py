@@ -25,7 +25,7 @@ class WorkflowDefinition:
 
 async def _research_step(context: dict, workspace_id: str | None) -> dict:
     """Research a topic using the knowledge engine."""
-    from app.knowledge_engine.engine import KnowledgeEngine
+    from ai.knowledge_engine.engine import KnowledgeEngine
 
     engine = KnowledgeEngine()
     topic = context.get("topic") or context.get("research", {}).get("topic", "")
@@ -38,7 +38,7 @@ async def _research_step(context: dict, workspace_id: str | None) -> dict:
 
 async def _summarize_step(context: dict, workspace_id: str | None) -> dict:
     """Summarize research results."""
-    from app.knowledge_engine.intelligence.summarizer import KnowledgeSummarizer
+    from ai.knowledge_engine.intelligence.summarizer import KnowledgeSummarizer
 
     summarizer = KnowledgeSummarizer()
     topic = context.get("topic") or "research"
@@ -50,7 +50,7 @@ async def _summarize_step(context: dict, workspace_id: str | None) -> dict:
 
 async def _compare_step(context: dict, workspace_id: str | None) -> dict:
     """Compare technologies based on research."""
-    from app.knowledge_engine.intelligence.summarizer import KnowledgeSummarizer
+    from ai.knowledge_engine.intelligence.summarizer import KnowledgeSummarizer
 
     summarizer = KnowledgeSummarizer()
     technologies = context.get("technologies", [])
@@ -69,7 +69,7 @@ async def _compare_step(context: dict, workspace_id: str | None) -> dict:
 
 async def _conflict_check_step(context: dict, workspace_id: str | None) -> dict:
     """Check for conflicting information."""
-    from app.knowledge_engine.intelligence.conflict_resolver import ConflictResolver
+    from ai.knowledge_engine.intelligence.conflict_resolver import ConflictResolver
 
     resolver = ConflictResolver()
     topic = context.get("topic") or context.get("research", {}).get("topic", "")
@@ -91,7 +91,7 @@ async def _conflict_check_step(context: dict, workspace_id: str | None) -> dict:
 
 async def _quality_check_step(context: dict, workspace_id: str | None) -> dict:
     """Check knowledge quality."""
-    from app.knowledge_engine.quality.quality_scorer import KnowledgeQualityScorer
+    from ai.knowledge_engine.quality.quality_scorer import KnowledgeQualityScorer
 
     scorer = KnowledgeQualityScorer()
     await scorer.ensure_table()
@@ -101,7 +101,7 @@ async def _quality_check_step(context: dict, workspace_id: str | None) -> dict:
 
 async def _health_check_step(context: dict, workspace_id: str | None) -> dict:
     """Run health check on knowledge base."""
-    from app.knowledge_engine.intelligence.health_dashboard import KnowledgeHealthDashboard
+    from ai.knowledge_engine.intelligence.health_dashboard import KnowledgeHealthDashboard
 
     dashboard = KnowledgeHealthDashboard()
     report = await dashboard.get_health_report(workspace_id or "default")
@@ -113,7 +113,7 @@ async def _health_check_step(context: dict, workspace_id: str | None) -> dict:
 
 async def _export_step(context: dict, workspace_id: str | None) -> dict:
     """Export knowledge as structured bundle."""
-    from app.knowledge_engine.intelligence.exporter import KnowledgeExporter
+    from ai.knowledge_engine.intelligence.exporter import KnowledgeExporter
 
     exporter = KnowledgeExporter()
     result = await exporter.export_workspace(
@@ -128,7 +128,7 @@ async def _export_step(context: dict, workspace_id: str | None) -> dict:
 
 async def _dedup_step(context: dict, workspace_id: str | None) -> dict:
     """Run deduplication on knowledge base."""
-    from app.knowledge_engine.intelligence.deduplicator import SemanticDeduplicator
+    from ai.knowledge_engine.intelligence.deduplicator import SemanticDeduplicator
 
     dedup = SemanticDeduplicator()
     result = await dedup.deduplicate_workspace(workspace_id or "default", dry_run=True)
@@ -137,7 +137,7 @@ async def _dedup_step(context: dict, workspace_id: str | None) -> dict:
 
 async def _ingest_step(context: dict, workspace_id: str | None) -> dict:
     """Ingest content from URLs discovered in research."""
-    from app.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
+    from ai.knowledge_engine.store.knowledge_indexer import KnowledgeIndexer
 
     indexer = KnowledgeIndexer()
     sources = context.get("research", {}).get("sources", [])
@@ -165,7 +165,7 @@ async def _ingest_step(context: dict, workspace_id: str | None) -> dict:
 
 async def _quality_enrich_step(context: dict, workspace_id: str | None) -> dict:
     """Enrich knowledge with quality scores."""
-    from app.knowledge_engine.quality.quality_scorer import KnowledgeQualityScorer
+    from ai.knowledge_engine.quality.quality_scorer import KnowledgeQualityScorer
 
     scorer = KnowledgeQualityScorer()
     await scorer.ensure_table()

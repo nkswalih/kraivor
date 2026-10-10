@@ -1,8 +1,8 @@
 import logging
 import time
 
-from app.infrastructure.rag.embedder import Embedder
-from app.infrastructure.rag.retriever import Retriever
+from ai.infrastructure.rag.embedder import Embedder
+from ai.infrastructure.rag.retriever import Retriever
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class ContextAssemblerNode:
         if not workspace_id:
             return ""
         try:
-            from app.knowledge_engine.store.knowledge_retriever import KnowledgeRetriever
+            from ai.knowledge_engine.store.knowledge_retriever import KnowledgeRetriever
             kr = KnowledgeRetriever()
             results = await kr.retrieve(workspace_id=workspace_id, query=query, top_k=5)
             if not results:

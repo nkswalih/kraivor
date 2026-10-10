@@ -13,7 +13,7 @@ import logging
 import re
 from dataclasses import dataclass
 
-from app.infrastructure.db.database import async_session_factory
+from ai.infrastructure.db.database import async_session_factory
 from sqlalchemy import text
 
 logger = logging.getLogger(__name__)

@@ -1,6 +1,6 @@
 from cryptography.fernet import Fernet
 
-from app.core.config import settings
+from ai.core.config import settings
 
 
 def get_encrypter() -> Fernet:

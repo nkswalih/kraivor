@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import logging
 
-from app.infrastructure.db.database import async_session_factory
-from app.infrastructure.llm.client import LLMClient
-from app.infrastructure.llm.router import ModelRouter
-from app.application.provisioning.key_resolver import KeyResolver
+from ai.infrastructure.db.database import async_session_factory
+from ai.infrastructure.llm.client import LLMClient
+from ai.infrastructure.llm.router import ModelRouter
+from ai.application.provisioning.key_resolver import KeyResolver
 
 logger = logging.getLogger(__name__)
 

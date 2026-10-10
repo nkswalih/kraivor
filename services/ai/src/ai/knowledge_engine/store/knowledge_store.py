@@ -9,8 +9,8 @@ from datetime import datetime
 
 from sqlalchemy import text
 
-from app.core.logging import log_safe
-from app.infrastructure.db.database import async_session_factory
+from ai.core.logging import log_safe
+from ai.infrastructure.db.database import async_session_factory
 
 logger = logging.getLogger(__name__)
 

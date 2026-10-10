@@ -6,8 +6,8 @@ import re
 import aiohttp
 import trafilatura
 
-from app.application.tools.base import BaseTool
-from app.core.url_guard import (
+from ai.application.tools.base import BaseTool
+from ai.core.url_guard import (
     MAX_REDIRECT_HOPS,
     REDIRECT_STATUSES,
     UnsafeURLError,

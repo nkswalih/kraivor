@@ -8,10 +8,10 @@ import logging
 
 import httpx
 
-from app.api.schemas.byok import ValidateResult
-from app.application.provisioning.provider_models import DEFAULT_PROVIDER_URLS
-from app.core.url_guard import UnsafeURLError, assert_safe_url
-from app.core.logging import log_safe
+from ai.api.schemas.byok import ValidateResult
+from ai.application.provisioning.provider_models import DEFAULT_PROVIDER_URLS
+from ai.core.url_guard import UnsafeURLError, assert_safe_url
+from ai.core.logging import log_safe
 
 logger = logging.getLogger(__name__)
 

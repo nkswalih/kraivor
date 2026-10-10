@@ -15,7 +15,7 @@ import re
 
 from sqlalchemy import text
 
-from app.infrastructure.db.database import async_session_factory
+from ai.infrastructure.db.database import async_session_factory
 
 logger = logging.getLogger(__name__)
 

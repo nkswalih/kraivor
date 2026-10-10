@@ -2,14 +2,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from app.api.dependencies.auth import JWTPayload, get_current_user
-from app.api.schemas.embeddings import (
+from ai.api.dependencies.auth import JWTPayload, get_current_user
+from ai.api.schemas.embeddings import (
     EmbeddingData,
     EmbeddingRequest,
     EmbeddingResponse,
     EmbeddingUsage,
 )
-from app.infrastructure.rag.embedder import Embedder
+from ai.infrastructure.rag.embedder import Embedder
 
 CurrentUser = Annotated[JWTPayload, Depends(get_current_user)]
 

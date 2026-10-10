@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from app.knowledge_engine.sources.base import SourceResult, SourceContent, RankedSource
+from ai.knowledge_engine.sources.base import SourceResult, SourceContent, RankedSource
 
 logger = logging.getLogger(__name__)
 

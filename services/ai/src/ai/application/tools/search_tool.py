@@ -4,7 +4,7 @@ import asyncio
 import logging
 from datetime import datetime
 
-from app.application.tools.base import BaseTool
+from ai.application.tools.base import BaseTool
 
 logger = logging.getLogger(__name__)
 

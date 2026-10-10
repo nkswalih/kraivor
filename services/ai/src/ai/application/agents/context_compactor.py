@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import time
 
-from app.infrastructure.llm.client import LLMClient
+from ai.infrastructure.llm.client import LLMClient
 
 logger = logging.getLogger(__name__)
 

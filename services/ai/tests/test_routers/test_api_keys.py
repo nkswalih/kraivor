@@ -1,6 +1,6 @@
 import pytest
 
-from app.api.schemas.api_key import CreateKeyRequest, ProvisionRequest
+from ai.api.schemas.api_key import CreateKeyRequest, ProvisionRequest
 
 pytestmark = pytest.mark.unit
 

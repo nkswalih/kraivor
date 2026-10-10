@@ -4,11 +4,11 @@ from sqlalchemy import desc, func, select
 from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.entities.conversation import Conversation as ConversationEntity
-from app.domain.entities.message import Message as MessageEntity
-from app.domain.entities.message import MessageRole
-from app.infrastructure.db.models.conversation import Conversation
-from app.infrastructure.db.models.message import Message
+from ai.domain.entities.conversation import Conversation as ConversationEntity
+from ai.domain.entities.message import Message as MessageEntity
+from ai.domain.entities.message import MessageRole
+from ai.infrastructure.db.models.conversation import Conversation
+from ai.infrastructure.db.models.message import Message
 
 
 async def ensure_conversation(

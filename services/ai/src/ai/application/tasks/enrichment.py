@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from app.core.celery_app import celery_app
+from ai.core.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 def enrich_codebase(
     self, repo_id: str, workspace_id: str, changed_files: list[str] | None = None
 ):
-    from app.infrastructure.db.database import async_session_factory
-    from app.infrastructure.rag.indexer import Indexer
+    from ai.infrastructure.db.database import async_session_factory
+    from ai.infrastructure.rag.indexer import Indexer
 
     async def _run():
         indexer = Indexer()

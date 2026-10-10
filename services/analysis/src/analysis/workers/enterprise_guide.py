@@ -5,18 +5,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace as _SimpleNamespace
 
-from app.core.constants import Category, Severity, Tiers
-from app.core.logging import get_logger
-from app.domain.entities.finding import Finding
-from app.domain.entities.score import Score
-from app.domain.rules.base import RuleViolation
-from app.workers.dead_code.detector import DeadCodeFinding
-from app.workers.devops.models import DevOpsFinding
-from app.workers.errors.scanner import ErrorFinding
-from app.workers.maintainability.models import MaintainabilityFinding
-from app.workers.perf.load_sim import SimulationResult
-from app.workers.perf.rpm_calculator import PerformanceMetrics
-from app.workers.reliability.models import ReliabilityFinding
+from analysis.core.constants import Category, Severity, Tiers
+from analysis.core.logging import get_logger
+from analysis.domain.entities.finding import Finding
+from analysis.domain.entities.score import Score
+from analysis.domain.rules.base import RuleViolation
+from analysis.workers.dead_code.detector import DeadCodeFinding
+from analysis.workers.devops.models import DevOpsFinding
+from analysis.workers.errors.scanner import ErrorFinding
+from analysis.workers.maintainability.models import MaintainabilityFinding
+from analysis.workers.perf.load_sim import SimulationResult
+from analysis.workers.perf.rpm_calculator import PerformanceMetrics
+from analysis.workers.reliability.models import ReliabilityFinding
 
 logger = get_logger(__name__)
 

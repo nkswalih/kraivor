@@ -6,9 +6,9 @@ import structlog
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from app.core.config import get_settings
-from app.infrastructure.cache.redis import RedisCache
-from app.infrastructure.db.session import get_db_session
+from analysis.core.config import get_settings
+from analysis.infrastructure.cache.redis import RedisCache
+from analysis.infrastructure.db.session import get_db_session
 
 logger = structlog.get_logger(__name__)
 
@@ -69,7 +69,7 @@ async def health_check() -> HealthResponse:
 
     start = time.monotonic()
     try:
-        from app.infrastructure.storage.s3 import S3Storage
+        from analysis.infrastructure.storage.s3 import S3Storage
 
         storage = S3Storage()
         await storage.exists("health-check")

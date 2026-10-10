@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.infrastructure.db.models.simulation_result import SimulationResultModel
+from analysis.infrastructure.db.models.simulation_result import SimulationResultModel
 
 
 class SimulationResultRepository:

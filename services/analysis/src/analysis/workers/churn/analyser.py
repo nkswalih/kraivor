@@ -4,8 +4,8 @@ import subprocess
 from collections import Counter
 from dataclasses import dataclass
 
-from app.core.constants import Severity
-from app.core.logging import get_logger
+from analysis.core.constants import Severity
+from analysis.core.logging import get_logger
 
 logger = get_logger(__name__)
 

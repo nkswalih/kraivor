@@ -4,7 +4,7 @@ Each mapping links a dependency name found in a config file
 to a DetectedTechnology descriptor.
 """
 
-from app.infrastructure.detection.models import DetectedTechnology
+from analysis.infrastructure.detection.models import DetectedTechnology
 
 # ── Python ──────────────────────────────────────────────────────────────────
 

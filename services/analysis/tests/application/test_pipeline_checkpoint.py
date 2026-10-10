@@ -17,9 +17,9 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from app.application.analysis.commands import StartAnalysisCommand
-from app.application.tasks import checkpoint, pipeline
-from app.application.tasks.checkpoint import (
+from analysis.application.analysis.commands import StartAnalysisCommand
+from analysis.application.tasks import checkpoint, pipeline
+from analysis.application.tasks.checkpoint import (
     delete_checkpoint,
     load_checkpoint,
     save_checkpoint,

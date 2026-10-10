@@ -1,5 +1,5 @@
-from app.application.tasks.pipeline import run_full_analysis
-from app.application.tasks.scanner import (
+from analysis.application.tasks.pipeline import run_full_analysis
+from analysis.application.tasks.scanner import (
     task_clone,
     task_finalize,
     task_parse,

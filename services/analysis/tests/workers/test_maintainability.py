@@ -2,9 +2,9 @@
 
 import pytest
 
-from app.domain.contracts.parser import ParsedClass, ParsedFile, ParsedFunction
-from app.workers.maintainability.detector import MaintainabilityDetector
-from app.workers.maintainability.models import MaintainabilityMetrics
+from analysis.domain.contracts.parser import ParsedClass, ParsedFile, ParsedFunction
+from analysis.workers.maintainability.detector import MaintainabilityDetector
+from analysis.workers.maintainability.models import MaintainabilityMetrics
 
 
 def _make_pf(
@@ -438,7 +438,7 @@ class TestDeepInheritance:
 @pytest.mark.asyncio
 class TestCircularImports:
     async def test_detects_import_inside_function(self) -> None:
-        content = "def handler():\n    from app.models import User\n    return User()\n"
+        content = "def handler():\n    from analysis.models import User\n    return User()\n"
         pf = _make_pf("circular.py", content)
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
@@ -446,7 +446,7 @@ class TestCircularImports:
         assert "circular_import" in types
 
     async def test_skips_imports_at_top(self) -> None:
-        content = "from app.models import User\ndef handler():\n    return User()\n"
+        content = "from analysis.models import User\ndef handler():\n    return User()\n"
         pf = _make_pf("top.py", content)
         detector = MaintainabilityDetector([pf])
         results = await detector.scan_all()
@@ -560,7 +560,7 @@ class TestMetricsComputation:
         assert d["total_findings"] == 10
 
     async def test_finding_to_dict(self) -> None:
-        from app.workers.maintainability.models import MaintainabilityFinding
+        from analysis.workers.maintainability.models import MaintainabilityFinding
 
         finding = MaintainabilityFinding(
             maintainability_type="long_method",

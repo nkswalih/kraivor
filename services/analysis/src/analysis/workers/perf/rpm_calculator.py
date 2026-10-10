@@ -1,9 +1,9 @@
 import re
 from dataclasses import dataclass, field
 
-from app.core.constants import RPM_DEDUCTIONS
-from app.core.logging import get_logger
-from app.domain.contracts.parser import ParsedFile, ParsedRoute
+from analysis.core.constants import RPM_DEDUCTIONS
+from analysis.core.logging import get_logger
+from analysis.domain.contracts.parser import ParsedFile, ParsedRoute
 
 logger = get_logger(__name__)
 

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from fnmatch import fnmatch
 
-from app.core.constants import Category, Severity
+from analysis.core.constants import Category, Severity
 
 
 @dataclass(kw_only=True)

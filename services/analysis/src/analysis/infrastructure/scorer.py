@@ -1,9 +1,14 @@
 import math
 from collections import Counter
 
-from app.core.constants import CORE_ENGINES, SEVERITY_PENALTIES, EngineStatus, Severity
-from app.domain.contracts.scorer import AbstractScorer, CapacityMetrics, Violation
-from app.domain.entities.score import Score
+from analysis.core.constants import (
+    CORE_ENGINES,
+    SEVERITY_PENALTIES,
+    EngineStatus,
+    Severity,
+)
+from analysis.domain.contracts.scorer import AbstractScorer, CapacityMetrics, Violation
+from analysis.domain.entities.score import Score
 
 
 class ProductionReadinessScorer(AbstractScorer):

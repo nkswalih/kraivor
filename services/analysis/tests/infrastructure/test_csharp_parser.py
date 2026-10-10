@@ -1,6 +1,6 @@
 import pytest
 
-from app.infrastructure.parsers.csharp_parser import CSharpParser
+from analysis.infrastructure.parsers.csharp_parser import CSharpParser
 
 
 @pytest.fixture

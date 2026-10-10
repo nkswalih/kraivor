@@ -4,7 +4,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.core.logging import get_logger
+from analysis.core.logging import get_logger
 
 logger = get_logger(__name__)
 

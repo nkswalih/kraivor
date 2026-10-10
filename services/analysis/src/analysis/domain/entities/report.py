@@ -2,8 +2,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import UUID
 
-from app.domain.entities.finding import Finding
-from app.domain.entities.score import Score
+from analysis.domain.entities.finding import Finding
+from analysis.domain.entities.score import Score
 
 
 @dataclass(kw_only=True)

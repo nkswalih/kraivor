@@ -3,7 +3,9 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.infrastructure.db.models.reliability_finding import ReliabilityFindingModel
+from analysis.infrastructure.db.models.reliability_finding import (
+    ReliabilityFindingModel,
+)
 
 
 class ReliabilityFindingRepository:

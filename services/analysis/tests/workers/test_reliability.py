@@ -2,8 +2,8 @@
 
 import pytest
 
-from app.domain.contracts.parser import ParsedFile
-from app.workers.reliability.detector import ReliabilityDetector
+from analysis.domain.contracts.parser import ParsedFile
+from analysis.workers.reliability.detector import ReliabilityDetector
 
 
 def _make_pf(path: str, content: str) -> ParsedFile:

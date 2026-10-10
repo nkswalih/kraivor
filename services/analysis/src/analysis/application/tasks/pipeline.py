@@ -14,8 +14,11 @@ from pathlib import Path
 from typing import Protocol, cast
 from uuid import UUID
 
-from app.application.analysis.commands import ProcessStageCommand, StartAnalysisCommand
-from app.application.analysis.handler import (
+from analysis.application.analysis.commands import (
+    ProcessStageCommand,
+    StartAnalysisCommand,
+)
+from analysis.application.analysis.handler import (
     _push_engine_statuses,
     _push_progress,
     handle_analysis_failure,
@@ -37,48 +40,48 @@ from app.application.analysis.handler import (
     handle_stage_simulation,
     handle_start_analysis,
 )
-from app.application.tasks.checkpoint import (
+from analysis.application.tasks.checkpoint import (
     delete_checkpoint,
     load_checkpoint,
     save_checkpoint,
 )
-from app.core.constants import EngineStateMap
-from app.core.engines import ALL_ENGINES as CANONICAL_ALL_ENGINES
-from app.core.engines import stage_to_engine_keys
-from app.core.logging import get_logger
-from app.domain.contracts.parser import ParsedFile
-from app.domain.entities.finding import Finding
-from app.domain.entities.score import Score
-from app.domain.events import (
+from analysis.core.constants import EngineStateMap
+from analysis.core.engines import ALL_ENGINES as CANONICAL_ALL_ENGINES
+from analysis.core.engines import stage_to_engine_keys
+from analysis.core.logging import get_logger
+from analysis.domain.contracts.parser import ParsedFile
+from analysis.domain.entities.finding import Finding
+from analysis.domain.entities.score import Score
+from analysis.domain.events import (
     AnalysisProgressed,
     EngineCompleted,
     EngineFailed,
     EngineStarted,
 )
-from app.domain.rules.base import RuleViolation
-from app.domain.rules.registry import create_default_registry
-from app.infrastructure.db.unit_of_work import UnitOfWork
-from app.infrastructure.git.repository_fetcher import RepositoryFetcher
-from app.infrastructure.messaging.producer import EventProducer
-from app.infrastructure.parsers.base import ChainedParser
-from app.infrastructure.parsers.csharp_parser import CSharpParser
-from app.infrastructure.parsers.elixir_parser import ElixirParser
-from app.infrastructure.parsers.go_parser import GoParser
-from app.infrastructure.parsers.java_parser import JavaParser
-from app.infrastructure.parsers.kotlin_parser import KotlinParser
-from app.infrastructure.parsers.mern_parser import MernParser
-from app.infrastructure.parsers.php_parser import PhpParser
-from app.infrastructure.parsers.python_parser import PythonParser
-from app.infrastructure.parsers.ruby_parser import RubyParser
-from app.infrastructure.parsers.rust_parser import RustParser
-from app.infrastructure.scorer import ProductionReadinessScorer
-from app.infrastructure.storage.s3 import S3Storage
-from app.workers.dead_code.detector import DeadCodeFinding
-from app.workers.devops.models import DevOpsFinding
-from app.workers.errors.scanner import ErrorFinding
-from app.workers.maintainability.models import MaintainabilityFinding
-from app.workers.perf.rpm_calculator import PerformanceMetrics
-from app.workers.reliability.models import ReliabilityFinding
+from analysis.domain.rules.base import RuleViolation
+from analysis.domain.rules.registry import create_default_registry
+from analysis.infrastructure.db.unit_of_work import UnitOfWork
+from analysis.infrastructure.git.repository_fetcher import RepositoryFetcher
+from analysis.infrastructure.messaging.producer import EventProducer
+from analysis.infrastructure.parsers.base import ChainedParser
+from analysis.infrastructure.parsers.csharp_parser import CSharpParser
+from analysis.infrastructure.parsers.elixir_parser import ElixirParser
+from analysis.infrastructure.parsers.go_parser import GoParser
+from analysis.infrastructure.parsers.java_parser import JavaParser
+from analysis.infrastructure.parsers.kotlin_parser import KotlinParser
+from analysis.infrastructure.parsers.mern_parser import MernParser
+from analysis.infrastructure.parsers.php_parser import PhpParser
+from analysis.infrastructure.parsers.python_parser import PythonParser
+from analysis.infrastructure.parsers.ruby_parser import RubyParser
+from analysis.infrastructure.parsers.rust_parser import RustParser
+from analysis.infrastructure.scorer import ProductionReadinessScorer
+from analysis.infrastructure.storage.s3 import S3Storage
+from analysis.workers.dead_code.detector import DeadCodeFinding
+from analysis.workers.devops.models import DevOpsFinding
+from analysis.workers.errors.scanner import ErrorFinding
+from analysis.workers.maintainability.models import MaintainabilityFinding
+from analysis.workers.perf.rpm_calculator import PerformanceMetrics
+from analysis.workers.reliability.models import ReliabilityFinding
 
 logger = get_logger(__name__)
 

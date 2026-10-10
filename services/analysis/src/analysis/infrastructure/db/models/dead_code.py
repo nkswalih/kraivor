@@ -4,7 +4,7 @@ from sqlalchemy import Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.infrastructure.db.base import Base, UUIDColumn
+from analysis.infrastructure.db.base import Base, UUIDColumn
 
 
 class DeadCodeModel(Base):

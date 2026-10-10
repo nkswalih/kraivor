@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.domain.rules.security import (
+from analysis.domain.rules.security import (
     SecurityCommandInjectionRule,
     SecurityCORSMisconfigRule,
     SecurityCSRFRule,

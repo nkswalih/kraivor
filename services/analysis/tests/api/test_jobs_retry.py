@@ -15,8 +15,8 @@ import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
-from app.api.main import create_app
-from app.dependencies.auth import JWTPayload
+from analysis.api.main import create_app
+from analysis.dependencies.auth import JWTPayload
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def app() -> FastAPI:
 @pytest.fixture
 def app_with_auth_override(app: FastAPI) -> Generator[FastAPI]:
     app.dependency_overrides = {}
-    from app.dependencies.auth import get_current_user
+    from analysis.dependencies.auth import get_current_user
 
     async def mock_user() -> JWTPayload:
         return JWTPayload(
@@ -76,8 +76,8 @@ def _job(status: str = "failed") -> dict[str, object]:
 
 def _overrides(app: FastAPI, mock_uow: object, *, user: bool = True) -> None:
     app.dependency_overrides = {}
-    from app.api.dependencies.services import get_uow
-    from app.dependencies.auth import get_current_user
+    from analysis.api.dependencies.services import get_uow
+    from analysis.dependencies.auth import get_current_user
 
     app.dependency_overrides[get_uow] = lambda: mock_uow  # type: ignore[assignment]
     if user:
@@ -123,7 +123,7 @@ class TestRetryEndpoint:
         mock_uow = mocker.AsyncMock()
         mock_uow.jobs.get_by_id.return_value = _job(status="completed")
         _overrides(app, mock_uow)
-        plan = mocker.patch("app.api.routers.jobs.plan_resume")
+        plan = mocker.patch("analysis.api.routers.jobs.plan_resume")
 
         async with _client(app) as client:
             response = await client.post(f"/api/v1/jobs/{uuid4()}/retry")
@@ -142,7 +142,7 @@ class TestRetryEndpoint:
         mock_uow = mocker.AsyncMock()
         mock_uow.jobs.get_by_id.return_value = _job()
         _overrides(app, mock_uow)
-        mocker.patch("app.api.routers.jobs.plan_resume", return_value=None)
+        mocker.patch("analysis.api.routers.jobs.plan_resume", return_value=None)
 
         async with _client(app) as client:
             response = await client.post(f"/api/v1/jobs/{uuid4()}/retry")
@@ -160,9 +160,9 @@ class TestRetryEndpoint:
         mock_uow = mocker.AsyncMock()
         mock_uow.jobs.get_by_id.return_value = _job()
         _overrides(app, mock_uow)
-        mocker.patch("app.api.routers.jobs.plan_resume", return_value="dead_code")
+        mocker.patch("analysis.api.routers.jobs.plan_resume", return_value="dead_code")
         mock_uow.jobs.queue_if_failed.return_value = False
-        launch = mocker.patch("app.api.routers.jobs._run_analysis_safe")
+        launch = mocker.patch("analysis.api.routers.jobs._run_analysis_safe")
 
         async with _client(app) as client:
             response = await client.post(f"/api/v1/jobs/{uuid4()}/retry")
@@ -179,7 +179,7 @@ class TestRetryEndpoint:
         mock_uow = mocker.AsyncMock()
         mock_uow.jobs.get_by_id.return_value = job
         _overrides(app, mock_uow)
-        mocker.patch("app.api.routers.jobs.plan_resume", return_value="dead_code")
+        mocker.patch("analysis.api.routers.jobs.plan_resume", return_value="dead_code")
         mock_uow.jobs.queue_if_failed.return_value = True
 
         launched: dict[str, object] = {}
@@ -187,7 +187,7 @@ class TestRetryEndpoint:
         async def _fake_run(cmd_dict: dict[str, object]) -> None:
             launched.update(cmd_dict)
 
-        mocker.patch("app.api.routers.jobs._run_analysis_safe", _fake_run)
+        mocker.patch("analysis.api.routers.jobs._run_analysis_safe", _fake_run)
 
         async with _client(app) as client:
             response = await client.post(f"/api/v1/jobs/{job['id']}/retry")

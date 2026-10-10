@@ -6,17 +6,17 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from pytest_mock.plugin import MockerFixture
 
-from app.api.main import create_app
-from app.application.analysis.commands import ProcessStageCommand
-from app.application.analysis.handler import handle_stage_finalize
-from app.core.constants import Category, Severity
-from app.dependencies.auth import JWTPayload
-from app.domain.contracts.storage import AbstractStorage
-from app.domain.entities.finding import Finding
-from app.domain.entities.report import Report
-from app.domain.entities.score import Score
-from app.infrastructure.db.unit_of_work import UnitOfWork
-from app.infrastructure.messaging.producer import EventProducer
+from analysis.api.main import create_app
+from analysis.application.analysis.commands import ProcessStageCommand
+from analysis.application.analysis.handler import handle_stage_finalize
+from analysis.core.constants import Category, Severity
+from analysis.dependencies.auth import JWTPayload
+from analysis.domain.contracts.storage import AbstractStorage
+from analysis.domain.entities.finding import Finding
+from analysis.domain.entities.report import Report
+from analysis.domain.entities.score import Score
+from analysis.infrastructure.db.unit_of_work import UnitOfWork
+from analysis.infrastructure.messaging.producer import EventProducer
 
 
 @pytest.fixture
@@ -32,7 +32,7 @@ def app_with_auth_override(app: FastAPI) -> Generator[FastAPI]:
         )
 
     app.dependency_overrides = {}
-    from app.dependencies.auth import get_current_user
+    from analysis.dependencies.auth import get_current_user
 
     app.dependency_overrides[get_current_user] = mock_get_current_user
     yield app
@@ -194,10 +194,10 @@ class TestScoreHistoryAPI:
         ]
         app = app_with_auth_override
         app.dependency_overrides = {}
-        from app.api.dependencies.services import get_uow
+        from analysis.api.dependencies.services import get_uow
 
         app.dependency_overrides[get_uow] = lambda: mock_uow
-        from app.dependencies.auth import get_current_user
+        from analysis.dependencies.auth import get_current_user
 
         async def mock_user() -> JWTPayload:
             return JWTPayload(
@@ -225,10 +225,10 @@ class TestScoreHistoryAPI:
         mock_uow.score_history.get_by_repo.return_value = []
         app = app_with_auth_override
         app.dependency_overrides = {}
-        from app.api.dependencies.services import get_uow
+        from analysis.api.dependencies.services import get_uow
 
         app.dependency_overrides[get_uow] = lambda: mock_uow
-        from app.dependencies.auth import get_current_user
+        from analysis.dependencies.auth import get_current_user
 
         async def mock_user() -> JWTPayload:
             return JWTPayload(

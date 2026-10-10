@@ -6,12 +6,12 @@ from datetime import UTC, datetime
 from typing import cast
 from uuid import UUID, uuid4
 
-from app.application.analysis.commands import (
+from analysis.application.analysis.commands import (
     DeleteJobCommand,
     ProcessStageCommand,
     StartAnalysisCommand,
 )
-from app.application.analysis.queries import (
+from analysis.application.analysis.queries import (
     DismissFindingsCommand,
     GetFindingsSummaryQuery,
     GetJobStatisticsQuery,
@@ -20,46 +20,46 @@ from app.application.analysis.queries import (
     ListFindingsQuery,
     ListJobsQuery,
 )
-from app.core.config import get_settings
-from app.core.constants import (
+from analysis.core.config import get_settings
+from analysis.core.constants import (
     Category,
     EngineStateMap,
     EngineStatus,
     JobStatus,
     Severity,
 )
-from app.core.exceptions import NotFoundError
-from app.core.logging import get_logger
-from app.domain.contracts.parser import ParsedFile
-from app.domain.contracts.scorer import AbstractScorer, Violation
-from app.domain.contracts.storage import AbstractStorage
-from app.domain.entities.analysis_metadata import AnalysisMetadata
-from app.domain.entities.finding import Finding
-from app.domain.entities.report import Report
-from app.domain.entities.score import Score
-from app.domain.events import (
+from analysis.core.exceptions import NotFoundError
+from analysis.core.logging import get_logger
+from analysis.domain.contracts.parser import ParsedFile
+from analysis.domain.contracts.scorer import AbstractScorer, Violation
+from analysis.domain.contracts.storage import AbstractStorage
+from analysis.domain.entities.analysis_metadata import AnalysisMetadata
+from analysis.domain.entities.finding import Finding
+from analysis.domain.entities.report import Report
+from analysis.domain.entities.score import Score
+from analysis.domain.events import (
     AnalysisCompleted,
     AnalysisFailed,
     AnalysisProgressed,
     AnalysisRequested,
 )
-from app.domain.rules.base import RuleViolation
-from app.domain.rules.registry import RuleRegistry
-from app.infrastructure.db.unit_of_work import UnitOfWork
-from app.infrastructure.git.repository_fetcher import RepositoryFetcher
-from app.infrastructure.messaging.producer import EventProducer
-from app.infrastructure.parsers.base import ChainedParser
-from app.workers.dead_code.detector import DeadCodeDetector, DeadCodeFinding
-from app.workers.devops.analyzer import DevopsAnalyzer
-from app.workers.devops.models import DevOpsFinding
-from app.workers.enterprise_guide import EnterpriseGuideGenerator
-from app.workers.errors.scanner import ErrorFinding, ErrorScanner
-from app.workers.maintainability.detector import MaintainabilityDetector
-from app.workers.maintainability.models import MaintainabilityFinding
-from app.workers.perf.load_sim import ProductionSimulator
-from app.workers.perf.rpm_calculator import PerformanceMetrics, RPMCalculator
-from app.workers.reliability.detector import ReliabilityDetector
-from app.workers.reliability.models import ReliabilityFinding
+from analysis.domain.rules.base import RuleViolation
+from analysis.domain.rules.registry import RuleRegistry
+from analysis.infrastructure.db.unit_of_work import UnitOfWork
+from analysis.infrastructure.git.repository_fetcher import RepositoryFetcher
+from analysis.infrastructure.messaging.producer import EventProducer
+from analysis.infrastructure.parsers.base import ChainedParser
+from analysis.workers.dead_code.detector import DeadCodeDetector, DeadCodeFinding
+from analysis.workers.devops.analyzer import DevopsAnalyzer
+from analysis.workers.devops.models import DevOpsFinding
+from analysis.workers.enterprise_guide import EnterpriseGuideGenerator
+from analysis.workers.errors.scanner import ErrorFinding, ErrorScanner
+from analysis.workers.maintainability.detector import MaintainabilityDetector
+from analysis.workers.maintainability.models import MaintainabilityFinding
+from analysis.workers.perf.load_sim import ProductionSimulator
+from analysis.workers.perf.rpm_calculator import PerformanceMetrics, RPMCalculator
+from analysis.workers.reliability.detector import ReliabilityDetector
+from analysis.workers.reliability.models import ReliabilityFinding
 
 logger = get_logger(__name__)
 
@@ -296,7 +296,7 @@ async def handle_stage_clone(
         for lang, share in sorted(_shares, key=lambda item: (-item[1], item[0]))
     ]
 
-    from app.infrastructure.detection.detector import FrameworkDetector
+    from analysis.infrastructure.detection.detector import FrameworkDetector
 
     detector = FrameworkDetector()
     detection = await detector.detect(repo_path)
@@ -346,7 +346,7 @@ async def handle_stage_churn(
     if not job:
         raise NotFoundError(f"Job {cmd.job_id} not found")
 
-    from app.workers.churn.analyser import ChurnAnalyser, finding_from_churn
+    from analysis.workers.churn.analyser import ChurnAnalyser, finding_from_churn
 
     analyser = ChurnAnalyser(repo_path, depth=depth)
     churn_results = await analyser.analyse()
@@ -405,8 +405,8 @@ async def _push_progress(
 ) -> None:
     from sqlalchemy import update
 
-    from app.infrastructure.db.models.analysis_job import AnalysisJobModel
-    from app.infrastructure.db.session import async_session_factory
+    from analysis.infrastructure.db.models.analysis_job import AnalysisJobModel
+    from analysis.infrastructure.db.session import async_session_factory
 
     async with async_session_factory() as session:
         values: dict[str, object] = {
@@ -435,8 +435,8 @@ async def _push_engine_statuses(job_id: UUID, engine_statuses: EngineStateMap) -
     """
     from sqlalchemy import update
 
-    from app.infrastructure.db.models.analysis_job import AnalysisJobModel
-    from app.infrastructure.db.session import async_session_factory
+    from analysis.infrastructure.db.models.analysis_job import AnalysisJobModel
+    from analysis.infrastructure.db.session import async_session_factory
 
     async with async_session_factory() as session:
         stmt = (
@@ -825,7 +825,7 @@ async def handle_stage_score(
             )
 
     # Build capacity metrics from perf + simulation data
-    from app.domain.contracts.scorer import CapacityMetrics
+    from analysis.domain.contracts.scorer import CapacityMetrics
 
     capacity: CapacityMetrics | None = None
     if perf_metrics is not None or (simulation_results and len(simulation_results) > 0):
@@ -1338,7 +1338,7 @@ async def handle_stage_guide_gen(
         raise NotFoundError(f"Job {cmd.job_id} not found")
 
     try:
-        from app.workers.perf.load_sim import SimulationResult as SimRes
+        from analysis.workers.perf.load_sim import SimulationResult as SimRes
 
         sim_objects: list[SimRes] = []
         if simulation_results:
@@ -1386,7 +1386,7 @@ async def handle_stage_ai_enrich(
     languages: list[str] | None = None,
     frameworks: list[str] | None = None,
 ) -> dict[str, object] | None:
-    from app.infrastructure.ai.enrichment_client import AiEnrichmentClient
+    from analysis.infrastructure.ai.enrichment_client import AiEnrichmentClient
 
     job_id = cmd.job_id
     job = await uow.jobs.get_by_id(job_id)
@@ -1585,7 +1585,10 @@ async def handle_re_generate_guide(
         )
 
         # Reconstruct PerformanceMetrics from DB endpoint metrics
-        from app.workers.perf.rpm_calculator import EndpointMetric, PerformanceMetrics
+        from analysis.workers.perf.rpm_calculator import (
+            EndpointMetric,
+            PerformanceMetrics,
+        )
 
         perf_metrics: PerformanceMetrics | None = None
         pm_raw = await uow.performance_metrics.get_by_job(job_id)
@@ -1622,7 +1625,7 @@ async def handle_re_generate_guide(
             )
 
         # Load simulation results (dicts → SimulationResult objects)
-        from app.workers.perf.load_sim import SimulationResult
+        from analysis.workers.perf.load_sim import SimulationResult
 
         sim_raw = await uow.simulation_results.get_by_job(job_id)
         simulation: list[SimulationResult] = []
@@ -1795,7 +1798,7 @@ async def handle_delete_job(
     # longer exists. Imported here, not at module scope: the tasks package's
     # __init__ imports the pipeline, and the pipeline imports this module --
     # a top-level import would have the two loading each other.
-    from app.application.tasks.checkpoint import delete_checkpoint
+    from analysis.application.tasks.checkpoint import delete_checkpoint
 
     delete_checkpoint(cmd.job_id)
 
@@ -1818,19 +1821,21 @@ async def handle_delete_job(
 async def get_job_statistics(
     query: GetJobStatisticsQuery, uow: UnitOfWork
 ) -> dict[str, object]:
-    from app.infrastructure.db.repositories.dead_code import DeadCodeRepository
-    from app.infrastructure.db.repositories.enterprise_guide import (
+    from analysis.infrastructure.db.repositories.dead_code import DeadCodeRepository
+    from analysis.infrastructure.db.repositories.enterprise_guide import (
         EnterpriseGuideRepository,
     )
-    from app.infrastructure.db.repositories.error_finding import ErrorFindingRepository
-    from app.infrastructure.db.repositories.finding import FindingRepository
-    from app.infrastructure.db.repositories.performance_metric import (
+    from analysis.infrastructure.db.repositories.error_finding import (
+        ErrorFindingRepository,
+    )
+    from analysis.infrastructure.db.repositories.finding import FindingRepository
+    from analysis.infrastructure.db.repositories.performance_metric import (
         PerformanceMetricRepository,
     )
-    from app.infrastructure.db.repositories.simulation_result import (
+    from analysis.infrastructure.db.repositories.simulation_result import (
         SimulationResultRepository,
     )
-    from app.infrastructure.db.session import async_session_factory
+    from analysis.infrastructure.db.session import async_session_factory
 
     async def _with_session(
         repo_cls: type[object], method: str, *args: object

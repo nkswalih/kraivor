@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from app.core.constants import SCORE_TIER_THRESHOLDS, Tiers
+from analysis.core.constants import SCORE_TIER_THRESHOLDS, Tiers
 
 
 @dataclass(kw_only=True)

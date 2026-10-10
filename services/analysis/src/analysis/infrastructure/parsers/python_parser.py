@@ -1,7 +1,7 @@
 import ast
 import re
 
-from app.domain.contracts.parser import (
+from analysis.domain.contracts.parser import (
     AbstractParser,
     ParsedClass,
     ParsedFile,

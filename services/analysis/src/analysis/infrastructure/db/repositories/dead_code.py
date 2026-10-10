@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.infrastructure.db.models.dead_code import DeadCodeModel
+from analysis.infrastructure.db.models.dead_code import DeadCodeModel
 
 
 class DeadCodeRepository:

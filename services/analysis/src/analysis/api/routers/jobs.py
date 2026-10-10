@@ -5,8 +5,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.api.dependencies.services import get_storage, get_uow
-from app.api.schemas.jobs import (
+from analysis.api.dependencies.services import get_storage, get_uow
+from analysis.api.schemas.jobs import (
     EngineInfo,
     EngineListResponse,
     EngineState,
@@ -16,12 +16,12 @@ from app.api.schemas.jobs import (
     LanguageShare,
     StartAnalysisRequest,
 )
-from app.application.analysis.commands import (
+from analysis.application.analysis.commands import (
     DeleteJobCommand,
     ProcessStageCommand,
     StartAnalysisCommand,
 )
-from app.application.analysis.handler import (
+from analysis.application.analysis.handler import (
     get_job_status,
     handle_analysis_failure,
     handle_delete_job,
@@ -29,20 +29,20 @@ from app.application.analysis.handler import (
     handle_start_analysis,
     list_jobs,
 )
-from app.application.analysis.queries import (
+from analysis.application.analysis.queries import (
     GetJobStatisticsQuery,
     GetJobStatusQuery,
     ListJobsQuery,
 )
-from app.application.tasks.pipeline import plan_resume, run_full_analysis
-from app.core.constants import JobStatus, TriggerType
-from app.core.engines import ENGINE_SPECS, EngineSpec
-from app.core.logging import get_logger
-from app.dependencies.auth import JWTPayload, get_current_user
-from app.domain.contracts.storage import AbstractStorage
-from app.infrastructure.db.unit_of_work import UnitOfWork
-from app.infrastructure.git.repository_fetcher import RepositoryFetcher
-from app.infrastructure.messaging.producer import EventProducer
+from analysis.application.tasks.pipeline import plan_resume, run_full_analysis
+from analysis.core.constants import JobStatus, TriggerType
+from analysis.core.engines import ENGINE_SPECS, EngineSpec
+from analysis.core.logging import get_logger
+from analysis.dependencies.auth import JWTPayload, get_current_user
+from analysis.domain.contracts.storage import AbstractStorage
+from analysis.infrastructure.db.unit_of_work import UnitOfWork
+from analysis.infrastructure.git.repository_fetcher import RepositoryFetcher
+from analysis.infrastructure.messaging.producer import EventProducer
 
 logger = get_logger(__name__)
 
@@ -128,7 +128,7 @@ async def get_job_statistics(
     uow: UnitOfWork = Depends(get_uow),
     _user: JWTPayload = Depends(get_current_user),
 ) -> JobStatisticsResponse:
-    from app.application.analysis.handler import get_job_statistics as _get_stats
+    from analysis.application.analysis.handler import get_job_statistics as _get_stats
 
     query = GetJobStatisticsQuery(job_id=job_id)
     stats = await _get_stats(query, uow)

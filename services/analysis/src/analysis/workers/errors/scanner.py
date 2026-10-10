@@ -1,8 +1,8 @@
 import re
 
-from app.core.constants import ErrorType
-from app.core.logging import get_logger
-from app.domain.contracts.parser import ParsedFile
+from analysis.core.constants import ErrorType
+from analysis.core.logging import get_logger
+from analysis.domain.contracts.parser import ParsedFile
 
 logger = get_logger(__name__)
 

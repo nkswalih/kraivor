@@ -1,6 +1,6 @@
 import pytest
 
-from app.infrastructure.parsers import (
+from analysis.infrastructure.parsers import (
     CSharpParser,
     ElixirParser,
     GoParser,
@@ -12,7 +12,7 @@ from app.infrastructure.parsers import (
     RubyParser,
     RustParser,
 )
-from app.infrastructure.parsers.base import ChainedParser
+from analysis.infrastructure.parsers.base import ChainedParser
 
 
 @pytest.fixture

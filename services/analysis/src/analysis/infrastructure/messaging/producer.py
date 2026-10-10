@@ -1,9 +1,9 @@
-from app.core.config import get_settings
+from analysis.core.config import get_settings
 
 settings = get_settings()
-from app.core.logging import get_logger
-from app.domain.events import DomainEvent
-from app.infrastructure.cache.redis import RedisCache
+from analysis.core.logging import get_logger
+from analysis.domain.events import DomainEvent
+from analysis.infrastructure.cache.redis import RedisCache
 
 logger = get_logger(__name__)
 

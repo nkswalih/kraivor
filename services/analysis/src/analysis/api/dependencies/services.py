@@ -3,11 +3,11 @@ from collections.abc import AsyncGenerator
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies.database import get_db
-from app.infrastructure.cache.redis import RedisCache
-from app.infrastructure.db.unit_of_work import UnitOfWork
-from app.infrastructure.messaging.producer import EventProducer
-from app.infrastructure.storage.s3 import S3Storage
+from analysis.api.dependencies.database import get_db
+from analysis.infrastructure.cache.redis import RedisCache
+from analysis.infrastructure.db.unit_of_work import UnitOfWork
+from analysis.infrastructure.messaging.producer import EventProducer
+from analysis.infrastructure.storage.s3 import S3Storage
 
 
 async def get_uow(

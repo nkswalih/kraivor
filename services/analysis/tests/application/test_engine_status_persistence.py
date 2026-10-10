@@ -27,22 +27,25 @@ from fastapi.routing import APIRoute
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import ClauseElement
 
-from app.api.schemas import jobs as jobs_schemas
-from app.application.analysis import handler as handler_mod
-from app.application.analysis.commands import ProcessStageCommand, StartAnalysisCommand
-from app.application.analysis.handler import (
+from analysis.api.schemas import jobs as jobs_schemas
+from analysis.application.analysis import handler as handler_mod
+from analysis.application.analysis.commands import (
+    ProcessStageCommand,
+    StartAnalysisCommand,
+)
+from analysis.application.analysis.handler import (
     handle_analysis_failure,
     handle_stage_finalize,
 )
-from app.application.tasks import pipeline
-from app.application.tasks.pipeline import _run_pipeline
-from app.core.constants import EngineStateMap
-from app.core.engines import ALL_ENGINES, stage_to_engine_keys
-from app.domain.contracts.storage import AbstractStorage
-from app.domain.entities.score import Score
-from app.infrastructure.db.repositories.analysis_job import JobRepository
-from app.infrastructure.db.unit_of_work import UnitOfWork
-from app.infrastructure.messaging.producer import EventProducer
+from analysis.application.tasks import pipeline
+from analysis.application.tasks.pipeline import _run_pipeline
+from analysis.core.constants import EngineStateMap
+from analysis.core.engines import ALL_ENGINES, stage_to_engine_keys
+from analysis.domain.contracts.storage import AbstractStorage
+from analysis.domain.entities.score import Score
+from analysis.infrastructure.db.repositories.analysis_job import JobRepository
+from analysis.infrastructure.db.unit_of_work import UnitOfWork
+from analysis.infrastructure.messaging.producer import EventProducer
 
 # The helpers these tests exercise were introduced *by* the fixes being tested.
 # They are reached through their modules rather than imported by name so that
@@ -138,7 +141,7 @@ class _FakeProducer:
 def _install_recorder(monkeypatch: pytest.MonkeyPatch) -> _WriteRecorder:
     recorder = _WriteRecorder()
     monkeypatch.setattr(
-        "app.infrastructure.db.session.async_session_factory", recorder.session_factory
+        "analysis.infrastructure.db.session.async_session_factory", recorder.session_factory
     )
     monkeypatch.setattr(pipeline, "EventProducer", _FakeProducer)
     return recorder
@@ -906,7 +909,7 @@ class TestCatalogueIsTheSingleSource:
         assert not still_pending, f"engines never completed: {sorted(still_pending)}"
 
     def test_every_stage_in_the_map_is_a_stage_the_pipeline_runs(self) -> None:
-        from app.core.engines import stage_to_engine_keys
+        from analysis.core.engines import stage_to_engine_keys
 
         stages = set(stage_to_engine_keys())
         # If a catalogue stage is not in the pipeline's loop, its engine would sit
@@ -933,8 +936,8 @@ class TestCatalogueIsTheSingleSource:
         assert stages <= pipeline_stages, f"unknown stages: {stages - pipeline_stages}"
 
     def test_the_scored_subset_matches_the_scorer(self) -> None:
-        from app.core.engines import SCORED_ENGINE_KEYS
-        from app.infrastructure.scorer import ProductionReadinessScorer
+        from analysis.core.engines import SCORED_ENGINE_KEYS
+        from analysis.infrastructure.scorer import ProductionReadinessScorer
 
         assert set(SCORED_ENGINE_KEYS) == set(ProductionReadinessScorer.CATEGORY_ORDER)
 
@@ -942,7 +945,7 @@ class TestCatalogueIsTheSingleSource:
         """FastAPI matches in declaration order, so `/jobs/engines` declared after
         `/jobs/{job_id}` would be read as a job with id "engines".
         """
-        from app.api.routers.jobs import router
+        from analysis.api.routers.jobs import router
 
         paths = [
             r.path

@@ -1,5 +1,5 @@
-from app.core.config import get_settings
-from app.core.constants import (
+from analysis.core.config import get_settings
+from analysis.core.constants import (
     Category,
     JobStatus,
     Severity,
@@ -7,7 +7,7 @@ from app.core.constants import (
     Tiers,
     TriggerType,
 )
-from app.core.exceptions import (
+from analysis.core.exceptions import (
     AppBaseError,
     ConfigurationError,
     NotFoundError,

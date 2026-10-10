@@ -20,7 +20,7 @@ def generate_test_jwt(
 
 @pytest.fixture
 def mock_settings() -> Generator[MagicMock]:
-    with patch("app.dependencies.auth.settings") as mock:
+    with patch("analysis.dependencies.auth.settings") as mock:
         mock.jwt.jwks_url = "http://localhost/.well-known/jwks.json"
         mock.jwt.algorithm = "RS256"
         mock.jwt.audience = "kraivor"
@@ -34,7 +34,7 @@ def mock_settings() -> Generator[MagicMock]:
 
 class TestGetCurrentUser:
     def test_valid_token_returns_payload(self, mock_settings: None) -> None:
-        from app.dependencies.auth import get_current_user
+        from analysis.dependencies.auth import get_current_user
 
         payload = {
             "sub": "user-123",
@@ -51,7 +51,7 @@ class TestGetCurrentUser:
         mock_request = MagicMock(spec=object)
         mock_request.headers = {"Authorization": "Bearer some.valid.token"}
 
-        with patch("app.dependencies.auth._verify_token", return_value=payload):
+        with patch("analysis.dependencies.auth._verify_token", return_value=payload):
             user = get_current_user(mock_request)
 
         assert user.sub == "user-123"
@@ -59,7 +59,7 @@ class TestGetCurrentUser:
         assert user.workspace_ids == ["ws-1", "ws-2"]
 
     def test_missing_token_raises_401(self, mock_settings: None) -> None:
-        from app.dependencies.auth import get_current_user
+        from analysis.dependencies.auth import get_current_user
 
         mock_request = MagicMock()
         mock_request.headers = {}
@@ -70,14 +70,14 @@ class TestGetCurrentUser:
         assert exc_info.value.status_code == 401
 
     def test_invalid_token_raises_401(self, mock_settings: None) -> None:
-        from app.dependencies.auth import get_current_user
+        from analysis.dependencies.auth import get_current_user
 
         mock_request = MagicMock()
         mock_request.headers = {"Authorization": "Bearer invalid.token.here"}
 
         with (
             patch(
-                "app.dependencies.auth._verify_token",
+                "analysis.dependencies.auth._verify_token",
                 side_effect=jwt.InvalidTokenError("bad token"),
             ),
             pytest.raises(HTTPException) as exc_info,
@@ -87,14 +87,14 @@ class TestGetCurrentUser:
         assert exc_info.value.status_code == 401
 
     def test_expired_token_raises_401(self, mock_settings: None) -> None:
-        from app.dependencies.auth import get_current_user
+        from analysis.dependencies.auth import get_current_user
 
         mock_request = MagicMock()
         mock_request.headers = {"Authorization": "Bearer expired.token.here"}
 
         with (
             patch(
-                "app.dependencies.auth._verify_token",
+                "analysis.dependencies.auth._verify_token",
                 side_effect=jwt.ExpiredSignatureError("expired"),
             ),
             pytest.raises(HTTPException) as exc_info,
@@ -104,7 +104,7 @@ class TestGetCurrentUser:
         assert exc_info.value.status_code == 401
 
     def test_internal_request_bypasses_verification(self, mock_settings: None) -> None:
-        from app.dependencies.auth import get_current_user
+        from analysis.dependencies.auth import get_current_user
 
         mock_request = MagicMock()
         mock_request.headers = {
@@ -126,7 +126,7 @@ class TestVerifyToken:
         from cryptography.hazmat.primitives import serialization
         from cryptography.hazmat.primitives.asymmetric import rsa
 
-        import app.dependencies.auth as auth_module
+        import analysis.dependencies.auth as auth_module
 
         private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         public_key = private_key.public_key()
@@ -168,7 +168,7 @@ class TestVerifyToken:
         from cryptography.hazmat.primitives import serialization
         from cryptography.hazmat.primitives.asymmetric import rsa
 
-        import app.dependencies.auth as auth_module
+        import analysis.dependencies.auth as auth_module
 
         private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         public_key = private_key.public_key()
@@ -206,7 +206,7 @@ class TestVerifyToken:
             auth_module._verify_token(token)
 
     def test_invalid_token_raises(self, mock_settings: None) -> None:
-        import app.dependencies.auth as auth_module
+        import analysis.dependencies.auth as auth_module
 
         mock_client = MagicMock()
         mock_client.get_signing_key_from_jwt.side_effect = jwt.InvalidTokenError(
@@ -222,12 +222,12 @@ class TestVerifyToken:
 
 class TestGetJwksClient:
     def test_client_created_and_cached(self, mock_settings: None) -> None:
-        import app.dependencies.auth as auth_module
+        import analysis.dependencies.auth as auth_module
 
         auth_module._jwks_client = None
         auth_module._jwks_client_ttl = 0
 
-        with patch("app.dependencies.auth.PyJWKClient") as mock_pyjwk:
+        with patch("analysis.dependencies.auth.PyJWKClient") as mock_pyjwk:
             mock_instance = MagicMock()
             mock_pyjwk.return_value = mock_instance
 
@@ -239,7 +239,7 @@ class TestGetJwksClient:
             mock_instance.fetch_data.assert_called_once()
 
     def test_invalidate_cache(self, mock_settings: None) -> None:
-        import app.dependencies.auth as auth_module
+        import analysis.dependencies.auth as auth_module
 
         auth_module._jwks_client = MagicMock()
         auth_module._jwks_client_ttl = time.time()

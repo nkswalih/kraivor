@@ -6,19 +6,19 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 
-from app.api.dependencies.services import get_uow
-from app.api.schemas.jobs import JobStatusResponse
-from app.application.analysis.commands import StartAnalysisCommand
-from app.application.analysis.handler import handle_start_analysis
-from app.application.tasks.pipeline import run_full_analysis
-from app.core.config import get_settings
-from app.core.constants import TriggerType
-from app.core.logging import get_logger
-from app.dependencies.auth import JWTPayload, get_current_user
-from app.infrastructure.db.unit_of_work import UnitOfWork
-from app.infrastructure.git.repository_fetcher import RepositoryFetcher
-from app.infrastructure.messaging.producer import EventProducer
-from app.infrastructure.storage.s3 import S3Storage
+from analysis.api.dependencies.services import get_uow
+from analysis.api.schemas.jobs import JobStatusResponse
+from analysis.application.analysis.commands import StartAnalysisCommand
+from analysis.application.analysis.handler import handle_start_analysis
+from analysis.application.tasks.pipeline import run_full_analysis
+from analysis.core.config import get_settings
+from analysis.core.constants import TriggerType
+from analysis.core.logging import get_logger
+from analysis.dependencies.auth import JWTPayload, get_current_user
+from analysis.infrastructure.db.unit_of_work import UnitOfWork
+from analysis.infrastructure.git.repository_fetcher import RepositoryFetcher
+from analysis.infrastructure.messaging.producer import EventProducer
+from analysis.infrastructure.storage.s3 import S3Storage
 
 _background_tasks: set[asyncio.Task[None]] = set()
 
@@ -150,7 +150,9 @@ async def _run_analysis_safe(cmd_dict: dict[str, object]) -> None:
             try:
                 async with UnitOfWork() as uow:
                     producer = EventProducer()
-                    from app.application.analysis.handler import handle_analysis_failure
+                    from analysis.application.analysis.handler import (
+                        handle_analysis_failure,
+                    )
 
                     await handle_analysis_failure(
                         UUID(cast(str, job_id)),
@@ -165,6 +167,6 @@ async def _run_analysis_safe(cmd_dict: dict[str, object]) -> None:
 
 
 def _job_to_response(job: dict[str, object] | None) -> JobStatusResponse:
-    from app.api.routers.jobs import _job_to_response as jtr
+    from analysis.api.routers.jobs import _job_to_response as jtr
 
     return jtr(cast(dict[str, object], job))

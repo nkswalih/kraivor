@@ -8,7 +8,7 @@ from fastapi import HTTPException, Request
 from jwt import PyJWKClient
 from pydantic import BaseModel
 
-from app.core.config import get_settings
+from analysis.core.config import get_settings
 
 settings = get_settings()
 

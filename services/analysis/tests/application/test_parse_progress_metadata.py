@@ -33,21 +33,21 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.application.analysis.commands import ProcessStageCommand
-from app.application.analysis.handler import handle_stage_parse
-from app.domain.contracts.parser import (
+from analysis.application.analysis.commands import ProcessStageCommand
+from analysis.application.analysis.handler import handle_stage_parse
+from analysis.domain.contracts.parser import (
     ParsedClass,
     ParsedFile,
     ParsedFunction,
     ParsedRoute,
 )
-from app.domain.entities.analysis_metadata import AnalysisMetadata
-from app.infrastructure.db.repositories.analysis_metadata import (
+from analysis.domain.entities.analysis_metadata import AnalysisMetadata
+from analysis.infrastructure.db.repositories.analysis_metadata import (
     AnalysisMetadataRepository,
 )
-from app.infrastructure.db.unit_of_work import UnitOfWork
-from app.infrastructure.messaging.producer import EventProducer
-from app.infrastructure.parsers.base import ChainedParser
+from analysis.infrastructure.db.unit_of_work import UnitOfWork
+from analysis.infrastructure.messaging.producer import EventProducer
+from analysis.infrastructure.parsers.base import ChainedParser
 
 # ======================================================================
 # Parsed-file builders
@@ -208,7 +208,7 @@ async def _run_parse(
     parser = _StubParser(by_path, fail)
 
     with patch(
-        "app.infrastructure.db.session.async_session_factory",
+        "analysis.infrastructure.db.session.async_session_factory",
         _fake_session_factory(recorder),
     ):
         await handle_stage_parse(
@@ -407,7 +407,7 @@ class TestTotalsAreCommittedBeforeTheProgressIsAnnounced:
         uow = _FakeUow(recorder)
 
         with patch(
-            "app.infrastructure.db.session.async_session_factory",
+            "analysis.infrastructure.db.session.async_session_factory",
             _fake_session_factory(recorder),
         ):
             metadata, parsed_files = asyncio.run(

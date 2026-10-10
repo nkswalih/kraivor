@@ -4,7 +4,7 @@ from sqlalchemy import Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.infrastructure.db.base import Base, SoftDeleteMixin, UUIDColumn
+from analysis.infrastructure.db.base import Base, SoftDeleteMixin, UUIDColumn
 
 
 class FileAnalysisModel(Base, SoftDeleteMixin):

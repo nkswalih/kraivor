@@ -3,10 +3,10 @@ from uuid import UUID
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.contracts.repository_provider import AbstractReportRepository
-from app.domain.entities.report import Report
-from app.domain.entities.score import Score
-from app.infrastructure.db.models.analysis_job import AnalysisJobModel
+from analysis.domain.contracts.repository_provider import AbstractReportRepository
+from analysis.domain.entities.report import Report
+from analysis.domain.entities.score import Score
+from analysis.infrastructure.db.models.analysis_job import AnalysisJobModel
 
 
 class ReportRepository(AbstractReportRepository):

@@ -1,5 +1,5 @@
-from app.core.constants import Category, Severity
-from app.domain.rules.base import BaseRule, RuleViolation
+from analysis.core.constants import Category, Severity
+from analysis.domain.rules.base import BaseRule, RuleViolation
 
 
 class StructureDeepNestingRule(BaseRule):

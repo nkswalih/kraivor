@@ -1,6 +1,6 @@
 import pytest
 
-from app.infrastructure.parsers.php_parser import PhpParser
+from analysis.infrastructure.parsers.php_parser import PhpParser
 
 
 @pytest.fixture

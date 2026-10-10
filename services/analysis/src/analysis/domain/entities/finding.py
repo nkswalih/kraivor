@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from uuid import UUID, uuid4
 
-from app.core.constants import Category, FindingStatus, Severity
+from analysis.core.constants import Category, FindingStatus, Severity
 
 
 @dataclass(kw_only=True)

@@ -3,8 +3,8 @@ from uuid import uuid4
 
 import httpx
 
-from app.core.config import get_settings
-from app.core.logging import get_logger
+from analysis.core.config import get_settings
+from analysis.core.logging import get_logger
 
 logger = get_logger(__name__)
 

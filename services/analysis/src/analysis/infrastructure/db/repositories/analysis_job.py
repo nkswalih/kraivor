@@ -9,11 +9,11 @@ from sqlalchemy.orm import load_only
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.sql.expression import SQLColumnExpression
 
-from app.core.constants import EngineStateMap, JobStatus
-from app.domain.contracts.repository_provider import AbstractJobRepository
-from app.infrastructure.db.models.analysis_job import AnalysisJobModel
-from app.infrastructure.db.models.file_analysis import FileAnalysisModel
-from app.infrastructure.db.models.score_history import ScoreHistoryModel
+from analysis.core.constants import EngineStateMap, JobStatus
+from analysis.domain.contracts.repository_provider import AbstractJobRepository
+from analysis.infrastructure.db.models.analysis_job import AnalysisJobModel
+from analysis.infrastructure.db.models.file_analysis import FileAnalysisModel
+from analysis.infrastructure.db.models.score_history import ScoreHistoryModel
 
 
 def floored_progress(

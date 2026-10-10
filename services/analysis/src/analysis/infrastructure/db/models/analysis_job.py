@@ -6,7 +6,12 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSON
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.infrastructure.db.base import Base, SoftDeleteMixin, TimestampMixin, UUIDColumn
+from analysis.infrastructure.db.base import (
+    Base,
+    SoftDeleteMixin,
+    TimestampMixin,
+    UUIDColumn,
+)
 
 
 class AnalysisJobModel(Base, TimestampMixin, SoftDeleteMixin):

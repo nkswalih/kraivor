@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.infrastructure.db.models.performance_metric import PerformanceMetricModel
+from analysis.infrastructure.db.models.performance_metric import PerformanceMetricModel
 
 
 class PerformanceMetricRepository:

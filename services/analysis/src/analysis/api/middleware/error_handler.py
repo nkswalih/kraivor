@@ -1,8 +1,8 @@
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from app.core.exceptions import NotFoundError
-from app.core.logging import get_logger
+from analysis.core.exceptions import NotFoundError
+from analysis.core.logging import get_logger
 
 logger = get_logger(__name__)
 

@@ -1,8 +1,8 @@
 import re
 
-from app.core.logging import get_logger
-from app.domain.contracts.parser import ParsedFile
-from app.workers.devops.models import DevOpsFinding
+from analysis.core.logging import get_logger
+from analysis.domain.contracts.parser import ParsedFile
+from analysis.workers.devops.models import DevOpsFinding
 
 logger = get_logger(__name__)
 

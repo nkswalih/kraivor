@@ -33,14 +33,14 @@ from typing import TYPE_CHECKING, cast
 import httpx
 import pytest
 
-from app.infrastructure.ai import enrichment_client as client_mod
-from app.infrastructure.ai.enrichment_client import AiEnrichmentClient
+from analysis.infrastructure.ai import enrichment_client as client_mod
+from analysis.infrastructure.ai.enrichment_client import AiEnrichmentClient
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     # Under `from __future__ import annotations` the annotations naming this are
     # strings, so the import is never evaluated at runtime and a pre-fix module
     # without the class still collects.
-    from app.infrastructure.ai.enrichment_client import EnrichOutcome
+    from analysis.infrastructure.ai.enrichment_client import EnrichOutcome
 
 pytestmark = pytest.mark.unit
 
@@ -120,7 +120,7 @@ def _patch_client(monkeypatch: pytest.MonkeyPatch, client: object) -> None:
     taking a constructed instance keeps every test from having to re-derive that.
     """
     monkeypatch.setattr(
-        "app.infrastructure.ai.enrichment_client.httpx.AsyncClient",
+        "analysis.infrastructure.ai.enrichment_client.httpx.AsyncClient",
         lambda **_kwargs: client,
     )
 
@@ -271,7 +271,7 @@ class TestTheEnvelopeIsUsable:
         # `_readable_summary_error` narrows one and drops the other and the reason
         # is lost again -- which is the bug this file exists to fix, arriving
         # through the new code rather than the old.
-        from app.application.analysis.handler import _readable_summary_error
+        from analysis.application.analysis.handler import _readable_summary_error
 
         outcome = await _outcome_for(monkeypatch, error)
 

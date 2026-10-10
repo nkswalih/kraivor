@@ -3,9 +3,9 @@ import math
 import re
 from typing import cast
 
-from app.core.constants import Category, Severity
-from app.domain.rules.base import BaseRule, RuleViolation
-from app.domain.rules.patterns.security_patterns import (
+from analysis.core.constants import Category, Severity
+from analysis.domain.rules.base import BaseRule, RuleViolation
+from analysis.domain.rules.patterns.security_patterns import (
     COMMAND_INJECTION_PATTERNS,
     CORS_PATTERNS,
     CSRF_PATTERNS,

@@ -1,9 +1,9 @@
 import re
 from typing import cast
 
-from app.core.logging import get_logger
-from app.domain.contracts.parser import ParsedFile
-from app.workers.reliability.models import ReliabilityFinding
+from analysis.core.logging import get_logger
+from analysis.domain.contracts.parser import ParsedFile
+from analysis.workers.reliability.models import ReliabilityFinding
 
 logger = get_logger(__name__)
 

@@ -1,10 +1,10 @@
 from uuid import UUID, uuid4
 
-from app.core.constants import Category, Severity, Tiers
-from app.domain.entities.finding import Finding
-from app.domain.entities.report import Report
-from app.domain.entities.repository import Repository
-from app.domain.entities.score import Score
+from analysis.core.constants import Category, Severity, Tiers
+from analysis.domain.entities.finding import Finding
+from analysis.domain.entities.report import Report
+from analysis.domain.entities.repository import Repository
+from analysis.domain.entities.score import Score
 
 
 class TestFinding:

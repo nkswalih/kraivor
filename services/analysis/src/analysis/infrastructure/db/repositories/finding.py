@@ -3,10 +3,10 @@ from uuid import UUID
 from sqlalchemy import case, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import FindingStatus, Severity
-from app.domain.contracts.repository_provider import AbstractFindingRepository
-from app.domain.entities.finding import Finding
-from app.infrastructure.db.models.finding import FindingModel
+from analysis.core.constants import FindingStatus, Severity
+from analysis.domain.contracts.repository_provider import AbstractFindingRepository
+from analysis.domain.entities.finding import Finding
+from analysis.infrastructure.db.models.finding import FindingModel
 
 
 class FindingRepository(AbstractFindingRepository):
@@ -207,7 +207,7 @@ class FindingRepository(AbstractFindingRepository):
 
     @staticmethod
     def _to_domain(model: FindingModel) -> Finding:
-        from app.core.constants import Category, FindingStatus, Severity
+        from analysis.core.constants import Category, FindingStatus, Severity
 
         return Finding(
             id=model.id,

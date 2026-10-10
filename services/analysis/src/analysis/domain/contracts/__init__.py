@@ -1,4 +1,4 @@
-from app.domain.contracts.parser import (
+from analysis.domain.contracts.parser import (
     AbstractParser,
     ParsedClass,
     ParsedFile,
@@ -6,13 +6,13 @@ from app.domain.contracts.parser import (
     ParsedImport,
     ParsedRoute,
 )
-from app.domain.contracts.repository_provider import (
+from analysis.domain.contracts.repository_provider import (
     AbstractFindingRepository,
     AbstractJobRepository,
     AbstractReportRepository,
 )
-from app.domain.contracts.scorer import AbstractScorer, Violation
-from app.domain.contracts.storage import AbstractStorage
+from analysis.domain.contracts.scorer import AbstractScorer, Violation
+from analysis.domain.contracts.storage import AbstractStorage
 
 __all__ = [
     "AbstractFindingRepository",

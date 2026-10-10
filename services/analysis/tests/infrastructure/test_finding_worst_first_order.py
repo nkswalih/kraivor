@@ -39,9 +39,9 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from app.core.constants import Category, FindingStatus, Severity
-from app.infrastructure.db.models.finding import FindingModel
-from app.infrastructure.db.unit_of_work import UnitOfWork
+from analysis.core.constants import Category, FindingStatus, Severity
+from analysis.infrastructure.db.models.finding import FindingModel
+from analysis.infrastructure.db.unit_of_work import UnitOfWork
 
 # One run, one repository, shared by every test: each test opens its own
 # in-memory database, so the ids never collide with data another test sees.

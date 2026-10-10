@@ -1,32 +1,34 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.infrastructure.db.repositories.analysis_job import JobRepository
-from app.infrastructure.db.repositories.analysis_metadata import (
+from analysis.infrastructure.db.repositories.analysis_job import JobRepository
+from analysis.infrastructure.db.repositories.analysis_metadata import (
     AnalysisMetadataRepository,
 )
-from app.infrastructure.db.repositories.dead_code import DeadCodeRepository
-from app.infrastructure.db.repositories.devops_finding import DevOpsFindingRepository
-from app.infrastructure.db.repositories.enterprise_guide import (
+from analysis.infrastructure.db.repositories.dead_code import DeadCodeRepository
+from analysis.infrastructure.db.repositories.devops_finding import (
+    DevOpsFindingRepository,
+)
+from analysis.infrastructure.db.repositories.enterprise_guide import (
     EnterpriseGuideRepository,
 )
-from app.infrastructure.db.repositories.error_finding import ErrorFindingRepository
-from app.infrastructure.db.repositories.file_analysis import FileAnalysisRepository
-from app.infrastructure.db.repositories.finding import FindingRepository
-from app.infrastructure.db.repositories.maintainability_finding import (
+from analysis.infrastructure.db.repositories.error_finding import ErrorFindingRepository
+from analysis.infrastructure.db.repositories.file_analysis import FileAnalysisRepository
+from analysis.infrastructure.db.repositories.finding import FindingRepository
+from analysis.infrastructure.db.repositories.maintainability_finding import (
     MaintainabilityFindingRepository,
 )
-from app.infrastructure.db.repositories.performance_metric import (
+from analysis.infrastructure.db.repositories.performance_metric import (
     PerformanceMetricRepository,
 )
-from app.infrastructure.db.repositories.reliability_finding import (
+from analysis.infrastructure.db.repositories.reliability_finding import (
     ReliabilityFindingRepository,
 )
-from app.infrastructure.db.repositories.report import ReportRepository
-from app.infrastructure.db.repositories.score_history import ScoreHistoryRepository
-from app.infrastructure.db.repositories.simulation_result import (
+from analysis.infrastructure.db.repositories.report import ReportRepository
+from analysis.infrastructure.db.repositories.score_history import ScoreHistoryRepository
+from analysis.infrastructure.db.repositories.simulation_result import (
     SimulationResultRepository,
 )
-from app.infrastructure.db.session import async_session_factory
+from analysis.infrastructure.db.session import async_session_factory
 
 
 class UnitOfWork:

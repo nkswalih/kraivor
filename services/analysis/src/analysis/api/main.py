@@ -7,13 +7,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.api.middleware.error_handler import (
+from analysis.api.middleware.error_handler import (
     generic_exception_handler,
     not_found_handler,
 )
-from app.api.middleware.logging import RequestLoggingMiddleware
-from app.api.middleware.request_id import RequestIDMiddleware
-from app.api.routers import (
+from analysis.api.middleware.logging import RequestLoggingMiddleware
+from analysis.api.middleware.request_id import RequestIDMiddleware
+from analysis.api.routers import (
     dead_code_router,
     devops_findings_router,
     enterprise_guide_router,
@@ -29,9 +29,9 @@ from app.api.routers import (
     score_history_router,
     simulation_results_router,
 )
-from app.core.config import get_settings
-from app.core.exceptions import NotFoundError
-from app.core.logging import get_logger
+from analysis.core.config import get_settings
+from analysis.core.exceptions import NotFoundError
+from analysis.core.logging import get_logger
 
 logger = get_logger(__name__)
 

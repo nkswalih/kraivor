@@ -1,6 +1,6 @@
-from app.core.constants import SimulationStatus
-from app.core.logging import get_logger
-from app.workers.perf.rpm_calculator import PerformanceMetrics
+from analysis.core.constants import SimulationStatus
+from analysis.core.logging import get_logger
+from analysis.workers.perf.rpm_calculator import PerformanceMetrics
 
 logger = get_logger(__name__)
 

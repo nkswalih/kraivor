@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.infrastructure.db.models.error_finding import ErrorFindingModel
+from analysis.infrastructure.db.models.error_finding import ErrorFindingModel
 
 
 class ErrorFindingRepository:

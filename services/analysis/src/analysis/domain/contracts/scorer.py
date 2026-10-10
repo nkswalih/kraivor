@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
-from app.domain.entities.score import Score
+from analysis.domain.entities.score import Score
 
 
 @dataclass(kw_only=True)

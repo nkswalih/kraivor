@@ -2,8 +2,8 @@ import os
 import re
 from pathlib import Path
 
-from app.core.logging import get_logger
-from app.infrastructure.detection.config_reader import (
+from analysis.core.logging import get_logger
+from analysis.infrastructure.detection.config_reader import (
     detect_ci_platform,
     read_cargo_toml,
     read_csproj,
@@ -14,8 +14,8 @@ from app.infrastructure.detection.config_reader import (
     read_requirements_txt,
     read_toml,
 )
-from app.infrastructure.detection.models import DetectedTechnology, DetectionResult
-from app.infrastructure.detection.signatures import (
+from analysis.infrastructure.detection.models import DetectedTechnology, DetectionResult
+from analysis.infrastructure.detection.signatures import (
     ALL_CSHARP_SIGNATURES,
     ALL_GO_SIGNATURES,
     ALL_JAVA_SIGNATURES,

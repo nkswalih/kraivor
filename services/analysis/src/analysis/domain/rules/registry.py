@@ -1,6 +1,6 @@
 from fnmatch import fnmatch
 
-from app.domain.rules.base import BaseRule
+from analysis.domain.rules.base import BaseRule
 
 
 class RuleRegistry:
@@ -51,16 +51,16 @@ class RuleRegistry:
 
 def create_default_registry() -> RuleRegistry:
     """Create a registry with all built-in rules loaded."""
-    from app.domain.rules.devops import (
+    from analysis.domain.rules.devops import (
         DevopsCIConfigRule,
         DevopsDockerfileRule,
         DevopsEnvFileRule,
     )
-    from app.domain.rules.quality import (
+    from analysis.domain.rules.quality import (
         QualityHighComplexityRule,
         QualityLongFunctionRule,
     )
-    from app.domain.rules.security import (
+    from analysis.domain.rules.security import (
         SecurityCommandInjectionRule,
         SecurityCORSMisconfigRule,
         SecurityCSRFRule,
@@ -76,7 +76,7 @@ def create_default_registry() -> RuleRegistry:
         SecurityXSSRule,
         SecurityXXERule,
     )
-    from app.domain.rules.structure import StructureDeepNestingRule
+    from analysis.domain.rules.structure import StructureDeepNestingRule
 
     registry = RuleRegistry()
     registry.register_many(

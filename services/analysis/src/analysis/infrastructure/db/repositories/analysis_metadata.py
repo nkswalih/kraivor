@@ -6,8 +6,8 @@ from sqlalchemy import select, update
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.entities.analysis_metadata import AnalysisMetadata
-from app.infrastructure.db.models.analysis_metadata import AnalysisMetadataModel
+from analysis.domain.entities.analysis_metadata import AnalysisMetadata
+from analysis.infrastructure.db.models.analysis_metadata import AnalysisMetadataModel
 
 
 class AnalysisMetadataRepository:

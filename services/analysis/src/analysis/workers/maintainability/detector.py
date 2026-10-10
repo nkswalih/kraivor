@@ -1,8 +1,8 @@
 import re
 
-from app.core.logging import get_logger
-from app.domain.contracts.parser import ParsedFile
-from app.workers.maintainability.models import (
+from analysis.core.logging import get_logger
+from analysis.domain.contracts.parser import ParsedFile
+from analysis.workers.maintainability.models import (
     MaintainabilityFinding,
     MaintainabilityMetrics,
 )

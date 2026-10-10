@@ -1,23 +1,23 @@
-from app.api.schemas.common import ErrorResponse, HealthResponse, PaginationParams
-from app.api.schemas.dead_code import DeadCodeFindingResponse, DeadCodeListResponse
-from app.api.schemas.errors import ErrorFindingListResponse, ErrorFindingResponse
-from app.api.schemas.findings import (
+from analysis.api.schemas.common import ErrorResponse, HealthResponse, PaginationParams
+from analysis.api.schemas.dead_code import DeadCodeFindingResponse, DeadCodeListResponse
+from analysis.api.schemas.errors import ErrorFindingListResponse, ErrorFindingResponse
+from analysis.api.schemas.findings import (
     FindingResponse,
     FindingsListResponse,
     FindingsSummaryResponse,
 )
-from app.api.schemas.guide import EnterpriseGuideResponse
-from app.api.schemas.jobs import (
+from analysis.api.schemas.guide import EnterpriseGuideResponse
+from analysis.api.schemas.jobs import (
     JobListResponse,
     JobStatusResponse,
     StartAnalysisRequest,
 )
-from app.api.schemas.perf import (
+from analysis.api.schemas.perf import (
     PerformanceMetricListResponse,
     PerformanceMetricResponse,
 )
-from app.api.schemas.reports import ReportResponse
-from app.api.schemas.simulation import (
+from analysis.api.schemas.reports import ReportResponse
+from analysis.api.schemas.simulation import (
     SimulationResultListResponse,
     SimulationResultResponse,
 )

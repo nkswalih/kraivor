@@ -1,11 +1,11 @@
-from app.core.constants import Category, Severity
-from app.domain.entities.score import Score
-from app.domain.rules.base import RuleViolation
-from app.workers.dead_code.detector import DeadCodeFinding
-from app.workers.enterprise_guide import EnterpriseGuide, EnterpriseGuideGenerator
-from app.workers.errors.scanner import ErrorFinding
-from app.workers.perf.load_sim import SimulationResult
-from app.workers.perf.rpm_calculator import PerformanceMetrics
+from analysis.core.constants import Category, Severity
+from analysis.domain.entities.score import Score
+from analysis.domain.rules.base import RuleViolation
+from analysis.workers.dead_code.detector import DeadCodeFinding
+from analysis.workers.enterprise_guide import EnterpriseGuide, EnterpriseGuideGenerator
+from analysis.workers.errors.scanner import ErrorFinding
+from analysis.workers.perf.load_sim import SimulationResult
+from analysis.workers.perf.rpm_calculator import PerformanceMetrics
 
 
 def _make_violation(

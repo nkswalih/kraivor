@@ -70,8 +70,11 @@ Per MAP §1c, plus everything the sweep found beyond the table:
 
 Notes on the sweep:
 
-- `infra/kubernetes/services/frontend/deployment.yaml` (MAP row) **does not
-  exist** — no k8s manifest deploys the frontend (compose + Vercel). Row was moot.
+- `infra/kubernetes/services/frontend/deployment.yaml` (MAP row) **does exist**
+  — a `frontend-service` Deployment using `${ECR_REGISTRY}/kraivor-frontend:latest`
+  (added in the initial scaffold, `b34b5fe`). It needed no edit: the
+  `kraivor-frontend` image name is unchanged by the move. *(Corrected in Phase 3;
+  an earlier draft of this record said the file did not exist.)*
 - `docker-compose.dev.yml` (comment only) and `docker-compose.prod.yml`
   (Vercel-hosted, no build) — unchanged, as MAP predicted.
 - `docs/handbook/` and `docs/documents/` are **gitignored local files**

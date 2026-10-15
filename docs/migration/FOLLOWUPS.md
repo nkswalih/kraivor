@@ -11,9 +11,9 @@ Severity is about impact, not about whether it blocks this migration.
 | F1 | formatting | `black --check` fails on the base commit in all four Python services | `BASELINE.md` §5; e.g. 5 files in `auth` | run `black` repo-wide in a dedicated formatting PR | low |
 | F2 | imports | `isort --check-only` fails on the base commit in all four services | `BASELINE.md` §5 | dedicated `isort` PR; note the Windows `PYTHONUTF8=1` requirement | low |
 | F3 | typing | `mypy .` fails on the base commit in all four services; `auth` exits 2 with `"Source file found twice under different module names: logging_utils and auth.logging_utils"` | `BASELINE.md` §5; root `Makefile` note | resolve `auth` module-root config so local output matches CI | medium |
-| F4 | analysis config | `[tool.coverage.run].source = ["app","workers"]` and isort `known_first_party = ["app","workers","tests"]` reference a top-level `workers/` that does not exist (only `app/workers/`) | `services/analysis/pyproject.toml:68,135`; dir listing has no `workers/` | drop the stale `workers` entries | low |
-| F5 | dependency duplication | `analysis` (and `ai`) declare dev deps in **both** `[project.optional-dependencies].dev` and `[dependency-groups].dev` | `services/analysis/pyproject.toml:28–49,164–186` | keep one source | low |
-| F6 | exclusions | `services/analysis/.flake8`, `pytest.ini`, `tox.ini` coexist with equivalent `pyproject.toml` config | service dir listings | consolidate (candidate for Phase 5, or leave) | low |
+| F4 | analysis config | `[tool.coverage.run].source` and isort `known_first_party` referenced a top-level `workers/` that does not exist (only `app/workers/`) | `services/analysis/pyproject.toml` at base | **resolved by this migration** (Phase 2b: `source = ["analysis"]`, `known_first_party = ["analysis","tests"]`) | — |
+| F5 | dependency duplication | `core`/`analysis`/`ai`/`auth` declared dev deps in **both** `[project.optional-dependencies].dev` and `[dependency-groups].dev` | service pyprojects at base | **resolved by this migration** (Phase 2a/2c/2d/2e: `[dependency-groups].dev` is the single dev source for all four; `analysis` keeps its distinct `prod` extra — see F15) | — |
+| F6 | exclusions | `services/*/.flake8` and `tox.ini` coexist with equivalent `pyproject.toml` config | service dir listings | `pytest.ini` consolidated into `pyproject.toml` for all four services in this migration (Phase 2a–2d); `.flake8`/`tox.ini` intentionally kept — unused by CI and the root `Makefile` (candidate for Phase 5) | low |
 | F7 | stray artifacts | tracked/leftover test outputs: `frontend/public/Screenshot 2026-05-25 212539.png`, `services/ai/tests/res/*.json`, `services/analysis/test.db` | file listing / `BASELINE` scan | remove in a cleanup PR | low |
 | F8 | CODEOWNERS | patterns `/k8s/` and `/terraform/` match no directory (code lives under `infra/`) | `CODEOWNERS:32–33` | already partly superseded by `/infra/`; drop the two dead lines | low |
 | F9 | labeler | `helm/**/*`, `terraform/**/*`, `k8s/**/*` patterns match nothing (no such dirs) | `.github/labeler.yml:57–59` | drop dead patterns | low |
@@ -22,6 +22,7 @@ Severity is about impact, not about whether it blocks this migration.
 | F12 | dead scaffolds | `services/notifications` (all `app/` 0-byte; `fail_under=90` passes vacuously) and `services/realtime` (Dockerfile runs `npm install` with no `package.json`) fail to build | `BASELINE`; service listings | **resolved by this migration** (Phase 0.5 removes both) | — |
 | F13 | uv version drift | core/auth Dockerfiles use `ghcr.io/astral-sh/uv:0.4.30`; analysis/ai use `0.11.7` | `Dockerfile*` grep | **normalised by this migration** (Phase 2e) | — |
 | F14 | compose | `docker-compose.prod.yml` cannot be validated with `docker compose config`, alone or layered on the base: it sets `profiles: ["removed"]` on `postgres`/`redis`/`kafka`/`dynamodb-local`/`frontend`, so dependents such as `ai` fail with `depends on undefined service "postgres"` | `docker-compose.prod.yml:12–26`; observed in Phase 0.5 | document that prod validation needs `--profile`, or decouple `depends_on` from profiled infra | low |
+| F15 | optional extras | `analysis` still declares a `prod` extra (`uvloop`, `httptools`) that **nothing installs**: every image/CI path runs `uv sync --locked [--no-dev]` with no `--extra`/`--all-extras`, and `uvicorn[standard]` already pulls both into the main set | `services/analysis/pyproject.toml`; `services/*/Dockerfile*` `uv sync` lines | drop the `prod` extra, or switch the prod image to `--extra prod` if it is meant to be installed | low |
 
 ## Notes
 
@@ -29,3 +30,7 @@ Severity is about impact, not about whether it blocks this migration.
   itself, not deferred.
 - Any new unrelated finding discovered during Phases 0.5–5 is appended here
   rather than fixed in place.
+- Phase 2 note: `docker compose config` prints
+  `The "_pqiS" variable is not set` on every compose file — the untracked local
+  `.env` `SECRET_KEY` contains a literal `$`, which compose tries to
+  interpolate (local env hygiene, see F11; the tracked repo is unaffected).

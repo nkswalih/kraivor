@@ -38,13 +38,13 @@ jobs:
         #
         # v2.4.4 also downgrades a failed results POST to a log line instead
         # of failing the whole job, which the API still does intermittently.
-        uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
+        uses: ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e # v2.5.0
         with:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
 
       - name: Upload SARIF to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+        uses: github/codeql-action/upload-sarif@4bfa242aa49c5f7c6770b98670d354a7dfac05f8 # v3
         with:
           sarif_file: results.sarif

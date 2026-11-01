@@ -71,7 +71,7 @@ jobs:
 
       - name: Upload Trivy SARIF
         if: steps.check-sarif.outputs.exists == 'true'
-        uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+        uses: github/codeql-action/upload-sarif@4bfa242aa49c5f7c6770b98670d354a7dfac05f8 # v3
         with:
           sarif_file: services/${{ matrix.service }}/trivy-${{ matrix.service }}.sarif
 

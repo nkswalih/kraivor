@@ -1,36 +1,76 @@
-COMPOSE = docker compose -f ../../docker-compose.dev.yml
-SERVICE = analysis
+# Developer entry points for the analysis service.
+#
+# The target set is identical across services/{auth,core,analysis,ai} so the
+# root Makefile can orchestrate them with one recursive rule per aggregate.
+# Commands mirror .github/workflows/ci.yml: ruff, bandit, pip-audit and pytest
+# are hard gates; black, isort and mypy are ::warning:: steps there, so
+# `typecheck` and `format` report without failing a build.
+#
+# `format` is the CI-equivalent check. Use `format-fix` to rewrite files.
 
-.PHONY: help install format lint typecheck test coverage check fix sh clean
+SERVICE := analysis
+COMPOSE_SERVICE := analysis
+COMPOSE := docker compose -f ../../docker-compose.dev.yml
+
+.PHONY: help install dev lint typecheck test build security format format-fix coverage check sh clean
 
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
-		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo make install     install dependencies [uv sync --locked]
+	@echo make dev         run $(SERVICE) via docker-compose.dev.yml
+	@echo make lint        ruff check [hard CI gate]
+	@echo make typecheck   mypy [advisory in CI]
+	@echo make test        pytest with coverage [hard CI gate]
+	@echo make build       build the production image
+	@echo make security    bandit + pip-audit [hard CI gates]
+	@echo make format      black/isort check [advisory, no writes]
+	@echo make format-fix  rewrite files with black + isort
+	@echo make coverage    coverage report without the maxfail stop
+	@echo make check       lint test security
+	@echo make sh          shell into the running dev container
+	@echo make clean       remove local caches and reports
 
-install: ## Install dev dependencies inside container
-	$(COMPOSE) exec $(SERVICE) uv sync --group dev
+install: ## Install dependencies from the lockfile
+	uv sync --locked
 
-format: ## Auto-format with ruff
-	$(COMPOSE) exec $(SERVICE) ruff format app/ tests/
+dev: ## Run this service via the dev compose stack
+	$(COMPOSE) up --build $(COMPOSE_SERVICE)
 
-lint: ## Lint with ruff
-	$(COMPOSE) exec $(SERVICE) ruff check app/ tests/
+lint: ## Ruff (hard CI gate)
+	uv run --locked ruff check .
 
-typecheck: ## Static type check with mypy
-	$(COMPOSE) exec $(SERVICE) mypy app/ --strict
+typecheck: ## MyPy (advisory in CI)
+	@echo --- mypy
+	@uv run --locked mypy . || echo    WARNING: mypy reported issues - not a CI gate
 
-test: ## Run tests with pytest
-	$(COMPOSE) exec $(SERVICE) pytest tests/ -v --tb=short $(ARGS)
+test: ## pytest with coverage (hard CI gate)
+	uv run --locked pytest --tb=short --maxfail=3 --cov \
+		--cov-report=term-missing:skip-covered --cov-report=xml --cov-report=html -q
+	uv run --locked python ../../scripts/check_coverage.py
 
-coverage: ## Run tests with coverage report
-	$(COMPOSE) exec $(SERVICE) pytest tests/ --cov=app/ --cov-report=term-missing --cov-report=html:htmlcov/
+build: ## Build the production image
+	docker build -f Dockerfile -t kraivor/$(SERVICE):local .
 
-check: lint typecheck test ## Run all checks
+security: ## Bandit + pip-audit (hard CI gates)
+	uv run --locked bandit -r . -x ./tests,./.venv,./migrations --configfile pyproject.toml -ll
+	uv run --locked pip-audit --strict --progress-spinner off
 
-fix: format ## Auto-fix formatting
+format: ## Black/isort check (advisory, no writes)
+	@echo --- black --check
+	@uv run --locked black --check --diff . || echo    WARNING: black check failed - not a CI gate
+	@echo --- isort --check-only
+	@uv run --locked isort --check-only --diff . || echo    WARNING: isort check failed - not a CI gate
 
-sh: ## Open a shell in the container
-	$(COMPOSE) exec $(SERVICE) /bin/sh
+format-fix: ## Rewrite files with black + isort
+	uv run --locked black .
+	uv run --locked isort .
 
-clean: ## Clean build artifacts
-	$(COMPOSE) exec $(SERVICE) sh -c "rm -rf .ruff_cache/ .pytest_cache/ .mypy_cache/ htmlcov/ .coverage; find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true"
+coverage: ## Coverage report without the maxfail stop
+	uv run --locked pytest --cov --cov-report=term-missing --cov-report=html:htmlcov/
+
+check: lint test security ## All hard gates for this service
+
+sh: ## Shell into the running dev container
+	$(COMPOSE) exec $(COMPOSE_SERVICE) sh
+
+clean: ## Remove local caches and reports
+	uv run --locked python -c "import pathlib, shutil; [shutil.rmtree(p, ignore_errors=True) for p in ('.ruff_cache', '.pytest_cache', '.mypy_cache', 'htmlcov')]; [p.unlink() for p in pathlib.Path('.').glob('.coverage*') if p.is_file()]"

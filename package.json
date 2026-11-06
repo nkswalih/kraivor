@@ -14,7 +14,7 @@
     "dev": "turbo run dev"
   },
   "devDependencies": {
-    "turbo": "2.11.7"
+    "turbo": "2.11.10"
   },
   "pnpm": {
     "overrides": {

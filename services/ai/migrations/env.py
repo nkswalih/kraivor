@@ -3,8 +3,8 @@ from alembic import context
 from logging.config import fileConfig
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from app.core.config import settings
-from app.infrastructure.db.models.base import Base
+from ai.core.config import settings
+from ai.infrastructure.db.models.base import Base
 
 config = context.config
 if config.config_file_name is not None:

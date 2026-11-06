@@ -19,7 +19,7 @@ from urllib.parse import urlsplit
 
 import pytest
 
-from app.infrastructure.git.repository_fetcher import _is_github_host
+from analysis.infrastructure.git.repository_fetcher import _is_github_host
 
 
 class TestIsGithubHost:

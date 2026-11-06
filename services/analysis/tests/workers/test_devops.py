@@ -2,8 +2,8 @@
 
 import pytest
 
-from app.domain.contracts.parser import ParsedFile
-from app.workers.devops.analyzer import DevopsAnalyzer
+from analysis.domain.contracts.parser import ParsedFile
+from analysis.workers.devops.analyzer import DevopsAnalyzer
 
 
 def _make_pf(path: str, content: str) -> ParsedFile:

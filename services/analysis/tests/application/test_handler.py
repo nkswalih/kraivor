@@ -6,11 +6,11 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from app.application.analysis.handler import _dedup_violations, get_job_statistics
-from app.application.analysis.queries import GetJobStatisticsQuery
-from app.core.constants import Category, Severity
-from app.domain.rules.base import RuleViolation
-from app.infrastructure.db.unit_of_work import UnitOfWork
+from analysis.application.analysis.handler import _dedup_violations, get_job_statistics
+from analysis.application.analysis.queries import GetJobStatisticsQuery
+from analysis.core.constants import Category, Severity
+from analysis.domain.rules.base import RuleViolation
+from analysis.infrastructure.db.unit_of_work import UnitOfWork
 
 # ======================================================================
 # _dedup_violations
@@ -175,7 +175,7 @@ def _install(
     calls: list[tuple[str, str, UUID]] = []
     specs = [
         (
-            "app.infrastructure.db.repositories.finding.FindingRepository",
+            "analysis.infrastructure.db.repositories.finding.FindingRepository",
             "FindingRepository",
             {
                 "count_by_severity": {} if severity is None else severity,
@@ -183,18 +183,18 @@ def _install(
             },
         ),
         (
-            "app.infrastructure.db.repositories.dead_code.DeadCodeRepository",
+            "analysis.infrastructure.db.repositories.dead_code.DeadCodeRepository",
             "DeadCodeRepository",
             {"count_by_job": dead_code},
         ),
         (
-            "app.infrastructure.db.repositories.error_finding.ErrorFindingRepository",
+            "analysis.infrastructure.db.repositories.error_finding.ErrorFindingRepository",
             "ErrorFindingRepository",
             {"count_by_job": errors},
         ),
         (
             (
-                "app.infrastructure.db.repositories.performance_metric."
+                "analysis.infrastructure.db.repositories.performance_metric."
                 "PerformanceMetricRepository"
             ),
             "PerformanceMetricRepository",
@@ -202,7 +202,7 @@ def _install(
         ),
         (
             (
-                "app.infrastructure.db.repositories.simulation_result."
+                "analysis.infrastructure.db.repositories.simulation_result."
                 "SimulationResultRepository"
             ),
             "SimulationResultRepository",
@@ -210,7 +210,7 @@ def _install(
         ),
         (
             (
-                "app.infrastructure.db.repositories.enterprise_guide."
+                "analysis.infrastructure.db.repositories.enterprise_guide."
                 "EnterpriseGuideRepository"
             ),
             "EnterpriseGuideRepository",
@@ -220,7 +220,7 @@ def _install(
     for target, name, results in specs:
         monkeypatch.setattr(target, _repo_factory(name, results, calls, gate))
     monkeypatch.setattr(
-        "app.infrastructure.db.session.async_session_factory", _FakeSession
+        "analysis.infrastructure.db.session.async_session_factory", _FakeSession
     )
     return calls
 
@@ -320,7 +320,7 @@ class TestGetJobStatistics:
             raise RuntimeError("db gone")
 
         monkeypatch.setattr(
-            "app.infrastructure.db.repositories.dead_code.DeadCodeRepository",
+            "analysis.infrastructure.db.repositories.dead_code.DeadCodeRepository",
             type(
                 "_Dead",
                 (),

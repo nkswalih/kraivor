@@ -43,11 +43,11 @@ from uuid import uuid4
 
 import pytest
 
-from app.application.analysis import handler as handler_mod
-from app.application.analysis.commands import ProcessStageCommand
-from app.domain.entities.finding import Finding
-from app.infrastructure.ai.enrichment_client import EnrichOutcome
-from app.infrastructure.db.unit_of_work import UnitOfWork
+from analysis.application.analysis import handler as handler_mod
+from analysis.application.analysis.commands import ProcessStageCommand
+from analysis.domain.entities.finding import Finding
+from analysis.infrastructure.ai.enrichment_client import EnrichOutcome
+from analysis.infrastructure.db.unit_of_work import UnitOfWork
 
 _ERROR = {
     "code": "rate_limited",
@@ -272,7 +272,7 @@ async def _run_enrich(
             return EnrichOutcome(result=response)
 
     monkeypatch.setattr(
-        "app.infrastructure.ai.enrichment_client.AiEnrichmentClient", _Client
+        "analysis.infrastructure.ai.enrichment_client.AiEnrichmentClient", _Client
     )
 
     finding = _Finding("SQL injection", "app/users.py")

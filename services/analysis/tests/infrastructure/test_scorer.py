@@ -4,8 +4,8 @@
 import math
 from typing import cast
 
-from app.domain.contracts.scorer import CapacityMetrics, Violation
-from app.infrastructure.scorer import ProductionReadinessScorer
+from analysis.domain.contracts.scorer import CapacityMetrics, Violation
+from analysis.infrastructure.scorer import ProductionReadinessScorer
 
 # ---------------------------------------------------------------------------
 # Helpers

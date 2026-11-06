@@ -6,21 +6,21 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-from app.core.config import get_settings
+from analysis.core.config import get_settings
 
 settings = get_settings()
 # Import all models so Base.metadata is populated
-import app.infrastructure.db.models.analysis_job
-import app.infrastructure.db.models.analysis_metadata
-import app.infrastructure.db.models.dead_code
-import app.infrastructure.db.models.enterprise_guide
-import app.infrastructure.db.models.error_finding
-import app.infrastructure.db.models.file_analysis
-import app.infrastructure.db.models.finding
-import app.infrastructure.db.models.performance_metric
-import app.infrastructure.db.models.score_history
-import app.infrastructure.db.models.simulation_result  # noqa: F401
-from app.infrastructure.db.base import Base
+import analysis.infrastructure.db.models.analysis_job
+import analysis.infrastructure.db.models.analysis_metadata
+import analysis.infrastructure.db.models.dead_code
+import analysis.infrastructure.db.models.enterprise_guide
+import analysis.infrastructure.db.models.error_finding
+import analysis.infrastructure.db.models.file_analysis
+import analysis.infrastructure.db.models.finding
+import analysis.infrastructure.db.models.performance_metric
+import analysis.infrastructure.db.models.score_history
+import analysis.infrastructure.db.models.simulation_result  # noqa: F401
+from analysis.infrastructure.db.base import Base
 
 config = context.config
 if config.config_file_name is not None:

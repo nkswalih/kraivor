@@ -1,0 +1,5 @@
+# pnpm workspace members. Only real, buildable JS/TS packages belong here.
+# The Python services live under services/ and are not npm workspaces.
+packages:
+  - "apps/*"
+  - "packages/*"

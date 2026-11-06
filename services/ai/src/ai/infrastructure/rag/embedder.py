@@ -1,0 +1,97 @@
+import hashlib
+import logging
+from openai import AsyncOpenAI
+
+from ai.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+EMBED_CACHE_TTL = 3600  # 1 hour
+
+# Module-level singleton cache for SentenceTransformer models.
+# Prevents reloading from HuggingFace on every request (saves 15-20s per message).
+_local_model_cache: dict[str, object] = {}
+
+
+class Embedder:
+    def __init__(self, provider: str | None = None, api_key: str | None = None):
+        self.provider = provider or settings.embedding_provider
+        self._model = None
+        self._client = None
+        self.dimension = 384
+        if self.provider == "local":
+            model_name = settings.embedding_model
+            if model_name in _local_model_cache:
+                self._model = _local_model_cache[model_name]
+                logger.debug("Using cached SentenceTransformer model: %s", model_name)
+            else:
+                try:
+                    from sentence_transformers import SentenceTransformer
+
+                    self._model = SentenceTransformer(model_name)
+                    _local_model_cache[model_name] = self._model
+                    logger.info("Loaded and cached SentenceTransformer model: %s", model_name)
+                except Exception as e:
+                    logger.warning(
+                        "Failed to load sentence_transformers, embedding will raise at call time: %s",
+                        e,
+                    )
+        elif self.provider == "openai":
+            self._client = AsyncOpenAI(api_key=api_key)
+            self.dimension = 1536
+
+    async def embed(self, text: str) -> list[float]:
+        cache_key = f"emb:{hashlib.sha256(text.encode()).hexdigest()}"
+        try:
+            from ai.infrastructure.cache.redis_client import get_redis
+            import json
+            r = await get_redis()
+            cached = await r.get(cache_key)
+            if cached:
+                return json.loads(cached)
+        except Exception as e:
+            # Cache is optional: fall through to a live embedding call.
+            logger.debug("embed_cache_read_failed err=%s", e)
+
+        if self.provider == "local":
+            if self._model is None:
+                model_name = settings.embedding_model
+                if model_name in _local_model_cache:
+                    self._model = _local_model_cache[model_name]
+                else:
+                    from sentence_transformers import SentenceTransformer
+                    self._model = SentenceTransformer(model_name)
+                    _local_model_cache[model_name] = self._model
+            result = self._model.encode(text).tolist()
+        else:
+            response = await self._client.embeddings.create(
+                model="text-embedding-3-small", input=text
+            )
+            result = response.data[0].embedding
+
+        try:
+            from ai.infrastructure.cache.redis_client import get_redis
+            import json
+            r = await get_redis()
+            await r.setex(cache_key, EMBED_CACHE_TTL, json.dumps(result))
+        except Exception as e:
+            # Cache is optional: a write failure must not fail the embed.
+            logger.debug("embed_cache_write_failed err=%s", e)
+
+        return result
+
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        if self.provider == "local":
+            if self._model is None:
+                model_name = settings.embedding_model
+                if model_name in _local_model_cache:
+                    self._model = _local_model_cache[model_name]
+                else:
+                    from sentence_transformers import SentenceTransformer
+                    self._model = SentenceTransformer(model_name)
+                    _local_model_cache[model_name] = self._model
+            return self._model.encode(texts, batch_size=32).tolist()
+        response = await self._client.embeddings.create(
+            model="text-embedding-3-small", input=texts
+        )
+        return [d.embedding for d in response.data]

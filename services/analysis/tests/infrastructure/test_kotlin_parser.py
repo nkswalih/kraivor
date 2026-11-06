@@ -1,6 +1,6 @@
 import pytest
 
-from app.infrastructure.parsers.kotlin_parser import KotlinParser
+from analysis.infrastructure.parsers.kotlin_parser import KotlinParser
 
 
 @pytest.fixture

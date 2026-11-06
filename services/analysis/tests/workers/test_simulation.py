@@ -1,6 +1,6 @@
-from app.core.constants import SimulationStatus
-from app.workers.perf.load_sim import ProductionSimulator
-from app.workers.perf.rpm_calculator import EndpointMetric, PerformanceMetrics
+from analysis.core.constants import SimulationStatus
+from analysis.workers.perf.load_sim import ProductionSimulator
+from analysis.workers.perf.rpm_calculator import EndpointMetric, PerformanceMetrics
 
 
 class TestProductionSimulator:

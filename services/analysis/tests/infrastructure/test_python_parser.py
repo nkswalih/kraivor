@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.infrastructure.parsers.python_parser import PythonParser
+from analysis.infrastructure.parsers.python_parser import PythonParser
 
 
 @pytest.fixture

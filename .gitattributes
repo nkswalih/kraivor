@@ -13,4 +13,4 @@
 # `-text` turns off end-of-line conversion for these paths entirely, so the
 # blob holds exactly the bytes the harness was fuzzed against, on every
 # platform and in every checkout.
-fuzzing/corpus/** -text
+scripts/fuzzing/corpus/** -text

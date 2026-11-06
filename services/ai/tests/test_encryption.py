@@ -9,7 +9,7 @@ provider sub-keys became permanently unreadable with no error anywhere.
 import pytest
 from cryptography.fernet import Fernet
 
-from app.core import encryption
+from ai.core import encryption
 
 
 @pytest.fixture

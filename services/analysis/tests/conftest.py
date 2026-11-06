@@ -19,7 +19,7 @@ def _isolated_checkpoints(
     them there -- thousands of orphaned `.state` files across a suite run, and
     tests asserting on file contents that another test happened to write.
     """
-    from app.application.tasks import checkpoint
+    from analysis.application.tasks import checkpoint
 
     monkeypatch.setattr(checkpoint, "_checkpoint_dir", lambda: tmp_path)
 

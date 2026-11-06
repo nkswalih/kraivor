@@ -57,11 +57,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# Turborepo cache (local build cache; recreated by every `turbo run`)
+.turbo/
+
 # Build outputs
 .next/
 out/
-dist/
-build/
 
 # TypeScript incremental build cache -- a machine-local artifact. It is rewritten
 # by every `tsc` run, so tracking it shows the file dirty after any build.
@@ -81,15 +82,10 @@ logs/
 
 # Test coverage
 .coverage
-*/.coverage
 .coverage.*
 htmlcov/
 coverage.xml
 coverage/
-frontend/coverage/
-
-# TypeScript incremental build cache
-*.tsbuildinfo
 
 # Database
 *.db
@@ -101,31 +97,12 @@ frontend/coverage/
 media/
 
 # OS
-.DS_Store
 Thumbs.db
 
 # Temp files
 tmp/
 temp/
 *.tmp
-
-# DOCS
-KAIVOR_BLUEPRINT.md
-KRAIVOR_ARCHITECTURE.md
-KRAIVOR_BUILD_GUIDE.md
-CORE_IMPLEMENTATION.md
-frontend-core-service.md
-KRAIVOR_FRONTEND_PROMPT.md
-NEW_CORE_DESIGN.md
-system.md
-tickets.md
-tools.md
-docs/github-app-migration.md
-frontend-projects.md
-ANALYSIS_SERVICE_DESIGN.md
-AI_SERVICE_DESIGN.md
-DEPLOYMENT_DESKTOP.md
-progress.md
 
 services/core/celerybeat-schedule
 
@@ -135,6 +112,13 @@ services/core/celerybeat-schedule
 services/ai/stress_test.py
 services/ai/stress_test_v3.py
 
-
+# Local-only documentation drafts. These exist on some machines but are not
+# part of the tracked set; see docs/README.md for the indexed documentation.
 docs/handbook
 docs/documents
+services/analysis/docs/
+
+# The root pyproject.toml is tool config, not a package, so it has no
+# dependencies to lock. `uv run` at the repo root writes a lockfile anyway;
+# service dependencies live in services/*/uv.lock, which stay tracked.
+/uv.lock

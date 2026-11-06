@@ -131,8 +131,8 @@ uv sync --group dev
 **Frontend**:
 
 ```bash
-cd frontend
-npm install
+cd apps/web
+pnpm install
 ```
 
 #### 4. Run Database Migrations
@@ -225,10 +225,11 @@ Two things worth knowing, because they used to hide failures:
   against pytest-style suites — and it cannot produce the coverage report.
   `make test` now runs `pytest --cov`, so the `fail_under` floor in each
   service's `pyproject.toml` is enforced locally too.
-- **The frontend has no `services/` directory.** Its gates are the
-  `package.json` scripts: `npm run typecheck`, `npm test`, `npm run build`.
-  There is no separate lint target because `next build` runs ESLint as a
-  gate; `typecheck` and `vitest` both pass with lint errors present.
+- **The frontend lives in `apps/web` and has no `services/` directory.** Its
+  gates are the `package.json` scripts: `pnpm run typecheck`, `pnpm test`,
+  `pnpm run build`. There is no separate lint target because `next build` runs
+  ESLint as a gate; `typecheck` and `vitest` both pass with lint errors
+  present.
 
 ### Coverage Floors
 
@@ -316,8 +317,8 @@ bandit -r . -x ./tests
 - Run lint and typecheck before committing:
 
 ```bash
-npm run lint
-npm run typecheck
+pnpm run lint
+pnpm run typecheck
 ```
 
 ---
@@ -347,7 +348,7 @@ make check
 cd services/analysis && uv run pytest tests/ -v
 
 # Frontend
-cd frontend && npm test
+cd apps/web && pnpm test
 ```
 
 ### JWT Keys for the Auth Service

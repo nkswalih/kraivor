@@ -1,14 +1,20 @@
 import pytest
 
-from app.domain.rules.devops import (
+from analysis.domain.rules.devops import (
     DevopsCIConfigRule,
     DevopsDockerfileRule,
     DevopsEnvFileRule,
 )
-from app.domain.rules.quality import QualityHighComplexityRule, QualityLongFunctionRule
-from app.domain.rules.registry import RuleRegistry, create_default_registry
-from app.domain.rules.security import SecurityHardcodedSecretRule, SecurityNoAuthRule
-from app.domain.rules.structure import StructureDeepNestingRule
+from analysis.domain.rules.quality import (
+    QualityHighComplexityRule,
+    QualityLongFunctionRule,
+)
+from analysis.domain.rules.registry import RuleRegistry, create_default_registry
+from analysis.domain.rules.security import (
+    SecurityHardcodedSecretRule,
+    SecurityNoAuthRule,
+)
+from analysis.domain.rules.structure import StructureDeepNestingRule
 
 
 class TestRuleRegistry:

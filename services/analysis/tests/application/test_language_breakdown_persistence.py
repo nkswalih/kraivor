@@ -28,21 +28,21 @@ from uuid import uuid4
 
 import pytest
 
-from app.api.routers.jobs import _job_to_response
-from app.api.schemas import jobs as jobs_schemas
+from analysis.api.routers.jobs import _job_to_response
+from analysis.api.schemas import jobs as jobs_schemas
 
 # `LanguageShare` is new here, so it is reached through the module rather than
 # imported by name. A module-level `from ... import LanguageShare` would raise
 # ImportError against pre-fix source at collection time, which stops the whole
 # file from running and hides the other sixteen failures behind one error.
 JobStatusResponse = jobs_schemas.JobStatusResponse
-from app.application.analysis.commands import ProcessStageCommand
-from app.application.analysis.handler import handle_stage_clone
-from app.infrastructure.db.models.analysis_job import AnalysisJobModel
-from app.infrastructure.db.repositories.analysis_job import JobRepository
-from app.infrastructure.db.unit_of_work import UnitOfWork
-from app.infrastructure.git.repository_fetcher import RepositoryFetcher
-from app.infrastructure.messaging.producer import EventProducer
+from analysis.application.analysis.commands import ProcessStageCommand
+from analysis.application.analysis.handler import handle_stage_clone
+from analysis.infrastructure.db.models.analysis_job import AnalysisJobModel
+from analysis.infrastructure.db.repositories.analysis_job import JobRepository
+from analysis.infrastructure.db.unit_of_work import UnitOfWork
+from analysis.infrastructure.git.repository_fetcher import RepositoryFetcher
+from analysis.infrastructure.messaging.producer import EventProducer
 
 # ======================================================================
 # Fakes
@@ -160,7 +160,7 @@ async def _clone(files: list[dict[str, object]]) -> _RecordingJobsRepo:
     )
 
     with patch(
-        "app.infrastructure.detection.detector.FrameworkDetector",
+        "analysis.infrastructure.detection.detector.FrameworkDetector",
         return_value=_StubDetector(),
     ):
         await handle_stage_clone(

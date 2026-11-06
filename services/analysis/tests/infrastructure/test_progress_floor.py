@@ -42,8 +42,8 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.sql.elements import ColumnElement
 
-from app.infrastructure.db.models.analysis_job import AnalysisJobModel
-from app.infrastructure.db.repositories.analysis_job import floored_progress
+from analysis.infrastructure.db.models.analysis_job import AnalysisJobModel
+from analysis.infrastructure.db.repositories.analysis_job import floored_progress
 
 _METADATA = MetaData()
 _PCT = Table(

@@ -1,11 +1,11 @@
-from app.domain.contracts.parser import (
+from analysis.domain.contracts.parser import (
     ParsedClass,
     ParsedFile,
     ParsedFunction,
     ParsedImport,
     ParsedRoute,
 )
-from app.workers.dead_code.detector import DeadCodeDetector
+from analysis.workers.dead_code.detector import DeadCodeDetector
 
 
 def _make_pf(
@@ -102,7 +102,7 @@ class TestDeadCodeDetector:
             content="class OldModel:\n    pass\n",
             classes=[
                 __import__(
-                    "app.domain.contracts.parser", fromlist=["ParsedClass"]
+                    "analysis.domain.contracts.parser", fromlist=["ParsedClass"]
                 ).ParsedClass(name="OldModel", line_start=1, line_end=2)
             ],
         )

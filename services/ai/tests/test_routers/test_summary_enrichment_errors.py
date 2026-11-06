@@ -27,8 +27,8 @@ import asyncio
 import pytest
 from types import SimpleNamespace
 
-from app.application.analysis import enrichment as module
-from app.application.analysis.enrichment import (
+from ai.application.analysis import enrichment as module
+from ai.application.analysis.enrichment import (
     MAX_SUMMARY_MODEL_ATTEMPTS,
     MIN_SUMMARY_CHARS,
     SUMMARY_TIMEOUT_SECONDS,
@@ -36,14 +36,14 @@ from app.application.analysis.enrichment import (
     _usable_summary,
     describe_summary_failure,
 )
-from app.infrastructure.llm.client import LLM_DEFAULT_TIMEOUT
-from app.infrastructure.llm.error_classifier import (
+from ai.infrastructure.llm.client import LLM_DEFAULT_TIMEOUT
+from ai.infrastructure.llm.error_classifier import (
     ClassifiedError,
     ErrorCategory,
     SuggestedAction,
     classify_error,
 )
-from app.infrastructure.llm.router import FREE_MODELS
+from ai.infrastructure.llm.router import FREE_MODELS
 
 # ======================================================================
 # The stub provider

@@ -8,7 +8,7 @@
 * @kraivor/maintainers
 
 # Frontend (Next.js)
-/frontend/ @kraivor/frontend-maintainers
+/apps/web/ @kraivor/frontend-maintainers
 
 # Backend services
 /services/auth/ @kraivor/auth-maintainers
@@ -29,8 +29,6 @@ README.md @kraivor/docs-maintainers
 
 # Infrastructure
 /infra/ @kraivor/devops-maintainers
-/k8s/ @kraivor/devops-maintainers
-/terraform/ @kraivor/devops-maintainers
 
 # Security
 SECURITY.md @kraivor/security-maintainers

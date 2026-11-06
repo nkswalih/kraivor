@@ -1,6 +1,6 @@
 import pytest
 
-from app.api.schemas.embeddings import EmbeddingRequest, EmbeddingResponse
+from ai.api.schemas.embeddings import EmbeddingRequest, EmbeddingResponse
 
 pytestmark = pytest.mark.unit
 
@@ -11,7 +11,7 @@ class TestEmbeddingsRouter:
         assert req.input == "hello world"
 
     async def test_embedding_response_schema(self):
-        from app.api.schemas.embeddings import EmbeddingData, EmbeddingUsage
+        from ai.api.schemas.embeddings import EmbeddingData, EmbeddingUsage
 
         resp = EmbeddingResponse(
             data=[EmbeddingData(index=0, embedding=[0.1, 0.2, 0.3])],

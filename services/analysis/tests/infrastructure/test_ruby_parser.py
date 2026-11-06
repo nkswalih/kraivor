@@ -1,6 +1,6 @@
 import pytest
 
-from app.infrastructure.parsers.ruby_parser import RubyParser
+from analysis.infrastructure.parsers.ruby_parser import RubyParser
 
 
 @pytest.fixture

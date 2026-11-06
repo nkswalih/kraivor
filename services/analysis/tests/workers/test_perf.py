@@ -1,8 +1,8 @@
 import uuid
 
-from app.domain.contracts.parser import ParsedFile, ParsedRoute
-from app.infrastructure.db.models.performance_metric import PerformanceMetricModel
-from app.workers.perf.rpm_calculator import RPMCalculator
+from analysis.domain.contracts.parser import ParsedFile, ParsedRoute
+from analysis.infrastructure.db.models.performance_metric import PerformanceMetricModel
+from analysis.workers.perf.rpm_calculator import RPMCalculator
 
 
 def _make_pf(

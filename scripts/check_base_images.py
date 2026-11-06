@@ -37,7 +37,7 @@ FIRST_PARTY = (
 
 SKIP_DIRS = {".git", ".venv", "node_modules", "__pycache__", ".ruff_cache", ".pytest_cache"}
 
-SERVICES = ("auth", "core", "ai", "analysis", "notifications")
+SERVICES = ("auth", "core", "ai", "analysis")
 
 # Dockerfile FROM tags are floats on purpose: they name the release for humans,
 # and the digest behind them is the immutable truth.
@@ -193,7 +193,7 @@ def check_node_consistency() -> list[str]:
     rather than inheriting someone else's types."""
     problems: list[str] = []
 
-    for directory in ("frontend", "services/realtime"):
+    for directory in ("apps/web",):
         pkg_path = f"{directory}/package.json"
         dockerfile = f"{directory}/Dockerfile"
         if not (os.path.exists(pkg_path) and os.path.exists(dockerfile)):

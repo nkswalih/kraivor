@@ -1,6 +1,6 @@
 import pytest
 
-from app.infrastructure.parsers.rust_parser import RustParser
+from analysis.infrastructure.parsers.rust_parser import RustParser
 
 
 @pytest.fixture

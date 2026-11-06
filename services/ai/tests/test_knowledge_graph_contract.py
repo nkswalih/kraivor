@@ -14,7 +14,7 @@ from typing import Any, cast
 
 import pytest
 
-from app.knowledge_engine.graph.knowledge_graph import (
+from ai.knowledge_engine.graph.knowledge_graph import (
     KnowledgeGraph,
     extract_entities,
     extract_relationships,

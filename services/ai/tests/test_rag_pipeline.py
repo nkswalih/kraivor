@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from app.infrastructure.rag.chunker import SemanticChunker
-from app.infrastructure.rag.embedder import Embedder
+from ai.infrastructure.rag.chunker import SemanticChunker
+from ai.infrastructure.rag.embedder import Embedder
 
 pytestmark = pytest.mark.unit
 
@@ -27,7 +27,7 @@ class TestChunker:
 
     async def test_chunk_fallback_no_ast(self, monkeypatch):
         monkeypatch.setattr(
-            "app.infrastructure.rag.chunker.SemanticChunker._chunk_with_ast",
+            "ai.infrastructure.rag.chunker.SemanticChunker._chunk_with_ast",
             AsyncMock(side_effect=ImportError),
         )
         chunker = SemanticChunker(chunk_size=100, overlap=10)

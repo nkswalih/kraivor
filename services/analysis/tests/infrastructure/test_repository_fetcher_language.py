@@ -24,7 +24,7 @@ from pathlib import Path
 
 import pytest
 
-from app.infrastructure.git.repository_fetcher import (
+from analysis.infrastructure.git.repository_fetcher import (
     _OTHER_LANGUAGE,
     RepositoryFetcher,
 )

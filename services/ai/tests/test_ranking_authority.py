@@ -9,7 +9,7 @@ behaviour and the lookalikes it has to reject.
 
 import pytest
 
-from app.knowledge_engine.ranking.authority import _domain_is, get_domain_half_life
+from ai.knowledge_engine.ranking.authority import _domain_is, get_domain_half_life
 
 
 class TestDomainIs:

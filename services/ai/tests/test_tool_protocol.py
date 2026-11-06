@@ -13,14 +13,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.application.tools.base import BaseTool
-from app.application.tools.code_search_tool import CodeSearchTool
-from app.application.tools.search_tool import (
+from ai.application.tools.base import BaseTool
+from ai.application.tools.code_search_tool import CodeSearchTool
+from ai.application.tools.search_tool import (
     DuckDuckGoInstantTool,
     DuckDuckGoNewsTool,
     DuckDuckGoSearchTool,
 )
-from app.application.tools.web_fetch_tool import NewsFetchTool, WebFetchTool
+from ai.application.tools.web_fetch_tool import NewsFetchTool, WebFetchTool
 
 pytestmark = pytest.mark.unit
 
@@ -156,7 +156,7 @@ class TestWebSearchTool:
 
         with (
             patch.dict("sys.modules", {"ddgs": MagicMock(DDGS=lambda: ddgs)}),
-            patch("app.application.tools.search_tool.asyncio.sleep", AsyncMock()),
+            patch("ai.application.tools.search_tool.asyncio.sleep", AsyncMock()),
         ):
             out = await DuckDuckGoSearchTool().run(query="x")
 
@@ -169,7 +169,7 @@ class TestWebSearchTool:
 
         with (
             patch.dict("sys.modules", {"ddgs": MagicMock(DDGS=lambda: ddgs)}),
-            patch("app.application.tools.search_tool.asyncio.sleep", AsyncMock()),
+            patch("ai.application.tools.search_tool.asyncio.sleep", AsyncMock()),
         ):
             await DuckDuckGoSearchTool().run(query="x")
 
@@ -203,7 +203,7 @@ class TestWebFetchTool:
     async def test_refuses_unsafe_url_without_fetching(self, url):
         """No session may be opened for a URL the guard rejects."""
         session = MagicMock()
-        with patch("app.application.tools.web_fetch_tool.aiohttp") as mock_aiohttp:
+        with patch("ai.application.tools.web_fetch_tool.aiohttp") as mock_aiohttp:
             mock_aiohttp.ClientSession.return_value.__aenter__ = AsyncMock(
                 return_value=session
             )
@@ -224,7 +224,7 @@ class TestWebFetchTool:
         session.get.return_value.__aenter__ = AsyncMock(return_value=resp)
         session.get.return_value.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("app.application.tools.web_fetch_tool.aiohttp") as mock_aiohttp:
+        with patch("ai.application.tools.web_fetch_tool.aiohttp") as mock_aiohttp:
             mock_aiohttp.ClientSession.return_value.__aenter__ = AsyncMock(
                 return_value=session
             )
@@ -239,7 +239,7 @@ class TestWebFetchTool:
 
     async def test_news_fetch_tool_also_guards(self):
         session = MagicMock()
-        with patch("app.application.tools.web_fetch_tool.aiohttp") as mock_aiohttp:
+        with patch("ai.application.tools.web_fetch_tool.aiohttp") as mock_aiohttp:
             mock_aiohttp.ClientSession.return_value.__aenter__ = AsyncMock(
                 return_value=session
             )

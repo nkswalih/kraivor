@@ -14,10 +14,10 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from app.application.analysis import handler as handler_mod
-from app.application.analysis.handler import describe_failure
-from app.core.constants import EngineStateMap
-from app.domain.events import AnalysisFailed
+from analysis.application.analysis import handler as handler_mod
+from analysis.application.analysis.handler import describe_failure
+from analysis.core.constants import EngineStateMap
+from analysis.domain.events import AnalysisFailed
 
 
 def _boom() -> str:

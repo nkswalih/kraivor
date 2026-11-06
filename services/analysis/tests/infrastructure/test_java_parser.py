@@ -1,6 +1,6 @@
 import pytest
 
-from app.infrastructure.parsers.java_parser import JavaParser
+from analysis.infrastructure.parsers.java_parser import JavaParser
 
 
 @pytest.fixture

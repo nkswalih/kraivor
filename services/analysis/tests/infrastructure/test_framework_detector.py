@@ -17,8 +17,8 @@ from pathlib import Path
 
 import pytest
 
-from app.infrastructure.detection.detector import FrameworkDetector
-from app.infrastructure.detection.models import DetectionResult
+from analysis.infrastructure.detection.detector import FrameworkDetector
+from analysis.infrastructure.detection.models import DetectionResult
 
 
 def _write(root: Path, rel: str, content: str) -> None:

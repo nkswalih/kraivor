@@ -1,5 +1,5 @@
-from app.domain.contracts.parser import ParsedFile
-from app.workers.errors.scanner import ErrorScanner
+from analysis.domain.contracts.parser import ParsedFile
+from analysis.workers.errors.scanner import ErrorScanner
 
 
 def _make_pf(path: str, content: str) -> ParsedFile:

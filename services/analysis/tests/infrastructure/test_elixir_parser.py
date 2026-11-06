@@ -1,6 +1,6 @@
 import pytest
 
-from app.infrastructure.parsers.elixir_parser import ElixirParser
+from analysis.infrastructure.parsers.elixir_parser import ElixirParser
 
 
 @pytest.fixture

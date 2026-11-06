@@ -26,6 +26,7 @@ Severity is about impact, not about whether it blocks this migration.
 | F16 | analysis schemas | `HealthResponse` is defined twice: `api/routers/health.py` (with `dependencies`) and `api/schemas/common.py` (without); the router uses its local copy and the `schemas` export is unused by it | `git grep -n HealthResponse -- services/analysis/src` | keep one definition — extend `common.HealthResponse` with `dependencies` and import it | low |
 | F17 | contracts | `apps/web` hand-maintains TypeScript types that mirror service models: 38 exported TS names also name a Python class and nothing generates them, so drift is undetected | `docs/migration/PHASE-4.md` (Phase 4 audit) | adopt OpenAPI/JSON-Schema codegen if drift becomes a problem (out of scope here - "no new frameworks") | info |
 | F18 | docs link | `SECURITY.md` links to `HALL_OF_FAME.md`, which has never been tracked on any branch | `SECURITY.md:102`; `git log --all -- HALL_OF_FAME.md` is empty | add the file, or rewrite the sentence to describe the policy without a link | low |
+| F19 | npm advisories | four **moderate** advisories remain in build-time-only trees: `seroval` (via `@tanstack/react-query-devtools` -> `@kobalte/core` -> `solid-js`) and `glob`/`minimatch` (via `@sentry/nextjs` -> `@sentry/bundler-plugins`) | `pnpm audit --prod` after the 2026-11 refresh | below the `--audit-level=high` gate and absent from the runtime image; revisit when Sentry/devtools ship patched deps | low |
 
 ## Notes
 
@@ -48,3 +49,12 @@ Severity is about impact, not about whether it blocks this migration.
   names pre-migration paths on purpose (see the note in `docs/README.md`).
 - Phase 5 note: `docker compose -f docker-compose.prod.yml config` still exits 1
   (F14, unchanged); the main and dev compose files both validate.
+- 2026-11 security refresh (same branch, separate commit): the advisory database
+  had drifted since the last `dev` run on 2026-10-09, so every service's
+  `pip-audit` gate went red on unchanged locks. Pin-only bumps were applied in
+  all four `uv.lock` files plus the frontend. Three were major versions and are
+  the only behaviour-bearing changes in this branch:
+  `zod` 3 -> 4 (with `@hookform/resolvers` 3 -> 7, required for zod 4),
+  `social-auth-core` 5 -> 6 and `social-auth-app-django` 6 -> 7 (Django 6.1.1
+  is already above the `>=5.2` floor). `UV` and `pnpm` audits are clean
+  afterwards; see F19 for the four remaining build-time-only moderates.

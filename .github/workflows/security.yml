@@ -37,7 +37,7 @@ jobs:
           uv run bandit -r . -x ./tests,./.venv --configfile pyproject.toml -f sarif -o bandit-${{ matrix.service }}.sarif || true
 
       - name: Upload Bandit SARIF
-        uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+        uses: github/codeql-action/upload-sarif@a3d1b77a1ba1550fbb5c74db1dc3a11f4a481126 # v3
         with:
           sarif_file: services/${{ matrix.service }}/bandit-${{ matrix.service }}.sarif
 
@@ -76,7 +76,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: google/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
+      - uses: google/osv-scanner-action@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
         with:
           scan-args: >-
             --lockfile=services/auth/uv.lock

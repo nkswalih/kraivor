@@ -37,7 +37,7 @@ FIRST_PARTY = (
 
 SKIP_DIRS = {".git", ".venv", "node_modules", "__pycache__", ".ruff_cache", ".pytest_cache"}
 
-SERVICES = ("auth", "core", "ai", "analysis", "notifications")
+SERVICES = ("auth", "core", "ai", "analysis")
 
 # Dockerfile FROM tags are floats on purpose: they name the release for humans,
 # and the digest behind them is the immutable truth.

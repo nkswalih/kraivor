@@ -9,7 +9,7 @@ inputs:
   python-version:
     description: "Python version"
     required: false
-    default: "3.12"
+    default: "3.14"
   install-deps:
     description: "Whether to install dependencies"
     required: false
@@ -26,7 +26,7 @@ runs:
     - name: Install uv
       uses: astral-sh/setup-uv@v3
       with:
-        version: "latest"
+        version: "0.11.7"
         enable-cache: true
         cache-dependency-glob: services/${{ inputs.service }}/pyproject.toml
 
@@ -34,4 +34,7 @@ runs:
       if: inputs.install-deps == 'true'
       shell: bash
       working-directory: services/${{ inputs.service }}
-      run: uv sync --frozen --group dev
+      # `--locked` fails if uv.lock is out of date instead of silently
+      # resolving a different set. `dev` is the default dependency group, so
+      # no `--group dev` is needed.
+      run: uv sync --locked

@@ -54,9 +54,6 @@ infrastructure:
   - changed-files:
       - any-glob-to-any-file:
           - infra/**/*
-          - k8s/**/*
-          - terraform/**/*
-          - helm/**/*
 
 dependencies:
   - changed-files:

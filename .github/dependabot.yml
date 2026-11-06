@@ -43,7 +43,7 @@ updates:
     open-pull-requests-limit: 3
 
     commit-message:
-      prefix: "chore(frontend/deps)"
+      prefix: "chore(web/deps)"
 
     labels:
       - "dependencies"

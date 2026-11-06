@@ -460,9 +460,9 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Lint first-party tooling (Ruff)
-        # fuzzing/ and scripts/ sit outside every service, so the per-service
-        # lint matrix cannot see them. Without this they are the only Python in
-        # the repo with no gate on it.
+        # scripts/ (including the fuzz harness in scripts/fuzzing/) sits
+        # outside every service, so the per-service lint matrix cannot see it.
+        # Without this it is the only Python in the repo with no gate on it.
         #
         # --require-hashes makes pip verify every download against a pinned
         # digest rather than trusting the index. Scorecard's Pinned-Dependencies
@@ -470,13 +470,13 @@ jobs:
         # only scores 5/10, because the version can still be re-uploaded.
         run: |
           pip install --require-hashes -r requirements/ci-ruff.txt
-          ruff check fuzzing/ scripts/
+          ruff check scripts/
 
       - name: Check the invariants over the corpus
         # This is the gate. It is deterministic and takes seconds, so a
         # regression fails the build the same way every time. The fuzzing step
         # below is time-limited by design and can only ever add findings.
-        run: python fuzzing/fuzz_url_guard.py --iterations 50000
+        run: python scripts/fuzzing/fuzz_url_guard.py --iterations 50000
 
       - name: Install atheris
         # atheris ships native libFuzzer binaries, so it exists only on Linux.
@@ -492,10 +492,10 @@ jobs:
         # directory has varied between versions.
         run: |
           mkdir -p .fuzz-artifacts
-          python fuzzing/fuzz_url_guard.py \
+          python scripts/fuzzing/fuzz_url_guard.py \
             -max_total_time="${{ env.FUZZ_SECONDS }}" \
             -artifact_prefix=.fuzz-artifacts/ \
-            $(find fuzzing/corpus/url_guard -type f | sort)
+            $(find scripts/fuzzing/corpus/url_guard -type f | sort)
 
       - name: Upload any crashers
         # Always runs: a found input is only useful if it survives the run.

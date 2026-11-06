@@ -117,3 +117,8 @@ services/ai/stress_test_v3.py
 docs/handbook
 docs/documents
 services/analysis/docs/
+
+# The root pyproject.toml is tool config, not a package, so it has no
+# dependencies to lock. `uv run` at the repo root writes a lockfile anyway;
+# service dependencies live in services/*/uv.lock, which stay tracked.
+/uv.lock

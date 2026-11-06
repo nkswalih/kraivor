@@ -151,7 +151,7 @@ def assert_safe_url(url: str) -> str:
     # bare ValueError -- not UnsafeURLError -- for a port outside 0-65535 or a
     # non-numeric one. Left unhandled it escapes the contract documented above
     # and every caller's `except UnsafeURLError` misses it, turning a rejected
-    # URL into a 500. Found by the fuzz target in fuzzing/fuzz_url_guard.py,
+    # URL into a 500. Found by the fuzz target in scripts/fuzzing/fuzz_url_guard.py,
     # which asserts that this function either returns or raises
     # UnsafeURLError and nothing else.
     try:

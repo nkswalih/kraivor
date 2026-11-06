@@ -186,7 +186,7 @@ class TestMalformedPort:
     keeps the raw authority, so text after an injected newline becomes the
     port, and the last colon in ``"Host: evil"`` supplies it.
 
-    Found by ``fuzzing/fuzz_url_guard.py``, whose first invariant is that
+    Found by ``scripts/fuzzing/fuzz_url_guard.py``, whose first invariant is that
     this function returns its input or raises UnsafeURLError and nothing else.
     """
 

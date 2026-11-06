@@ -13,10 +13,10 @@ use_parentheses = true
 ensure_newline_before_comments = true
 
 # Shared lint config for first-party code that lives outside a service:
-# fuzzing/ and scripts/. Each service carries its own [tool.ruff] inside its
-# pyproject.toml, and ruff resolves configuration per file from the closest
-# config upward, so this file does not change what `ruff check .` reports
-# inside services/.
+# scripts/, which includes the fuzz harness in scripts/fuzzing/. Each service
+# carries its own [tool.ruff] inside its pyproject.toml, and ruff resolves
+# configuration per file from the closest config upward, so this file does not
+# change what `ruff check .` reports inside services/.
 #
 # The rule set matches auth, core and ai. analysis is deliberately stricter
 # (it adds I and RUF); that is a per-service decision and is not imposed on

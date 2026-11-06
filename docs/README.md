@@ -3,6 +3,20 @@
 Everything tracked lives under one of five categories, plus the migration
 records and shared assets.
 
+## Repository root
+
+| Path | Holds |
+|---|---|
+| `apps/` | the Next.js application (`apps/web`) |
+| `services/` | the four Python services (`auth`, `core`, `analysis`, `ai`) |
+| `infra/` | Terraform, Kubernetes, and container support config (`infra/docker/` is nginx + Postgres init, not image definitions) |
+| `scripts/` | repo-level tooling, including the SSRF fuzz harness (`scripts/fuzzing/`) |
+| `requirements/` | **CI tool pins only** (`ci-ruff`, `ci-atheris`); service dependencies live in each `pyproject.toml` + `uv.lock` |
+| `docs/` | this tree |
+
+Service `Dockerfile`s stay next to the code they build, so each build context is
+that service directory; only the compose files live at the root.
+
 ## Architecture
 
 | Document | Covers |

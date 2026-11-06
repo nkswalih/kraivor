@@ -33,11 +33,11 @@ libFuzzer spend its budget on the network instead of on the parser.
 
 Run locally without atheris (available on any platform):
 
-    python fuzzing/fuzz_url_guard.py --iterations 20000
+    python scripts/fuzzing/fuzz_url_guard.py --iterations 20000
 
 Under libFuzzer, which needs atheris and therefore a Linux runner:
 
-    python fuzzing/fuzz_url_guard.py corpus/url_guard
+    python scripts/fuzzing/fuzz_url_guard.py scripts/fuzzing/corpus/url_guard
 """
 
 from __future__ import annotations
@@ -47,7 +47,8 @@ import os
 import random
 import sys
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# scripts/fuzzing/ -> scripts/ -> repository root.
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "services", "ai", "src"))
 
 from ai.core import url_guard  # noqa: E402
@@ -228,7 +229,8 @@ def main() -> int:
             "atheris is not installed (it ships native libFuzzer binaries and "
             "only runs on Linux).\n"
             "Falling back to the local driver. For coverage-guided fuzzing:\n"
-            "    pip install atheris && python fuzzing/fuzz_url_guard.py corpus/url_guard",
+            "    pip install atheris && python scripts/fuzzing/fuzz_url_guard.py "
+            "scripts/fuzzing/corpus/url_guard",
             file=sys.stderr,
         )
         return 1 if drive(5000, 20261003) else 0

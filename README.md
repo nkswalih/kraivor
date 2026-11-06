@@ -179,7 +179,7 @@ flowchart LR
 - **Everything observable** — correlation IDs, structured logs, Sentry
 
 For the request path, trust boundaries, and the workspace authorisation rules,
-see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
+see **[docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)**.
 
 ---
 
@@ -203,8 +203,8 @@ see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 ### Prerequisites
 
 - Docker & Docker Compose
-- Python 3.11+
-- Node.js 18+
+- Python 3.14+
+- Node.js 24+ (see `engines` in `package.json`)
 - PostgreSQL 15+
 - Redis 7+
 - Kafka (or use Docker)
@@ -251,26 +251,33 @@ make test   # Run tests for all services
 Start with these two — they answer "how does this thing actually work" and
 "what do I do when I break prod":
 
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — request path, trust
-  boundaries, the workspace authorisation rule, the internal service channel
-- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** — deploy pipeline, pre-deploy
-  checklist, rollback procedure, known gaps
+- **[docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)** —
+  request path, trust boundaries, the workspace authorisation rule, the
+  internal service channel
+- **[docs/operations/DEPLOYMENT.md](docs/operations/DEPLOYMENT.md)** — deploy
+  pipeline, pre-deploy checklist, rollback procedure, known gaps
 
-Service-specific references live in `docs/`:
+Service-specific references live under `docs/services/`:
 
 | Document | Covers |
 |----------|--------|
-| [`docs/AUTH_SERVICE.md`](docs/AUTH_SERVICE.md) | `services/auth` |
-| [`docs/CORE_SERVICE.md`](docs/CORE_SERVICE.md) | `services/core` |
-| [`docs/DOCKER.md`](docs/DOCKER.md) | local Docker workflow |
-| [`docs/CI-VS-DOCKER.md`](docs/CI-VS-DOCKER.md) | CI vs Docker differences |
+| [`docs/services/AUTH_SERVICE.md`](docs/services/AUTH_SERVICE.md) | `services/auth` |
+| [`docs/services/CORE_SERVICE.md`](docs/services/CORE_SERVICE.md) | `services/core` |
+| [`docs/services/chat/`](docs/services/chat/) | Core chat / Channels (service + V2 design) |
+| [`docs/development/DOCKER.md`](docs/development/DOCKER.md) | local Docker workflow |
+| [`docs/development/CI-VS-DOCKER.md`](docs/development/CI-VS-DOCKER.md) | CI vs Docker differences |
+| [`docs/api/postman/`](docs/api/postman/) | Postman collections/environments |
+| [`docs/README.md`](docs/README.md) | full documentation index |
+
+Migration records (what moved, when, and why) are in
+[`docs/migration/`](docs/migration/).
 
 ### Running tests
 
 ```bash
 make test                    # every service
-cd services/core && uv run pytest        # one service, with coverage gate
-cd apps/web && pnpm test                 # frontend unit tests
+make -C services/core test   # one service, with its coverage gate
+cd apps/web && pnpm test     # frontend unit tests
 cd apps/web && pnpm run test:coverage
 ```
 

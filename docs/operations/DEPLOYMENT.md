@@ -147,4 +147,4 @@ handling if done half-way. The current posture is:
 
 Revisit if a caller-supplied URL ever becomes reachable from a less
 constrained network position, or if a dependency offers a pinned-resolution
-client. See `docs/CODEQL-TRIAGE.md` for the findings this guard closed.
+client. See `docs/operations/CODEQL-TRIAGE.md` for the findings this guard closed.
